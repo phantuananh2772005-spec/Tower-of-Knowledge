@@ -4210,11 +4210,11 @@
               if (isStepDone) {
                 borderClass = 'border-emerald-500/40 bg-emerald-500/5';
                 badgeHtml = `<span class="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full font-mono">✓ Đã vượt qua</span>`;
-                actionBtnHtml = `<button onclick="startStepPlay('${d.ma_moc}', ${s.buoc}, '${escapeHtml(d.tieu_de)}')" class="px-3 py-1.5 rounded-xl border border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 font-bold text-[11px] transition cursor-pointer">Ôn tập</button>`;
+                actionBtnHtml = `<button id="btn_cp_step_ontap_${s.buoc}" onclick="startStepPlay('${d.ma_moc}', ${s.buoc}, '${escapeHtml(d.tieu_de)}')" class="px-3 py-1.5 rounded-xl border border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 font-bold text-[11px] transition cursor-pointer">Ôn tập</button>`;
               } else if (isStepActive) {
                 borderClass = 'border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/20';
                 badgeHtml = `<span class="text-[10px] font-bold text-emerald-600 bg-emerald-500/20 px-2 py-0.5 rounded-full font-mono animate-pulse">▶ Bước hiện tại</span>`;
-                actionBtnHtml = `<button onclick="startStepPlay('${d.ma_moc}', ${s.buoc}, '${escapeHtml(d.tieu_de)}')" class="px-4 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-[11px] hover:bg-emerald-700 transition cursor-pointer shadow-xs">Bắt đầu →</button>`;
+                actionBtnHtml = `<button id="btn_cp_step_start_${s.buoc}" onclick="startStepPlay('${d.ma_moc}', ${s.buoc}, '${escapeHtml(d.tieu_de)}')" class="px-4 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-[11px] hover:bg-emerald-700 transition cursor-pointer shadow-xs">Bắt đầu →</button>`;
               } else {
                 borderClass = 'border-[var(--border)] opacity-40 bg-[var(--background)]/30';
                 badgeHtml = `<span class="text-[10px] text-[var(--muted-foreground)] font-mono">🔒 Khóa</span>`;
