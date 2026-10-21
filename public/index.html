@@ -227,7 +227,7 @@
       <div class="min-w-0 flex-1 pr-4">
         <!-- Breadcrumb vị trí phân cấp -->
         <div id="topbar-breadcrumb" class="flex items-center gap-1.5 text-[11px] text-[var(--muted-foreground)] mb-0.5">
-          <button onclick="navTo('enrolled')" class="hover:text-[var(--foreground)] flex items-center gap-1 font-medium transition cursor-pointer truncate">
+          <button id="btn_topbar_doimon" onclick="navTo('enrolled')" class="hover:text-[var(--foreground)] flex items-center gap-1 font-medium transition cursor-pointer truncate">
             ← Đổi môn học
           </button>
           <span>/</span>
@@ -268,124 +268,13 @@
       <!-- ================= VIEW 1: BẢN ĐỒ LỘ TRÌNH LEO THÁP (MẶC ĐỊNH MỞ NGAY) ================= -->
       <section id="view-saga" class="px-4 max-w-lg w-full mx-auto pt-6 pb-16">
 
-        <!-- ================= CON ĐƯỜNG MỐC UỐN LƯỢN (KHÔNG CHỮ THỪA, CHỈ BẰNG THỊ GIÁC) ================= -->
-        <div id="saga-roadmap-track" class="flex flex-col items-center gap-6 pt-4 pb-16">
-
-        <!-- 👑 Ô KẾT THÚC CHƯƠNG SIÊU TO (CỔNG ĐỘT PHÁ - VƯƠNG MIỆN PHÁT SÁNG) -->
-        <div class="flex flex-col items-center text-center opacity-40">
-          <div class="w-24 h-24 rounded-3xl saga-circle bg-amber-500/20 border-4 border-amber-400 text-amber-500 flex items-center justify-center text-5xl shadow-2xl crown-glow cursor-not-allowed">
-            👑
-          </div>
-          <span class="text-xs font-bold mt-2.5 uppercase tracking-wider text-amber-600">Cổng Đột Phá Chương 1</span>
-        </div>
-
-        <div class="w-1.5 h-6 bg-[var(--border)] rounded-full opacity-40"></div>
-
-        <!-- ================= KỸ NĂNG 1.1.2 (CHƯA MỞ - KHÓA) ================= -->
-        <div class="flex flex-col items-center gap-4 opacity-35 w-full">
-          <!-- Ô TO KỸ NĂNG 1.1.2 -->
-          <div class="flex flex-col items-center translate-x-[-35px]">
-            <div class="w-14 h-14 rounded-full saga-circle bg-[var(--card)] border-2 border-[var(--border)] text-[var(--muted-foreground)] flex items-center justify-center text-xl font-bold shadow-sm">
-              📖
-            </div>
-            <span class="text-[11px] font-medium mt-1">1.1.2 DBMS</span>
-          </div>
-
-          <div class="w-1 h-5 bg-[var(--border)] rounded-full"></div>
-
-          <!-- Mốc nhỏ 2 của 1.1.2 -->
-          <div class="w-8 h-8 rounded-full saga-circle bg-[var(--card)] border border-[var(--border)] text-[10px] text-[var(--muted-foreground)] flex items-center justify-center translate-x-[25px]">
-            🔒
-          </div>
-
-          <div class="w-1 h-5 bg-[var(--border)] rounded-full"></div>
-
-          <!-- Mốc nhỏ 1 của 1.1.2 -->
-          <div class="w-8 h-8 rounded-full saga-circle bg-[var(--card)] border border-[var(--border)] text-[10px] text-[var(--muted-foreground)] flex items-center justify-center translate-x-[-20px]">
-            🔒
+        <!-- Dynamic Roadmap Content rendered via loadRoadmap() from live DB -->
+        <div id="saga-roadmap-track" class="flex flex-col items-center gap-6 pt-4 pb-16 min-h-[300px]">
+          <div class="flex flex-col items-center justify-center py-16 text-[var(--muted-foreground)]">
+            <div class="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+            <span class="text-xs font-medium">Đang tải bản đồ mốc học từ hệ thống...</span>
           </div>
         </div>
-
-        <!-- ĐƯỜNG NỐI ĐỨT ĐOẠN TỪ 1.1.1 LÊN 1.1.2 -->
-        <div class="w-1.5 h-8 border-l-2 border-dashed border-[var(--border)] my-1"></div>
-
-        <!-- ================= KỸ NĂNG 1.1.1 (ĐANG CHINH PHỤC - CHUỖI 6 MỐC NHỎ) ================= -->
-        <div class="flex flex-col items-center gap-5 w-full">
-
-          <!-- Ô TO KỸ NĂNG 1.1.1 (CỘT MỐC HOÀN TẤT KỸ NĂNG) -->
-          <div class="flex flex-col items-center opacity-40 translate-x-[35px]">
-            <div class="w-14 h-14 rounded-full saga-circle bg-[var(--card)] border-2 border-dashed border-[var(--border)] text-[var(--muted-foreground)] flex items-center justify-center text-2xl shadow-sm">
-              ⭐
-            </div>
-            <span class="text-[11px] font-medium mt-1">1.1.1 Hoàn tất</span>
-          </div>
-
-          <div class="w-1 h-5 bg-[var(--border)] rounded-full opacity-40"></div>
-
-          <!-- MỐC NHỎ 6 (KHÓA 🔒) -->
-          <div class="w-8 h-8 rounded-full saga-circle bg-[var(--card)] border border-[var(--border)] text-[10px] text-[var(--muted-foreground)] flex items-center justify-center translate-x-[-35px] opacity-40">
-            🔒
-          </div>
-
-          <div class="w-1 h-5 bg-[var(--border)] rounded-full opacity-40"></div>
-
-          <!-- MỐC NHỎ 5 (KHÓA 🔒) -->
-          <div class="w-8 h-8 rounded-full saga-circle bg-[var(--card)] border border-[var(--border)] text-[10px] text-[var(--muted-foreground)] flex items-center justify-center translate-x-[30px] opacity-40">
-            🔒
-          </div>
-
-          <div class="w-1 h-5 bg-[var(--border)] rounded-full opacity-40"></div>
-
-          <!-- MỐC NHỎ 4 (KHÓA 🔒) -->
-          <div class="w-8 h-8 rounded-full saga-circle bg-[var(--card)] border border-[var(--border)] text-[10px] text-[var(--muted-foreground)] flex items-center justify-center translate-x-[-20px] opacity-40">
-            🔒
-          </div>
-
-          <div class="w-1.5 h-12 bg-emerald-500/30 rounded-full"></div>
-
-          <!-- ================= MỐC NHỎ 3 (▶ ĐANG ĐỨNG HỌC HIỆN TẠI - CÓ PET ĐỒNG HÀNH) ================= -->
-          <div id="active-learning-node" class="flex flex-col items-center translate-x-[25px] relative">
-            <!-- Pet đồng hành đứng trên ô đang học -->
-            <div class="flex flex-col items-center absolute -top-16 select-none pointer-events-none z-10">
-              <span class="bg-[var(--card)] text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/40 shadow-xs text-emerald-600 mb-0.5 whitespace-nowrap animate-pulse">
-                Học tiếp nào! 🎯
-              </span>
-              <div id="roadmap-pet-avatar" class="w-12 h-12 flex items-center justify-center filter drop-shadow-md">
-                <span class="text-3xl pet-animated">🦉</span>
-              </div>
-            </div>
-
-            <!-- Nút Mốc học -->
-            <button onclick="startPlay(3)" title="Bấm để bắt đầu luyện tập mốc này" class="w-12 h-12 rounded-full saga-circle bg-emerald-600 text-white font-bold text-sm flex items-center justify-center shadow-xl node-current border-3 border-emerald-300 hover:scale-115 transition active:scale-95 cursor-pointer">
-              ▶
-            </button>
-          </div>
-
-          <div class="w-1.5 h-5 bg-emerald-500/60 rounded-full"></div>
-
-          <!-- MỐC NHỎ 2 (ĐÃ HOÀN THÀNH ✓) -->
-          <div class="flex flex-col items-center translate-x-[-25px]">
-            <button onclick="startPlay(2)" title="Ôn tập lại mốc 2" class="w-8 h-8 rounded-full saga-circle bg-emerald-500 text-white font-bold text-xs flex items-center justify-center shadow-sm hover:scale-110 transition cursor-pointer">
-              ✓
-            </button>
-          </div>
-
-          <div class="w-1.5 h-5 bg-emerald-500/60 rounded-full"></div>
-
-          <!-- MỐC NHỎ 1 (ĐÃ HOÀN THÀNH ✓) -->
-          <div class="flex flex-col items-center translate-x-[0px]">
-            <button onclick="startPlay(1)" title="Ôn tập lại mốc 1" class="w-8 h-8 rounded-full saga-circle bg-emerald-500 text-white font-bold text-xs flex items-center justify-center shadow-sm hover:scale-110 transition cursor-pointer">
-              ✓
-            </button>
-          </div>
-
-        </div>
-
-        <div class="text-center pt-3 text-[10px] text-[var(--muted-foreground)] uppercase tracking-wider font-semibold">
-          ▲ Xuất phát từ đây ▲
-        </div>
-
-      </div>
 
     </section>
 
@@ -394,7 +283,7 @@
       <div>
         <div class="flex items-center justify-between text-xs text-[var(--muted-foreground)] mb-3">
           <span id="play-title" class="font-bold text-sm text-[var(--foreground)]">Mốc 3 · Rèn luyện</span>
-          <button onclick="closePlay()" class="hover:text-[var(--foreground)] border border-[var(--border)] px-3 py-1.5 rounded-lg text-xs font-medium transition">
+          <button id="btn_play_ve_bando" onclick="closePlay()" class="hover:text-[var(--foreground)] border border-[var(--border)] px-3 py-1.5 rounded-lg text-xs font-medium transition">
             ✕ Về bản đồ
           </button>
         </div>
@@ -434,7 +323,7 @@
             Tiếp tục hành trình chinh phục kiến thức và vượt qua các mốc trên lộ trình học tập.
           </p>
           <div class="pt-2">
-            <button onclick="navTo('saga')" class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition shadow-sm cursor-pointer">
+            <button id="btn_hub_tieptuc_csdl" onclick="navTo('saga')" class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition shadow-sm cursor-pointer">
               Tiếp tục leo tháp CSDL →
             </button>
           </div>
@@ -451,7 +340,7 @@
       <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 space-y-4 shadow-xs">
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-wider">Môn đang theo học</span>
-          <button onclick="navTo('enrolled')" class="text-xs font-semibold text-emerald-600 hover:underline cursor-pointer">Xem tất cả →</button>
+          <button id="btn_hub_xem_tatca_mon" onclick="navTo('enrolled')" class="text-xs font-semibold text-emerald-600 hover:underline cursor-pointer">Xem tất cả →</button>
         </div>
         <div id="hub-enrolled-courses-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div class="py-4 text-center text-xs text-[var(--muted-foreground)] col-span-2">Đang tải danh sách môn học...</div>
@@ -466,7 +355,7 @@
           <h2 class="text-lg font-bold">Môn học đang tham gia</h2>
           
         </div>
-        <button onclick="navTo('catalog')" class="px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition cursor-pointer shadow-xs">
+        <button id="btn_hub_khampha_themon" onclick="navTo('catalog')" class="px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition cursor-pointer shadow-xs">
           + Khám phá thêm môn
         </button>
       </div>
@@ -671,10 +560,10 @@
 
           <!-- Nút bấm tiếp tục -->
           <div class="flex gap-2.5 pt-1 relative z-10">
-            <button onclick="startBattle()" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs hover:brightness-110 transition shadow-lg cursor-pointer">
+            <button id="btn_battle_dautiep" onclick="startBattle()" class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black text-xs hover:brightness-110 transition shadow-lg cursor-pointer">
               ⚔️ ĐẤU TIẾP
             </button>
-            <button onclick="leaveBattle()" class="flex-1 py-2.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-300 font-bold text-xs hover:bg-slate-800 transition cursor-pointer">
+            <button id="btn_battle_vesanh" onclick="leaveBattle()" class="flex-1 py-2.5 rounded-xl border border-slate-700 bg-slate-900 text-slate-300 font-bold text-xs hover:bg-slate-800 transition cursor-pointer">
               ✕ VỀ SẢNH
             </button>
           </div>
@@ -733,7 +622,7 @@
               <h3 class="text-xs font-bold uppercase tracking-wider text-[var(--foreground)]">Linh vật đã sở hữu</h3>
               <p class="text-[10px] text-[var(--muted-foreground)] mt-0.5">Bấm để đổi nhanh bạn đồng hành</p>
             </div>
-            <button onclick="navTo('shop')" class="text-xs font-bold text-emerald-600 hover:underline cursor-pointer flex items-center gap-1">
+            <button id="btn_pet_to_shop" onclick="navTo('shop')" class="text-xs font-bold text-emerald-600 hover:underline cursor-pointer flex items-center gap-1">
               <span>Cửa hàng</span> <span>→</span>
             </button>
           </div>
@@ -833,7 +722,7 @@
                 <p class="text-[10px] text-[var(--muted-foreground)] truncate mt-0.5">Phụ kiện đội đầu tri thức</p>
               </div>
             </div>
-            <button onclick="buyItem('Mũ Cử Nhân', 50)" class="shrink-0 py-1.5 px-2.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] font-bold text-[11px] transition cursor-pointer whitespace-nowrap">
+            <button id="btn_buy_mu_cunhan" onclick="buyItem('Mũ Cử Nhân', 50)" class="shrink-0 py-1.5 px-2.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] font-bold text-[11px] transition cursor-pointer whitespace-nowrap">
               50 🪙
             </button>
           </div>
@@ -847,7 +736,7 @@
                 <p class="text-[10px] text-[var(--muted-foreground)] truncate mt-0.5">Phong cách sành điệu cực ngầu</p>
               </div>
             </div>
-            <button onclick="buyItem('Kính Râm Cực Ngầu', 40)" class="shrink-0 py-1.5 px-2.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] font-bold text-[11px] transition cursor-pointer whitespace-nowrap">
+            <button id="btn_buy_kinh_ram" onclick="buyItem('Kính Râm Cực Ngầu', 40)" class="shrink-0 py-1.5 px-2.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] font-bold text-[11px] transition cursor-pointer whitespace-nowrap">
               40 🪙
             </button>
           </div>
@@ -861,7 +750,7 @@
                 <p class="text-[10px] text-[var(--muted-foreground)] truncate mt-0.5">Hoàng gia lấp lánh ánh kim</p>
               </div>
             </div>
-            <button onclick="buyItem('Vương Miện Mini', 120)" class="shrink-0 py-1.5 px-2.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] font-bold text-[11px] transition cursor-pointer whitespace-nowrap">
+            <button id="btn_buy_vuong_mien" onclick="buyItem('Vương Miện Mini', 120)" class="shrink-0 py-1.5 px-2.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] font-bold text-[11px] transition cursor-pointer whitespace-nowrap">
               120 🪙
             </button>
           </div>
@@ -888,11 +777,11 @@
             </div>
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
-            <button onclick="closeProfileModal(); openSettingsModal();" title="Cài đặt tài khoản" class="px-2.5 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold flex items-center gap-1 text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition cursor-pointer">
+            <button id="btn_profile_open_settings" onclick="closeProfileModal(); openSettingsModal();" title="Cài đặt tài khoản" class="px-2.5 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold flex items-center gap-1 text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition cursor-pointer">
               <span>⚙️</span>
               <span class="hidden sm:inline">Cài đặt</span>
             </button>
-            <button onclick="closeProfileModal()" class="w-8 h-8 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold transition cursor-pointer">
+            <button id="btn_profile_close" onclick="closeProfileModal()" class="w-8 h-8 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold transition cursor-pointer">
               ✕
             </button>
           </div>
@@ -995,7 +884,7 @@
               <span class="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-base shrink-0">⚙️</span>
               <h3 class="font-bold text-base sm:text-lg tracking-tight">Cài đặt</h3>
             </div>
-            <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold transition cursor-pointer shrink-0">
+            <button id="btn_settings_close_main" onclick="closeSettingsModal()" class="w-8 h-8 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold transition cursor-pointer shrink-0">
               ✕
             </button>
           </div>
@@ -1050,12 +939,12 @@
           <!-- Header có nút Quay lại -->
           <div class="flex items-center justify-between pb-3 border-b border-[var(--border)]">
             <div class="flex items-center gap-2">
-              <button onclick="backToSettingsMain()" class="w-8 h-8 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold transition cursor-pointer shrink-0" title="Quay lại Cài đặt">
+              <button id="btn_settings_auth_back" onclick="backToSettingsMain()" class="w-8 h-8 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold transition cursor-pointer shrink-0" title="Quay lại Cài đặt">
                 ←
               </button>
               <h3 class="font-bold text-base sm:text-lg tracking-tight">Auth (Tài khoản)</h3>
             </div>
-            <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold transition cursor-pointer shrink-0">
+            <button id="btn_settings_auth_close" onclick="closeSettingsModal()" class="w-8 h-8 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold transition cursor-pointer shrink-0">
               ✕
             </button>
           </div>
@@ -1070,14 +959,14 @@
                   <span class="text-[10px] uppercase font-bold text-[var(--muted-foreground)] block">Tên</span>
                   <span id="auth-display-name-val" class="text-xs font-bold text-[var(--foreground)]">Học viên</span>
                 </div>
-                <button onclick="toggleEditField('name')" class="px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--card)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer">
+                <button id="btn_settings_edit_name" onclick="toggleEditField('name')" class="px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--card)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer">
                   Đổi
                 </button>
               </div>
               <!-- Hộp sửa Tên ẩn -->
               <div id="edit-box-name" class="hidden pt-2 border-t border-[var(--border)] flex items-center gap-2">
                 <input type="text" id="input-edit-name" value="Học viên" class="flex-1 px-2.5 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-xs focus:outline-none focus:border-emerald-500">
-                <button onclick="saveEditName()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition cursor-pointer">
+                <button id="btn_settings_save_name" onclick="saveEditName()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition cursor-pointer">
                   Lưu
                 </button>
               </div>
@@ -1090,14 +979,14 @@
                   <span class="text-[10px] uppercase font-bold text-[var(--muted-foreground)] block">Tên đăng nhập</span>
                   <span id="auth-username-val" class="font-mono text-xs font-bold text-emerald-600">--</span>
                 </div>
-                <button onclick="toggleEditField('username')" class="px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--card)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer">
+                <button id="btn_settings_edit_username" onclick="toggleEditField('username')" class="px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--card)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer">
                   Đổi
                 </button>
               </div>
               <!-- Hộp sửa Username ẩn -->
               <div id="edit-box-username" class="hidden pt-2 border-t border-[var(--border)] flex items-center gap-2">
                 <input type="text" id="input-edit-username" value="" class="flex-1 px-2.5 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-xs font-mono focus:outline-none focus:border-emerald-500">
-                <button onclick="saveEditUsername()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition cursor-pointer">
+                <button id="btn_settings_save_username" onclick="saveEditUsername()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition cursor-pointer">
                   Lưu
                 </button>
               </div>
@@ -1110,7 +999,7 @@
                   <span class="text-[10px] uppercase font-bold text-[var(--muted-foreground)] block">Mật khẩu</span>
                   <span class="font-mono text-xs tracking-widest text-[var(--foreground)]">••••••••</span>
                 </div>
-                <button onclick="toggleEditField('password')" class="px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--card)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer">
+                <button id="btn_settings_edit_password" onclick="toggleEditField('password')" class="px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--card)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer">
                   Đổi
                 </button>
               </div>
@@ -1120,8 +1009,8 @@
                 <input type="password" id="input-edit-pwd-new" placeholder="Mật khẩu mới (tối thiểu 4 ký tự)..." class="w-full px-2.5 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-xs focus:outline-none focus:border-emerald-500">
                 <input type="password" id="input-edit-pwd-confirm" placeholder="Xác nhận mật khẩu mới..." class="w-full px-2.5 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-xs focus:outline-none focus:border-emerald-500">
                 <div class="flex justify-end gap-2 pt-1">
-                  <button onclick="toggleEditField('password')" class="px-3 py-1.5 border border-[var(--border)] rounded-lg text-xs transition cursor-pointer">Hủy</button>
-                  <button onclick="saveEditPassword()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition cursor-pointer">Cập nhật</button>
+                  <button id="btn_settings_cancel_password" onclick="toggleEditField('password')" class="px-3 py-1.5 border border-[var(--border)] rounded-lg text-xs transition cursor-pointer">Hủy</button>
+                  <button id="btn_settings_save_password" onclick="saveEditPassword()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition cursor-pointer">Cập nhật</button>
                 </div>
               </div>
             </div>
@@ -1137,7 +1026,7 @@
               </div>
               <div id="edit-box-google" class="hidden pt-2 border-t border-[var(--border)] flex items-center gap-2">
                 <input type="email" id="input-edit-google" placeholder="Nhập địa chỉ Gmail..." class="flex-1 px-2.5 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-xs font-mono focus:outline-none focus:border-emerald-500">
-                <button onclick="saveEditGoogle()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition cursor-pointer">
+                <button id="btn_settings_save_google" onclick="saveEditGoogle()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition cursor-pointer">
                   Lưu
                 </button>
               </div>
@@ -1147,7 +1036,7 @@
 
           <!-- Nút quay lại màn hình chính của Cài đặt -->
           <div class="pt-2 text-center">
-            <button onclick="backToSettingsMain()" class="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium transition cursor-pointer">
+            <button id="btn_settings_auth_footer_back" onclick="backToSettingsMain()" class="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium transition cursor-pointer">
               ← Trở về Cài đặt
             </button>
           </div>
@@ -1158,12 +1047,12 @@
           <!-- Header có nút Quay lại -->
           <div class="flex items-center justify-between pb-3 border-b border-[var(--border)]">
             <div class="flex items-center gap-2">
-              <button onclick="backToSettingsMain()" class="w-8 h-8 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold transition cursor-pointer shrink-0" title="Quay lại Cài đặt">
+              <button id="btn_settings_sound_back" onclick="backToSettingsMain()" class="w-8 h-8 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold transition cursor-pointer shrink-0" title="Quay lại Cài đặt">
                 ←
               </button>
               <h3 class="font-bold text-base sm:text-lg tracking-tight">Âm thanh hiệu ứng</h3>
             </div>
-            <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold transition cursor-pointer shrink-0">
+            <button id="btn_settings_sound_close" onclick="closeSettingsModal()" class="w-8 h-8 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold transition cursor-pointer shrink-0">
               ✕
             </button>
           </div>
@@ -1177,7 +1066,7 @@
                 <div>
                   <div class="flex items-center gap-1.5">
                     <span class="text-xs font-bold text-[var(--foreground)]">Giải đố & Trả lời</span>
-                    <button onclick="playTestSound('quiz')" title="Nghe thử âm thanh" class="text-[10px] px-1.5 py-0.2 rounded bg-[var(--card)] border border-[var(--border)] hover:bg-emerald-500/10 text-[var(--muted-foreground)] hover:text-emerald-600 transition cursor-pointer">
+                    <button id="btn_sound_test_quiz" onclick="playTestSound('quiz')" title="Nghe thử âm thanh" class="text-[10px] px-1.5 py-0.2 rounded bg-[var(--card)] border border-[var(--border)] hover:bg-emerald-500/10 text-[var(--muted-foreground)] hover:text-emerald-600 transition cursor-pointer">
                       ▶ Thử
                     </button>
                   </div>
@@ -1197,7 +1086,7 @@
                 <div>
                   <div class="flex items-center gap-1.5">
                     <span class="text-xs font-bold text-[var(--foreground)]">Phần thưởng & Lên cấp</span>
-                    <button onclick="playTestSound('coin')" title="Nghe thử âm thanh" class="text-[10px] px-1.5 py-0.2 rounded bg-[var(--card)] border border-[var(--border)] hover:bg-emerald-500/10 text-[var(--muted-foreground)] hover:text-emerald-600 transition cursor-pointer">
+                    <button id="btn_sound_test_coin" onclick="playTestSound('coin')" title="Nghe thử âm thanh" class="text-[10px] px-1.5 py-0.2 rounded bg-[var(--card)] border border-[var(--border)] hover:bg-emerald-500/10 text-[var(--muted-foreground)] hover:text-emerald-600 transition cursor-pointer">
                       ▶ Thử
                     </button>
                   </div>
@@ -1217,7 +1106,7 @@
                 <div>
                   <div class="flex items-center gap-1.5">
                     <span class="text-xs font-bold text-[var(--foreground)]">Đấu trường 1v1</span>
-                    <button onclick="playTestSound('battle')" title="Nghe thử âm thanh" class="text-[10px] px-1.5 py-0.2 rounded bg-[var(--card)] border border-[var(--border)] hover:bg-emerald-500/10 text-[var(--muted-foreground)] hover:text-emerald-600 transition cursor-pointer">
+                    <button id="btn_sound_test_battle" onclick="playTestSound('battle')" title="Nghe thử âm thanh" class="text-[10px] px-1.5 py-0.2 rounded bg-[var(--card)] border border-[var(--border)] hover:bg-emerald-500/10 text-[var(--muted-foreground)] hover:text-emerald-600 transition cursor-pointer">
                       ▶ Thử
                     </button>
                   </div>
@@ -1238,7 +1127,7 @@
                 <div>
                   <div class="flex items-center gap-1.5">
                     <span class="text-xs font-bold text-[var(--foreground)]">Kết quả Trận Đấu</span>
-                    <button onclick="playTestSound('outcome')" title="Nghe thử âm thanh" class="text-[10px] px-1.5 py-0.2 rounded bg-[var(--card)] border border-[var(--border)] hover:bg-emerald-500/10 text-[var(--muted-foreground)] hover:text-emerald-600 transition cursor-pointer">
+                    <button id="btn_sound_test_outcome" onclick="playTestSound('outcome')" title="Nghe thử âm thanh" class="text-[10px] px-1.5 py-0.2 rounded bg-[var(--card)] border border-[var(--border)] hover:bg-emerald-500/10 text-[var(--muted-foreground)] hover:text-emerald-600 transition cursor-pointer">
                       ▶ Thử
                     </button>
                   </div>
@@ -1258,7 +1147,7 @@
                 <div>
                   <div class="flex items-center gap-1.5">
                     <span class="text-xs font-bold text-[var(--foreground)]">Nhạc nền Lo-Fi (BGM)</span>
-                    <button onclick="playTestSound('bgm')" title="Nghe thử âm thanh" class="text-[10px] px-1.5 py-0.2 rounded bg-[var(--card)] border border-[var(--border)] hover:bg-emerald-500/10 text-[var(--muted-foreground)] hover:text-emerald-600 transition cursor-pointer">
+                    <button id="btn_sound_test_bgm" onclick="playTestSound('bgm')" title="Nghe thử âm thanh" class="text-[10px] px-1.5 py-0.2 rounded bg-[var(--card)] border border-[var(--border)] hover:bg-emerald-500/10 text-[var(--muted-foreground)] hover:text-emerald-600 transition cursor-pointer">
                       ▶ Thử
                     </button>
                   </div>
@@ -1275,7 +1164,7 @@
 
           <!-- Nút quay lại màn hình chính của Cài đặt -->
           <div class="pt-2 text-center">
-            <button onclick="backToSettingsMain()" class="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium transition cursor-pointer">
+            <button id="btn_settings_sound_footer_back" onclick="backToSettingsMain()" class="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium transition cursor-pointer">
               ← Trở về Cài đặt
             </button>
           </div>
@@ -1312,7 +1201,7 @@
 
         <!-- CÁCH 1: TIẾP TỤC VỚI GOOGLE (1 CHẠM) -->
         <div class="space-y-2 pt-1">
-          <button onclick="loginWithGoogle()" class="w-full py-2.5 px-4 rounded-2xl border border-[var(--border)] bg-[var(--background)] hover:bg-[var(--card)] hover:border-emerald-500/40 text-xs font-semibold flex items-center justify-center gap-3 transition cursor-pointer shadow-2xs group">
+          <button id="btn_auth_google_login" onclick="loginWithGoogle()" class="w-full py-2.5 px-4 rounded-2xl border border-[var(--border)] bg-[var(--background)] hover:bg-[var(--card)] hover:border-emerald-500/40 text-xs font-semibold flex items-center justify-center gap-3 transition cursor-pointer shadow-2xs group">
             <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
               <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
@@ -1403,7 +1292,7 @@
 
         <!-- Nút Hủy tìm trận -->
         <div class="pt-1">
-          <button onclick="cancelMatchmaking()" class="px-5 py-2 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold text-[var(--muted-foreground)] hover:text-rose-500 transition cursor-pointer">
+          <button id="btn_cancel_matchmaking" onclick="cancelMatchmaking()" class="px-5 py-2 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold text-[var(--muted-foreground)] hover:text-rose-500 transition cursor-pointer">
             ✕ Hủy tìm trận
           </button>
         </div>
@@ -1521,7 +1410,7 @@
       <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-2xl max-w-[280px] w-full space-y-3 animate-in zoom-in-95 duration-150">
         <div class="flex items-center justify-between pb-1 border-b border-[var(--border)]">
           <span class="text-xs font-bold text-[var(--foreground)]">Chọn Avatar</span>
-          <button onclick="closeAvatarPopover()" class="w-6 h-6 rounded-lg hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold text-[var(--muted-foreground)] hover:text-[var(--foreground)] cursor-pointer">✕</button>
+          <button id="btn_close_avatar_popover" onclick="closeAvatarPopover()" class="w-6 h-6 rounded-lg hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold text-[var(--muted-foreground)] hover:text-[var(--foreground)] cursor-pointer">✕</button>
         </div>
         <div id="preset-avatars-grid" class="grid grid-cols-5 gap-2"></div>
       </div>
@@ -1542,7 +1431,7 @@
               </div>
             </div>
           </div>
-          <button onclick="closeTheoryModal()" class="w-8 h-8 rounded-lg hover:bg-[var(--border)]/50 text-[var(--muted-foreground)] hover:text-[var(--foreground)] flex items-center justify-center text-sm transition cursor-pointer">
+          <button id="btn_theory_modal_close_x" onclick="closeTheoryModal()" class="w-8 h-8 rounded-lg hover:bg-[var(--border)]/50 text-[var(--muted-foreground)] hover:text-[var(--foreground)] flex items-center justify-center text-sm transition cursor-pointer">
             ✕
           </button>
         </div>
@@ -1554,7 +1443,7 @@
 
         <!-- Footer với nút Hoàn thành nhận Xu/EXP -->
         <div class="px-6 py-4 border-t border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--background)]/50">
-          <button onclick="closeTheoryModal()" class="px-4 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition cursor-pointer">
+          <button id="btn_theory_modal_close_btn" onclick="closeTheoryModal()" class="px-4 py-2 rounded-xl border border-[var(--border)] text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition cursor-pointer">
             Đóng
           </button>
           <button id="btn-complete-theory" onclick="confirmCompleteTheory()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-2">
@@ -1592,7 +1481,7 @@
 
     const TOPBAR_CONFIG = {
       saga: {
-        breadcrumb: '<button onclick="navTo(\'enrolled\')" class="hover:text-[var(--foreground)] flex items-center gap-1 font-medium transition cursor-pointer truncate">← Đổi môn</button><span>/</span><span class="font-semibold text-emerald-600 truncate">Cơ sở dữ liệu</span>',
+        breadcrumb: '<button id="btn_topbar_nav_doimon" onclick="navTo(\'enrolled\')" class="hover:text-[var(--foreground)] flex items-center gap-1 font-medium transition cursor-pointer truncate">← Đổi môn</button><span>/</span><span class="font-semibold text-emerald-600 truncate">Cơ sở dữ liệu</span>',
         title: 'Chương 1: CSDL',
         showProgress: true
       },
@@ -1602,12 +1491,12 @@
         showProgress: false
       },
       enrolled: {
-        breadcrumb: '<button onclick="navTo(\'hub\')" class="hover:text-[var(--foreground)] transition cursor-pointer">Trang chủ</button><span>/</span><span>Môn học</span>',
+        breadcrumb: '<button id="btn_topbar_nav_trangchu" onclick="navTo(\'hub\')" class="hover:text-[var(--foreground)] transition cursor-pointer">Trang chủ</button><span>/</span><span>Môn học</span>',
         title: 'Môn đang học',
         showProgress: false
       },
       catalog: {
-        breadcrumb: '<button onclick="navTo(\'hub\')" class="hover:text-[var(--foreground)] transition cursor-pointer">Trang chủ</button><span>/</span><span>Kho môn</span>',
+        breadcrumb: '<button id="btn_nav_trangchu_crumb" onclick="navTo(\'hub\')" class="hover:text-[var(--foreground)] transition cursor-pointer">Trang chủ</button><span>/</span><span>Kho môn</span>',
         title: 'Kho môn học',
         showProgress: false
       },
@@ -1617,7 +1506,7 @@
         showProgress: false
       },
       battle: {
-        breadcrumb: '<button onclick="leaveBattle()" class="hover:text-[var(--foreground)] transition cursor-pointer">← Rời trận</button>',
+        breadcrumb: '<button id="btn_battle_header_leave" onclick="leaveBattle()" class="hover:text-[var(--foreground)] transition cursor-pointer">← Rời trận</button>',
         title: 'Đấu 1v1',
         showProgress: false
       },
@@ -1632,7 +1521,7 @@
         showProgress: false
       },
       play: {
-        breadcrumb: '<button onclick="closePlay()" class="hover:text-[var(--foreground)] transition cursor-pointer">✕ Dừng</button>',
+        breadcrumb: '<button id="btn_play_header_close" onclick="closePlay()" class="hover:text-[var(--foreground)] transition cursor-pointer">✕ Dừng</button>',
         title: 'Luyện tập',
         showProgress: false
       }
@@ -1683,12 +1572,7 @@
         }
       }, 100);
     }
-    function startPlay(mNum) {
-      navTo('play');
-      document.getElementById('play-title').textContent = `Mốc ${mNum} · Rèn luyện`;
-      currentQIndex = 0;
-      loadQuestion();
-    }
+    // Legacy startPlay(mNum) replaced by DB-driven startPlay(mocId, tieuDe, loaiMoc) at line ~4000
 
     function closePlay() {
       navTo('saga');
@@ -2191,7 +2075,7 @@
                 <div class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: ${pct}%"></div>
               </div>
             </div>
-            <button onclick="navTo('saga')" class="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition shadow-xs cursor-pointer">
+            <button id="btn_enrolled_vaoleothap" onclick="navTo('saga')" class="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition shadow-xs cursor-pointer">
               Vào con đường leo tháp →
             </button>
           </div>
@@ -2217,7 +2101,7 @@
               <h3 class="font-bold text-sm leading-tight">${escapeHtml(c.ten_mon)}</h3>
               <p class="text-[11px] text-[var(--muted-foreground)] line-clamp-3 leading-relaxed">${escapeHtml(c.mo_ta || 'Giáo trình đào tạo chuẩn hóa')}</p>
             </div>
-            <button onclick="navTo('saga')" class="w-full py-2 rounded-xl bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition cursor-pointer">
+            <button id="btn_course_open_roadmap" onclick="navTo('saga')" class="w-full py-2 rounded-xl bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition cursor-pointer">
               Mở lộ trình →
             </button>
           </div>
@@ -3437,10 +3321,10 @@
         displaySlot.innerHTML = `<span class="font-mono text-xs text-[var(--foreground)] font-medium">${currentUserAccount.email}</span>`;
         actionSlot.innerHTML = `
           <div class="flex items-center gap-1.5">
-            <button onclick="updateLinkedEmail()" class="px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--card)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer">
+            <button id="btn_edit_google_email" onclick="updateLinkedEmail()" class="px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--card)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer">
               Đổi
             </button>
-            <button onclick="unlinkGoogleAccount()" title="Hủy liên kết Google" class="px-2.5 py-1.5 rounded-lg border border-[var(--border)] hover:bg-rose-500/10 text-rose-500 hover:border-rose-500/30 text-xs font-semibold transition cursor-pointer">
+            <button id="btn_unlink_google_account" onclick="unlinkGoogleAccount()" title="Hủy liên kết Google" class="px-2.5 py-1.5 rounded-lg border border-[var(--border)] hover:bg-rose-500/10 text-rose-500 hover:border-rose-500/30 text-xs font-semibold transition cursor-pointer">
               ✕
             </button>
           </div>
@@ -3448,7 +3332,7 @@
       } else {
         // Nếu chưa liên kết thêm dòng xanh liên kết ngay
         displaySlot.innerHTML = `
-          <button onclick="linkGoogleAccount()" class="text-xs font-bold text-emerald-500 hover:text-emerald-400 hover:underline cursor-pointer flex items-center gap-1 mt-0.5">
+          <button id="btn_link_google_account" onclick="linkGoogleAccount()" class="text-xs font-bold text-emerald-500 hover:text-emerald-400 hover:underline cursor-pointer flex items-center gap-1 mt-0.5">
             ➕ Liên kết ngay
           </button>
         `;
@@ -3588,7 +3472,7 @@
 
       const isGoogleSel = currentAvatar.isGoogle;
       const googleSlot = `
-        <button onclick="setAvatar('google')" title="Ảnh Google" class="aspect-square rounded-xl border ${isGoogleSel ? 'border-emerald-500 bg-emerald-500/15 ring-2 ring-emerald-500/40' : 'border-[var(--border)] hover:border-emerald-500/40 bg-[var(--card)]'} flex items-center justify-center transition cursor-pointer p-1.5 shadow-2xs group">
+        <button id="btn_avatar_google" onclick="setAvatar('google')" title="Ảnh Google" class="aspect-square rounded-xl border ${isGoogleSel ? 'border-emerald-500 bg-emerald-500/15 ring-2 ring-emerald-500/40' : 'border-[var(--border)] hover:border-emerald-500/40 bg-[var(--card)]'} flex items-center justify-center transition cursor-pointer p-1.5 shadow-2xs group">
           <div class="w-full h-full rounded-lg bg-white border border-gray-200 flex items-center justify-center shadow-2xs group-hover:scale-105 transition">
             <svg class="w-5 h-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -3603,7 +3487,7 @@
       const presetSlots = PRESET_AVATARS.map(av => {
         const isSel = !currentAvatar.isGoogle && currentAvatar.id === av.id;
         return `
-          <button onclick="setAvatar('${av.id}')" title="${av.name}" class="aspect-square rounded-xl border ${isSel ? 'border-emerald-500 bg-emerald-500/15 ring-2 ring-emerald-500/40' : 'border-[var(--border)] hover:border-emerald-500/40 bg-[var(--card)]'} flex items-center justify-center transition cursor-pointer p-1.5 shadow-2xs group">
+          <button id="btn_avatar_${av.id}" onclick="setAvatar('${av.id}')" title="${av.name}" class="aspect-square rounded-xl border ${isSel ? 'border-emerald-500 bg-emerald-500/15 ring-2 ring-emerald-500/40' : 'border-[var(--border)] hover:border-emerald-500/40 bg-[var(--card)]'} flex items-center justify-center transition cursor-pointer p-1.5 shadow-2xs group">
             <div class="w-full h-full rounded-lg bg-gradient-to-tr ${av.bg} flex items-center justify-center text-lg shadow-2xs group-hover:scale-105 transition select-none">
               ${av.icon}
             </div>
@@ -3939,9 +3823,7 @@
             // Boss Node
             htmlOutput += `
               <div class="flex flex-col items-center text-center ${isLocked ? 'opacity-40' : ''} my-2">
-                <button onclick="startPlay('${m.ma_moc}', '${escapeHtml(m.tieu_de)}', '${m.loai_moc}')" 
-                        title="${escapeHtml(m.tieu_de)}" 
-                        class="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl saga-circle bg-amber-500/20 border-4 border-amber-400 text-amber-500 flex items-center justify-center text-4xl sm:text-5xl shadow-2xl ${isLocked ? 'cursor-not-allowed opacity-50' : 'crown-glow hover:scale-105 transition cursor-pointer'}">
+                <button id="btn_moc_boss_${m.ma_moc}" onclick="startPlay('${m.ma_moc}', '${escapeHtml(m.tieu_de)}', '${m.loai_moc}')" title="${escapeHtml(m.tieu_de)}" class="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl saga-circle bg-amber-500/20 border-4 border-amber-400 text-amber-500 flex items-center justify-center text-4xl sm:text-5xl shadow-2xl ${isLocked ? 'cursor-not-allowed opacity-50' : 'crown-glow hover:scale-105 transition cursor-pointer'}">
                   👑
                 </button>
                 <span class="text-xs font-bold mt-2 uppercase tracking-wider text-amber-600">${escapeHtml(m.tieu_de)}</span>
@@ -3959,9 +3841,7 @@
                     <span class="text-3xl pet-animated">${currentEquippedPet ? currentEquippedPet.icon : '🐉'}</span>
                   </div>
                 </div>
-                <button onclick="startPlay('${m.ma_moc}', '${escapeHtml(m.tieu_de)}', '${m.loai_moc}')" 
-                        title="Bắt đầu: ${escapeHtml(m.tieu_de)}" 
-                        class="w-12 h-12 rounded-full saga-circle bg-emerald-600 text-white font-bold text-sm flex items-center justify-center shadow-xl node-current border-3 border-emerald-300 hover:scale-115 transition active:scale-95 cursor-pointer">
+                <button id="btn_moc_active_${m.ma_moc}" onclick="startPlay('${m.ma_moc}', '${escapeHtml(m.tieu_de)}', '${m.loai_moc}')" title="Bắt đầu: ${escapeHtml(m.tieu_de)}" class="w-12 h-12 rounded-full saga-circle bg-emerald-600 text-white font-bold text-sm flex items-center justify-center shadow-xl node-current border-3 border-emerald-300 hover:scale-115 transition active:scale-95 cursor-pointer">
                   ▶
                 </button>
                 <span class="text-[11px] font-bold mt-1 text-emerald-600 max-w-[150px] text-center truncate">${escapeHtml(m.tieu_de.split(':')[0])}</span>
@@ -3971,9 +3851,7 @@
             // Completed Checkmark Node
             htmlOutput += `
               <div class="flex flex-col items-center ${offsetClass}">
-                <button onclick="startPlay('${m.ma_moc}', '${escapeHtml(m.tieu_de)}', '${m.loai_moc}')" 
-                        title="Ôn tập: ${escapeHtml(m.tieu_de)}" 
-                        class="w-8 h-8 sm:w-9 sm:h-9 rounded-full saga-circle bg-emerald-500 text-white font-bold text-xs flex items-center justify-center shadow-sm hover:scale-110 transition cursor-pointer">
+                <button id="btn_moc_done_${m.ma_moc}" onclick="startPlay('${m.ma_moc}', '${escapeHtml(m.tieu_de)}', '${m.loai_moc}')" title="Ôn tập: ${escapeHtml(m.tieu_de)}" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full saga-circle bg-emerald-500 text-white font-bold text-xs flex items-center justify-center shadow-sm hover:scale-110 transition cursor-pointer">
                   ✓
                 </button>
                 <span class="text-[10px] font-medium mt-1 text-[var(--muted-foreground)] max-w-[140px] text-center truncate">${escapeHtml(m.tieu_de.split(':')[0])}</span>
