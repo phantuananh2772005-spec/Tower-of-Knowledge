@@ -368,7 +368,7 @@
 
         <!-- Action Footer -->
         <div class="pt-4 border-t border-[var(--border)] flex justify-between items-center">
-          <button id="btn-quiz-theory-hint" onclick="reopenTheoryCards()" class="text-xs font-semibold text-[var(--muted-foreground)] hover:text-[var(--foreground)] flex items-center gap-1.5 cursor-pointer transition">
+          <button id="btn-quiz-theory-hint" onclick="handleTheoryHintClick()" class="text-xs font-semibold text-[var(--muted-foreground)] hover:text-[var(--foreground)] flex items-center gap-1.5 cursor-pointer transition">
             <span>📖</span> <span class="underline">Xem lại thẻ bài giảng</span>
           </button>
           <button id="btn-next-step" onclick="handleMocPracticeAction()" class="px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5">
@@ -4316,19 +4316,12 @@
       scrollToActiveNode(true);
     }
 
-    function renderMicroStepsDots(stepStr, isMocDone) {
-      let done = 0;
-      if (isMocDone) done = 4;
-      else if (stepStr && stepStr.includes('/')) done = parseInt(stepStr.split('/')[0], 10) || 0;
-      let dots = '';
-      for (let i = 1; i <= 4; i++) {
-        if (i <= done) {
-          dots += '<span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-2xs"></span>';
-        } else {
-          dots += '<span class="inline-block w-1.5 h-1.5 rounded-full bg-[var(--border)] border border-[var(--muted-foreground)]/30"></span>';
-        }
+    function handleTheoryHintClick() {
+      if (currentMocSession) {
+        reopenTheoryCards();
+      } else if (currentQuizSession) {
+        viewCurrentTheoryFromQuiz();
       }
-      return `<div class="flex items-center gap-1 mt-1 justify-center">${dots} <span class="text-[9px] font-mono text-[var(--muted-foreground)] ml-0.5 font-bold">${done}/4</span></div>`;
     }
 
     function escapeHtml(str) {
@@ -5740,10 +5733,7 @@
       });
     }
 
-    // --- 2e. Duolingo Feedback & Action Handler ---
-    function handleQuizAction() {
-      handleMocPracticeAction();
-    }
+    // --- 2e. Duolingo Step Completion Handler ---
 
     async function finishAndSubmitStep() {
       if (!currentQuizSession) return;
