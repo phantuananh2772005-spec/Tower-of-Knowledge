@@ -498,9 +498,9 @@ async function submitStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
           await db.execute(`
             UPDATE tien_do_mon_hoc
             SET phan_tram_hoan_thanh = $1,
-                ngay_hoan_thanh = CASE WHEN $1 >= 100 THEN SYSDATETIME() ELSE NULL END
-            WHERE ma_nguoi_dung = $2 AND ma_mon = $3
-          `, [compPct, ma_nguoi_dung, courseChapter.ma_mon]);
+                ngay_hoan_thanh = CASE WHEN $2 >= 100 THEN SYSDATETIME() ELSE NULL END
+            WHERE ma_nguoi_dung = $3 AND ma_mon = $4
+          `, [compPct, compPct, ma_nguoi_dung, courseChapter.ma_mon]);
         }
       } else {
         await db.execute(`
@@ -617,9 +617,9 @@ async function completeTheoreticalCheckpoint(ma_moc, ma_nguoi_dung) {
     await db.execute(`
       UPDATE tien_do_mon_hoc
       SET phan_tram_hoan_thanh = $1,
-          ngay_hoan_thanh = CASE WHEN $1 >= 100 THEN SYSDATETIME() ELSE NULL END
-      WHERE ma_nguoi_dung = $2 AND ma_mon = $3
-    `, [compPct, ma_nguoi_dung, courseChapter.ma_mon]);
+          ngay_hoan_thanh = CASE WHEN $2 >= 100 THEN SYSDATETIME() ELSE NULL END
+      WHERE ma_nguoi_dung = $3 AND ma_mon = $4
+    `, [compPct, compPct, ma_nguoi_dung, courseChapter.ma_mon]);
   }
 
   await mutateCoins(ma_nguoi_dung, earnedCoins, 'HOAN_THANH_MOC', `Hoàn thành lý thuyết mốc ${checkpoint.tieu_de}`);
@@ -765,9 +765,9 @@ async function submitQuizCheckpoint(ma_moc, submissions, ma_nguoi_dung) {
       await db.execute(`
         UPDATE tien_do_mon_hoc
         SET phan_tram_hoan_thanh = $1,
-            ngay_hoan_thanh = CASE WHEN $1 >= 100 THEN SYSDATETIME() ELSE NULL END
-        WHERE ma_nguoi_dung = $2 AND ma_mon = $3
-      `, [compPct, ma_nguoi_dung, courseChapter.ma_mon]);
+            ngay_hoan_thanh = CASE WHEN $2 >= 100 THEN SYSDATETIME() ELSE NULL END
+        WHERE ma_nguoi_dung = $3 AND ma_mon = $4
+      `, [compPct, compPct, ma_nguoi_dung, courseChapter.ma_mon]);
     }
 
     const coinsToAward = evaluation.earnedCoins || rewardCoins;
