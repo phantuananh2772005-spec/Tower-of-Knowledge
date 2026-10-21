@@ -31,7 +31,13 @@ async function mutateCoins(ma_nguoi_dung, so_luong, nguon_giao_dich, mo_ta = '')
     throw new Error(`Số dư không đủ. Cần ${Math.abs(so_luong)} xu nhưng hiện chỉ có ${user.xu_tri_thuc} xu.`);
   }
 
-  const { newBalance, delta } = applyCoinChange(user.xu_tri_thuc, so_luong);
+  const coinResult = applyCoinChange(user.xu_tri_thuc, so_luong);
+  if (!coinResult.isSuccess) {
+    throw new Error(coinResult.errorMessage || 'Số dư Xu Tri Thức không đủ để thực hiện giao dịch.');
+  }
+
+  const newBalance = coinResult.newCoins;
+  const delta = Number(so_luong) || 0;
   const ma_giao_dich = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
   // Update user balance and insert transaction record
