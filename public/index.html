@@ -4556,10 +4556,20 @@
       const fbBox = document.getElementById('q-feedback-box');
       if (fbBox) fbBox.classList.add('hidden');
 
+      const isAutoAdvanceType = (q.loai_cau_hoi === 'TRAC_NGHIEM_4' || q.loai_cau_hoi === 'NOI_CAP');
       const nextBtn = document.getElementById('btn-next-step');
       if (nextBtn) {
-        nextBtn.innerHTML = '<span>Kiểm tra</span> <span>✓</span>';
-        nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5";
+        if (isAutoAdvanceType) {
+          nextBtn.disabled = true;
+          nextBtn.classList.add('opacity-0', 'pointer-events-none');
+          nextBtn.innerHTML = '<span>Tiếp tục</span> <span>→</span>';
+          nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5 opacity-0 pointer-events-none";
+        } else {
+          nextBtn.disabled = false;
+          nextBtn.classList.remove('opacity-0', 'pointer-events-none');
+          nextBtn.innerHTML = '<span>Kiểm tra</span> <span>✓</span>';
+          nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5";
+        }
       }
 
       const container = document.getElementById('q-options-container');
@@ -4580,103 +4590,154 @@
     let lastPracticeCheckResult = null;
 
     async function handleMocPracticeAction() {
-      if (!currentMocSession) {
-        handleQuizAction();
-        return;
-      }
-      const s = currentMocSession;
-      if (!s.questionsQueue || s.questionsQueue.length === 0) {
-        completeAllPractice();
-        return;
-      }
-      const currentQ = s.questionsQueue[0];
+      const s = currentMocSession || currentQuizSession;
+      if (!s) return;
 
-      if (!s.isAnswerChecked) {
-        if (!s.currentAnswer) {
-          showToast('Vui lòng hoàn thành thao tác hoặc chọn đáp án!', 'info');
+      const currentQ = (s.questionsQueue && s.questionsQueue[0]) || (s.questions && s.questions[s.qIndex || 0]);
+      if (!currentQ) {
+        if (currentMocSession) completeAllPractice();
+        else finishAndSubmitStep();
+        return;
+      }
+
+      const isChecked = s.isAnswerChecked || s.isCurrentQuestionChecked;
+
+      if (!isChecked) {
+        // Chỉ câu Điền từ và Sắp xếp câu mới cần người dùng bấm nút [Kiểm tra]
+        if (currentQ.loai_cau_hoi === 'DIEN_TU') {
+          if (!s.dienTuChosen) {
+            showToast('Vui lòng chạm một từ bên dưới để điền vào ô trống trước khi kiểm tra!', 'info');
+            return;
+          }
+          const expected = currentQ.du_lieu?.blank_answer;
+          const isCorrect = Boolean(expected && String(s.dienTuChosen).trim().toLowerCase() === String(expected).trim().toLowerCase());
+          s.isAnswerChecked = true;
+          s.isCurrentQuestionChecked = true;
+          lastPracticeCheckResult = isCorrect;
+          s.currentAnswer = { ma_cau_hoi: currentQ.ma_cau_hoi, selected_word: s.dienTuChosen };
+          if (s.submissions) s.submissions.push(s.currentAnswer);
+
+          if (s.failedQuestionsSet && !s.failedQuestionsSet.has(currentQ.ma_cau_hoi)) {
+            if (isCorrect) s.firstAttemptCorrectCount = (s.firstAttemptCorrectCount || 0) + 1;
+            else s.failedQuestionsSet.add(currentQ.ma_cau_hoi);
+          }
+
+          const blankTarget = document.getElementById('blank-drop-target');
+          if (blankTarget) {
+            if (isCorrect) {
+              blankTarget.className = "inline-flex items-center justify-center min-w-[120px] min-h-[36px] px-3 py-1 rounded-xl border-2 border-emerald-500 bg-emerald-500/15 font-bold text-emerald-600 text-xs sm:text-sm mx-1 align-middle";
+              blankTarget.innerHTML = `✓ ${escapeHtml(s.dienTuChosen)}`;
+            } else {
+              blankTarget.className = "inline-flex items-center justify-center min-w-[120px] min-h-[36px] px-3 py-1 rounded-xl border-2 border-rose-500 bg-rose-500/15 font-bold text-rose-600 text-xs sm:text-sm mx-1 align-middle pair-shake-error";
+              blankTarget.innerHTML = `✕ ${escapeHtml(s.dienTuChosen)} (Đúng: ${escapeHtml(expected || '')})`;
+            }
+          }
+
+          if (audioSettings && audioSettings.quiz) playAdvancedSound(isCorrect ? 'quiz-correct' : 'quiz-wrong');
+
+          const fbBox = document.getElementById('q-feedback-box');
+          const fbTitle = document.getElementById('q-feedback-title');
+          const fbDesc = document.getElementById('q-feedback-desc');
+          if (fbBox && fbTitle && fbDesc) {
+            fbTitle.innerHTML = isCorrect ? `<span class="text-emerald-600 font-bold">✓ Rất chính xác! Tuyệt vời!</span>` : `<span class="text-rose-600 font-bold">❌ Chưa chính xác (Câu này sẽ gặp lại ở cuối để làm chủ!)</span>`;
+            fbDesc.textContent = currentQ.giai_thich || 'Khái niệm trọng tâm giúp khắc sâu kiến thức.';
+            fbBox.className = `rounded-2xl p-4 border ${isCorrect ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-rose-500/40 bg-rose-500/10'} text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200`;
+            fbBox.classList.remove('hidden');
+          }
+
+          const nextBtn = document.getElementById('btn-next-step');
+          if (nextBtn) {
+            if (isCorrect) {
+              nextBtn.innerHTML = '<span>Tiếp tục</span> <span>→</span>';
+              nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5";
+            } else {
+              nextBtn.innerHTML = '<span>Đã hiểu · Luyện lại ở cuối</span> <span>↺</span>';
+              nextBtn.className = "px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5";
+            }
+          }
+          return;
+        } else if (currentQ.loai_cau_hoi === 'SAP_XEP_CAU') {
+          if (!s.arrangedTokens || s.arrangedTokens.length === 0) {
+            showToast('Vui lòng chạm các từ bên dưới để ghép thành câu trước khi kiểm tra!', 'info');
+            return;
+          }
+          const userOrder = s.arrangedTokens.map(t => t.word);
+          const expectedOrder = currentQ.du_lieu?.correct_order || [];
+          const isCorrect = (expectedOrder.length > 0 && userOrder.length === expectedOrder.length &&
+            expectedOrder.every((w, i) => String(w).trim().toLowerCase() === String(userOrder[i]).trim().toLowerCase()));
+
+          s.isAnswerChecked = true;
+          s.isCurrentQuestionChecked = true;
+          lastPracticeCheckResult = isCorrect;
+          s.currentAnswer = { ma_cau_hoi: currentQ.ma_cau_hoi, ordered_words: userOrder };
+          if (s.submissions) s.submissions.push(s.currentAnswer);
+
+          if (s.failedQuestionsSet && !s.failedQuestionsSet.has(currentQ.ma_cau_hoi)) {
+            if (isCorrect) s.firstAttemptCorrectCount = (s.firstAttemptCorrectCount || 0) + 1;
+            else s.failedQuestionsSet.add(currentQ.ma_cau_hoi);
+          }
+
+          const zone = document.getElementById('sentence-construction-zone');
+          if (zone) {
+            if (isCorrect) {
+              zone.classList.add('border-emerald-500', 'bg-emerald-500/10');
+            } else {
+              zone.classList.add('border-rose-500', 'bg-rose-500/10', 'pair-shake-error');
+            }
+          }
+
+          if (audioSettings && audioSettings.quiz) playAdvancedSound(isCorrect ? 'quiz-correct' : 'quiz-wrong');
+
+          const fbBox = document.getElementById('q-feedback-box');
+          const fbTitle = document.getElementById('q-feedback-title');
+          const fbDesc = document.getElementById('q-feedback-desc');
+          if (fbBox && fbTitle && fbDesc) {
+            fbTitle.innerHTML = isCorrect ? `<span class="text-emerald-600 font-bold">✓ Rất chính xác! Cú pháp hoàn hảo!</span>` : `<span class="text-rose-600 font-bold">❌ Chưa chính xác! Câu đúng là: "${expectedOrder.join(' ')}"</span>`;
+            fbDesc.textContent = currentQ.giai_thich || 'Khái niệm trọng tâm giúp khắc sâu kiến thức.';
+            fbBox.className = `rounded-2xl p-4 border ${isCorrect ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-rose-500/40 bg-rose-500/10'} text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200`;
+            fbBox.classList.remove('hidden');
+          }
+
+          const nextBtn = document.getElementById('btn-next-step');
+          if (nextBtn) {
+            if (isCorrect) {
+              nextBtn.innerHTML = '<span>Tiếp tục</span> <span>→</span>';
+              nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5";
+            } else {
+              nextBtn.innerHTML = '<span>Đã hiểu · Luyện lại ở cuối</span> <span>↺</span>';
+              nextBtn.className = "px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5";
+            }
+          }
           return;
         }
+      }
 
-        try {
-          const token = localStorage.getItem('tok_token');
-          const resp = await fetch(`/api/checkpoints/${s.mocId}/check-answer`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...(token ? { 'Authorization': 'Bearer ' + token } : {})
-            },
-            body: JSON.stringify({
-              ma_cau_hoi: currentQ.ma_cau_hoi,
-              tra_loi: s.currentAnswer
-            })
-          });
-          const res = await resp.json();
+      // Step 2: Tiếp tục sang câu tiếp theo
+      s.isAnswerChecked = false;
+      s.isCurrentQuestionChecked = false;
 
-          if (res.success && res.data) {
-            const isCorrect = res.data.la_dung;
-            const explanation = res.data.giai_thich || currentQ.giai_thich || 'Khái niệm trọng tâm giúp khắc sâu kiến thức.';
-
-            s.isAnswerChecked = true;
-            lastPracticeCheckResult = isCorrect;
-
-            if (!s.failedQuestionsSet.has(currentQ.ma_cau_hoi)) {
-              if (isCorrect) {
-                s.firstAttemptCorrectCount++;
-              } else {
-                s.failedQuestionsSet.add(currentQ.ma_cau_hoi);
-              }
-            }
-
-            const fbBox = document.getElementById('q-feedback-box');
-            const fbTitle = document.getElementById('q-feedback-title');
-            const fbDesc = document.getElementById('q-feedback-desc');
-            const nextBtn = document.getElementById('btn-next-step');
-
-            if (fbBox && fbTitle && fbDesc) {
-              if (isCorrect) {
-                if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-correct');
-                fbBox.className = "rounded-2xl p-4 border border-emerald-500/40 bg-emerald-500/10 text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200";
-                fbTitle.innerHTML = `<span class="text-emerald-600 font-bold">✓ Rất chính xác! Tuyệt vời!</span>`;
-                fbDesc.textContent = explanation;
-                if (nextBtn) {
-                  nextBtn.innerHTML = '<span>Tiếp tục</span> <span>→</span>';
-                  nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5";
-                }
-              } else {
-                if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-wrong');
-                fbBox.className = "rounded-2xl p-4 border border-amber-500/40 bg-amber-500/10 text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200";
-                fbTitle.innerHTML = `<span class="text-amber-600 font-bold">⚠️ Chưa chính xác (Câu này sẽ gặp lại ở cuối để làm chủ!)</span>`;
-                fbDesc.textContent = explanation;
-                if (nextBtn) {
-                  nextBtn.innerHTML = '<span>Đã hiểu · Luyện lại ở cuối</span> <span>↺</span>';
-                  nextBtn.className = "px-6 py-2.5 rounded-xl bg-amber-600 text-white font-bold text-xs hover:bg-amber-700 transition cursor-pointer shadow-md flex items-center gap-1.5";
-                }
-              }
-              fbBox.classList.remove('hidden');
-            }
-          } else {
-            showToast(res.error?.message || 'Không thể kiểm tra câu trả lời!', 'error');
-          }
-        } catch (err) {
-          showToast('Lỗi kết nối khi kiểm tra câu hỏi!', 'error');
-        }
-      } else {
-        s.isAnswerChecked = false;
+      if (currentMocSession && currentMocSession.questionsQueue) {
         const isCorrect = lastPracticeCheckResult;
-
         if (isCorrect) {
-          s.questionsQueue.shift();
-          s.masteredCount = (s.masteredCount || 0) + 1;
+          currentMocSession.questionsQueue.shift();
+          currentMocSession.masteredCount = (currentMocSession.masteredCount || 0) + 1;
         } else {
           // Push failed question to end of queue ("làm sai đẩy câu đó ra cuối")
-          const failed = s.questionsQueue.shift();
-          s.questionsQueue.push(failed);
+          const failed = currentMocSession.questionsQueue.shift();
+          currentMocSession.questionsQueue.push(failed);
         }
 
-        if (s.questionsQueue.length === 0) {
+        if (currentMocSession.questionsQueue.length === 0) {
           completeAllPractice();
         } else {
           renderCurrentPracticeQuestion();
+        }
+      } else if (currentQuizSession) {
+        currentQuizSession.qIndex++;
+        if (currentQuizSession.qIndex >= currentQuizSession.questions.length) {
+          finishAndSubmitStep();
+        } else {
+          renderQuizQuestion();
         }
       }
     }
@@ -4993,10 +5054,20 @@
       const fbBox = document.getElementById('q-feedback-box');
       if (fbBox) fbBox.classList.add('hidden');
 
+      const isAutoAdvanceType = (q.loai_cau_hoi === 'TRAC_NGHIEM_4' || q.loai_cau_hoi === 'NOI_CAP');
       const nextBtn = document.getElementById('btn-next-step');
       if (nextBtn) {
-        nextBtn.innerHTML = '<span>Kiểm tra</span> <span>✓</span>';
-        nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5";
+        if (isAutoAdvanceType) {
+          nextBtn.disabled = true;
+          nextBtn.classList.add('opacity-0', 'pointer-events-none');
+          nextBtn.innerHTML = '<span>Tiếp tục</span> <span>→</span>';
+          nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5 opacity-0 pointer-events-none";
+        } else {
+          nextBtn.disabled = false;
+          nextBtn.classList.remove('opacity-0', 'pointer-events-none');
+          nextBtn.innerHTML = '<span>Kiểm tra</span> <span>✓</span>';
+          nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5";
+        }
       }
 
       const container = document.getElementById('q-options-container');
@@ -5038,25 +5109,105 @@
     }
 
     function selectTracNghiem(idx) {
-      if (!currentQuizSession || currentQuizSession.isCurrentQuestionChecked) return;
-      const q = currentQuizSession.questions[currentQuizSession.qIndex];
-      currentQuizSession.currentAnswer = {
+      const s = currentMocSession || currentQuizSession;
+      if (!s) return;
+      if (s.isAnswerChecked || s.isCurrentQuestionChecked) return;
+
+      const q = (s.questionsQueue && s.questionsQueue[0]) || (s.questions && s.questions[s.qIndex || 0]);
+      if (!q) return;
+
+      // Đánh dấu đã kiểm tra lập tức: chọn sai là sai luôn, không cần nút kiểm tra!
+      s.isAnswerChecked = true;
+      s.isCurrentQuestionChecked = true;
+
+      s.currentAnswer = {
         ma_cau_hoi: q.ma_cau_hoi,
         chi_muc_chon: idx
       };
+      if (s.submissions) {
+        s.submissions.push(s.currentAnswer);
+      }
+
+      const isCorrect = (q.vi_tri_dap_an_dung !== null && q.vi_tri_dap_an_dung !== undefined)
+        ? (idx === Number(q.vi_tri_dap_an_dung))
+        : true;
+      lastPracticeCheckResult = isCorrect;
+
+      if (s.failedQuestionsSet && !s.failedQuestionsSet.has(q.ma_cau_hoi)) {
+        if (isCorrect) {
+          s.firstAttemptCorrectCount = (s.firstAttemptCorrectCount || 0) + 1;
+        } else {
+          s.failedQuestionsSet.add(q.ma_cau_hoi);
+        }
+      }
 
       const container = document.getElementById('q-options-container');
       if (container) {
         container.querySelectorAll('button').forEach((b, i) => {
+          b.disabled = true;
+          b.classList.remove('group', 'hover:border-emerald-500/60', 'hover:bg-emerald-500/5', 'cursor-pointer');
+          b.classList.add('cursor-default');
+
+          const optText = (q.dap_an && q.dap_an[i]) || b.innerText;
+
           if (i === idx) {
-            b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-500/10 text-emerald-600 transition flex items-center justify-between cursor-pointer font-semibold shadow-xs";
+            if (isCorrect) {
+              b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-500/15 text-emerald-600 transition flex items-center justify-between font-bold shadow-sm";
+              b.innerHTML = `
+                <span class="text-xs sm:text-sm text-emerald-700 dark:text-emerald-300 font-bold leading-relaxed">${escapeHtml(optText)}</span>
+                <span class="px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-600 text-xs font-bold shrink-0 ml-3 flex items-center gap-1">✓ Chính xác</span>
+              `;
+            } else {
+              b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 border-rose-500 bg-rose-500/15 text-rose-600 transition flex items-center justify-between font-bold shadow-sm pair-shake-error";
+              b.innerHTML = `
+                <span class="text-xs sm:text-sm text-rose-700 dark:text-rose-300 font-bold leading-relaxed">${escapeHtml(optText)}</span>
+                <span class="px-2.5 py-1 rounded-xl bg-rose-500/20 text-rose-600 text-xs font-bold shrink-0 ml-3 flex items-center gap-1">✕ Sai</span>
+              `;
+            }
+          } else if (i === Number(q.vi_tri_dap_an_dung) && !isCorrect) {
+            b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 border-emerald-500/80 bg-emerald-500/10 text-emerald-600 transition flex items-center justify-between font-semibold shadow-xs";
+            b.innerHTML = `
+              <span class="text-xs sm:text-sm text-emerald-700 dark:text-emerald-300 font-semibold leading-relaxed">${escapeHtml(optText)}</span>
+              <span class="px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-600 text-xs font-bold shrink-0 ml-3 flex items-center gap-1">✓ Đáp án đúng</span>
+            `;
           } else {
-            b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border border-[var(--border)] opacity-60 hover:opacity-100 transition flex items-center justify-between cursor-pointer";
+            b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border border-[var(--border)] opacity-35 transition flex items-center justify-between";
           }
         });
       }
 
-      if (audioSettings && audioSettings.quiz) playAdvancedSound('click');
+      if (audioSettings && audioSettings.quiz) {
+        playAdvancedSound(isCorrect ? 'quiz-correct' : 'quiz-wrong');
+      }
+
+      const fbBox = document.getElementById('q-feedback-box');
+      const fbTitle = document.getElementById('q-feedback-title');
+      const fbDesc = document.getElementById('q-feedback-desc');
+      if (fbBox && fbTitle && fbDesc) {
+        if (isCorrect) {
+          fbTitle.innerHTML = `<span class="text-emerald-600 font-bold">✓ Rất chính xác! Tuyệt vời!</span>`;
+          fbBox.className = "rounded-2xl p-4 border border-emerald-500/40 bg-emerald-500/10 text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200";
+        } else {
+          fbTitle.innerHTML = `<span class="text-rose-600 font-bold">❌ Chưa chính xác (Câu này sẽ gặp lại ở cuối để làm chủ!)</span>`;
+          fbBox.className = "rounded-2xl p-4 border border-rose-500/40 bg-rose-500/10 text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200";
+        }
+        fbDesc.textContent = q.giai_thich || 'Khái niệm trọng tâm của mốc học giúp củng cố bản chất lý thuyết và ghi nhớ bền vững.';
+        fbBox.classList.remove('hidden');
+      }
+
+      const nextBtn = document.getElementById('btn-next-step');
+      if (nextBtn) {
+        nextBtn.disabled = false;
+        nextBtn.classList.remove('opacity-0', 'pointer-events-none');
+        const isLastInStep = s.questions && s.qIndex === (s.questions.length - 1);
+        if (isCorrect) {
+          nextBtn.innerHTML = isLastInStep ? '<span>Hoàn thành & Tiếp tục</span> <span>✓</span>' : '<span>Tiếp tục</span> <span>→</span>';
+          nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-150";
+        } else {
+          nextBtn.innerHTML = '<span>Đã hiểu · Luyện lại ở cuối</span> <span>↺</span>';
+          nextBtn.className = "px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-150";
+        }
+      }
     }
 
     // --- 2b. Duolingo Nối Cặp Thuật Ngữ & Khái Niệm ---
@@ -5216,11 +5367,43 @@
             matched_pairs: ms.matchedPairs
           };
 
-          // If all pairs are matched
+          // If all pairs are matched -> Tự động hoàn thành câu & chuyển nút thành [Tiếp tục]
           if (ms.matchedPairs.length >= ms.totalPairs) {
             const statusEl = document.getElementById('noi-cap-status-box');
             if (statusEl) statusEl.classList.remove('hidden');
             if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-correct');
+
+            const s = currentMocSession || currentQuizSession;
+            if (s) {
+              s.isAnswerChecked = true;
+              s.isCurrentQuestionChecked = true;
+              lastPracticeCheckResult = true;
+              if (s.failedQuestionsSet && !s.failedQuestionsSet.has(q.ma_cau_hoi)) {
+                s.firstAttemptCorrectCount = (s.firstAttemptCorrectCount || 0) + 1;
+              }
+              if (s.submissions) {
+                s.submissions.push(s.currentAnswer);
+              }
+            }
+
+            const fbBox = document.getElementById('q-feedback-box');
+            const fbTitle = document.getElementById('q-feedback-title');
+            const fbDesc = document.getElementById('q-feedback-desc');
+            if (fbBox && fbTitle && fbDesc) {
+              fbTitle.innerHTML = `<span class="text-emerald-600 font-bold">✓ Rất chính xác! Ghép thành công tất cả các cặp!</span>`;
+              fbDesc.textContent = q.giai_thich || 'Khái niệm trọng tâm của mốc học giúp củng cố bản chất lý thuyết và ghi nhớ bền vững.';
+              fbBox.className = "rounded-2xl p-4 border border-emerald-500/40 bg-emerald-500/10 text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200";
+              fbBox.classList.remove('hidden');
+            }
+
+            const nextBtn = document.getElementById('btn-next-step');
+            if (nextBtn) {
+              nextBtn.disabled = false;
+              nextBtn.classList.remove('opacity-0', 'pointer-events-none');
+              const isLastInStep = s && s.questions && s.qIndex === (s.questions.length - 1);
+              nextBtn.innerHTML = isLastInStep ? '<span>Hoàn thành & Tiếp tục</span> <span>✓</span>' : '<span>Tiếp tục</span> <span>→</span>';
+              nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-150";
+            }
           }
         } else {
           // --- MATCH WRONG: Gentle shake + red border flash + gentle error buzzer ---
@@ -5461,61 +5644,7 @@
 
     // --- 2e. Duolingo Feedback & Action Handler ---
     function handleQuizAction() {
-      if (!currentQuizSession) return;
-      const { questions, qIndex } = currentQuizSession;
-      const q = questions[qIndex];
-
-      if (!currentQuizSession.isCurrentQuestionChecked) {
-        // Step 1: Check Answer & show pedagogical feedback
-        if (q.loai_cau_hoi === 'NOI_CAP') {
-          const ms = currentQuizSession.matchingState;
-          if (ms && ms.matchedPairs.length < ms.totalPairs) {
-            showToast(`Hãy ghép nốt các cặp còn lại (${ms.matchedPairs.length}/${ms.totalPairs}) trước khi tiếp tục!`, 'info');
-            return;
-          }
-        }
-
-        if (!currentQuizSession.currentAnswer) {
-          showToast('Vui lòng hoàn thành thao tác hoặc chọn đáp án trước khi kiểm tra!', 'info');
-          return;
-        }
-
-        currentQuizSession.isCurrentQuestionChecked = true;
-        currentQuizSession.submissions.push(currentQuizSession.currentAnswer);
-
-        // Show feedback box
-        const fbBox = document.getElementById('q-feedback-box');
-        const fbTitle = document.getElementById('q-feedback-title');
-        const fbDesc = document.getElementById('q-feedback-desc');
-
-        if (fbBox && fbTitle && fbDesc) {
-          fbTitle.innerHTML = `<span class="text-emerald-600">💡 Giải thích sư phạm cốt lõi:</span>`;
-          fbDesc.textContent = q.giai_thich || 'Khái niệm trọng tâm của mốc học giúp củng cố bản chất lý thuyết và ghi nhớ bền vững.';
-          fbBox.className = "rounded-2xl p-4 border border-emerald-500/30 bg-emerald-500/10 text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200";
-          fbBox.classList.remove('hidden');
-        }
-
-        if (audioSettings && audioSettings.quiz) playAdvancedSound('click');
-
-        // Update button
-        const nextBtn = document.getElementById('btn-next-step');
-        if (nextBtn) {
-          if (qIndex === questions.length - 1) {
-            nextBtn.innerHTML = '<span>Hoàn thành Bước & Nộp bài</span> <span>✓</span>';
-          } else {
-            nextBtn.innerHTML = '<span>Câu tiếp theo</span> <span>→</span>';
-          }
-        }
-      } else {
-        // Step 2: Proceed to Next Question or Finish Step
-        currentQuizSession.isCurrentQuestionChecked = false;
-        currentQuizSession.qIndex++;
-        if (currentQuizSession.qIndex >= currentQuizSession.questions.length) {
-          finishAndSubmitStep();
-        } else {
-          renderQuizQuestion();
-        }
-      }
+      handleMocPracticeAction();
     }
 
     async function finishAndSubmitStep() {

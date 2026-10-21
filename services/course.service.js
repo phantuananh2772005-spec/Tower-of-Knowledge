@@ -285,13 +285,15 @@ async function getCheckpointContent(ma_moc, ma_nguoi_dung, stepRequested) {
         } else if (q.loai_cau_hoi === 'DIEN_TU') {
           du_lieu = {
             sentence_template: parsed.sentence_template,
-            options: (parsed.options || []).sort(() => Math.random() - 0.5)
+            options: (parsed.options || []).sort(() => Math.random() - 0.5),
+            blank_answer: parsed.blank_answer
           };
         } else if (q.loai_cau_hoi === 'SAP_XEP_CAU') {
           const allTokens = [...(parsed.correct_order || []), ...(parsed.distractors || [])].sort(() => Math.random() - 0.5);
           du_lieu = {
             prompt: parsed.prompt,
-            tokens: allTokens
+            tokens: allTokens,
+            correct_order: parsed.correct_order
           };
         }
       } catch (e) {
@@ -306,6 +308,8 @@ async function getCheckpointContent(ma_moc, ma_nguoi_dung, stepRequested) {
       muc_bloom: q.muc_bloom || 'NHO',
       buoc_luyen_tap: q.buoc_luyen_tap || 1,
       dap_an: q.loai_cau_hoi === 'TRAC_NGHIEM_4' ? [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d] : null,
+      vi_tri_dap_an_dung: q.vi_tri_dap_an_dung !== undefined && q.vi_tri_dap_an_dung !== null ? Number(q.vi_tri_dap_an_dung) : null,
+      giai_thich: q.giai_thich || '',
       du_lieu,
       do_kho: q.do_kho || 1
     };
