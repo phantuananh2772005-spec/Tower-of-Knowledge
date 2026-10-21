@@ -123,7 +123,7 @@ async function queryMssql(sql, params = []) {
  */
 function adaptForPostgres(sql) {
   if (!sql || typeof sql !== 'string') return sql;
-  return sql
+  let adapted = sql
     .replace(/SYSDATETIME\(\)/gi, 'NOW()')
     .replace(/CAST\(NOW\(\)\s+AS\s+DATE\)/gi, 'CURRENT_DATE')
     .replace(/\b([a-zA-Z0-9_.]+\.)?dang_kich_hoat\s*=\s*1\b/gi, '$1dang_kich_hoat = TRUE')
@@ -132,6 +132,16 @@ function adaptForPostgres(sql) {
     .replace(/\b([a-zA-Z0-9_.]+\.)?bat_am_thanh\s*=\s*0\b/gi, '$1bat_am_thanh = FALSE')
     .replace(/\b([a-zA-Z0-9_.]+\.)?la_dap_an_dung\s*=\s*1\b/gi, '$1la_dap_an_dung = TRUE')
     .replace(/\b([a-zA-Z0-9_.]+\.)?la_dap_an_dung\s*=\s*0\b/gi, '$1la_dap_an_dung = FALSE');
+
+  // Convert SELECT TOP <N> <cols> ... to SELECT <cols> ... LIMIT <N>
+  const topMatch = adapted.match(/^\s*SELECT\s+TOP\s+(\d+)\s+([\s\S]+)$/i);
+  if (topMatch) {
+    const limitNum = topMatch[1];
+    const rest = topMatch[2];
+    adapted = `SELECT ${rest} LIMIT ${limitNum}`;
+  }
+
+  return adapted;
 }
 
 /**

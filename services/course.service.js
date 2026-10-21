@@ -80,7 +80,7 @@ async function enrollCourse(slug, ma_nguoi_dung) {
 
   // Ensure first checkpoint is open
   const firstMoc = await db.queryOne(`
-    SELECT TOP 1 m.ma_moc 
+    SELECT m.ma_moc 
     FROM moc_bai_hoc m
     JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
     WHERE c.ma_mon = $1
@@ -123,7 +123,7 @@ async function ensureCourseInitialized(ma_nguoi_dung, ma_mon) {
   }
 
   const firstMoc = await db.queryOne(`
-    SELECT TOP 1 m.ma_moc 
+    SELECT m.ma_moc 
     FROM moc_bai_hoc m
     JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
     WHERE c.ma_mon = $1
