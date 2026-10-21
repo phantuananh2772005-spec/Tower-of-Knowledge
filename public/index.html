@@ -687,55 +687,71 @@
     </section>
 
     <!-- ================= VIEW 7: LINH VẬT THÚ CƯNG (THUẦN CHĂM SÓC & BỘ SƯU TẬP) ================= -->
-    <section id="view-pet" class="hidden p-6 sm:p-10 max-w-4xl w-full mx-auto space-y-6">
-      <!-- Thẻ Linh vật đang trang bị -->
-      <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 text-center max-w-md mx-auto space-y-5 shadow-xs relative overflow-hidden">
-        <div class="absolute top-3 right-3 bg-emerald-500/10 text-emerald-600 text-[10px] font-bold px-2.5 py-1 rounded-full">
-          Đang đồng hành
-        </div>
-        <div class="relative inline-block">
-          <span id="current-pet-icon-large" class="text-7xl pet-animated block select-none pixel-art">🦉</span>
-          <span id="pet-heart-float" class="absolute -top-3 right-0 text-xl opacity-0 transition-opacity">💖</span>
-        </div>
-        <div>
-          <h2 id="current-pet-name" class="text-xl font-bold">Cú Đêm Hedwig</h2>
-          <p id="current-pet-buff" class="text-xs text-emerald-600 font-medium mt-1">Rồng con tinh nghịch · Cổ vũ bạn học</p>
-        </div>
+    <!-- ================= VIEW 7: LINH VẬT THÚ CƯNG (2 CỘT RESPONSIVE) ================= -->
+    <section id="view-pet" class="hidden p-4 sm:p-8 max-w-5xl w-full mx-auto">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- CỘT TRÁI (Lg: 7 cột): Thẻ Linh vật đang trang bị -->
+        <div class="lg:col-span-7 bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 sm:p-8 text-center space-y-5 shadow-xs relative overflow-hidden">
+          <div class="absolute top-4 right-4 bg-emerald-500/10 text-emerald-600 text-[10px] font-bold px-3 py-1 rounded-full border border-emerald-500/20">
+            Đang đồng hành
+          </div>
+          
+          <div class="relative inline-block mt-2">
+            <span id="current-pet-icon-large" class="text-7xl pet-animated block select-none pixel-art">🦉</span>
+            <span id="pet-heart-float" class="absolute -top-3 right-0 text-xl opacity-0 transition-opacity">💖</span>
+          </div>
+          
+          <div>
+            <h2 id="current-pet-name" class="text-xl sm:text-2xl font-bold tracking-tight">Cú Đêm Hedwig</h2>
+            <p id="current-pet-buff" class="text-xs text-emerald-600 font-semibold mt-1">Rồng con tinh nghịch · Cổ vũ bạn học</p>
+          </div>
 
-        <!-- Thanh tâm trạng & chăm sóc -->
-        <div class="space-y-3 text-left text-xs bg-[var(--background)] p-4 rounded-2xl border border-[var(--border)]">
-          <div class="flex justify-between items-center">
-            <span class="text-[var(--muted-foreground)] font-medium">Tâm trạng</span>
-            <span id="pet-mood-txt" class="font-bold text-emerald-600">Vui vẻ (90%)</span>
-          </div>
-          <div class="w-full h-2 bg-[var(--border)] rounded-full overflow-hidden">
-            <div id="pet-mood-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 90%"></div>
-          </div>
-          <div class="pt-2 flex gap-2">
-            <button onclick="feedPet()" class="flex-1 py-2 rounded-xl bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border border-amber-500/30 font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5">
-              🍎 Cho ăn (10 🪙)
-            </button>
-            <button onclick="petHappy()" class="flex-1 py-2 rounded-xl border border-[var(--border)] hover:bg-[var(--card)] font-semibold text-xs transition cursor-pointer flex items-center justify-center gap-1.5">
-              ✨ Vuốt ve
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Bộ sưu tập Pet đã sở hữu (Đổi Pet nhanh) -->
-      <div class="max-w-md mx-auto space-y-3">
-        <h3 class="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)]">Linh vật đã sở hữu</h3>
-        <div id="owned-pets-list" class="grid grid-cols-2 gap-3">
-          <div class="p-3 min-h-[58px] rounded-2xl border-2 border-emerald-500 bg-emerald-500/10 flex items-center gap-3 select-none">
-            <div class="w-9 h-9 flex items-center justify-center shrink-0">
-              <span class="text-3xl">🦉</span>
+          <!-- Thanh tâm trạng & Chăm sóc -->
+          <div class="space-y-3 text-left text-xs bg-[var(--background)] p-4 sm:p-5 rounded-2xl border border-[var(--border)]">
+            <div class="flex justify-between items-center">
+              <span class="text-[var(--muted-foreground)] font-semibold">Tâm trạng</span>
+              <span id="pet-mood-txt" class="font-bold text-emerald-600">Vui vẻ (90%)</span>
             </div>
-            <div class="flex-1 min-w-0 text-left">
-              <p class="font-bold text-xs truncate text-emerald-600">Cú Hedwig</p>
-              <span class="text-[10px] text-emerald-600 font-bold block leading-tight">Đang dùng ✓</span>
+            <div class="w-full h-2.5 bg-[var(--border)] rounded-full overflow-hidden">
+              <div id="pet-mood-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 90%"></div>
+            </div>
+            <div class="pt-2 flex gap-3">
+              <button onclick="feedPet()" class="flex-1 py-2.5 rounded-xl bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border border-amber-500/30 font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs hover:scale-[1.02] active:scale-[0.98]">
+                <span>🍎</span> <span>Cho ăn (10 🪙)</span>
+              </button>
+              <button onclick="petHappy()" class="flex-1 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--card-hover)] font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs hover:scale-[1.02] active:scale-[0.98]">
+                <span>✨</span> <span>Vuốt ve</span>
+              </button>
             </div>
           </div>
         </div>
+
+        <!-- CỘT PHẢI (Lg: 5 cột): Danh sách Linh vật đã sở hữu -->
+        <div class="lg:col-span-5 bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 space-y-4 shadow-xs">
+          <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-[var(--foreground)]">Linh vật đã sở hữu</h3>
+              <p class="text-[10px] text-[var(--muted-foreground)] mt-0.5">Bấm để đổi nhanh bạn đồng hành</p>
+            </div>
+            <button onclick="navTo('shop')" class="text-xs font-bold text-emerald-600 hover:underline cursor-pointer flex items-center gap-1">
+              <span>Cửa hàng</span> <span>→</span>
+            </button>
+          </div>
+
+          <div id="owned-pets-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2.5">
+            <div class="p-3 min-h-[58px] rounded-2xl border-2 border-emerald-500 bg-emerald-500/10 flex items-center gap-3 select-none">
+              <div class="w-9 h-9 flex items-center justify-center shrink-0">
+                <span class="text-3xl">🦉</span>
+              </div>
+              <div class="flex-1 min-w-0 text-left">
+                <p class="font-bold text-xs truncate text-emerald-600">Cú Hedwig</p>
+                <span class="text-[10px] text-emerald-600 font-bold block leading-tight">Đang dùng ✓</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -1918,7 +1934,7 @@
         const avatarThumb = p.image 
           ? `<img src="${p.image}" class="w-8 h-8 object-contain pixel-art select-none" />`
           : `<span class="text-3xl select-none">${p.icon}</span>`;
-        return `<div onclick="equipPet('${p.id}', '${p.name}', '${p.icon}', '${p.buff}')" class="p-3 min-h-[58px] rounded-2xl border-2 ${isCur ? 'border-emerald-500 bg-emerald-500/10 shadow-xs' : 'border-white bg-[var(--card)] hover:border-white shadow-xs'} flex items-center gap-3 cursor-pointer transition select-none">
+        return `<div onclick="equipPet('${p.id}', '${p.name}', '${p.icon}', '${p.buff}')" class="p-3 min-h-[58px] rounded-2xl border-2 ${isCur ? 'border-emerald-500 bg-emerald-500/10 shadow-xs' : 'border-[var(--border)] bg-[var(--background)] hover:border-emerald-500/40 shadow-xs'} flex items-center gap-3 cursor-pointer transition select-none">
           <div class="w-9 h-9 flex items-center justify-center shrink-0">${avatarThumb}</div>
           <div class="flex-1 min-w-0 text-left">
             <p class="font-bold text-xs truncate ${isCur ? 'text-emerald-600' : ''}">${p.name}</p>
