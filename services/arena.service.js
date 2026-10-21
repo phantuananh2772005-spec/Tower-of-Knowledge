@@ -38,13 +38,13 @@ async function createMatch(player1Id, player2Id, ma_mon = 'mon_csdl') {
 
   await db.execute(`
     INSERT INTO nguoi_choi_trong_tran (ma_nguoi_choi_trong_tran, ma_tran, ma_nguoi_dung, ma_thu_cung, mau_hien_tai, mau_toi_da, ket_qua)
-    VALUES 
-    ($1, $2, $3, $4, 100, 100, 'CHUA_KET_THUC'),
-    ($5, $2, $6, $7, 100, 100, 'CHUA_KET_THUC')
-  `, [
-    p1IdInMatch, ma_tran, player1Id, pet1 ? pet1.ma_thu_cung : null,
-    p2IdInMatch, ma_tran, player2Id, pet2 ? pet2.ma_thu_cung : null
-  ]);
+    VALUES ($1, $2, $3, $4, 100, 100, 'CHUA_KET_THUC')
+  `, [p1IdInMatch, ma_tran, player1Id, pet1 ? pet1.ma_thu_cung : null]);
+
+  await db.execute(`
+    INSERT INTO nguoi_choi_trong_tran (ma_nguoi_choi_trong_tran, ma_tran, ma_nguoi_dung, ma_thu_cung, mau_hien_tai, mau_toi_da, ket_qua)
+    VALUES ($1, $2, $3, $4, 100, 100, 'CHUA_KET_THUC')
+  `, [p2IdInMatch, ma_tran, player2Id, pet2 ? pet2.ma_thu_cung : null]);
 
   // Pick 5 questions from course
   const questions = await db.query(`

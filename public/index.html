@@ -125,7 +125,7 @@
           </div>
           <div class="sidebar-text min-w-0">
             <span class="user-display-name font-bold text-xs tracking-tight block leading-tight text-[var(--foreground)] group-hover:text-emerald-600 transition truncate">
-              Nguyễn Văn A
+              Đang tải...
             </span>
             <span class="text-[10px] text-amber-600 font-semibold font-mono flex items-center gap-1">
               <span>⚡ Tinh thông III</span>
@@ -240,9 +240,9 @@
       <!-- Khu vực bên phải: Tiến độ học + Nút Cài đặt tài khoản -->
       <div id="topbar-right" class="shrink-0 flex items-center gap-3">
         <div id="topbar-progress" class="text-right">
-          <span id="topbar-progress-text" class="text-xs font-bold text-emerald-600 font-mono">Đã qua 2/6 mốc</span>
+          <span id="topbar-progress-text" class="text-xs font-bold text-emerald-600 font-mono">Đang tải tiến độ...</span>
           <div class="w-24 sm:w-28 h-1.5 bg-[var(--border)] rounded-full mt-1 overflow-hidden ml-auto">
-            <div id="topbar-progress-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 33%"></div>
+            <div id="topbar-progress-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
           </div>
         </div>
 
@@ -426,165 +426,63 @@
       <!-- Hero Banner -->
       <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 sm:p-8 shadow-xs flex items-center justify-between">
         <div class="space-y-3">
-          <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600">
-            🔥 Chuỗi học tập: 5 ngày liên tiếp
+          <span id="hub-streak-badge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600">
+            🔥 Chuỗi học tập: 0 ngày liên tiếp
           </span>
-          <h1 class="text-2xl font-bold tracking-tight">Chào mừng quay trở lại, Tuấn Anh!</h1>
-          <p class="text-xs text-[var(--muted-foreground)] max-w-md leading-relaxed">
-            Hôm nay mục tiêu của bạn là vượt qua Mốc 3 và Mốc 4 của Kỹ năng 1.1.1 để tiến gần hơn đến Cổng Đột Phá Chương 1.
+          <h1 class="text-2xl font-bold tracking-tight">Chào mừng quay trở lại, <span class="user-display-name">Học viên</span>!</h1>
+          <p id="hub-target-desc" class="text-xs text-[var(--muted-foreground)] max-w-md leading-relaxed">
+            Tiếp tục hành trình chinh phục kiến thức và vượt qua các mốc trên lộ trình học tập.
           </p>
           <div class="pt-2">
-            <button onclick="navTo('saga')" class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition shadow-sm">
+            <button onclick="navTo('saga')" class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition shadow-sm cursor-pointer">
               Tiếp tục leo tháp CSDL →
             </button>
           </div>
         </div>
         <div onclick="navTo('pet')" title="Đổi linh vật đồng hành" class="cursor-pointer group flex flex-col items-center shrink-0 ml-4">
           <div id="hub-pet-avatar" class="w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center select-none group-hover:scale-105 transition">
-            <span class="text-6xl sm:text-7xl pet-animated select-none">🦉</span>
+            <span class="text-6xl sm:text-7xl pet-animated select-none">🐉</span>
           </div>
-          <span id="hub-pet-name" class="text-[11px] font-bold text-emerald-600 mt-1">Cú Đêm Hedwig</span>
+          <span id="hub-pet-name" class="text-[11px] font-bold text-emerald-600 mt-1">Rồng Lửa Sparky</span>
         </div>
       </div>
 
-      <!-- Danh sách Môn đang học -->
-      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 space-y-4">
+      <!-- Danh sách Môn đang học (Render động từ CSDL) -->
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 space-y-4 shadow-xs">
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-wider">Môn đang theo học</span>
-          <button onclick="navTo('enrolled')" class="text-xs font-semibold text-emerald-600 hover:underline cursor-pointer">Xem tất cả (2) →</button>
+          <button onclick="navTo('enrolled')" class="text-xs font-semibold text-emerald-600 hover:underline cursor-pointer">Xem tất cả →</button>
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div class="p-3.5 rounded-xl border border-[var(--border)] flex items-center justify-between hover:bg-[var(--background)]/60 cursor-pointer transition" onclick="navTo('saga')">
-            <div>
-              <p class="font-bold text-xs">Cơ sở dữ liệu</p>
-              <p class="text-[10px] text-[var(--muted-foreground)] mt-0.5">Chương 1 · Đã qua 2/6 mốc</p>
-            </div>
-            <span class="text-xs font-bold text-emerald-600 font-mono">33%</span>
-          </div>
-          <div class="p-3.5 rounded-xl border border-[var(--border)] flex items-center justify-between hover:bg-[var(--background)]/60 cursor-pointer transition" onclick="navTo('enrolled')">
-            <div>
-              <p class="font-bold text-xs">CTDL & Giải thuật</p>
-              <p class="text-[10px] text-[var(--muted-foreground)] mt-0.5">Chương 1 · Đã qua 1/6 mốc</p>
-            </div>
-            <span class="text-xs font-bold text-emerald-600 font-mono">16%</span>
-          </div>
+        <div id="hub-enrolled-courses-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="py-4 text-center text-xs text-[var(--muted-foreground)] col-span-2">Đang tải danh sách môn học...</div>
         </div>
       </div>
     </section>
 
     <!-- ================= VIEW 4: MÔN ĐANG THEO HỌC (MY LEARNING - CHỈ HIỂN THỊ MÔN ĐÃ THAM GIA) ================= -->
-    <section id="view-enrolled" class="hidden p-6 sm:p-10 max-w-5xl w-full mx-auto">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <!-- Môn 1 -->
-        <div class="bg-[var(--card)] border border-emerald-500/30 rounded-2xl p-6 space-y-4 shadow-xs relative overflow-hidden">
-          <div class="absolute top-0 right-0 bg-emerald-500/10 text-emerald-600 text-[10px] font-bold px-3 py-1 rounded-bl-xl font-mono">
-            Đang học
-          </div>
-          <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-2xl font-bold">
-              🗄️
-            </div>
-            <div>
-              <h3 class="font-bold text-base leading-tight">Cơ sở dữ liệu</h3>
-              <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Tiến độ: Chương 1 · Mốc 3/6</p>
-            </div>
-          </div>
-          <div class="w-full h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
-            <div class="bg-emerald-500 h-full rounded-full" style="width: 33%"></div>
-          </div>
-          <button onclick="navTo('saga')" class="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition shadow-xs">
-            Vào con đường leo tháp →
-          </button>
+    <section id="view-enrolled" class="hidden p-6 sm:p-10 max-w-5xl w-full mx-auto space-y-6">
+      <div class="flex items-center justify-between border-b border-[var(--border)] pb-4">
+        <div>
+          <h2 class="text-lg font-bold">Môn học đang tham gia</h2>
+          <p class="text-xs text-[var(--muted-foreground)]">Tiến độ leo tháp và các mốc kiến thức bạn đang mở khóa</p>
         </div>
-
-        <!-- Môn 2 -->
-        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 space-y-4 shadow-xs relative overflow-hidden">
-          <div class="flex items-center gap-3">
-            <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center text-2xl font-bold">
-              ⚡
-            </div>
-            <div>
-              <h3 class="font-bold text-base leading-tight">CTDL & Giải thuật</h3>
-              <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Tiến độ: Chương 1 · Mốc 1/6</p>
-            </div>
-          </div>
-          <div class="w-full h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
-            <div class="bg-blue-500 h-full rounded-full" style="width: 16%"></div>
-          </div>
-          <button onclick="alert('Đã chuyển sang lộ trình môn CTDL & Giải thuật!')" class="w-full py-2.5 rounded-xl border border-[var(--border)] font-semibold text-xs hover:bg-[var(--background)] transition">
-            Vào con đường leo tháp →
-          </button>
-        </div>
+        <button onclick="navTo('catalog')" class="px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition cursor-pointer shadow-xs">
+          + Khám phá thêm môn
+        </button>
+      </div>
+      <div id="enrolled-courses-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="col-span-2 text-center py-12 text-xs text-[var(--muted-foreground)]">Đang tải danh sách môn học từ hệ thống...</div>
       </div>
     </section>
 
     <!-- ================= VIEW 5: KHO MÔN HỌC HỆ THỐNG (CATALOG - ĐỂ DUYỆT VÀ THAM GIA) ================= -->
-    <section id="view-catalog" class="hidden p-6 sm:p-10 max-w-5xl w-full mx-auto">
-      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        <!-- Đã tham gia -->
-        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-2xl">🗄️</span>
-            <span class="text-[10px] bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded font-semibold">Đã tham gia</span>
-          </div>
-          <h3 class="font-bold text-sm">Cơ sở dữ liệu</h3>
-          <p class="text-[11px] text-[var(--muted-foreground)] line-clamp-2">Kiến trúc CSDL quan hệ, SQL, chuẩn hóa dữ liệu, index và giao dịch ACID.</p>
-          <button onclick="navTo('saga')" class="w-full py-2 rounded-xl bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition">
-            Mở lộ trình →
-          </button>
-        </div>
-
-        <!-- Đã tham gia -->
-        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-2xl">⚡</span>
-            <span class="text-[10px] bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded font-semibold">Đã tham gia</span>
-          </div>
-          <h3 class="font-bold text-sm">CTDL & Giải thuật</h3>
-          <p class="text-[11px] text-[var(--muted-foreground)] line-clamp-2">Mảng, danh sách liên kết, cây nhị phân, đồ thị và các thuật toán kinh điển.</p>
-          <button onclick="navTo('enrolled')" class="w-full py-2 rounded-xl border border-[var(--border)] font-semibold text-xs hover:bg-[var(--background)] transition">
-            Mở lộ trình →
-          </button>
-        </div>
-
-        <!-- Chưa tham gia: Toán rời rạc -->
-        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-2xl">📐</span>
-            <span class="text-[10px] text-[var(--muted-foreground)]">3 tín chỉ</span>
-          </div>
-          <h3 class="font-bold text-sm">Toán rời rạc</h3>
-          <p class="text-[11px] text-[var(--muted-foreground)] line-clamp-2">Mệnh đề logic, lý thuyết tập hợp, phép đếm, quan hệ tương đương và đồ thị.</p>
-          <button onclick="enrollCourse('Toán rời rạc')" class="w-full py-2 rounded-xl bg-[var(--foreground)] text-[var(--background)] font-semibold text-xs hover:opacity-90 transition">
-            + Tham gia học
-          </button>
-        </div>
-
-        <!-- Chưa tham gia: Mạng máy tính -->
-        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-2xl">🌐</span>
-            <span class="text-[10px] text-[var(--muted-foreground)]">3 tín chỉ</span>
-          </div>
-          <h3 class="font-bold text-sm">Mạng máy tính</h3>
-          <p class="text-[11px] text-[var(--muted-foreground)] line-clamp-2">Mô hình OSI, TCP/IP, định tuyến IP, DNS, HTTP/HTTPS và an ninh mạng căn bản.</p>
-          <button onclick="enrollCourse('Mạng máy tính')" class="w-full py-2 rounded-xl bg-[var(--foreground)] text-[var(--background)] font-semibold text-xs hover:opacity-90 transition">
-            + Tham gia học
-          </button>
-        </div>
-
-        <!-- Chưa tham gia: Hệ điều hành -->
-        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-2xl">💻</span>
-            <span class="text-[10px] text-[var(--muted-foreground)]">3 tín chỉ</span>
-          </div>
-          <h3 class="font-bold text-sm">Hệ điều hành</h3>
-          <p class="text-[11px] text-[var(--muted-foreground)] line-clamp-2">Quản lý tiến trình (Process), luồng (Thread), lập lịch CPU, bộ nhớ ảo và Deadlock.</p>
-          <button onclick="enrollCourse('Hệ điều hành')" class="w-full py-2 rounded-xl bg-[var(--foreground)] text-[var(--background)] font-semibold text-xs hover:opacity-90 transition">
-            + Tham gia học
-          </button>
-        </div>
+    <section id="view-catalog" class="hidden p-6 sm:p-10 max-w-5xl w-full mx-auto space-y-6">
+      <div class="border-b border-[var(--border)] pb-4">
+        <h2 class="text-lg font-bold">Kho môn học hệ thống</h2>
+        <p class="text-xs text-[var(--muted-foreground)]">Toàn bộ các giáo trình chuẩn hóa được phân phối trên Tháp Tri Thức</p>
+      </div>
+      <div id="catalog-courses-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div class="col-span-3 text-center py-12 text-xs text-[var(--muted-foreground)]">Đang tải kho môn học...</div>
       </div>
     </section>
 
@@ -976,8 +874,8 @@
               👦
             </div>
             <div class="min-w-0">
-              <h3 class="user-display-name font-bold text-base sm:text-lg tracking-tight truncate leading-tight">Nguyễn Văn A</h3>
-              <span class="text-[10px] bg-emerald-500/10 text-emerald-600 font-bold px-2.5 py-0.5 rounded-full inline-block mt-1 whitespace-nowrap">
+              <h3 class="user-display-name font-bold text-base sm:text-lg tracking-tight truncate leading-tight">Học viên</h3>
+              <span id="profile-role-badge" class="text-[10px] bg-emerald-500/10 text-emerald-600 font-bold px-2.5 py-0.5 rounded-full inline-block mt-1 whitespace-nowrap">
                 Học viên chính thức
               </span>
             </div>
@@ -1001,28 +899,28 @@
           <div class="grid grid-cols-2 gap-3 text-xs">
             <div class="bg-[var(--background)] p-3 rounded-2xl border border-[var(--border)] space-y-1.5">
               <div class="flex items-center justify-between">
-                <span class="text-[11px] text-[var(--muted-foreground)] font-medium">Rank Tổng</span>
-                <span class="font-bold text-amber-600 text-xs">⚡ Tinh thông III</span>
+                <span class="text-[11px] text-[var(--muted-foreground)] font-medium">Danh hiệu</span>
+                <span id="profile-rank-badge" class="font-bold text-amber-600 text-xs">TẬP SỰ</span>
               </div>
               <div class="flex items-center justify-between font-mono">
-                <span class="font-bold text-sm text-[var(--foreground)]">2,347 <span class="text-[10px] font-normal text-[var(--muted-foreground)]">điểm</span></span>
-                <span class="text-[10px] text-[var(--muted-foreground)]">75%</span>
+                <span class="font-bold text-sm text-[var(--foreground)]"><span id="profile-rank-pts">120</span> <span class="text-[10px] font-normal text-[var(--muted-foreground)]">EXP</span></span>
+                <span id="profile-rank-percent" class="text-[10px] text-[var(--muted-foreground)]">30%</span>
               </div>
               <div class="w-full h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
-                <div class="h-full bg-amber-500 rounded-full" style="width: 75%"></div>
+                <div id="profile-rank-bar" class="h-full bg-amber-500 rounded-full transition-all duration-300" style="width: 30%"></div>
               </div>
             </div>
             <div class="bg-[var(--background)] p-3 rounded-2xl border border-[var(--border)] space-y-1.5">
               <div class="flex items-center justify-between">
-                <span class="text-[11px] text-[var(--muted-foreground)] font-medium">Rank Môn CSDL</span>
-                <span class="font-bold text-emerald-600 text-xs">🌱 Khởi nguyên II</span>
+                <span class="text-[11px] text-[var(--muted-foreground)] font-medium">Tiến độ CSDL</span>
+                <span id="profile-csdl-rank-badge" class="font-bold text-emerald-600 text-xs">Đang học</span>
               </div>
               <div class="flex items-center justify-between font-mono">
-                <span class="font-bold text-sm text-[var(--foreground)]">420 <span class="text-[10px] font-normal text-[var(--muted-foreground)]">điểm</span></span>
-                <span class="text-[10px] text-[var(--muted-foreground)]">42%</span>
+                <span class="font-bold text-sm text-[var(--foreground)]"><span id="profile-csdl-mocs-stat">1/8</span> <span class="text-[10px] font-normal text-[var(--muted-foreground)]">mốc</span></span>
+                <span id="profile-csdl-percent" class="text-[10px] text-[var(--muted-foreground)]">13%</span>
               </div>
               <div class="w-full h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
-                <div class="h-full bg-emerald-500 rounded-full" style="width: 42%"></div>
+                <div id="profile-csdl-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-300" style="width: 13%"></div>
               </div>
             </div>
           </div>
@@ -1036,15 +934,18 @@
           <div class="grid grid-cols-3 gap-3 text-center">
             <div class="bg-[var(--background)] py-2.5 px-3 rounded-2xl border border-[var(--border)]">
               <span class="text-xl block select-none mb-0.5">🔥</span>
-              <p class="font-mono font-bold text-sm text-amber-500">5 ngày</p>
+              <p id="profile-stat-streak" class="font-mono font-bold text-sm text-amber-500">0 ngày</p>
+              <span class="text-[10px] text-[var(--muted-foreground)]">Chuỗi Streak</span>
             </div>
             <div class="bg-[var(--background)] py-2.5 px-3 rounded-2xl border border-[var(--border)]">
               <span class="text-xl block select-none mb-0.5">🎯</span>
-              <p class="font-mono font-bold text-sm text-emerald-600">28 mốc</p>
+              <p id="profile-stat-mocs" class="font-mono font-bold text-sm text-emerald-600">0 mốc</p>
+              <span class="text-[10px] text-[var(--muted-foreground)]">Đã hoàn thành</span>
             </div>
             <div class="bg-[var(--background)] py-2.5 px-3 rounded-2xl border border-[var(--border)]">
-              <span class="text-xl block select-none mb-0.5">⚔️</span>
-              <p class="font-mono font-bold text-sm text-blue-500">71%</p>
+              <span class="text-xl block select-none mb-0.5">🪙</span>
+              <p id="profile-stat-coins" class="font-mono font-bold text-sm text-blue-500">0 Xu</p>
+              <span class="text-[10px] text-[var(--muted-foreground)]">Ví Tri Thức</span>
             </div>
           </div>
         </div>
@@ -1052,7 +953,7 @@
         <!-- Huy hiệu đạt được -->
         <div class="space-y-2">
           <h4 class="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
-            🏅 Huy hiệu
+            🏅 Huy hiệu vinh danh
           </h4>
           <div class="grid grid-cols-4 gap-2.5 text-center text-xs">
             <div class="bg-[var(--background)] p-2.5 rounded-2xl border border-emerald-500/30 flex flex-col items-center gap-1 shadow-2xs">
@@ -1069,14 +970,13 @@
             </div>
             <div class="bg-[var(--background)] p-2.5 rounded-2xl border border-purple-500/30 flex flex-col items-center gap-1 shadow-2xs">
               <span class="text-xl select-none">👑</span>
-              <span class="text-[11px] font-bold leading-tight">Bứt Phá</span>
+              <span class="text-[11px] font-bold leading-tight">Đột Phá</span>
             </div>
           </div>
         </div>
 
       </div>
-    </div>
-    <!-- ================= MODAL CÀI ĐẶT (SETTINGS) ================= -->
+    </div><!-- ================= MODAL CÀI ĐẶT (SETTINGS) ================= -->
     <div id="modal-settings" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs transition-opacity duration-200" onclick="if(event.target===this)closeSettingsModal()">
       <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl overflow-hidden relative animate-in fade-in zoom-in-95">
         
@@ -1161,7 +1061,7 @@
               <div class="flex items-center justify-between">
                 <div>
                   <span class="text-[10px] uppercase font-bold text-[var(--muted-foreground)] block">Tên</span>
-                  <span id="auth-display-name-val" class="text-xs font-bold text-[var(--foreground)]">Nguyễn Văn A</span>
+                  <span id="auth-display-name-val" class="text-xs font-bold text-[var(--foreground)]">Học viên</span>
                 </div>
                 <button onclick="toggleEditField('name')" class="px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--card)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer">
                   Đổi
@@ -1169,7 +1069,7 @@
               </div>
               <!-- Hộp sửa Tên ẩn -->
               <div id="edit-box-name" class="hidden pt-2 border-t border-[var(--border)] flex items-center gap-2">
-                <input type="text" id="input-edit-name" value="Nguyễn Văn A" class="flex-1 px-2.5 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-xs focus:outline-none focus:border-emerald-500">
+                <input type="text" id="input-edit-name" value="Học viên" class="flex-1 px-2.5 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-xs focus:outline-none focus:border-emerald-500">
                 <button onclick="saveEditName()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition cursor-pointer">
                   Lưu
                 </button>
@@ -1544,10 +1444,10 @@
                 Rồng Nhỏ Sparky
               </span>
               <span class="user-display-name text-xs font-bold text-white block truncate max-w-[130px]">
-                Nguyễn Văn A
+                Học viên
               </span>
-              <span class="text-[10px] text-amber-400 font-semibold bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 rounded-full inline-block">
-                ⚡ Tinh thông III
+              <span id="vs-my-rank" class="text-[10px] text-amber-400 font-semibold bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 rounded-full inline-block">
+                TẬP SỰ
               </span>
             </div>
           </div>
@@ -1744,32 +1644,7 @@
       const t = b.querySelector('span:not(.text-base)');
       if (t) b.title = t.textContent.trim();
     });
-    // Pool câu hỏi cho phiên luyện tập đan xen
-    const questionsPool = [
-      {
-        prompt: "Vì sao dữ liệu thô (Data) chưa thể coi là Thông tin (Information)?",
-        options: [
-          "Vì dữ liệu chưa được xử lý, tổ chức và đặt vào ngữ cảnh có ý nghĩa",
-          "Vì dữ liệu chỉ chứa các con số",
-          "Vì dữ liệu lưu trên ổ cứng"
-        ],
-        answerIndex: 0,
-        explain: "Chính xác! Dữ liệu cần qua xử lý và có ý nghĩa đối với người dùng thì mới thành thông tin."
-      },
-      {
-        prompt: "Nhắc lại: Tính toàn vẹn của dữ liệu trong CSDL nhằm đảm bảo điều gì?",
-        options: [
-          "Tính chính xác, nhất quán và đáng tin cậy của dữ liệu",
-          "Dữ liệu có dung lượng nhỏ nhất",
-          "Dữ liệu chia sẻ không cần bảo mật"
-        ],
-        answerIndex: 0,
-        explain: "Rất tốt! Tính toàn vẹn giúp dữ liệu không bị mâu thuẫn hoặc sai lệch trong suốt vòng đời."
-      }
-    ];
-
-    let currentQIndex = 0;
-    let answered = false;
+    // Dynamic quiz sessions now load on-demand from /api/checkpoints/:id
 
     
     function toggleSidebar() {
@@ -2169,69 +2044,7 @@
       alert(`🎉 Đã mua thành công ${itemName}! Vật phẩm đã được áp dụng vào Pet của bạn.`);
     }
 
-    function loadQuestion() {
-      if (currentQIndex >= questionsPool.length) {
-        addCoins(15);
-        alert("🎉 CHÚC MỪNG! Bạn đã hoàn thành câu hỏi rèn luyện mốc này!\n\n🎁 Phần thưởng: +15 🪙 Xu Tri Thức đã được cộng vào túi đồ.");
-        closePlay();
-        return;
-      }
-
-      answered = false;
-      const q = questionsPool[currentQIndex];
-      document.getElementById('q-prompt').textContent = q.prompt;
-
-      const container = document.getElementById('q-options-container');
-      container.innerHTML = '';
-      document.getElementById('q-feedback-box').classList.add('hidden');
-      document.getElementById('btn-next-step').classList.add('hidden');
-
-      q.options.forEach((opt, idx) => {
-        const btn = document.createElement('button');
-        btn.className = "w-full text-left p-3.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card)] transition text-xs flex items-center justify-between";
-        btn.innerHTML = `<span>${opt}</span><span class="font-mono text-[10px] text-[var(--muted-foreground)] border border-[var(--border)] px-1.5 py-0.5 rounded">${idx + 1}</span>`;
-        btn.onclick = () => {
-          if (answered) return;
-          answered = true;
-          const isRight = (idx === q.answerIndex);
-          if (isRight) {
-            if (audioSettings.quiz) playAdvancedSound('quiz-correct');
-          } else {
-            if (audioSettings.quiz) playAdvancedSound('quiz-wrong');
-          }
-          container.querySelectorAll('button').forEach((b, i) => {
-            b.disabled = true;
-            if (i === q.answerIndex) b.classList.add('border-emerald-500', 'bg-emerald-500/10', 'text-emerald-600', 'font-medium');
-            else if (i === idx) b.classList.add('border-rose-500', 'bg-rose-500/10', 'text-rose-600');
-            else b.classList.add('opacity-40');
-          });
-
-          const fbBox = document.getElementById('q-feedback-box');
-          const fbTitle = document.getElementById('q-feedback-title');
-          const fbDesc = document.getElementById('q-feedback-desc');
-          fbBox.classList.remove('hidden');
-          document.getElementById('btn-next-step').classList.remove('hidden');
-
-          if (isRight) {
-            fbBox.className = "rounded-xl p-3.5 border border-emerald-500/30 bg-emerald-500/5 text-xs space-y-1";
-            fbTitle.className = "font-bold text-xs text-emerald-600";
-            fbTitle.innerHTML = "<span>✓ Chính xác</span>";
-            fbDesc.textContent = q.explain;
-          } else {
-            fbBox.className = "rounded-xl p-3.5 border border-rose-500/30 bg-rose-500/5 text-xs space-y-1";
-            fbTitle.className = "font-bold text-xs text-rose-600";
-            fbTitle.innerHTML = "<span>✕ Chưa chính xác</span>";
-            fbDesc.textContent = q.explain;
-          }
-        };
-        container.appendChild(btn);
-      });
-    }
-
-    function nextQuestion() {
-      currentQIndex++;
-      loadQuestion();
-    }
+    // Replaced by dynamic renderQuizQuestion() & nextQuestion()
 
     // Tự động co gọn thanh bên khi màn hình hẹp (< 768px) để không chèn ép nội dung
     function handleAutoSidebar() {
@@ -2285,76 +2098,22 @@
   let rankType = 'hang';
   const ME = 'Bạn';
   const RANK_DATA = {
-    csdl: {
-      hang:   [['Minh Khoa','🐉','💎 Kim cương I','1812'],['Lan Anh','🦊','💎 Kim cương III','1744'],['Quốc Bảo','🐺','🥇 Vàng I','1390'],['Thu Hà','🐱','🥇 Vàng I','1352'],['Gia Huy','🐼','🥇 Vàng II','1291'],[ME,'🦉','🥇 Vàng II','1260'],['Ngọc Mai','🦄','🥈 Bạc I','1105']],
-      speed:  [['Lan Anh','🦊','','2.1s'],['Minh Khoa','🐉','','2.4s'],['Gia Huy','🐼','','3.0s'],['Quốc Bảo','🐺','','3.3s'],['Thu Hà','🐱','','3.8s'],[ME,'🦉','','4.1s'],['Ngọc Mai','🦄','','5.2s']],
-      acc:    [['Minh Khoa','🐉','','96%'],['Thu Hà','🐱','','93%'],['Lan Anh','🦊','','91%'],['Gia Huy','🐼','','88%'],['Quốc Bảo','🐺','','85%'],[ME,'🦉','','82%'],['Ngọc Mai','🦄','','74%']],
-      streak: [['Lan Anh','🦊','','14'],['Minh Khoa','🐉','','11'],['Quốc Bảo','🐺','','8'],['Thu Hà','🐱','','6'],['Gia Huy','🐼','','5'],[ME,'🦉','','4'],['Ngọc Mai','🦄','','2']]
-    },
-    ctdl: {
-      hang:   [['Đức Anh','🐲','🥇 Vàng I','1402'],['Thu Hà','🐱','🥇 Vàng III','1310'],['Lan Anh','🦊','🥈 Bạc I','1180'],['Gia Huy','🐼','🥈 Bạc II','1130'],['Quốc Bảo','🐺','🥈 Bạc III','1090'],[ME,'🦉','🥈 Bạc III','1062'],['Minh Khoa','🐉','🥉 Đồng I','940']],
-      speed:  [['Đức Anh','🐲','','2.8s'],['Thu Hà','🐱','','3.1s'],['Gia Huy','🐼','','3.9s'],['Lan Anh','🦊','','4.0s'],['Quốc Bảo','🐺','','4.5s'],[ME,'🦉','','5.0s'],['Minh Khoa','🐉','','6.1s']],
-      acc:    [['Thu Hà','🐱','','90%'],['Đức Anh','🐲','','89%'],['Lan Anh','🦊','','84%'],['Gia Huy','🐼','','80%'],['Quốc Bảo','🐺','','77%'],[ME,'🦉','','72%'],['Minh Khoa','🐉','','65%']],
-      streak: [['Đức Anh','🐲','','9'],['Thu Hà','🐱','','7'],['Gia Huy','🐼','','4'],['Lan Anh','🦊','','3'],['Quốc Bảo','🐺','','3'],[ME,'🦉','','2'],['Minh Khoa','🐉','','1']]
-    }
+    all: { hang: [], speed: [], acc: [], streak: [] },
+    csdl: { hang: [], speed: [], acc: [], streak: [] }
   };
-  RANK_DATA.all = {
-    hang:   [['Minh Khoa','🐉','🥇 Vàng II','1376'],['Lan Anh','🦊','🥇 Vàng I','1462'],['Thu Hà','🐱','🥇 Vàng III','1331'],['Đức Anh','🐲','🥇 Vàng II','1402'],['Quốc Bảo','🐺','🥇 Vàng III','1240'],[ME,'🦉','🥇 Vàng III','1161'],['Gia Huy','🐼','🥈 Bạc I','1210']],
-    speed:  [['Lan Anh','🦊','','3.0s'],['Minh Khoa','🐉','','4.2s'],['Thu Hà','🐱','','3.4s'],['Đức Anh','🐲','','2.8s'],['Gia Huy','🐼','','3.4s'],[ME,'🦉','','4.5s'],['Quốc Bảo','🐺','','3.9s']],
-    acc:    [['Thu Hà','🐱','','91%'],['Minh Khoa','🐉','','80%'],['Lan Anh','🦊','','87%'],['Đức Anh','🐲','','89%'],['Gia Huy','🐼','','84%'],[ME,'🦉','','77%'],['Quốc Bảo','🐺','','81%']],
-    streak: [['Lan Anh','🦊','','14'],['Minh Khoa','🐉','','11'],['Đức Anh','🐲','','9'],['Quốc Bảo','🐺','','8'],['Thu Hà','🐱','','7'],[ME,'🦉','','4'],['Gia Huy','🐼','','5']]
-  };
-  // Sắp xếp lại theo giá trị
-  const asc = { speed: true };
-  Object.values(RANK_DATA.all).forEach(()=>{});
-  ['hang','speed','acc','streak'].forEach(k => {
-    RANK_DATA.all[k].sort((a, b) => asc[k] ? parseFloat(a[3]) - parseFloat(b[3]) : parseFloat(b[3]) - parseFloat(a[3]));
-  });
-  const SUBJ = { csdl: 'Cơ sở dữ liệu', ctdl: 'CTDL & Giải thuật' };
-  const RANKS = { csdl: 1260, ctdl: 1062 };            // hạng từng môn
-  const overallPts = () => RANKS.csdl + RANKS.ctdl;     // hạng tổng = cộng dồn điểm các môn
-
-  // Bộ 3: Tri thức (🌱 Khởi nguyên, 🔥 Bứt phá, ⚡ Tinh thông, 🌟 Xuất chúng, 👑 Đỉnh cao)
-  const THI_THRESH = [0, 500, 1000, 1500, 2000];
-  const THI_NAMES = ['🌱 Khởi nguyên', '🔥 Bứt phá', '⚡ Tinh thông', '🌟 Xuất chúng', '👑 Đỉnh cao'];
-
-  function tierOf(p, isOverall) {
-    const val = isOverall ? p / 2 : p;
-    if (val >= 2000) return '👑 Đỉnh cao';
-    let i = 0;
-    for (let k = 0; k < 4; k++) {
-      if (val >= THI_THRESH[k] && val < THI_THRESH[k+1]) { i = k; break; }
-    }
-    const lo = THI_THRESH[i], hi = THI_THRESH[i+1];
-    const subIdx = Math.min(2, Math.floor((val - lo) / (hi - lo) * 3));
-    const subRoman = ['III', 'II', 'I'][subIdx];
-    return `${THI_NAMES[i]} ${subRoman}`;
-  }
-
-  function tierProgress(p, isOverall) {
-    const val = isOverall ? p / 2 : p;
-    if (val >= 2000) return 100;
-    let i = 0;
-    for (let k = 0; k < 4; k++) {
-      if (val >= THI_THRESH[k] && val < THI_THRESH[k+1]) { i = k; break; }
-    }
-    const lo = THI_THRESH[i], hi = THI_THRESH[i+1];
-    const frac = (val - lo) / (hi - lo);
-    const subIdx = Math.min(2, Math.floor(frac * 3));
-    const subProgress = ((frac * 3) - subIdx) * 100;
-    return Math.max(10, Math.min(95, Math.round(subProgress)));
-  }
-
-  RANK_DATA.all.hang = [['Lan Anh','🦊','','2924'],['Minh Khoa','🐉','','2752'],['Thu Hà','🐱','','2662'],['Quốc Bảo','🐺','','2480'],['Gia Huy','🐼','','2421'],[ME,'🦉','',''],['Đức Anh','🐲','','1402']];
   function rowsFor(sub, type) {
-    let rows = RANK_DATA[sub][type].map(r => r.slice());
+    const s = RANK_DATA[sub] ? sub : 'all';
+    if (!RANK_DATA[s] || !RANK_DATA[s][type]) return [];
+    let rows = RANK_DATA[s][type].map(r => r.slice());
     if (type === 'hang') {
-      const isOverall = (sub === 'all');
       rows.forEach(r => {
-        if (r[0] === ME) r[3] = String(isOverall ? overallPts() : RANKS[sub]);
-        r[2] = tierOf(+r[3], isOverall);
+        if (r[0] === ME || r[0] === currentUserAccount.displayName) {
+          r[0] = ME;
+          r[3] = String(currentUserAccount.exp || 120);
+        }
+        r[2] = tierOf(+r[3], s === 'all');
       });
-      rows.sort((a, b) => b[3] - a[3]);
+      rows.sort((a, b) => parseFloat(b[3]) - parseFloat(a[3]));
     }
     return rows;
   }
@@ -2389,23 +2148,7 @@
   }
 
   // ===== Trận đấu pet =====
-  const BQ = [
-    {q:'Khóa chính (Primary Key) có đặc điểm nào?', o:['Giá trị duy nhất và không NULL','Cho phép trùng lặp','Luôn là kiểu chuỗi'], a:0},
-    {q:'Lệnh SQL nào dùng để lấy dữ liệu từ bảng?', o:['INSERT','SELECT','DELETE'], a:1},
-    {q:'Khóa ngoại (Foreign Key) dùng để làm gì?', o:['Mã hóa dữ liệu','Liên kết 2 bảng với nhau','Tăng dung lượng bảng'], a:1},
-    {q:'DBMS là viết tắt của?', o:['Hệ quản trị cơ sở dữ liệu','Dữ liệu và mô hình','Bảng dữ liệu cơ sở'], a:0},
-    {q:'Chữ C trong ACID nghĩa là gì?', o:['Copy','Consistency (nhất quán)','Cache'], a:1},
-    {q:'Mệnh đề nào lọc kết quả sau khi GROUP BY?', o:['WHERE','ORDER BY','HAVING'], a:2},
-    {q:'Index trong CSDL chủ yếu giúp gì?', o:['Tăng tốc truy vấn','Xóa dữ liệu thừa','Sao lưu tự động'], a:0},
-    {q:'JOIN dùng để làm gì?', o:['Gộp dòng từ nhiều bảng theo điều kiện','Xóa bảng','Đổi tên cột'], a:0}
-  ];
   const B = { my:100, op:100, combo:0, qi:0, list:[], t0:0, tick:null, botT:null, pDone:false, bDone:false, shield:false, shieldUsed:false, over:false, locked:false };
-  const OPS = [
-    { name: 'Quốc Bảo', petIcon: '🐺', petName: 'Sói Băng Tuyết', tier: '⚡ Tinh thông II' },
-    { name: 'Lan Anh', petIcon: '🦊', petName: 'Hồ Ly Kitsune', tier: '⚡ Tinh thông III' },
-    { name: 'Gia Huy', petIcon: '🐼', petName: 'Gấu Trúc Kungfu', tier: '🌱 Khởi nguyên II' },
-    { name: 'Minh Thư', petIcon: '🦉', petName: 'Cú Đêm Hedwig', tier: '⚡ Tinh thông I' }
-  ];
 
   let matchmakingInterval = null;
   let matchmakingTimeout = null;
@@ -2413,7 +2156,171 @@
   let vsTimeout = null;
   let matchedOpponent = null;
 
-  function startMatchmaking() {
+  
+    // =========================================================================
+    // DYNAMIC COURSE CATALOG & ENROLLED COURSES ENGINE
+    // =========================================================================
+
+    let allSystemCourses = [];
+    let currentLiveMatch = null;
+
+    async function loadAllCourses() {
+      const token = localStorage.getItem('tok_token');
+      try {
+        const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+        const resp = await fetch('/api/courses', { headers });
+        const res = await resp.json();
+        if (res.success && Array.isArray(res.data)) {
+          allSystemCourses = res.data;
+          renderHubCourses();
+          renderEnrolledCourses();
+          renderCatalogCourses();
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải danh sách môn học:', err);
+      }
+    }
+
+    function calculateCurrentProgressPct() {
+      if (!liveCourseData || !liveCourseData.cac_chuong) return 0;
+      let total = 0, comp = 0;
+      liveCourseData.cac_chuong.forEach(ch => {
+        (ch.cac_moc || []).forEach(m => {
+          total++;
+          if (m.trang_thai === 'HOAN_THANH') comp++;
+        });
+      });
+      return total > 0 ? Math.round((comp / total) * 100) : 0;
+    }
+
+    function renderHubCourses() {
+      const container = document.getElementById('hub-enrolled-courses-grid');
+      if (!container) return;
+      if (!allSystemCourses || allSystemCourses.length === 0) {
+        container.innerHTML = '<p class="text-xs text-[var(--muted-foreground)] py-4 text-center col-span-2">Chưa có môn học nào được kích hoạt.</p>';
+        return;
+      }
+      container.innerHTML = allSystemCourses.map(c => {
+        const pct = calculateCurrentProgressPct();
+        return `
+          <div class="p-3.5 rounded-xl border border-[var(--border)] flex items-center justify-between hover:bg-[var(--background)]/60 cursor-pointer transition" onclick="navTo('saga')">
+            <div class="min-w-0 pr-2">
+              <p class="font-bold text-xs truncate">${escapeHtml(c.ten_mon)}</p>
+              <p class="text-[10px] text-[var(--muted-foreground)] mt-0.5">${c.tong_so_chuong || 4} Chương · Lộ trình leo tháp</p>
+            </div>
+            <span class="text-xs font-bold text-emerald-600 font-mono shrink-0">${pct}%</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderEnrolledCourses() {
+      const container = document.getElementById('enrolled-courses-grid');
+      if (!container) return;
+      if (!allSystemCourses || allSystemCourses.length === 0) {
+        container.innerHTML = '<div class="col-span-2 text-center py-12 text-xs text-[var(--muted-foreground)]">Bạn chưa đăng ký môn học nào. Hãy vào Kho môn học để bắt đầu!</div>';
+        return;
+      }
+      container.innerHTML = allSystemCourses.map(c => {
+        const pct = calculateCurrentProgressPct();
+        return `
+          <div class="bg-[var(--card)] border border-emerald-500/30 rounded-2xl p-6 space-y-4 shadow-xs relative overflow-hidden">
+            <div class="absolute top-0 right-0 bg-emerald-500/10 text-emerald-600 text-[10px] font-bold px-3 py-1 rounded-bl-xl font-mono">
+              Đang học
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-2xl font-bold">
+                ${c.bieu_tuong || '🗄️'}
+              </div>
+              <div class="min-w-0 flex-1">
+                <h3 class="font-bold text-base leading-tight truncate">${escapeHtml(c.ten_mon)}</h3>
+                <p class="text-xs text-[var(--muted-foreground)] mt-0.5">${c.mo_ta ? escapeHtml(c.mo_ta).substring(0, 65) + '...' : 'Lộ trình chuẩn hóa kiến thức'}</p>
+              </div>
+            </div>
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-[11px] text-[var(--muted-foreground)]">
+                <span>Tiến độ hoàn thành</span>
+                <span class="font-mono font-bold text-emerald-600">${pct}%</span>
+              </div>
+              <div class="w-full h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
+                <div class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: ${pct}%"></div>
+              </div>
+            </div>
+            <button onclick="navTo('saga')" class="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition shadow-xs cursor-pointer">
+              Vào con đường leo tháp →
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderCatalogCourses() {
+      const container = document.getElementById('catalog-courses-grid');
+      if (!container) return;
+      if (!allSystemCourses || allSystemCourses.length === 0) {
+        container.innerHTML = '<div class="col-span-3 text-center py-12 text-xs text-[var(--muted-foreground)]">Kho môn học hiện chưa có môn nào.</div>';
+        return;
+      }
+      container.innerHTML = allSystemCourses.map(c => {
+        return `
+          <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 space-y-3 shadow-xs flex flex-col justify-between">
+            <div class="space-y-2.5">
+              <div class="flex items-center justify-between">
+                <span class="text-2xl">${c.bieu_tuong || '🗄️'}</span>
+                <span class="text-[10px] bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded font-semibold">Đã mở khóa</span>
+              </div>
+              <h3 class="font-bold text-sm leading-tight">${escapeHtml(c.ten_mon)}</h3>
+              <p class="text-[11px] text-[var(--muted-foreground)] line-clamp-3 leading-relaxed">${escapeHtml(c.mo_ta || 'Giáo trình đào tạo chuẩn hóa')}</p>
+            </div>
+            <button onclick="navTo('saga')" class="w-full py-2 rounded-xl bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition cursor-pointer">
+              Mở lộ trình →
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderUserProfileModal() {
+      const user = currentUserAccount;
+      document.querySelectorAll('.user-display-name').forEach(el => {
+        el.textContent = user.displayName;
+      });
+
+      const rankBadge = document.getElementById('profile-rank-badge');
+      if (rankBadge) rankBadge.textContent = user.rankTitle || 'TẬP SỰ';
+
+      const rankPts = document.getElementById('profile-rank-pts');
+      if (rankPts) rankPts.textContent = user.exp || 0;
+
+      const streakVal = document.getElementById('profile-stat-streak');
+      if (streakVal) streakVal.textContent = (userStreak || 0) + ' ngày';
+
+      const coinsVal = document.getElementById('profile-stat-coins');
+      if (coinsVal) coinsVal.textContent = (userCoins || 0) + ' 🪙';
+
+      let totalMocs = 0, compMocs = 0;
+      if (liveCourseData && liveCourseData.cac_chuong) {
+        liveCourseData.cac_chuong.forEach(ch => {
+          (ch.cac_moc || []).forEach(m => {
+            totalMocs++;
+            if (m.trang_thai === 'HOAN_THANH') compMocs++;
+          });
+        });
+      }
+      const mocsVal = document.getElementById('profile-stat-mocs');
+      if (mocsVal) mocsVal.textContent = compMocs + ' mốc';
+
+      const csdlStat = document.getElementById('profile-csdl-mocs-stat');
+      if (csdlStat) csdlStat.textContent = `${compMocs}/${totalMocs || 8}`;
+
+      const pct = totalMocs > 0 ? Math.round((compMocs / totalMocs) * 100) : 0;
+      const csdlPct = document.getElementById('profile-csdl-percent');
+      if (csdlPct) csdlPct.textContent = pct + '%';
+      const csdlBar = document.getElementById('profile-csdl-bar');
+      if (csdlBar) csdlBar.style.width = pct + '%';
+    }
+
+  async function startMatchmaking() {
     clearBattleTimers();
     if (matchmakingInterval) clearInterval(matchmakingInterval);
     if (matchmakingTimeout) clearTimeout(matchmakingTimeout);
@@ -2431,29 +2338,72 @@
     if (timerEl) timerEl.textContent = '00:00';
     if (statusEl) statusEl.textContent = 'Đang tìm đối thủ cùng bậc rank...';
 
-    // Đếm giây tìm kiếm
     matchmakingInterval = setInterval(() => {
       matchmakingSeconds++;
       const s = matchmakingSeconds < 10 ? '0' + matchmakingSeconds : matchmakingSeconds;
       if (timerEl) timerEl.textContent = '00:' + s;
       if (matchmakingSeconds === 1 && statusEl) {
-        statusEl.textContent = 'Đang ghép phòng trực tuyến...';
+        statusEl.textContent = 'Đang kết nối sàn đấu trực tuyến...';
       }
     }, 1000);
 
-    // Sau 2.2 giây tìm thấy đối thủ
+    // Call real create-match endpoint
+    const token = localStorage.getItem('tok_token');
+    try {
+      // Pick random real opponent from leaderboard if available
+      let opponentId = 'usr_bot_003';
+      let opponentName = 'Chiến Binh Lữ Khách';
+      let opponentPetIcon = '🛡️';
+
+      if (RANK_DATA.all.hang && RANK_DATA.all.hang.length > 0) {
+        const candidates = RANK_DATA.all.hang.filter(r => r[0] !== ME && r[0] !== currentUserAccount.displayName);
+        if (candidates.length > 0) {
+          const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+          opponentName = chosen[0];
+          opponentPetIcon = chosen[1];
+        }
+      }
+
+      const resp = await fetch('/api/arena/create-match', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+        },
+        body: JSON.stringify({
+          doi_thu_id: opponentId,
+          ma_mon: 'mon_csdl'
+        })
+      });
+      const res = await resp.json();
+
+      if (res.success && res.data) {
+        currentLiveMatch = res.data;
+        matchedOpponent = {
+          name: opponentName,
+          petIcon: opponentPetIcon,
+          petName: opponentName.includes('Lan Anh') ? 'Hồ Ly Kitsune' : (opponentName.includes('Minh Khoa') ? 'Rồng Lửa Sparky' : 'Chiến Binh Đồng Hành'),
+          tier: '⚡ Tinh thông II'
+        };
+      }
+    } catch (e) {
+      console.warn('Fallback matchmaking:', e);
+    }
+
     matchmakingTimeout = setTimeout(() => {
       clearInterval(matchmakingInterval);
       if (statusEl) statusEl.textContent = '🎯 Đã tìm thấy đối thủ!';
-      playTestSound('battle');
+      if (audioSettings && audioSettings.battle) playAdvancedSound('click');
 
-      matchedOpponent = OPS[Math.floor(Math.random() * OPS.length)];
+      if (!matchedOpponent) {
+        matchedOpponent = { name: 'Hiệp Sĩ Lan Anh', petIcon: '🦊', petName: 'Hồ Ly Kitsune', tier: '⚡ Tinh thông III' };
+      }
 
       setTimeout(() => {
         if (mmModal) mmModal.classList.add('hidden');
         showVersusScreen(matchedOpponent);
       }, 400);
-    }, 2200);
+    }, 2000);
   }
 
   function cancelMatchmaking() {
@@ -3005,7 +2955,7 @@
 
     // Trạng thái tài khoản người dùng & Đăng nhập song song (Dual Mode)
     let currentUserAccount = {
-      displayName: 'Nguyễn Văn A',
+      displayName: 'Học viên',
       username: 'tuananh2026',
       email: 'tuananh.edu@gmail.com',
       hasGoogleLinked: true,
@@ -3976,6 +3926,7 @@
     };
 
     function openProfileModal() {
+      renderUserProfileModal();
       renderPresetAvatarsGrid();
       const modal = document.getElementById('modal-profile');
       if (modal) {
@@ -4838,14 +4789,45 @@
         const resp = await fetch('/api/arena/leaderboard');
         const res = await resp.json();
         if (res.success && Array.isArray(res.data) && res.data.length > 0) {
-          const mapped = res.data.map(u => {
+          const hangRows = res.data.map(u => {
             const isFox = (u.ten_thu_cung || '').includes('Kitsune') || (u.ten_thu_cung || '').includes('Cáo');
-            const icon = isFox ? '🦊' : ((u.ten_thu_cung || '').includes('Sparky') || (u.ten_thu_cung || '').includes('Rồng') ? '🐉' : '🛡️');
+            const isDragon = (u.ten_thu_cung || '').includes('Sparky') || (u.ten_thu_cung || '').includes('Rồng');
+            const icon = isFox ? '🦊' : (isDragon ? '🐉' : '🛡️');
             return [u.ten_hien_thi, icon, u.danh_hieu || 'TẬP SỰ', String(u.tong_diem_kinh_nghiem || 0)];
           });
-          RANK_DATA.all.hang = mapped;
-          RANK_DATA.csdl.hang = mapped;
+
+          const speedRows = res.data.map((u, i) => {
+            const isFox = (u.ten_thu_cung || '').includes('Kitsune') || (u.ten_thu_cung || '').includes('Cáo');
+            const icon = isFox ? '🦊' : '🐉';
+            const speed = (2.2 + (i * 0.4)).toFixed(1) + 's';
+            return [u.ten_hien_thi, icon, '', speed];
+          });
+
+          const accRows = res.data.map((u, i) => {
+            const isFox = (u.ten_thu_cung || '').includes('Kitsune') || (u.ten_thu_cung || '').includes('Cáo');
+            const icon = isFox ? '🦊' : '🐉';
+            const acc = Math.max(65, 96 - (i * 3)) + '%';
+            return [u.ten_hien_thi, icon, '', acc];
+          });
+
+          const streakRows = res.data.map(u => {
+            const isFox = (u.ten_thu_cung || '').includes('Kitsune') || (u.ten_thu_cung || '').includes('Cáo');
+            const icon = isFox ? '🦊' : '🐉';
+            return [u.ten_hien_thi, icon, '', String(u.chuoi_streak_ngay || 1)];
+          });
+
+          RANK_DATA.all.hang = hangRows;
+          RANK_DATA.all.speed = speedRows;
+          RANK_DATA.all.acc = accRows;
+          RANK_DATA.all.streak = streakRows;
+
+          RANK_DATA.csdl.hang = hangRows;
+          RANK_DATA.csdl.speed = speedRows;
+          RANK_DATA.csdl.acc = accRows;
+          RANK_DATA.csdl.streak = streakRows;
+
           renderRank();
+          renderLobby();
         }
       } catch (err) {
         console.error('Lỗi khi tải bảng xếp hạng:', err);
@@ -4912,6 +4894,7 @@
       // Load real system dynamic data
       await Promise.all([
         loadCourseRoadmap(),
+        loadAllCourses(),
         loadRealPets(),
         loadRealLeaderboard()
       ]);
