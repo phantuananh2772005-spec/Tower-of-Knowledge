@@ -494,7 +494,7 @@
       <div id="arena-fight" class="space-y-4">
         <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 text-center space-y-5 relative shadow-xs">
           <!-- Nút BXH hình cúp ở góc phải trên của thẻ đấu -->
-          <button onclick="arenaTab('rank')" class="absolute top-4 right-4 p-2.5 rounded-2xl border border-[var(--border)] bg-[var(--background)] hover:bg-emerald-500/10 hover:border-emerald-500/30 text-amber-500 hover:text-amber-400 transition cursor-pointer shadow-2xs group flex items-center gap-1.5 flex items-center justify-center" title="Bảng xếp hạng đấu trường">
+          <button id="btn_bxh_dautruong" onclick="arenaTab('rank')" class="absolute top-4 right-4 p-2.5 rounded-2xl border border-[var(--border)] bg-[var(--background)] hover:bg-emerald-500/10 hover:border-emerald-500/30 text-amber-500 hover:text-amber-400 transition cursor-pointer shadow-2xs group flex items-center gap-1.5 flex items-center justify-center" title="Bảng xếp hạng đấu trường">
             <span class="text-base group-hover:scale-110 transition-transform">🏆</span>
           </button>
           <div class="flex items-center justify-center gap-10 text-7xl select-none">
@@ -533,7 +533,7 @@
               <p id="lobby-all-pts" class="font-mono font-bold text-base">0 điểm</p>
             </div>
           </div>
-          <button onclick="startMatchmaking()" class="px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition shadow-md flex items-center justify-center gap-2 mx-auto cursor-pointer hover:scale-105 active:scale-95 duration-150">
+          <button id="btn_timtran_1v1" onclick="startMatchmaking()" class="px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition shadow-md flex items-center justify-center gap-2 mx-auto cursor-pointer hover:scale-105 active:scale-95 duration-150">
             <span>⚔️</span>
             <span>Tìm trận đấu 1v1</span>
           </button>
@@ -544,7 +544,7 @@
       <!-- Tab BXH -->
       <div id="arena-rank" class="hidden space-y-4">
         <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
-          <button onclick="arenaTab('fight')" class="px-3 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--background)] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+          <button id="btn_ve_sanh_dau" onclick="arenaTab('fight')" class="px-3 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--background)] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
             <span>←</span> <span>Trở về sảnh đấu</span>
           </button>
           <span class="text-xs font-bold text-amber-500 flex items-center gap-1">🏆 Bảng xếp hạng thi đấu</span>
@@ -716,10 +716,10 @@
               <div id="pet-mood-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 90%"></div>
             </div>
             <div class="pt-2 flex gap-3">
-              <button onclick="feedPet()" class="flex-1 py-2.5 rounded-xl bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border border-amber-500/30 font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs hover:scale-[1.02] active:scale-[0.98]">
+              <button id="btn_choan_pet" onclick="feedPet()" class="flex-1 py-2.5 rounded-xl bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border border-amber-500/30 font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs hover:scale-[1.02] active:scale-[0.98]">
                 <span>🍎</span> <span>Cho ăn (10 🪙)</span>
               </button>
-              <button onclick="petHappy()" class="flex-1 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--card-hover)] font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs hover:scale-[1.02] active:scale-[0.98]">
+              <button id="btn_vuotve_pet" onclick="petHappy()" class="flex-1 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--card-hover)] font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs hover:scale-[1.02] active:scale-[0.98]">
                 <span>✨</span> <span>Vuốt ve</span>
               </button>
             </div>
@@ -1039,7 +1039,7 @@
 
           <!-- DƯỚI CÙNG CARD CÀI ĐẶT: NÚT ĐĂNG XUẤT CĂN GIỮA -->
           <div class="pt-4 border-t border-[var(--border)] flex justify-center">
-            <button onclick="logoutAndOpenAuth()" class="px-6 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/30 text-xs font-bold transition cursor-pointer flex items-center justify-center gap-2 shadow-2xs">
+            <button id="btn_dangxuat" onclick="logoutAndOpenAuth()" class="px-6 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/30 text-xs font-bold transition cursor-pointer flex items-center justify-center gap-2 shadow-2xs">
               <span>🚪 Đăng xuất</span>
             </button>
           </div>
@@ -1295,7 +1295,7 @@
               <h3 id="auth-modal-title" class="font-bold text-base sm:text-lg tracking-tight">Tạo tài khoản</h3>
             </div>
           </div>
-          <button onclick="closeAuthModal()" class="w-8 h-8 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold transition cursor-pointer shrink-0">
+          <button id="btn_dong_modal_auth" onclick="closeAuthModal()" class="w-8 h-8 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold transition cursor-pointer shrink-0">
             ✕
           </button>
         </div>
@@ -1683,12 +1683,6 @@
         }
       }, 100);
     }
-
-    function enrollCourse(name) {
-      showToast(`🎉 Đã thêm môn "${name}" vào Lộ trình đang học của bạn!`);
-      navTo('enrolled');
-    }
-
     function startPlay(mNum) {
       navTo('play');
       document.getElementById('play-title').textContent = `Mốc ${mNum} · Rèn luyện`;
@@ -1726,16 +1720,6 @@
         // Có thể hiện toast nhỏ
       }
     }
-
-    function petSubTab(tab) {
-      document.getElementById('subtab-pet-home').classList.toggle('hidden', tab !== 'home');
-      document.getElementById('subtab-pet-shop').classList.toggle('hidden', tab !== 'shop');
-      const on = "px-5 py-2 rounded-lg bg-[var(--foreground)] text-[var(--background)] transition cursor-pointer";
-      const off = "px-5 py-2 rounded-lg text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition cursor-pointer";
-      document.getElementById('tab-pet-home-btn').className = tab === 'home' ? on : off;
-      document.getElementById('tab-pet-shop-btn').className = tab === 'shop' ? on : off;
-    }
-
     function feedPet() {
       if (userCoins < 10) {
         showToast("🪙 Bạn không đủ Xu! Hãy học bài để nhận thêm Xu nhé.", "error");
@@ -2439,304 +2423,6 @@
   function clearBattleTimers() { clearInterval(B.tick); clearTimeout(B.botT); }
   function leaveBattle() { clearBattleTimers(); navTo('minigame'); arenaTab('fight'); }
   setTimeout(renderLobby, 0);
-  // ================= MODAL SHOWCASE 5 MẪU HIỆU ỨNG THẮNG / THUA (TÍCH HỢP TRỰC TIẾP) =================
-  let scOutcome = 'win'; // 'win' | 'defeat'
-  let scStyle = 2; // Default to K.O. Victory       // 1, 2, 3, 4, 5
-
-  function openResultsShowcaseModal() {
-    const m = document.getElementById('modal-results-showcase');
-    if (m) {
-      m.classList.remove('hidden');
-      document.body.style.overflow = 'hidden';
-      renderShowcaseStage();
-    }
-  }
-
-  function closeResultsShowcaseModal() {
-    const m = document.getElementById('modal-results-showcase');
-    if (m) {
-      m.classList.add('hidden');
-      document.body.style.overflow = '';
-    }
-  }
-
-  function setShowcaseOutcome(out) {
-    scOutcome = out;
-    const bWin = document.getElementById('sc-btn-win');
-    const bDefeat = document.getElementById('sc-btn-defeat');
-    if (out === 'win') {
-      bWin.className = "px-3 py-1 rounded-lg bg-emerald-600 text-white transition cursor-pointer shadow-2xs font-bold";
-      bDefeat.className = "px-3 py-1 rounded-lg text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition cursor-pointer font-bold";
-    } else {
-      bDefeat.className = "px-3 py-1 rounded-lg bg-rose-600 text-white transition cursor-pointer shadow-2xs font-bold";
-      bWin.className = "px-3 py-1 rounded-lg text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition cursor-pointer font-bold";
-    }
-    renderShowcaseStage();
-  }
-
-  function setShowcaseStyle(s) {
-    scStyle = s;
-    for (let i = 1; i <= 5; i++) {
-      const tab = document.getElementById('sc-tab-' + i);
-      if (tab) {
-        if (i === s) {
-          tab.className = "px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 bg-amber-500/20 text-amber-500 border border-amber-500/40";
-        } else {
-          tab.className = "px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-transparent";
-        }
-      }
-    }
-    renderShowcaseStage();
-  }
-
-  function renderShowcaseStage() {
-    const stage = document.getElementById('sc-stage');
-    if (!stage) return;
-
-    const petName = currentEquippedPet ? currentEquippedPet.name : 'Rồng Nhỏ Sparky';
-    let petVisual = '';
-    if (currentEquippedPet && currentEquippedPet.image) {
-      const filter = scOutcome === 'defeat' ? 'grayscale opacity-75' : '';
-      petVisual = `<img src="${currentEquippedPet.image}" alt="${petName}" class="w-24 h-24 sm:w-28 sm:h-28 object-contain pixel-art drop-shadow-xl mx-auto ${filter}" />`;
-    } else {
-      const icon = currentEquippedPet ? currentEquippedPet.icon : '🦉';
-      const filter = scOutcome === 'defeat' ? 'grayscale opacity-75' : '';
-      petVisual = `<span class="text-6xl sm:text-7xl select-none block text-center ${filter}">${icon}</span>`;
-    }
-
-    const descEl = document.getElementById('sc-style-desc');
-    const descs = {
-      1: 'Phong cách 1: 🔥 Đấu Trường eSports (Hào quang hoàng kim, cúp vàng rơi, nảy điểm RP)',
-      2: 'Phong cách 2: ⚡ Arcade Retro & Comic K.O. (Đậm chất điện tử cổ điển, giật nổ K.O.)',
-      3: 'Phong cách 3: 💎 Gacha Thần Thoại (Trận pháp ma thuật huyền bí, rương báu mở)',
-      4: 'Phong cách 4: ⚔️ Smash Showdown (Vết chém điện ảnh chéo góc, chữ WINNER to bản)',
-      5: 'Phong cách 5: ✨ Glassmorphism Pro (Giao diện kính mờ cao cấp chuẩn quốc tế)'
-    };
-    if (descEl) descEl.textContent = descs[scStyle];
-
-    let html = '';
-
-    if (scStyle === 1) {
-      // Style 1: eSports Arena
-      if (scOutcome === 'win') {
-        html = `
-          <div class="relative bg-gradient-to-b from-[#181c2b] to-[#0c0e17] border-2 border-amber-500/50 rounded-3xl p-6 text-center space-y-5 shadow-2xl text-white">
-            <div class="space-y-1">
-              <span class="text-4xl block animate-bounce drop-shadow">👑</span>
-              <h2 class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500">
-                CHIẾN THẮNG!
-              </h2>
-              <p class="text-[11px] text-amber-200/80">Bản lĩnh áp đảo · Điểm xếp hạng được cộng đồng bộ</p>
-            </div>
-            <div class="py-1">
-              <div class="w-28 h-28 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/30 p-2 flex items-center justify-center">
-                ${petVisual}
-              </div>
-              <span class="inline-block mt-2 text-xs font-bold text-amber-400 bg-amber-500/15 border border-amber-500/30 px-3 py-0.5 rounded-full">
-                ${petName} · Ăn Mừng Rực Rỡ 🎉
-              </span>
-            </div>
-            <div class="grid grid-cols-2 gap-2.5 text-left text-xs">
-              <div class="bg-black/40 border border-emerald-500/30 rounded-xl p-3">
-                <div class="flex justify-between font-bold text-slate-400 text-[10px]"><span>RANK CSDL</span><span class="text-emerald-400">+30 RP</span></div>
-                <div class="font-bold text-amber-400">⚡ Tinh thông II</div>
-                <div class="font-mono font-black text-sm">1,320 pt</div>
-              </div>
-              <div class="bg-black/40 border border-blue-500/30 rounded-xl p-3">
-                <div class="flex justify-between font-bold text-slate-400 text-[10px]"><span>RANK TỔNG</span><span class="text-emerald-400">+30 RP</span></div>
-                <div class="font-bold text-blue-400">⚡ Tinh thông II</div>
-                <div class="font-mono font-black text-sm">2,382 pt</div>
-              </div>
-            </div>
-            <div class="flex items-center justify-center gap-3 text-xs">
-              <span class="text-amber-400 font-bold bg-amber-500/10 px-2.5 py-1 rounded-lg">🪙 +25 Xu Tri Thức</span>
-              <span class="text-emerald-400 font-bold bg-emerald-500/10 px-2.5 py-1 rounded-lg">🔥 Giữ chuỗi 5 ngày</span>
-            </div>
-          </div>
-        `;
-      } else {
-        html = `
-          <div class="relative bg-gradient-to-b from-[#1a1215] to-[#0c0a0c] border-2 border-rose-500/40 rounded-3xl p-6 text-center space-y-5 shadow-2xl text-white">
-            <div class="space-y-1">
-              <span class="text-4xl block drop-shadow">🛡️💥</span>
-              <h2 class="text-2xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-rose-300 via-rose-500 to-red-600">
-                THẤT BẠI!
-              </h2>
-              <p class="text-[11px] text-rose-200/70">Đối thủ đã nhỉnh hơn một nhịp · Thất bại là mẹ thành công</p>
-            </div>
-            <div class="py-1">
-              <div class="w-28 h-28 mx-auto rounded-2xl bg-rose-500/10 border border-rose-500/30 p-2 flex items-center justify-center">
-                ${petVisual}
-              </div>
-              <span class="inline-block mt-2 text-xs font-bold text-rose-400 bg-rose-500/15 border border-rose-500/30 px-3 py-0.5 rounded-full">
-                ${petName} · Đang dưỡng sức hồi phục 🩹
-              </span>
-            </div>
-            <div class="grid grid-cols-2 gap-2.5 text-left text-xs">
-              <div class="bg-black/40 border border-rose-500/25 rounded-xl p-3">
-                <div class="flex justify-between font-bold text-slate-400 text-[10px]"><span>RANK CSDL</span><span class="text-rose-400">-10 RP</span></div>
-                <div class="font-mono font-black text-sm">1,280 pt</div>
-              </div>
-              <div class="bg-black/40 border border-rose-500/25 rounded-xl p-3">
-                <div class="flex justify-between font-bold text-slate-400 text-[10px]"><span>RANK TỔNG</span><span class="text-rose-400">-10 RP</span></div>
-                <div class="font-mono font-black text-sm">2,342 pt</div>
-              </div>
-            </div>
-            <div class="text-xs text-slate-400 bg-black/40 border border-slate-800 rounded-xl p-2">
-              🪙 Nhận quà an ủi: <b>+5 Xu Tri Thức</b> · Cố lên để phục thù!
-            </div>
-          </div>
-        `;
-      }
-    } else if (scStyle === 2) {
-      // Style 2: Arcade Retro
-      if (scOutcome === 'win') {
-        html = `
-          <div class="bg-[#050b14] border-4 border-cyan-400 rounded-2xl p-6 text-center space-y-5 shadow-2xl text-cyan-300">
-            <div class="inline-block bg-gradient-to-r from-fuchsia-600 to-cyan-500 text-white font-black text-3xl px-5 py-1.5 rounded-xl transform -rotate-2 border-2 border-white">
-              K.O. VICTORY!
-            </div>
-            <div class="p-3 border-2 border-dashed border-cyan-400/50 bg-black/60 rounded-xl max-w-xs mx-auto">
-              ${petVisual}
-              <div class="mt-1 text-xs font-mono font-bold text-cyan-300">PERFECT STREAK x2</div>
-            </div>
-            <div class="font-mono text-xs grid grid-cols-2 gap-2">
-              <div class="bg-cyan-950/60 border border-cyan-500/40 p-2.5 rounded-lg">SCORE +1,200<br><span class="text-amber-400 font-bold">RANK UP: S</span></div>
-              <div class="bg-cyan-950/60 border border-cyan-500/40 p-2.5 rounded-lg">COINS +50 🪙<br><span class="text-fuchsia-400 font-bold">EXP x2</span></div>
-            </div>
-          </div>
-        `;
-      } else {
-        html = `
-          <div class="bg-[#140507] border-4 border-rose-600 rounded-2xl p-6 text-center space-y-5 shadow-2xl text-rose-300">
-            <div class="inline-block bg-rose-600 text-white font-black text-3xl px-5 py-1.5 rounded-xl transform rotate-2 border-2 border-white">
-              YOU DIED! K.O.
-            </div>
-            <div class="p-3 border-2 border-dashed border-rose-500/50 bg-black/60 rounded-xl max-w-xs mx-auto">
-              ${petVisual}
-              <div class="mt-1 text-xs font-mono font-bold text-rose-400">💔 INSERT COIN TO RETRY</div>
-            </div>
-            <div class="font-mono text-xs text-rose-300 bg-rose-950/60 border border-rose-500/40 p-2.5 rounded-xl">
-              CONTINUE? 9, 8, 7...
-            </div>
-          </div>
-        `;
-      }
-    } else if (scStyle === 3) {
-      // Style 3: Gacha Anime
-      if (scOutcome === 'win') {
-        html = `
-          <div class="bg-gradient-to-b from-[#1c1829] to-[#0d0b17] border border-amber-400/40 rounded-3xl p-6 text-center space-y-5 shadow-2xl text-amber-200">
-            <div class="space-y-1">
-              <span class="text-xs uppercase tracking-widest text-amber-300">Vinh Dự Hiệp Sĩ</span>
-              <h2 class="text-2xl sm:text-3xl font-serif font-black text-amber-300">✦ ĐẠI THẮNG QUANG VINH ✦</h2>
-            </div>
-            <div class="py-1">
-              <div class="w-28 h-28 mx-auto rounded-full bg-gradient-to-tr from-purple-500/20 to-amber-500/20 border border-amber-400/30 p-2 flex items-center justify-center">
-                ${petVisual}
-              </div>
-            </div>
-            <div class="bg-purple-950/40 border border-purple-500/30 rounded-xl p-3 flex justify-around text-xs">
-              <span class="font-serif font-bold text-amber-300">🎁 Rương Chiến Tích</span>
-              <span class="font-mono text-emerald-400 font-bold">+35 Xu · +100 EXP</span>
-            </div>
-          </div>
-        `;
-      } else {
-        html = `
-          <div class="bg-gradient-to-b from-[#1a1520] to-[#0a080f] border border-slate-700 rounded-3xl p-6 text-center space-y-5 shadow-2xl text-slate-300">
-            <div class="space-y-1">
-              <span class="text-xs uppercase tracking-widest text-slate-400">Chiến Trường Tạm Lắng</span>
-              <h2 class="text-2xl sm:text-3xl font-serif font-black text-slate-200">✦ BẤT THÀNH CHIẾN ✦</h2>
-            </div>
-            <div class="py-1">
-              <div class="w-28 h-28 mx-auto flex items-center justify-center">
-                ${petVisual}
-              </div>
-            </div>
-            <div class="bg-black/40 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-400">
-              Kiên trì rèn luyện · Tinh thần bất diệt
-            </div>
-          </div>
-        `;
-      }
-    } else if (scStyle === 4) {
-      // Style 4: Smash Showdown
-      if (scOutcome === 'win') {
-        html = `
-          <div class="bg-black border-y-4 border-amber-500 p-6 text-center space-y-5 shadow-2xl text-white">
-            <div class="space-y-1">
-              <span class="text-[10px] font-black uppercase tracking-widest text-amber-400 font-mono">MATCH FINISHED</span>
-              <h2 class="text-4xl sm:text-5xl font-black italic tracking-tighter text-amber-400">WINNER!</h2>
-            </div>
-            <div class="w-32 h-32 mx-auto rounded-xl bg-gradient-to-tr from-amber-500/20 to-red-500/20 border-2 border-amber-400 transform rotate-2 flex items-center justify-center">
-              ${petVisual}
-            </div>
-            <div class="font-black text-xs uppercase tracking-wider text-amber-400">
-              ⚡ DOMINATING VICTORY · +30 RANK POINTS
-            </div>
-          </div>
-        `;
-      } else {
-        html = `
-          <div class="bg-black border-y-4 border-slate-700 p-6 text-center space-y-5 shadow-2xl text-white">
-            <div class="space-y-1">
-              <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 font-mono">MATCH FINISHED</span>
-              <h2 class="text-4xl sm:text-5xl font-black italic tracking-tighter text-slate-300">DEFEATED!</h2>
-            </div>
-            <div class="w-32 h-32 mx-auto rounded-xl bg-slate-900 border-2 border-slate-700 transform -rotate-2 flex items-center justify-center">
-              ${petVisual}
-            </div>
-            <div class="font-black text-xs uppercase tracking-wider text-slate-400">
-              REMATCH REQUEST AVAILABLE
-            </div>
-          </div>
-        `;
-      }
-    } else if (scStyle === 5) {
-      // Style 5: Glassmorphism Pro
-      if (scOutcome === 'win') {
-        html = `
-          <div class="bg-slate-900/80 backdrop-blur-md border border-white/20 rounded-3xl p-6 text-center space-y-4 shadow-2xl text-white">
-            <div class="space-y-1">
-              <div class="text-3xl animate-bounce">🏆</div>
-              <h2 class="text-2xl font-extrabold">Xuất sắc! Bạn đã thắng</h2>
-              <p class="text-[11px] text-slate-400">Hoàn thành trận đấu 1v1 xuất sắc</p>
-            </div>
-            <div class="py-1">
-              ${petVisual}
-              <span class="inline-block mt-1 text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-3 py-0.5 rounded-full">
-                ${petName}
-              </span>
-            </div>
-            <div class="bg-slate-800/60 border border-white/10 rounded-xl p-3 flex justify-between items-center text-xs">
-              <span class="text-slate-400">Tiến độ leo Rank</span>
-              <span class="font-mono font-black text-emerald-400">⚡ Tinh thông II (+30)</span>
-            </div>
-          </div>
-        `;
-      } else {
-        html = `
-          <div class="bg-slate-900/80 backdrop-blur-md border border-white/20 rounded-3xl p-6 text-center space-y-4 shadow-2xl text-white">
-            <div class="space-y-1">
-              <div class="text-3xl">🌱</div>
-              <h2 class="text-2xl font-extrabold">Cố lên, trận sau sẽ thắng!</h2>
-              <p class="text-[11px] text-slate-400">Chỉ thiếu một chút may mắn thôi</p>
-            </div>
-            <div class="py-1">
-              ${petVisual}
-            </div>
-            <div class="bg-slate-800/60 border border-white/10 rounded-xl p-3 flex justify-between items-center text-xs">
-              <span class="text-slate-400">Giữ vững phong độ</span>
-              <span class="font-bold text-amber-400">🔥 Chuỗi 5 ngày an toàn</span>
-            </div>
-          </div>
-        `;
-      }
-    }
-
-    stage.innerHTML = html;
-  }
 
   // Escape key handler update
   function updHp() {
@@ -3555,64 +3241,6 @@
     }
 
     // Set Sound Theme
-    function setSoundTheme(themeName) {
-      selectedSoundTheme = themeName;
-      if (typeof showToast === 'function') {
-        const names = {
-          epic: 'Dàn Nhạc & Thần Thoại (Orchestral)',
-          arcade: 'Retro 8-Bit Chiptune (Arcade)',
-          cyber: 'Hiện Đại Cyberpunk (Sci-Fi)',
-          cute: 'Hoạt Họa Vui Nhộn (Cartoon Pop)'
-        };
-        showToast('Đã chọn Theme Âm Thanh: ' + (names[themeName] || themeName));
-      }
-    }
-
-    function openSoundboardModal() {
-      const modal = document.getElementById('modal-soundboard');
-      if (modal) modal.classList.remove('hidden');
-    }
-
-    function closeSoundboardModal() {
-      const modal = document.getElementById('modal-soundboard');
-      if (modal) modal.classList.add('hidden');
-    }
-
-    function previewSFX(id, label) {
-      playAdvancedSound(id);
-      const ind = document.getElementById('sb-indicator');
-      const txt = document.getElementById('sb-status-text');
-      if (ind && txt) {
-        ind.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-ping';
-        txt.innerHTML = `<span class="text-emerald-500 font-bold">${label}</span>`;
-        setTimeout(() => {
-          ind.className = 'w-2 h-2 rounded-full bg-[var(--border)]';
-        }, 500);
-      }
-    }
-
-    function setThemeAudio(theme) {
-      setSoundTheme(theme);
-      ['epic', 'arcade', 'cyber', 'cute'].forEach(t => {
-        const btn = document.getElementById('sb-theme-' + t);
-        const setBtn = document.getElementById('set-theme-' + t);
-        const activeClass = 'px-2.5 py-1 rounded-xl text-xs font-bold bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/40 transition cursor-pointer';
-        const inactiveClass = 'px-2.5 py-1 rounded-xl text-xs font-bold text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition cursor-pointer';
-        if (btn) btn.className = (t === theme ? activeClass : inactiveClass);
-        if (setBtn) {
-          if (t === theme) {
-            setBtn.className = 'px-2 py-0.5 rounded-lg font-bold bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/40';
-          } else {
-            setBtn.className = 'px-2 py-0.5 rounded-lg font-bold text-[var(--muted-foreground)] hover:text-[var(--foreground)]';
-          }
-        }
-      });
-      if (theme === 'arcade') playAdvancedSound('win-8bit');
-      else if (theme === 'cyber') playAdvancedSound('win-cyber');
-      else if (theme === 'cute') playAdvancedSound('pet-sparky');
-      else playAdvancedSound('win-fanfare');
-    }
-
     function playTestSound(type) {
       if (!audioSettings[type]) {
         showToast('Hiệu ứng này đang được tắt!', 'error');
@@ -3932,17 +3560,7 @@
           closeAuthModal();
           return;
         }
-        const sbModal = document.getElementById('modal-soundboard');
-        if (sbModal && !sbModal.classList.contains('hidden')) {
-          closeSoundboardModal();
-          return;
-        }
-        const bscModal = document.getElementById('modal-results-showcase');
-        if (bscModal && !bscModal.classList.contains('hidden')) {
-          closeResultsShowcaseModal();
-          return;
-        }
-        const sModal = document.getElementById('modal-settings');
+        const sModal = document.getElementById("modal-settings");
         if (sModal && !sModal.classList.contains('hidden')) {
           closeSettingsModal();
           return;
@@ -3964,11 +3582,6 @@
       const popover = document.getElementById('avatar-popover');
       if (popover) popover.classList.add('hidden');
     }
-
-    function toggleAvatarPicker() {
-      openAvatarPopover();
-    }
-
     function renderPresetAvatarsGrid() {
       const grid = document.getElementById('preset-avatars-grid');
       if (!grid) return;

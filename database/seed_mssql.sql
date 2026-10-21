@@ -33,9 +33,7 @@ SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
 INSERT INTO thu_cung_so_huu (ma_so_huu, ma_nguoi_dung, ma_thu_cung, dang_kich_hoat)
 VALUES
-('own_demo_01', 'usr_demo_002', 'pet_sparky', 1),
-('own_admin_01', 'usr_admin_001', 'pet_kitsune', 1),
-('own_bot_01', 'usr_bot_003', 'pet_golem', 1);
+('own_admin_01', 'usr_admin_001', 'pet_sparky', 1);
 GO
 
 -- 4. MON HOC: CO SO DU LIEU
@@ -277,10 +275,7 @@ GO
 -- No pre-seeded checkpoint progress
 
 -- 9. GIAO DICH XU KHOI TAO
-INSERT INTO giao_dich_xu (ma_giao_dich, ma_nguoi_dung, so_luong, so_du_sau, nguon_giao_dich, mo_ta)
-VALUES
-('tx_seed_001', 'usr_demo_002', 150, 150, 'THUONG_STREAK', N'Thưởng duy trì chuỗi Streak 3 ngày'),
-('tx_seed_002', 'usr_demo_002', 10, 160, 'THUONG_MOC_HOC', N'Thưởng hoàn thành Mốc 1.1: Khái niệm CSDL');
+-- Sạch 100%: Giao dịch được ghi nhận tự động khi người dùng học tập và nhận thưởng.
 GO
 
 PRINT N'DA NAP DU LIEU MAU CHUAN GIAO TRINH CO SO DU LIEU THANH CONG VAO SQL SERVER!';

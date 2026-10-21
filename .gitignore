@@ -9,3 +9,4 @@ Thumbs.db
 dist/
 coverage/
 *.log
+audit_*.png

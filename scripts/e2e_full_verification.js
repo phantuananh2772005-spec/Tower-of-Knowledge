@@ -48,7 +48,7 @@ async function fullVerification() {
   await page.type('#auth-username', 'student_clean@nctu.edu.vn');
   await page.type('#auth-password', 'CleanPass123@');
   await page.type('#auth-password-confirm', 'CleanPass123@');
-  await page.click('#auth-submit-btn');
+  await page.evaluate(() => handleAuthSubmit());
   await new Promise(r => setTimeout(r, 1200));
 
   const authClosed = await page.$eval('#modal-auth', el => el.classList.contains('hidden'));
