@@ -7,6 +7,9 @@
 
 const { execFile } = require('child_process');
 const util = require('util');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 const execFileAsync = util.promisify(execFile);
 require('dotenv').config();
 
@@ -79,33 +82,40 @@ async function queryMssql(sql, params = []) {
     finalSql = `SET ANSI_NULLS ON; SET QUOTED_IDENTIFIER ON; SET NOCOUNT ON; ${interpolated};`;
   }
 
-  const { stdout, stderr } = await execFileAsync('sqlcmd', [
-    '-S', process.env.MSSQL_SERVER || 'localhost',
-    '-E',
-    '-d', process.env.MSSQL_DATABASE || 'TowerOfKnowledge',
-    '-y', '0',
-    '-w', '65535',
-    '-f', '65001',
-    '-Q', finalSql
-  ], { encoding: 'utf8', maxBuffer: 25 * 1024 * 1024 });
+  const tmpFile = path.join(os.tmpdir(), `mssql_${Date.now()}_${Math.random().toString(36).substring(2, 7)}.sql`);
+  fs.writeFileSync(tmpFile, finalSql, 'utf8');
 
-  if (stderr && stderr.trim().length > 0 && !stderr.includes('Changed database context')) {
-    throw new Error(stderr);
-  }
+  try {
+    const { stdout, stderr } = await execFileAsync('sqlcmd', [
+      '-S', process.env.MSSQL_SERVER || 'localhost',
+      '-E',
+      '-d', process.env.MSSQL_DATABASE || 'TowerOfKnowledge',
+      '-y', '0',
+      '-w', '65535',
+      '-f', '65001',
+      '-i', tmpFile
+    ], { encoding: 'utf8', maxBuffer: 25 * 1024 * 1024 });
 
-  if (isSelect) {
-    // sqlcmd splits long JSON across lines with \r\n; join them together
-    const raw = stdout.replace(/\r?\n/g, '').trim();
-    if (!raw) return [];
-    try {
-      return JSON.parse(raw);
-    } catch (e) {
-      // If result was not valid JSON (e.g. empty or non-wrapped), return empty
-      return [];
+    if (stderr && stderr.trim().length > 0 && !stderr.includes('Changed database context')) {
+      throw new Error(stderr);
     }
-  }
 
-  return { affectedRows: 1 };
+    if (isSelect) {
+      // sqlcmd splits long JSON across lines with \r\n; join them together
+      const raw = stdout.replace(/\r?\n/g, '').trim();
+      if (!raw) return [];
+      try {
+        return JSON.parse(raw);
+      } catch (e) {
+        // If result was not valid JSON (e.g. empty or non-wrapped), return empty
+        return [];
+      }
+    }
+
+    return { affectedRows: 1 };
+  } finally {
+    try { fs.unlinkSync(tmpFile); } catch (e) {}
+  }
 }
 
 /**

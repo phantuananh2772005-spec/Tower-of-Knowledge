@@ -23,8 +23,9 @@
 function evaluateQuizSubmission(submittedAnswers, officialQuestions, passScore = 70, rewardCoins = 20, rewardExp = 50) {
   const answerMap = new Map();
   for (const a of (submittedAnswers || [])) {
-    const val = a.lua_chon !== undefined ? a.lua_chon : a.chi_muc_chon;
-    answerMap.set(String(a.ma_cau_hoi), Number(val));
+    if (a && a.ma_cau_hoi) {
+      answerMap.set(String(a.ma_cau_hoi), a);
+    }
   }
 
   const totalQuestions = officialQuestions.length;
@@ -32,8 +33,53 @@ function evaluateQuizSubmission(submittedAnswers, officialQuestions, passScore =
   const details = [];
 
   for (const q of officialQuestions) {
-    const userChoice = answerMap.has(String(q.ma_cau_hoi)) ? answerMap.get(String(q.ma_cau_hoi)) : -1;
-    const isCorrect = userChoice === Number(q.vi_tri_dap_an_dung);
+    const userSubmission = answerMap.get(String(q.ma_cau_hoi));
+    let isCorrect = false;
+    let userDisplayChoice = null;
+    const loai = q.loai_cau_hoi || 'TRAC_NGHIEM_4';
+
+    if (!userSubmission) {
+      isCorrect = false;
+    } else if (loai === 'NOI_CAP') {
+      let parsed = {};
+      try {
+        parsed = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : (q.du_lieu_cau_hoi || {});
+      } catch (e) { parsed = {}; }
+      const expectedPairs = parsed.pairs || [];
+      const userPairs = userSubmission.matched_pairs || userSubmission.cap_ghep || [];
+      if (expectedPairs.length > 0 && userPairs.length === expectedPairs.length) {
+        isCorrect = expectedPairs.every(ep =>
+          userPairs.some(up => String(up.left).trim() === String(ep.left).trim() && String(up.right).trim() === String(ep.right).trim())
+        );
+      }
+      userDisplayChoice = `${userPairs.length}/${expectedPairs.length} cặp`;
+    } else if (loai === 'DIEN_TU') {
+      let parsed = {};
+      try {
+        parsed = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : (q.du_lieu_cau_hoi || {});
+      } catch (e) { parsed = {}; }
+      const expected = String(parsed.blank_answer || '').trim().toLowerCase();
+      const actual = String(userSubmission.selected_word || userSubmission.tu_dien || userSubmission.lua_chon || '').trim().toLowerCase();
+      isCorrect = Boolean(expected && actual === expected);
+      userDisplayChoice = actual;
+    } else if (loai === 'SAP_XEP_CAU') {
+      let parsed = {};
+      try {
+        parsed = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : (q.du_lieu_cau_hoi || {});
+      } catch (e) { parsed = {}; }
+      const expectedOrder = parsed.correct_order || [];
+      const userOrder = userSubmission.ordered_words || userSubmission.thu_tu_tu || [];
+      if (expectedOrder.length > 0 && userOrder.length === expectedOrder.length) {
+        isCorrect = expectedOrder.every((word, idx) => String(word).trim() === String(userOrder[idx]).trim());
+      }
+      userDisplayChoice = userOrder.join(' ');
+    } else {
+      // Default: TRAC_NGHIEM_4
+      const val = userSubmission.lua_chon !== undefined ? userSubmission.lua_chon : userSubmission.chi_muc_chon;
+      const userChoice = val !== undefined ? Number(val) : -1;
+      isCorrect = userChoice === Number(q.vi_tri_dap_an_dung);
+      userDisplayChoice = userChoice;
+    }
 
     if (isCorrect) {
       correctCount++;
@@ -41,9 +87,10 @@ function evaluateQuizSubmission(submittedAnswers, officialQuestions, passScore =
 
     details.push({
       ma_cau_hoi: q.ma_cau_hoi,
+      loai_cau_hoi: loai,
       la_dung: isCorrect,
-      lua_chon: userChoice,
-      dap_an_dung: Number(q.vi_tri_dap_an_dung),
+      lua_chon: userDisplayChoice,
+      dap_an_dung: q.vi_tri_dap_an_dung !== undefined && q.vi_tri_dap_an_dung !== null ? Number(q.vi_tri_dap_an_dung) : null,
       giai_thich: q.giai_thich || ''
     });
   }

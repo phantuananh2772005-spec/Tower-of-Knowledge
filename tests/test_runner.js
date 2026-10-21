@@ -238,6 +238,44 @@ async function main() {
     assert.ok(stats.tong_quan.tong_cau_hoi >= 16);
   });
 
+  // ================= 6. DUOLINGO STEPPING & ONBOARDING JOURNEY =================
+  console.log('\n--- 6. Duolingo Stepping & Onboarding Journey ---');
+  await runAsyncTest('journey: new user zero-course start -> explicit enroll -> 4-step bloom checkpoint submission', async () => {
+    const testUsername = `user_runner_${Date.now()}`;
+    const regResult = await authService.register({
+      ten_dang_nhap: testUsername,
+      mat_khau: 'Password123@',
+      ten_hien_thi: `Học Viên Runner ${Date.now()}`
+    });
+    const userId = regResult.nguoi_dung.ma_nguoi_dung;
+
+    // Zero-course on start
+    const myInit = await courseService.listMyCourses(userId);
+    assert.strictEqual(myInit.length, 0);
+
+    // Explicit enroll
+    const enrollRes = await courseService.enrollCourse('co-so-du-lieu', userId);
+    assert.strictEqual(enrollRes.success, true);
+
+    const myEnrolled = await courseService.listMyCourses(userId);
+    assert.strictEqual(myEnrolled.length, 1);
+
+    // Mốc 1.1 DA_MO with 4 steps
+    const courseDetails = await courseService.getCourseDetails('co-so-du-lieu', userId);
+    const moc1 = courseDetails.cac_chuong[0].cac_moc[0];
+    assert.strictEqual(moc1.trang_thai, 'DA_MO');
+    assert.strictEqual(moc1.buoc_hien_tai, 1);
+    assert.strictEqual(moc1.cac_buoc_hoan_thanh, '0/4');
+
+    // Step 1 content
+    const step1 = await courseService.getCheckpointContent(moc1.ma_moc, userId, 1);
+    assert.ok(step1.danh_sach_cau_hoi.length > 0);
+
+    // Cleanup
+    const db = require('../database/db');
+    await db.execute('DELETE FROM nguoi_dung WHERE ma_nguoi_dung = $1', [userId]);
+  });
+
   console.log('\n================================================================');
   console.log(`🏁 TEST RESULTS: ${passedTests} PASSED, ${failedTests} FAILED`);
   console.log('================================================================\n');

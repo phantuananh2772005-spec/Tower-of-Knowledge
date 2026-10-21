@@ -117,11 +117,14 @@ CREATE TABLE cau_hoi (
     ma_moc VARCHAR(50) NULL REFERENCES moc_bai_hoc(ma_moc) ON DELETE SET NULL,
     noi_dung TEXT NOT NULL,
     loai_cau_hoi VARCHAR(30) NOT NULL DEFAULT 'TRAC_NGHIEM_4',
-    dap_an_a TEXT NOT NULL,
-    dap_an_b TEXT NOT NULL,
-    dap_an_c TEXT NOT NULL,
-    dap_an_d TEXT NOT NULL,
-    vi_tri_dap_an_dung INT NOT NULL,
+    dap_an_a TEXT NULL,
+    dap_an_b TEXT NULL,
+    dap_an_c TEXT NULL,
+    dap_an_d TEXT NULL,
+    vi_tri_dap_an_dung INT NULL,
+    muc_bloom VARCHAR(20) NOT NULL DEFAULT 'NHO',
+    buoc_luyen_tap INT NOT NULL DEFAULT 1,
+    du_lieu_cau_hoi TEXT NULL,
     giai_thich TEXT NULL,
     do_kho INT NOT NULL DEFAULT 1,
     tao_luc TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -146,6 +149,8 @@ CREATE TABLE tien_do_moc_bai_hoc (
     trang_thai VARCHAR(20) NOT NULL DEFAULT 'DA_MO',
     diem_dat_duoc INT NOT NULL DEFAULT 0,
     xu_da_nhan INT NOT NULL DEFAULT 0,
+    buoc_hien_tai INT NOT NULL DEFAULT 1,
+    cac_buoc_hoan_thanh VARCHAR(50) NOT NULL DEFAULT '0/4',
     thoi_diem_hoan_thanh TIMESTAMPTZ NULL,
     CONSTRAINT uq_nguoi_dung_moc UNIQUE(ma_nguoi_dung, ma_moc)
 );
