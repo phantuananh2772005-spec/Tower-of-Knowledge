@@ -153,6 +153,28 @@ async function main() {
     assert.strictEqual(res.isCourseFinished, false);
   });
 
+  runTest('progression: strictly advances sequentially 1.1 -> 1.2 -> 1.3 -> 1.4 -> 1.5 -> 2.1', () => {
+    const list = [
+      { ma_moc: 'moc_csdl_01_01', thu_tu: 1, chuong_thu_tu: 1 },
+      { ma_moc: 'moc_csdl_02_01', thu_tu: 1, chuong_thu_tu: 2 },
+      { ma_moc: 'moc_csdl_01_02', thu_tu: 2, chuong_thu_tu: 1 },
+      { ma_moc: 'moc_csdl_01_03', thu_tu: 3, chuong_thu_tu: 1 },
+      { ma_moc: 'moc_csdl_01_04', thu_tu: 4, chuong_thu_tu: 1 },
+      { ma_moc: 'moc_csdl_01_05', thu_tu: 5, chuong_thu_tu: 1 }
+    ];
+    // After 1.1, must unlock 1.2 (NOT 2.1)
+    const n1 = progressionRules.findNextCheckpointToUnlock(list, 'moc_csdl_01_01');
+    assert.strictEqual(n1.nextCheckpoint.ma_moc, 'moc_csdl_01_02');
+
+    // After 1.2, must unlock 1.3
+    const n2 = progressionRules.findNextCheckpointToUnlock(list, 'moc_csdl_01_02');
+    assert.strictEqual(n2.nextCheckpoint.ma_moc, 'moc_csdl_01_03');
+
+    // After 1.5, must unlock 2.1
+    const n5 = progressionRules.findNextCheckpointToUnlock(list, 'moc_csdl_01_05');
+    assert.strictEqual(n5.nextCheckpoint.ma_moc, 'moc_csdl_02_01');
+  });
+
   // ================= 4. COMBAT RULES =================
   console.log('\n--- 4. Arena 1v1 Combat Rules ---');
   runTest('combat: calculates damage with speed-critical bonus', () => {
@@ -200,7 +222,7 @@ async function main() {
     assert.strictEqual(admin.vai_tro, 'QUAN_TRI_VIEN');
   });
 
-  await runAsyncTest('db: verifies complete curriculum "Cơ sở dữ liệu" (4 chapters, 8 checkpoints)', async () => {
+  await runAsyncTest('db: verifies complete curriculum "Cơ sở dữ liệu" (4 chapters, 11 checkpoints with 5 in Ch1)', async () => {
     const course = await courseService.getCourseDetails('co-so-du-lieu', 'usr_admin_001');
     assert.strictEqual(course.mon_hoc.slug, 'co-so-du-lieu');
     assert.strictEqual(course.cac_chuong.length, 4);
@@ -209,18 +231,19 @@ async function main() {
     course.cac_chuong.forEach(ch => {
       totalCheckpoints += ch.cac_moc.length;
     });
-    assert.strictEqual(totalCheckpoints, 8);
+    assert.strictEqual(totalCheckpoints, 11);
+    assert.strictEqual(course.cac_chuong[0].cac_moc.length, 5, 'Chapter 1 must have 5 progression checkpoints');
   });
 
-  await runAsyncTest('db: verifies question bank (16 questions with full answers and explanations)', async () => {
-    const questions = await adminService.listQuestions();
-    assert.ok(questions.length >= 16, `Expected at least 16 questions, got ${questions.length}`);
-    const q1 = questions.find(q => q.ma_cau_hoi === 'q_csdl_01');
-    assert.ok(q1);
+  await runAsyncTest('db: verifies question bank (expanded question bank with 60+ questions)', async () => {
+    const questions = await adminService.listQuestions({ limit: 100 });
+    assert.ok(questions.length >= 60, `Expected at least 60 questions, got ${questions.length}`);
+    const q1 = questions.find(q => q.ma_cau_hoi === 'q_csdl_01_01_01');
+    assert.ok(q1, 'q_csdl_01_01_01 must exist in question bank');
     assert.ok(q1.noi_dung.length > 10);
     assert.ok(q1.dap_an_a.length > 0);
     assert.ok(q1.dap_an_b.length > 0);
-    assert.strictEqual(q1.vi_tri_dap_an_dung, 1);
+    assert.strictEqual(q1.vi_tri_dap_an_dung, 0);
   });
 
   await runAsyncTest('service: tests pet catalog and active equipment', async () => {

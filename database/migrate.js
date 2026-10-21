@@ -61,6 +61,14 @@ async function main() {
     }
   }
 
+  console.log('==> Seeding Chapter 1 (5 checkpoints & 63 questions)...');
+  try {
+    const ch1Seeder = require('../scripts/seed_chapter1_5levels');
+    await ch1Seeder.runSeed();
+  } catch (seedErr) {
+    console.warn('[MIGRATE] Warning: seed_chapter1_5levels error (non-fatal):', seedErr.message);
+  }
+
   console.log('==> Database setup successfully completed!');
 }
 

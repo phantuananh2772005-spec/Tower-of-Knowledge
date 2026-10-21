@@ -29,6 +29,24 @@
     .crown-glow {
       animation: crownGlow 2.5s infinite ease-in-out;
     }
+    /* Hiệu ứng Nối từ Duolingo: rung lắc khi sai và biến mất êm dịu khi đúng */
+    @keyframes gentleShake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-6px); }
+      40%, 80% { transform: translateX(6px); }
+    }
+    .pair-shake-error {
+      animation: gentleShake 0.4s ease-in-out !important;
+      border-color: #ef4444 !important;
+      background-color: rgba(239, 68, 68, 0.16) !important;
+      color: #ef4444 !important;
+    }
+    .pair-matched-vanish {
+      opacity: 0 !important;
+      transform: scale(0.92) !important;
+      pointer-events: none !important;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
     /* Giữ Pet đứng vững vàng cố định trên mặt đất (planted feet), không bồng bềnh lơ lửng */
     .pet-animated {
       display: inline-block;
@@ -3327,6 +3345,40 @@
             break;
           }
 
+          case 'pair-match': {
+            // Bright sparkling chime when matching a pair correctly
+            [880, 1174.66, 1760].forEach((f, i) => {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = 'triangle';
+              osc.frequency.setValueAtTime(f, now + i * 0.06);
+              gain.gain.setValueAtTime(0.18, now + i * 0.06);
+              gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.28);
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.start(now + i * 0.06);
+              osc.stop(now + i * 0.06 + 0.32);
+            });
+            break;
+          }
+
+          case 'pair-wrong': {
+            // Low gentle shake buzzer when pair is incorrect
+            [220, 164.81].forEach((f, i) => {
+              const osc = ctx.createOscillator();
+              const gain = ctx.createGain();
+              osc.type = 'sawtooth';
+              osc.frequency.setValueAtTime(f, now + i * 0.08);
+              gain.gain.setValueAtTime(0.15, now + i * 0.08);
+              gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.22);
+              osc.connect(gain);
+              gain.connect(ctx.destination);
+              osc.start(now + i * 0.08);
+              osc.stop(now + i * 0.08 + 0.25);
+            });
+            break;
+          }
+
           case 'coin-cascade':
           case 'sfx-coin': {
             // Gold coins clinking cascade
@@ -5013,20 +5065,25 @@
       const leftItems = data.leftItems || [];
       const rightItems = data.rightItems || [];
       const totalPairs = data.totalPairs || leftItems.length;
+      const pairsMap = data.pairsMap || {};
 
       currentQuizSession.matchingState = {
         selectedLeft: null,
+        selectedLeftBtn: null,
         selectedRight: null,
+        selectedRightBtn: null,
         matchedPairs: [],
-        totalPairs
+        totalPairs,
+        pairsMap,
+        isEvaluating: false
       };
 
       const wrapper = document.createElement('div');
-      wrapper.className = "space-y-3";
+      wrapper.className = "space-y-3.5";
 
       const hintText = document.createElement('p');
-      hintText.className = "text-[11px] text-[var(--muted-foreground)]";
-      hintText.textContent = "Chạm 1 mục bên Trái rồi chạm mục tương ứng bên Phải để ghép cặp:";
+      hintText.className = "text-xs text-[var(--muted-foreground)] flex items-center gap-1.5";
+      hintText.innerHTML = `<span>👆</span> <span>Chạm 1 mục bên Trái rồi chạm mục tương ứng bên Phải để ghép đôi:</span>`;
       wrapper.appendChild(hintText);
 
       const cols = document.createElement('div');
@@ -5034,12 +5091,12 @@
 
       // Left column
       const leftCol = document.createElement('div');
-      leftCol.className = "space-y-2";
+      leftCol.className = "space-y-2.5";
       leftItems.forEach(item => {
         const btn = document.createElement('button');
         btn.dataset.item = item;
         btn.dataset.side = 'left';
-        btn.className = "w-full text-left p-3 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:border-emerald-500/60 text-xs font-semibold text-[var(--foreground)] transition cursor-pointer";
+        btn.className = "w-full text-left p-3.5 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:border-emerald-500/60 text-xs font-semibold text-[var(--foreground)] transition cursor-pointer shadow-2xs leading-snug";
         btn.innerHTML = `<span class="truncate">${escapeHtml(item)}</span>`;
         btn.onclick = () => selectNoiCapToken('left', item, btn);
         leftCol.appendChild(btn);
@@ -5047,12 +5104,12 @@
 
       // Right column
       const rightCol = document.createElement('div');
-      rightCol.className = "space-y-2";
+      rightCol.className = "space-y-2.5";
       rightItems.forEach(item => {
         const btn = document.createElement('button');
         btn.dataset.item = item;
         btn.dataset.side = 'right';
-        btn.className = "w-full text-left p-3 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:border-emerald-500/60 text-xs font-normal text-[var(--foreground)]/90 transition cursor-pointer leading-snug";
+        btn.className = "w-full text-left p-3.5 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:border-emerald-500/60 text-xs font-normal text-[var(--foreground)]/90 transition cursor-pointer leading-snug shadow-2xs";
         btn.innerHTML = `<span>${escapeHtml(item)}</span>`;
         btn.onclick = () => selectNoiCapToken('right', item, btn);
         rightCol.appendChild(btn);
@@ -5061,64 +5118,130 @@
       cols.appendChild(leftCol);
       cols.appendChild(rightCol);
       wrapper.appendChild(cols);
+
+      // Status indicator when all pairs are matched
+      const statusEl = document.createElement('div');
+      statusEl.id = 'noi-cap-status-box';
+      statusEl.className = 'hidden p-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-600 text-xs font-semibold text-center animate-in fade-in zoom-in-95 duration-200';
+      statusEl.innerHTML = `🎉 Tuyệt vời! Bạn đã ghép chính xác tất cả ${totalPairs} cặp khái niệm! Chạm <b>Tiếp tục</b> để xem phân tích.`;
+      wrapper.appendChild(statusEl);
+
       container.appendChild(wrapper);
     }
 
     function selectNoiCapToken(side, item, btnEl) {
       if (!currentQuizSession || currentQuizSession.isCurrentQuestionChecked) return;
       const ms = currentQuizSession.matchingState;
-      if (!ms) return;
+      if (!ms || ms.isEvaluating) return;
+      if (btnEl.dataset.matched === 'true') return;
 
       const container = document.getElementById('q-options-container');
 
       if (side === 'left') {
+        if (ms.selectedLeft === item) {
+          // Deselect
+          ms.selectedLeft = null;
+          ms.selectedLeftBtn = null;
+          btnEl.className = "w-full text-left p-3.5 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:border-emerald-500/60 text-xs font-semibold text-[var(--foreground)] transition cursor-pointer shadow-2xs leading-snug";
+          return;
+        }
         ms.selectedLeft = item;
+        ms.selectedLeftBtn = btnEl;
         container.querySelectorAll('[data-side="left"]').forEach(b => {
-          if (b.dataset.matched) return;
+          if (b.dataset.matched === 'true') return;
           if (b === btnEl) {
-            b.className = "w-full text-left p-3 rounded-xl border-2 border-emerald-500 bg-emerald-500/10 text-xs font-semibold text-emerald-600 transition cursor-pointer shadow-xs";
+            b.className = "w-full text-left p-3.5 rounded-xl border-2 border-emerald-500 bg-emerald-500/15 text-xs font-semibold text-emerald-600 transition cursor-pointer shadow-xs leading-snug ring-2 ring-emerald-500/20";
           } else {
-            b.className = "w-full text-left p-3 rounded-xl border border-[var(--border)] bg-[var(--card)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer";
+            b.className = "w-full text-left p-3.5 rounded-xl border border-[var(--border)] bg-[var(--card)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer shadow-2xs leading-snug";
           }
         });
       } else {
+        if (ms.selectedRight === item) {
+          // Deselect
+          ms.selectedRight = null;
+          ms.selectedRightBtn = null;
+          btnEl.className = "w-full text-left p-3.5 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:border-emerald-500/60 text-xs font-normal text-[var(--foreground)]/90 transition cursor-pointer leading-snug shadow-2xs";
+          return;
+        }
         ms.selectedRight = item;
+        ms.selectedRightBtn = btnEl;
         container.querySelectorAll('[data-side="right"]').forEach(b => {
-          if (b.dataset.matched) return;
+          if (b.dataset.matched === 'true') return;
           if (b === btnEl) {
-            b.className = "w-full text-left p-3 rounded-xl border-2 border-emerald-500 bg-emerald-500/10 text-xs font-normal text-emerald-600 transition cursor-pointer shadow-xs leading-snug";
+            b.className = "w-full text-left p-3.5 rounded-xl border-2 border-emerald-500 bg-emerald-500/15 text-xs font-normal text-emerald-600 transition cursor-pointer shadow-xs leading-snug ring-2 ring-emerald-500/20";
           } else {
-            b.className = "w-full text-left p-3 rounded-xl border border-[var(--border)] bg-[var(--card)] text-xs font-normal text-[var(--foreground)]/90 transition cursor-pointer leading-snug";
+            b.className = "w-full text-left p-3.5 rounded-xl border border-[var(--border)] bg-[var(--card)] text-xs font-normal text-[var(--foreground)]/90 transition cursor-pointer leading-snug shadow-2xs";
           }
         });
       }
 
       if (audioSettings && audioSettings.quiz) playAdvancedSound('click');
 
-      // Both sides selected -> lock pair
-      if (ms.selectedLeft && ms.selectedRight) {
+      // Both sides selected -> Immediate verification!
+      if (ms.selectedLeft && ms.selectedRight && ms.selectedLeftBtn && ms.selectedRightBtn) {
         const leftVal = ms.selectedLeft;
         const rightVal = ms.selectedRight;
-        ms.matchedPairs.push({ left: leftVal, right: rightVal });
+        const leftBtn = ms.selectedLeftBtn;
+        const rightBtn = ms.selectedRightBtn;
 
-        // Mark paired buttons as completed
-        container.querySelectorAll('button').forEach(b => {
-          if (b.dataset.item === leftVal || b.dataset.item === rightVal) {
-            b.dataset.matched = 'true';
-            b.disabled = true;
-            b.className = "w-full text-left p-3 rounded-xl border border-emerald-500/40 bg-emerald-500/15 text-xs text-emerald-600 transition opacity-80 cursor-default flex items-center justify-between";
-            b.innerHTML = `<span class="truncate">${escapeHtml(b.dataset.item)}</span> <span class="text-[10px] font-mono font-bold bg-emerald-500/20 px-1.5 py-0.5 rounded ml-1">✓ Đã ghép</span>`;
+        // Check against pairsMap
+        const expectedRight = ms.pairsMap[leftVal];
+        const isMatch = (expectedRight !== undefined && expectedRight === rightVal);
+
+        if (isMatch) {
+          // --- MATCH CORRECT: Vanish both paired cards + sparkling chime ---
+          if (audioSettings && audioSettings.quiz) playAdvancedSound('pair-match');
+
+          leftBtn.dataset.matched = 'true';
+          rightBtn.dataset.matched = 'true';
+          leftBtn.classList.add('pair-matched-vanish');
+          rightBtn.classList.add('pair-matched-vanish');
+
+          setTimeout(() => {
+            leftBtn.style.visibility = 'hidden';
+            leftBtn.style.pointerEvents = 'none';
+            rightBtn.style.visibility = 'hidden';
+            rightBtn.style.pointerEvents = 'none';
+          }, 350);
+
+          ms.matchedPairs.push({ left: leftVal, right: rightVal });
+          ms.selectedLeft = null;
+          ms.selectedLeftBtn = null;
+          ms.selectedRight = null;
+          ms.selectedRightBtn = null;
+
+          const q = currentQuizSession.questions[currentQuizSession.qIndex];
+          currentQuizSession.currentAnswer = {
+            ma_cau_hoi: q.ma_cau_hoi,
+            matched_pairs: ms.matchedPairs
+          };
+
+          // If all pairs are matched
+          if (ms.matchedPairs.length >= ms.totalPairs) {
+            const statusEl = document.getElementById('noi-cap-status-box');
+            if (statusEl) statusEl.classList.remove('hidden');
+            if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-correct');
           }
-        });
+        } else {
+          // --- MATCH WRONG: Gentle shake + red border flash + gentle error buzzer ---
+          ms.isEvaluating = true;
+          if (audioSettings && audioSettings.quiz) playAdvancedSound('pair-wrong');
 
-        ms.selectedLeft = null;
-        ms.selectedRight = null;
+          leftBtn.classList.add('pair-shake-error');
+          rightBtn.classList.add('pair-shake-error');
 
-        const q = currentQuizSession.questions[currentQuizSession.qIndex];
-        currentQuizSession.currentAnswer = {
-          ma_cau_hoi: q.ma_cau_hoi,
-          matched_pairs: ms.matchedPairs
-        };
+          setTimeout(() => {
+            leftBtn.classList.remove('pair-shake-error');
+            rightBtn.classList.remove('pair-shake-error');
+            leftBtn.className = "w-full text-left p-3.5 rounded-xl border border-[var(--border)] bg-[var(--card)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer shadow-2xs leading-snug";
+            rightBtn.className = "w-full text-left p-3.5 rounded-xl border border-[var(--border)] bg-[var(--card)] text-xs font-normal text-[var(--foreground)]/90 transition cursor-pointer leading-snug shadow-2xs";
+            ms.selectedLeft = null;
+            ms.selectedLeftBtn = null;
+            ms.selectedRight = null;
+            ms.selectedRightBtn = null;
+            ms.isEvaluating = false;
+          }, 450);
+        }
       }
     }
 
@@ -5344,6 +5467,14 @@
 
       if (!currentQuizSession.isCurrentQuestionChecked) {
         // Step 1: Check Answer & show pedagogical feedback
+        if (q.loai_cau_hoi === 'NOI_CAP') {
+          const ms = currentQuizSession.matchingState;
+          if (ms && ms.matchedPairs.length < ms.totalPairs) {
+            showToast(`Hãy ghép nốt các cặp còn lại (${ms.matchedPairs.length}/${ms.totalPairs}) trước khi tiếp tục!`, 'info');
+            return;
+          }
+        }
+
         if (!currentQuizSession.currentAnswer) {
           showToast('Vui lòng hoàn thành thao tác hoặc chọn đáp án trước khi kiểm tra!', 'info');
           return;

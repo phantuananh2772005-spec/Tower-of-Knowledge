@@ -138,7 +138,12 @@ function calculateCompletionPercentage(totalNodes, completedNodes) {
  * @returns {{ nextCheckpoint: object|null, isCourseFinished: boolean }}
  */
 function findNextCheckpointToUnlock(orderedCheckpoints, currentCheckpointId) {
-  const sorted = [...orderedCheckpoints].sort((a, b) => a.thu_tu - b.thu_tu);
+  const sorted = [...orderedCheckpoints].sort((a, b) => {
+    const chA = a.chuong_thu_tu !== undefined ? Number(a.chuong_thu_tu) : 0;
+    const chB = b.chuong_thu_tu !== undefined ? Number(b.chuong_thu_tu) : 0;
+    if (chA !== chB) return chA - chB;
+    return Number(a.thu_tu) - Number(b.thu_tu);
+  });
   const currentIndex = sorted.findIndex(c => String(c.ma_moc) === String(currentCheckpointId));
 
   if (currentIndex === -1 || currentIndex === sorted.length - 1) {

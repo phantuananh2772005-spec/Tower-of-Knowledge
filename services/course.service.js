@@ -277,7 +277,11 @@ async function getCheckpointContent(ma_moc, ma_nguoi_dung, stepRequested) {
         if (q.loai_cau_hoi === 'NOI_CAP' && parsed.pairs) {
           const leftItems = parsed.pairs.map(p => p.left).sort(() => Math.random() - 0.5);
           const rightItems = parsed.pairs.map(p => p.right).sort(() => Math.random() - 0.5);
-          du_lieu = { leftItems, rightItems, totalPairs: parsed.pairs.length };
+          const pairsMap = {};
+          parsed.pairs.forEach(p => {
+            pairsMap[p.left] = p.right;
+          });
+          du_lieu = { leftItems, rightItems, totalPairs: parsed.pairs.length, pairsMap };
         } else if (q.loai_cau_hoi === 'DIEN_TU') {
           du_lieu = {
             sentence_template: parsed.sentence_template,
