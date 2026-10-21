@@ -17,15 +17,7 @@ GO
 
 INSERT INTO nguoi_dung (ma_nguoi_dung, ten_dang_nhap, email, mat_khau_hash, ten_hien_thi, khung_avatar, vai_tro, tong_diem_kinh_nghiem, xu_tri_thuc, chuoi_streak_ngay, ngay_hoat_dong_cuoi, che_do_giao_dien, bat_am_thanh)
 VALUES 
-('usr_admin_001', 'admin', 'admin@towerofknowledge.edu.vn', '$2a$10$RE9vsn6NderNjirHDtSP9urgC/WotN.WfzRPbhJ.KGNMT1F8wGOnm', N'Đại Sư Quản Trị', 'khung_vang_dai_su', 'QUAN_TRI_VIEN', 2500, 850, 7, CAST(SYSDATETIME() AS DATE), 'TOI', 1),
-('usr_demo_002', 'demo_user', 'student@towerofknowledge.edu.vn', '$2a$10$W04xIE.JXjb4d6l0vksEzOHJXn60IrjvN42c1/tTqDEoqJmwgq806', N'Dũng Sĩ SQL', 'khung_khoi_dau', 'NGUOI_HOC', 120, 160, 3, CAST(SYSDATETIME() AS DATE), 'TOI', 1),
-('usr_bot_003', 'rival_bot', 'bot@towerofknowledge.edu.vn', '$2a$10$W04xIE.JXjb4d6l0vksEzOHJXn60IrjvN42c1/tTqDEoqJmwgq806', N'Chiến Binh Lữ Khách', 'khung_bac_tap_su', 'NGUOI_HOC', 180, 210, 4, CAST(SYSDATETIME() AS DATE), 'TOI', 1),
-('usr_std_004', 'lan_anh', 'lananh@student.edu.vn', '$2a$10$W04xIE.JXjb4d6l0vksEzOHJXn60IrjvN42c1/tTqDEoqJmwgq806', N'Hiệp Sĩ Lan Anh', 'khung_khoi_dau', 'NGUOI_HOC', 1740, 320, 14, CAST(SYSDATETIME() AS DATE), 'TOI', 1),
-('usr_std_005', 'minh_khoa', 'minhkhoa@student.edu.vn', '$2a$10$W04xIE.JXjb4d6l0vksEzOHJXn60IrjvN42c1/tTqDEoqJmwgq806', N'Pháp Sư Minh Khoa', 'khung_khoi_dau', 'NGUOI_HOC', 1620, 280, 11, CAST(SYSDATETIME() AS DATE), 'TOI', 1),
-('usr_std_006', 'quoc_bao', 'quocbao@student.edu.vn', '$2a$10$W04xIE.JXjb4d6l0vksEzOHJXn60IrjvN42c1/tTqDEoqJmwgq806', N'Đấu Sĩ Quốc Bảo', 'khung_khoi_dau', 'NGUOI_HOC', 1380, 230, 8, CAST(SYSDATETIME() AS DATE), 'TOI', 1),
-('usr_std_007', 'thu_ha', 'thuha@student.edu.vn', '$2a$10$W04xIE.JXjb4d6l0vksEzOHJXn60IrjvN42c1/tTqDEoqJmwgq806', N'Hiền Giả Thu Hà', 'khung_khoi_dau', 'NGUOI_HOC', 1250, 190, 6, CAST(SYSDATETIME() AS DATE), 'TOI', 1),
-('usr_std_008', 'gia_huy', 'giahuy@student.edu.vn', '$2a$10$W04xIE.JXjb4d6l0vksEzOHJXn60IrjvN42c1/tTqDEoqJmwgq806', N'Chiến Binh Gia Huy', 'khung_khoi_dau', 'NGUOI_HOC', 1120, 170, 5, CAST(SYSDATETIME() AS DATE), 'TOI', 1),
-('usr_std_009', 'ngoc_mai', 'ngocmai@student.edu.vn', '$2a$10$W04xIE.JXjb4d6l0vksEzOHJXn60IrjvN42c1/tTqDEoqJmwgq806', N'Tập Sự Ngọc Mai', 'khung_khoi_dau', 'NGUOI_HOC', 950, 120, 2, CAST(SYSDATETIME() AS DATE), 'TOI', 1);
+('usr_admin_001', 'admin', 'admin@towerofknowledge.edu.vn', '$2a$10$RE9vsn6NderNjirHDtSP9urgC/WotN.WfzRPbhJ.KGNMT1F8wGOnm', N'Đại Sư Quản Trị', 'khung_vang_dai_su', 'QUAN_TRI_VIEN', 2500, 850, 7, CAST(SYSDATETIME() AS DATE);
 GO
 
 -- 2. THU CUNG
@@ -279,15 +271,10 @@ N'Serializable',
 GO
 
 -- 8. TIEN DO MAC DINH CHO NGUOI DUNG DEMO
-INSERT INTO tien_do_mon_hoc (ma_tien_do_mon, ma_nguoi_dung, ma_mon, phan_tram_hoan_thanh, ngay_bat_dau)
-VALUES
-('prog_m_demo_csdl', 'usr_demo_002', 'mon_csdl', 25.0, SYSDATETIME());
+-- No pre-seeded progression: clean fresh start
 
 -- Mốc 1.1 đã hoàn thành, Mốc 1.2 đã mở sẵn sàng làm
-INSERT INTO tien_do_moc_bai_hoc (ma_tien_do_moc, ma_nguoi_dung, ma_moc, trang_thai, diem_dat_duoc, xu_da_nhan, thoi_diem_hoan_thanh)
-VALUES
-('prog_ck_demo_01', 'usr_demo_002', 'moc_csdl_01_01', 'HOAN_THANH', 15, 10, SYSDATETIME()),
-('prog_ck_demo_02', 'usr_demo_002', 'moc_csdl_01_02', 'DA_MO', 0, 0, NULL);
+-- No pre-seeded checkpoint progress
 
 -- 9. GIAO DICH XU KHOI TAO
 INSERT INTO giao_dich_xu (ma_giao_dich, ma_nguoi_dung, so_luong, so_du_sau, nguon_giao_dich, mo_ta)

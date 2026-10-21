@@ -153,7 +153,7 @@
             <span class="text-base shrink-0">🎯</span>
             <span class="sidebar-text font-medium">Môn đang theo học</span>
           </div>
-          <span class="sidebar-text text-[10px] bg-emerald-500/10 text-emerald-600 font-bold px-1.5 py-0.5 rounded font-mono">2</span>
+          <span id="sidebar-enrolled-count" class="sidebar-text text-[10px] bg-emerald-500/10 text-emerald-600 font-bold px-1.5 py-0.5 rounded font-mono">1</span>
         </button>
 
         <!-- 3. Bản đồ Lộ trình leo tháp (Active mặc định) -->
@@ -464,7 +464,7 @@
       <div class="flex items-center justify-between border-b border-[var(--border)] pb-4">
         <div>
           <h2 class="text-lg font-bold">Môn học đang tham gia</h2>
-          <p class="text-xs text-[var(--muted-foreground)]">Tiến độ leo tháp và các mốc kiến thức bạn đang mở khóa</p>
+          
         </div>
         <button onclick="navTo('catalog')" class="px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition cursor-pointer shadow-xs">
           + Khám phá thêm môn
@@ -479,7 +479,7 @@
     <section id="view-catalog" class="hidden p-6 sm:p-10 max-w-5xl w-full mx-auto space-y-6">
       <div class="border-b border-[var(--border)] pb-4">
         <h2 class="text-lg font-bold">Kho môn học hệ thống</h2>
-        <p class="text-xs text-[var(--muted-foreground)]">Toàn bộ các giáo trình chuẩn hóa được phân phối trên Tháp Tri Thức</p>
+        
       </div>
       <div id="catalog-courses-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         <div class="col-span-3 text-center py-12 text-xs text-[var(--muted-foreground)]">Đang tải kho môn học...</div>
@@ -497,7 +497,12 @@
 
       <!-- Tab Đấu -->
       <div id="arena-fight" class="space-y-4">
-        <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-8 text-center space-y-5">
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 text-center space-y-5 relative shadow-xs">
+          <!-- Nút BXH hình cúp ở góc phải trên của thẻ đấu -->
+          <button onclick="arenaTab('rank')" class="absolute top-4 right-4 p-2.5 rounded-2xl border border-[var(--border)] bg-[var(--background)] hover:bg-emerald-500/10 hover:border-emerald-500/30 text-amber-500 hover:text-amber-400 transition cursor-pointer shadow-2xs group flex items-center gap-1.5" title="Bảng xếp hạng đấu trường">
+            <span class="text-base group-hover:scale-110 transition-transform">🏆</span>
+            <span class="text-xs font-bold text-[var(--foreground)] hidden sm:inline">BXH</span>
+          </button>
           <div class="flex items-center justify-center gap-10 text-7xl select-none">
             <div onclick="navTo('pet')" title="Đổi linh vật ra trận" class="cursor-pointer group flex flex-col items-center">
               <div id="arena-lobby-pet" class="w-24 h-24 flex items-center justify-center select-none group-hover:scale-105 transition">
@@ -538,19 +543,18 @@
             <span>⚔️</span>
             <span>Tìm trận đấu 1v1</span>
           </button>
-          <div class="pt-1 flex flex-wrap justify-center gap-2">
-            <button onclick="openResultsShowcaseModal()" class="inline-flex items-center gap-1.5 text-xs text-amber-500 hover:text-amber-400 font-bold bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-2xs">
-              <span>✨ Thử 5 Mẫu Hiệu Ứng Thắng / Thua (Xem trực tiếp)</span>
-            </button>
-            <a href="battle_results_showcase.html" target="_blank" class="inline-flex items-center gap-1 text-[11px] text-[var(--muted-foreground)] hover:text-[var(--foreground)] px-2.5 py-1.5 transition">
-              <span>🔗 Mở tab riêng ↗</span>
-            </a>
-          </div>
+          
         </div>
       </div>
 
       <!-- Tab BXH -->
       <div id="arena-rank" class="hidden space-y-4">
+        <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+          <button onclick="arenaTab('fight')" class="px-3 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--background)] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+            <span>←</span> <span>Trở về sảnh đấu</span>
+          </button>
+          <span class="text-xs font-bold text-amber-500 flex items-center gap-1">🏆 Bảng xếp hạng thi đấu</span>
+        </div>
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center p-1 bg-[var(--card)] border border-[var(--border)] rounded-xl text-xs font-semibold">
             <button id="rk-hang" onclick="setRank('hang')" class="px-3 py-1.5 rounded-lg">🏆 Hạng</button>
@@ -681,14 +685,7 @@
             </button>
           </div>
 
-          <div class="pt-2 border-t border-slate-800/80 relative z-10 flex flex-wrap items-center justify-center gap-2">
-            <button onclick="openResultsShowcaseModal()" class="inline-flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 font-bold bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-2xs">
-              <span>✨ Thử 5 Mẫu Hiệu Ứng Thắng / Thua (Xem trực tiếp)</span>
-            </button>
-            <a href="battle_results_showcase.html" target="_blank" class="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-white px-2 py-1 transition cursor-pointer font-medium">
-              <span>🔗 Mở tab riêng ↗</span>
-            </a>
-          </div>
+          
 
         </div>
       </div>
@@ -1513,80 +1510,6 @@
       </div>
     </div>
 
-    <!-- ================= MODAL SHOWCASE 5 MẪU HIỆU ỨNG THẮNG / THUA ================= -->
-    <div id="modal-results-showcase" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md transition-opacity duration-200" onclick="if(event.target===this)closeResultsShowcaseModal()">
-      <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden relative animate-in fade-in zoom-in-95">
-        
-        <!-- Header Controls -->
-        <div class="p-4 sm:p-5 border-b border-[var(--border)] flex flex-wrap items-center justify-between gap-3 bg-[var(--background)]/80">
-          <div class="flex items-center gap-2.5">
-            <span class="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center text-base shrink-0">✨</span>
-            <div>
-              <div class="flex items-center gap-2">
-                <h3 class="font-extrabold text-sm sm:text-base tracking-tight leading-tight">5 Mẫu Hiệu Ứng Thắng / Thua</h3>
-                <a href="battle_results_showcase.html" target="_blank" class="inline-flex items-center gap-1 text-[11px] text-amber-500 hover:text-amber-400 font-bold px-2 py-0.5 rounded-lg bg-amber-500/10 border border-amber-500/20 transition">
-                  <span>🔗 Mở tab riêng ↗</span>
-                </a>
-              </div>
-              <p class="text-[11px] text-[var(--muted-foreground)]">Bấm chọn phong cách để trải nghiệm thử</p>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <!-- Win / Defeat Toggle -->
-            <div class="flex items-center p-1 bg-[var(--card)] border border-[var(--border)] rounded-xl text-xs font-bold">
-              <button id="sc-btn-win" onclick="setShowcaseOutcome('win')" class="px-3 py-1 rounded-lg bg-emerald-600 text-white transition cursor-pointer shadow-2xs font-bold">
-                🏆 Thắng
-              </button>
-              <button id="sc-btn-defeat" onclick="setShowcaseOutcome('defeat')" class="px-3 py-1 rounded-lg text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition cursor-pointer font-bold">
-                💀 Thua
-              </button>
-            </div>
-
-            <!-- Nút đóng -->
-            <button onclick="closeResultsShowcaseModal()" class="w-8 h-8 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold transition cursor-pointer shrink-0">
-              ✕
-            </button>
-          </div>
-        </div>
-
-        <!-- 5 Tabs Style Selector -->
-        <div class="px-4 py-2 border-b border-[var(--border)] flex items-center gap-1.5 overflow-x-auto bg-[var(--card)] shrink-0">
-          <button id="sc-tab-1" onclick="setShowcaseStyle(1)" class="px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 bg-amber-500/20 text-amber-500 border border-amber-500/40">
-            🔥 1. Đấu Trường
-          </button>
-          <button id="sc-tab-2" onclick="setShowcaseStyle(2)" class="px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-transparent">
-            ⚡ 2. Retro Arcade
-          </button>
-          <button id="sc-tab-3" onclick="setShowcaseStyle(3)" class="px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-transparent">
-            💎 3. Gacha Thần Thoại
-          </button>
-          <button id="sc-tab-4" onclick="setShowcaseStyle(4)" class="px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-transparent">
-            ⚔️ 4. Smash Showdown
-          </button>
-          <button id="sc-tab-5" onclick="setShowcaseStyle(5)" class="px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer shrink-0 text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-transparent">
-            ✨ 5. Glassmorphism Pro
-          </button>
-        </div>
-
-        <!-- STAGE AREA (SCROLLABLE IF NEEDED) -->
-        <div class="flex-1 overflow-y-auto p-4 sm:p-6 flex items-center justify-center">
-          <div id="sc-stage" class="w-full max-w-lg transition-all duration-300">
-            <!-- Render động bằng renderShowcaseStage() -->
-          </div>
-        </div>
-
-        <!-- Footer Info -->
-        <div class="px-4 py-2.5 border-t border-[var(--border)] bg-[var(--background)]/60 text-center text-xs text-[var(--muted-foreground)] shrink-0 flex items-center justify-between">
-          <span id="sc-style-desc" class="font-medium text-[var(--foreground)] text-[11px]">Đang xem: Phong cách 1 - Đấu Trường eSports</span>
-          <button onclick="renderShowcaseStage()" class="text-xs font-bold text-emerald-600 hover:underline cursor-pointer">
-            🔄 Phát lại hiệu ứng
-          </button>
-        </div>
-
-      </div>
-    </div>
-
     <!-- ================= CARD RỜI CHỌN AVATAR (TÁCH RIÊNG KHỎI LAYOUT) ================= -->
     <div id="avatar-popover" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs" style="z-index: 9999;" onclick="if(event.target===this)closeAvatarPopover()">
       <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 shadow-2xl max-w-[280px] w-full space-y-3 animate-in zoom-in-95 duration-150">
@@ -1756,7 +1679,7 @@
     }
 
     function enrollCourse(name) {
-      alert(`🎉 Đã thêm môn "${name}" vào Lộ trình đang học của bạn!`);
+      showToast(`🎉 Đã thêm môn "${name}" vào Lộ trình đang học của bạn!`);
       navTo('enrolled');
     }
 
@@ -1809,14 +1732,14 @@
 
     function feedPet() {
       if (userCoins < 10) {
-        alert("🪙 Bạn không đủ Xu! Hãy học bài để nhận thêm Xu nhé.");
+        showToast("🪙 Bạn không đủ Xu! Hãy học bài để nhận thêm Xu nhé.", "error");
         return;
       }
       userCoins -= 10;
       updateCoinsUI();
       document.getElementById('pet-mood-txt').textContent = "Cực kỳ vui vẻ (100%)";
       document.getElementById('pet-mood-bar').style.width = "100%";
-      alert("🍎 Bạn đã cho pet ăn! Pet rất vui và được hồi phục 100% năng lượng.");
+      showToast("🍎 Bạn đã cho pet ăn! Pet rất vui và hồi phục 100% năng lượng.");
     }
 
     function petHappy() {
@@ -1825,7 +1748,7 @@
         h.classList.remove('opacity-0');
         setTimeout(() => h.classList.add('opacity-0'), 1200);
       }
-      alert("💖 Pet cọ đầu vào bạn rất thích thú! Bạn và linh vật đã thân thiết hơn.");
+      showToast("💖 Pet cọ đầu vào bạn rất thích thú! Cảm tình gia tăng.");
     }
 
     const allPets = [
@@ -1949,7 +1872,7 @@
       const pet = allPets.find(p => p.id === petId);
       if (!pet) return;
       if (!ownedPets[petId]) {
-        alert("Bạn chưa sở hữu linh vật này! Hãy mở khóa trong Cửa hàng Shop nhé.");
+        showToast("Bạn chưa sở hữu linh vật này! Hãy mở khóa trong Cửa hàng.", "error");
         syncAllPetDisplays();
         return;
       }
@@ -2013,12 +1936,12 @@
     function buyPet(petId, name, icon, buff, price) {
       if (ownedPets[petId]) {
         equipPet(petId, name, icon, buff);
-        alert(`🎉 Đã đổi sang linh vật ${name} đồng hành!`);
+        showToast(`🎉 Đã đổi sang linh vật ${name} đồng hành!`);
         navTo('pet');
         return;
       }
       if (userCoins < price) {
-        alert(`🪙 Bạn còn thiếu ${price - userCoins} Xu! Hãy hoàn thành thêm các mốc học trên lộ trình để tích lũy Xu nhé.`);
+        showToast(`🪙 Bạn còn thiếu ${price - userCoins} Xu! Hãy học bài để nhận thêm Xu.`, "error");
         return;
       }
       userCoins -= price;
@@ -2030,18 +1953,18 @@
         btn.textContent = "✓ Sở hữu";
       }
       equipPet(petId, name, icon, buff);
-      alert(`🎉 Chúc mừng! Bạn đã mở khóa thành công linh vật ${name} (${icon})!\n\nLinh vật mới đã được đưa vào chuồng và cùng bạn đồng hành leo tháp.`);
+      showToast(`🎉 Chúc mừng! Đã mở khóa linh vật ${name} thành công!`);
       navTo('pet');
     }
 
     function buyItem(itemName, price) {
       if (userCoins < price) {
-        alert(`🪙 Bạn còn thiếu ${price - userCoins} Xu để mua ${itemName}!`);
+        showToast(`🪙 Bạn còn thiếu ${price - userCoins} Xu để mua ${itemName}!`, "error");
         return;
       }
       userCoins -= price;
       updateCoinsUI();
-      alert(`🎉 Đã mua thành công ${itemName}! Vật phẩm đã được áp dụng vào Pet của bạn.`);
+      showToast(`🎉 Đã mua thành công ${itemName}!`);
     }
 
     // Replaced by dynamic renderQuizQuestion() & nextQuestion()
@@ -2083,6 +2006,40 @@
   </script>
 
 <script>
+  
+  // ===== Đấu trường Tiers & Ranks =====
+  const RANKS = { csdl: 0, ctdl: 0 };
+  const overallPts = () => Math.round(((RANKS.csdl || 0) + (RANKS.ctdl || 0)) / 2);
+  const THI_THRESH = [0, 500, 1000, 1500, 2000];
+  const THI_NAMES = ['🌱 Khởi nguyên', '🔥 Bứt phá', '⚡ Tinh thông', '🌟 Xuất chúng', '👑 Đỉnh cao'];
+
+  function tierOf(p, isOverall) {
+    const val = typeof p === 'number' ? p : 0;
+    if (val >= 2000) return '👑 Đỉnh cao';
+    let i = 0;
+    for (let k = 0; k < 4; k++) {
+      if (val >= THI_THRESH[k] && val < THI_THRESH[k+1]) { i = k; break; }
+    }
+    const lo = THI_THRESH[i], hi = THI_THRESH[i+1];
+    const span = hi - lo;
+    const frac = span > 0 ? (val - lo) / span : 0;
+    const subIdx = Math.min(2, Math.floor(frac * 3));
+    const subRoman = ['I', 'II', 'III'][subIdx];
+    return `${THI_NAMES[i]} ${subRoman}`;
+  }
+
+  function tierProgress(p, isOverall) {
+    const val = typeof p === 'number' ? p : 0;
+    if (val >= 2000) return 100;
+    let i = 0;
+    for (let k = 0; k < 4; k++) {
+      if (val >= THI_THRESH[k] && val < THI_THRESH[k+1]) { i = k; break; }
+    }
+    const lo = THI_THRESH[i], hi = THI_THRESH[i+1];
+    const frac = (val - lo) / (hi - lo);
+    return Math.min(100, Math.max(0, Math.round(frac * 100)));
+  }
+
   // ===== Đấu trường: tab =====
   function arenaTab(t) {
     document.getElementById('arena-fight').classList.toggle('hidden', t !== 'fight');
@@ -2172,6 +2129,8 @@
         const res = await resp.json();
         if (res.success && Array.isArray(res.data)) {
           allSystemCourses = res.data;
+          const badgeEl = document.getElementById('sidebar-enrolled-count');
+          if (badgeEl) badgeEl.textContent = allSystemCourses.length || 1;
           renderHubCourses();
           renderEnrolledCourses();
           renderCatalogCourses();
@@ -4568,10 +4527,10 @@
 
           if (dat_yeu_cau) {
             if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-correct');
-            alert(`🎉 CHÚC MỪNG BẠN ĐÃ VƯỢT QUA MỐC BÀI TẬP!\n\n📊 Điểm số: ${diem_so}/100 (${so_cau_dung}/${tong_cau} câu đúng)\n🎁 Phần thưởng: +${xu_nhan_duoc} 🪙 Xu Tri Thức · +${exp_nhan_duoc} ⭐ EXP`);
+            showToast(`🎉 VƯỢT QUA MỐC BÀI TẬP! ${diem_so}/100 điểm (+${xu_nhan_duoc} 🪙, +${exp_nhan_duoc} ⭐ EXP)`);
           } else {
             if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-wrong');
-            alert(`Chưa đạt điểm yêu cầu (${diem_so}/100 điểm, đúng ${so_cau_dung}/${tong_cau} câu).\nCần tối thiểu 70 điểm để vượt qua mốc. Hãy ôn tập lại kiến thức và thử lại nhé!`);
+            showToast(`Chưa đạt điểm yêu cầu (${diem_so}/100). Cần tối thiểu 70 điểm để vượt qua.`, "error");
           }
 
           // Refresh user data & roadmap
@@ -4734,7 +4693,7 @@
       }
 
       if (userCoins < price) {
-        alert(`🪙 Bạn còn thiếu ${price - userCoins} Xu! Hãy hoàn thành thêm các mốc học trên lộ trình để tích lũy Xu nhé.`);
+        showToast(`🪙 Bạn còn thiếu ${price - userCoins} Xu! Hãy tích lũy thêm Xu.`, "error");
         return;
       }
 
@@ -4749,7 +4708,7 @@
         const res = await resp.json();
         if (res.success) {
           if (audioSettings && audioSettings.quiz) playAdvancedSound('success');
-          alert(`🎉 Chúc mừng! Bạn đã mở khóa thành công linh thú ${name}!`);
+          showToast(`🎉 Chúc mừng! Đã mở khóa thành công linh thú ${name}!`);
           await refreshUserData();
           await loadRealPets();
           equipPet(petId, name, icon, buff, petId === 'fox' ? KITSUNE_ANIM_GIF : SPARKY_ANIM_GIF);
@@ -4774,7 +4733,7 @@
         const res = await resp.json();
         if (res.success) {
           equipPet(petId, name, icon, buff, petId === 'fox' ? KITSUNE_ANIM_GIF : SPARKY_ANIM_GIF);
-          alert(`🎉 Đã đổi sang linh vật ${name} đồng hành!`);
+          showToast(`🎉 Đã đổi sang linh vật ${name} đồng hành!`);
           navTo('pet');
           await loadRealPets();
         }

@@ -41,7 +41,9 @@ app.use(responseFormatter);
 
 // Serve static assets & frontend applications
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/admin', express.static(path.join(__dirname, 'public', 'admin')));
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
