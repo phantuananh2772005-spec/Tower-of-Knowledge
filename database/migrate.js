@@ -69,6 +69,14 @@ async function main() {
     console.warn('[MIGRATE] Warning: seed_chapter1_5levels error (non-fatal):', seedErr.message);
   }
 
+  console.log('==> Initializing Telemetry Schema...');
+  try {
+    const { initTelemetrySchema } = require('./init_telemetry');
+    await initTelemetrySchema();
+  } catch (telemErr) {
+    console.warn('[MIGRATE] Warning: initTelemetrySchema notice:', telemErr.message);
+  }
+
   console.log('==> Database setup successfully completed!');
 }
 

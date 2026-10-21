@@ -88,6 +88,9 @@ server.listen(PORT, () => {
   // Ensure Chapter 1 has 5 checkpoints and full question set (self-healing seed)
   setTimeout(() => {
     try {
+      const { initTelemetrySchema } = require('./database/init_telemetry');
+      initTelemetrySchema().catch(e => console.warn('⚠️ [STARTUP] Telemetry schema notice:', e.message));
+
       const ch1Seeder = require('./scripts/seed_chapter1_5levels');
       ch1Seeder.runSeed()
         .then(() => console.log('✅ [STARTUP] Chapter 1 5-level database sync completed!'))

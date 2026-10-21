@@ -1561,6 +1561,24 @@
           </div>
         </div>
 
+        <!-- Telemetry Summary (Session Time, Speed & Theory Lookups) -->
+        <div class="bg-[var(--background)] p-3 rounded-2xl border border-[var(--border)] grid grid-cols-2 gap-2 text-xs">
+          <div class="flex items-center gap-2 text-left">
+            <span class="text-base shrink-0">⏱️</span>
+            <div>
+              <p class="text-[10px] text-[var(--muted-foreground)]">Thời gian & Tốc độ</p>
+              <p class="font-bold text-[var(--foreground)] font-mono"><span id="congrats-time">0s</span> (<span id="congrats-speed">0s/câu</span>)</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 text-left">
+            <span class="text-base shrink-0">📖</span>
+            <div>
+              <p class="text-[10px] text-[var(--muted-foreground)]">Xem lại lý thuyết</p>
+              <p class="font-bold text-[var(--foreground)] font-mono"><span id="congrats-lookups">0 lần</span></p>
+            </div>
+          </div>
+        </div>
+
         <button id="btn_congrats_continue" onclick="finishMocAndReturnToMap()" class="w-full py-3 rounded-2xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 transition shadow-lg cursor-pointer flex items-center justify-center gap-2">
           <span>🚀 Tiếp tục hành trình leo tháp</span>
           <span>→</span>
@@ -4407,6 +4425,10 @@
             masteredCount: 0,
             firstAttemptCorrectCount: 0,
             failedQuestionsSet: new Set(),
+            submissions: [],
+            currentQuestionStartTime: null,
+            currentQuestionLookups: 0,
+            isReturningFromTheoryHint: false,
             currentAnswer: null,
             isAnswerChecked: false,
             questions: rawQuestions,
@@ -4512,6 +4534,9 @@
 
     function reopenTheoryCards() {
       if (!currentMocSession) return;
+      // Chỉ tính tra cứu bài giảng khi người học bấm nút tra cứu từ câu hỏi
+      currentMocSession.currentQuestionLookups = (currentMocSession.currentQuestionLookups || 0) + 1;
+      currentMocSession.isReturningFromTheoryHint = true;
       currentMocSession.phase = 'THEORY_CARDS';
       currentMocSession.cardIndex = 0;
       renderMocLearningScreen();
@@ -4530,6 +4555,16 @@
       s.matchingState = null;
       s.dienTuChosen = null;
       s.arrangedTokens = [];
+      if (!s.submissions) s.submissions = [];
+
+      // Đo thời gian và số lần tra cứu theo từng câu hỏi:
+      // Nếu vừa xem lại lý thuyết quay lại, giữ nguyên số lần tra cứu của câu này
+      if (!s.isReturningFromTheoryHint) {
+        s.currentQuestionStartTime = Date.now();
+        s.currentQuestionLookups = 0;
+      }
+      s.isReturningFromTheoryHint = false;
+
       currentQuizSession = s;
 
       const progEl = document.getElementById('play-progress');
@@ -4611,11 +4646,21 @@
           }
           const expected = currentQ.du_lieu?.blank_answer;
           const isCorrect = Boolean(expected && String(s.dienTuChosen).trim().toLowerCase() === String(expected).trim().toLowerCase());
+          const timeSpentSec = Math.max(1, Math.round((Date.now() - (s.currentQuestionStartTime || Date.now())) / 1000));
+          const lookupsCount = s.currentQuestionLookups || 0;
           s.isAnswerChecked = true;
           s.isCurrentQuestionChecked = true;
           lastPracticeCheckResult = isCorrect;
-          s.currentAnswer = { ma_cau_hoi: currentQ.ma_cau_hoi, selected_word: s.dienTuChosen };
-          if (s.submissions) s.submissions.push(s.currentAnswer);
+          s.currentAnswer = {
+            ma_cau_hoi: currentQ.ma_cau_hoi,
+            selected_word: s.dienTuChosen,
+            lua_chon: s.dienTuChosen,
+            la_dung: isCorrect,
+            thoi_gian_giay: timeSpentSec,
+            so_lan_tra_cuu: lookupsCount
+          };
+          if (!s.submissions) s.submissions = [];
+          s.submissions.push(s.currentAnswer);
 
           if (s.failedQuestionsSet && !s.failedQuestionsSet.has(currentQ.ma_cau_hoi)) {
             if (isCorrect) s.firstAttemptCorrectCount = (s.firstAttemptCorrectCount || 0) + 1;
@@ -4666,11 +4711,21 @@
           const isCorrect = (expectedOrder.length > 0 && userOrder.length === expectedOrder.length &&
             expectedOrder.every((w, i) => String(w).trim().toLowerCase() === String(userOrder[i]).trim().toLowerCase()));
 
+          const timeSpentSec = Math.max(1, Math.round((Date.now() - (s.currentQuestionStartTime || Date.now())) / 1000));
+          const lookupsCount = s.currentQuestionLookups || 0;
           s.isAnswerChecked = true;
           s.isCurrentQuestionChecked = true;
           lastPracticeCheckResult = isCorrect;
-          s.currentAnswer = { ma_cau_hoi: currentQ.ma_cau_hoi, ordered_words: userOrder };
-          if (s.submissions) s.submissions.push(s.currentAnswer);
+          s.currentAnswer = {
+            ma_cau_hoi: currentQ.ma_cau_hoi,
+            ordered_words: userOrder,
+            lua_chon: userOrder.join(' '),
+            la_dung: isCorrect,
+            thoi_gian_giay: timeSpentSec,
+            so_lan_tra_cuu: lookupsCount
+          };
+          if (!s.submissions) s.submissions = [];
+          s.submissions.push(s.currentAnswer);
 
           if (s.failedQuestionsSet && !s.failedQuestionsSet.has(currentQ.ma_cau_hoi)) {
             if (isCorrect) s.firstAttemptCorrectCount = (s.firstAttemptCorrectCount || 0) + 1;
@@ -4758,24 +4813,45 @@
             ...(token ? { 'Authorization': 'Bearer ' + token } : {})
           },
           body: JSON.stringify({
-            cau_tra_loi: []
+            cau_tra_loi: s.submissions || []
           })
         });
         const res = await resp.json();
 
         const earnedCoins = res.data?.earnedCoins || 15;
         const earnedExp = res.data?.earnedExp || 25;
+        const telemetry = res.data?.telemetry;
 
         const congratsModal = document.getElementById('modal-moc-congrats');
         const titleEl = document.getElementById('congrats-moc-title');
         const accEl = document.getElementById('congrats-accuracy');
         const expEl = document.getElementById('congrats-exp');
         const coinsEl = document.getElementById('congrats-coins');
+        const timeEl = document.getElementById('congrats-time');
+        const speedEl = document.getElementById('congrats-speed');
+        const lookupsEl = document.getElementById('congrats-lookups');
 
         if (titleEl) titleEl.textContent = s.tieuDe;
         if (accEl) accEl.textContent = `${accuracyPct}%`;
         if (expEl) expEl.textContent = `+${earnedExp}`;
         if (coinsEl) coinsEl.textContent = `+${earnedCoins}`;
+
+        if (telemetry) {
+          if (timeEl) timeEl.textContent = `${telemetry.thoi_gian_tong_giay}s`;
+          if (speedEl) speedEl.textContent = `${telemetry.toc_do_trung_binh_giay}s/câu`;
+          if (lookupsEl) lookupsEl.textContent = `${telemetry.tong_so_lan_tra_cuu} lần`;
+        } else {
+          let clientTotalSec = 0;
+          let clientLookups = 0;
+          (s.submissions || []).forEach(sub => {
+            clientTotalSec += (sub.thoi_gian_giay || 0);
+            clientLookups += (sub.so_lan_tra_cuu || 0);
+          });
+          const count = Math.max(1, (s.submissions || []).length);
+          if (timeEl) timeEl.textContent = `${clientTotalSec}s`;
+          if (speedEl) speedEl.textContent = `${(clientTotalSec / count).toFixed(1)}s/câu`;
+          if (lookupsEl) lookupsEl.textContent = `${clientLookups} lần`;
+        }
 
         if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-correct');
 
@@ -5025,6 +5101,8 @@
       currentQuizSession.matchingState = null;
       currentQuizSession.dienTuChosen = null;
       currentQuizSession.arrangedTokens = [];
+      currentQuizSession.currentQuestionStartTime = Date.now();
+      currentQuizSession.currentQuestionLookups = 0;
 
       const q = questions[qIndex];
 
@@ -5120,18 +5198,25 @@
       s.isAnswerChecked = true;
       s.isCurrentQuestionChecked = true;
 
-      s.currentAnswer = {
-        ma_cau_hoi: q.ma_cau_hoi,
-        chi_muc_chon: idx
-      };
-      if (s.submissions) {
-        s.submissions.push(s.currentAnswer);
-      }
-
       const isCorrect = (q.vi_tri_dap_an_dung !== null && q.vi_tri_dap_an_dung !== undefined)
         ? (idx === Number(q.vi_tri_dap_an_dung))
         : true;
       lastPracticeCheckResult = isCorrect;
+
+      const timeSpentSec = Math.max(1, Math.round((Date.now() - (s.currentQuestionStartTime || Date.now())) / 1000));
+      const lookupsCount = s.currentQuestionLookups || 0;
+
+      s.currentAnswer = {
+        ma_cau_hoi: q.ma_cau_hoi,
+        chi_muc_chon: idx,
+        lua_chon: idx,
+        la_dung: isCorrect,
+        thoi_gian_giay: timeSpentSec,
+        so_lan_tra_cuu: lookupsCount
+      };
+      if (s.submissions) {
+        s.submissions.push(s.currentAnswer);
+      }
 
       if (s.failedQuestionsSet && !s.failedQuestionsSet.has(q.ma_cau_hoi)) {
         if (isCorrect) {
@@ -5375,9 +5460,22 @@
 
             const s = currentMocSession || currentQuizSession;
             if (s) {
+              const timeSpentSec = Math.max(1, Math.round((Date.now() - (s.currentQuestionStartTime || Date.now())) / 1000));
+              const lookupsCount = s.currentQuestionLookups || 0;
+
               s.isAnswerChecked = true;
               s.isCurrentQuestionChecked = true;
               lastPracticeCheckResult = true;
+
+              s.currentAnswer = {
+                ma_cau_hoi: q.ma_cau_hoi,
+                matched_pairs: ms.matchedPairs,
+                lua_chon: `${ms.matchedPairs.length} cặp`,
+                la_dung: true,
+                thoi_gian_giay: timeSpentSec,
+                so_lan_tra_cuu: lookupsCount
+              };
+
               if (s.failedQuestionsSet && !s.failedQuestionsSet.has(q.ma_cau_hoi)) {
                 s.firstAttemptCorrectCount = (s.firstAttemptCorrectCount || 0) + 1;
               }
@@ -5700,6 +5798,7 @@
 
     function viewCurrentTheoryFromQuiz() {
       if (!currentQuizSession) return;
+      currentQuizSession.currentQuestionLookups = (currentQuizSession.currentQuestionLookups || 0) + 1;
       openTheoryModal(currentQuizSession.mocId);
     }
 

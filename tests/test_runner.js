@@ -318,6 +318,35 @@ async function main() {
     await db.execute('DELETE FROM nguoi_dung WHERE ma_nguoi_dung = $1', [userId]);
   });
 
+  // --- 7. Adaptive Spaced Repetition & Session Telemetry History ---
+  console.log('\n--- 7. Adaptive Spaced Repetition & Session Telemetry History ---');
+  await runAsyncTest('telemetry: logs session metrics, updates memory weights and adaptive sampling', async () => {
+    const { initTelemetrySchema } = require('../database/init_telemetry');
+    await initTelemetrySchema();
+
+    const db = require('../database/db');
+    const user = await db.queryOne('SELECT TOP 1 ma_nguoi_dung FROM nguoi_dung');
+    assert(user, 'Should have user');
+    const ck = await db.queryOne("SELECT ma_moc FROM moc_bai_hoc WHERE ma_moc = 'moc_csdl_01_01'");
+    assert(ck, 'Should have checkpoint');
+
+    const stepRes = await courseService.submitStep(ck.ma_moc, 1, [
+      { ma_cau_hoi: 'q_csdl_01_01_01', chi_muc_chon: 0, thoi_gian_giay: 5.5, so_lan_tra_cuu: 1 }
+    ], user.ma_nguoi_dung);
+
+    assert(stepRes && stepRes.telemetry, 'Should return telemetry');
+    assert.strictEqual(stepRes.telemetry.tong_so_lan_tra_cuu, 1);
+    assert.strictEqual(stepRes.telemetry.thoi_gian_tong_giay, 5.5);
+
+    // Verify session log in lich_su_phien_hoc
+    const log = await db.queryOne(
+      'SELECT TOP 1 * FROM lich_su_phien_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2 ORDER BY tao_luc DESC',
+      [user.ma_nguoi_dung, ck.ma_moc]
+    );
+    assert(log, 'Session log should exist in lich_su_phien_hoc');
+    assert(log.chi_tiet_cau_hoi, 'Should contain JSON details');
+  });
+
   console.log('\n================================================================');
   console.log(`🏁 TEST RESULTS: ${passedTests} PASSED, ${failedTests} FAILED`);
   console.log('================================================================\n');

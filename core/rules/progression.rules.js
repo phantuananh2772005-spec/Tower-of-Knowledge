@@ -90,6 +90,8 @@ function evaluateQuizSubmission(submittedAnswers, officialQuestions, passScore =
       loai_cau_hoi: loai,
       la_dung: isCorrect,
       lua_chon: userDisplayChoice,
+      thoi_gian_giay: userSubmission && userSubmission.thoi_gian_giay !== undefined ? Number(userSubmission.thoi_gian_giay) : 5,
+      so_lan_tra_cuu: userSubmission && userSubmission.so_lan_tra_cuu !== undefined ? Number(userSubmission.so_lan_tra_cuu) : 0,
       dap_an_dung: q.vi_tri_dap_an_dung !== undefined && q.vi_tri_dap_an_dung !== null ? Number(q.vi_tri_dap_an_dung) : null,
       giai_thich: q.giai_thich || ''
     });
