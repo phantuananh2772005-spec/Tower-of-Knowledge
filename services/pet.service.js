@@ -49,8 +49,8 @@ async function buyPet(ma_thu_cung, ma_nguoi_dung) {
   const ma_so_huu = `own_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   await db.execute(`
     INSERT INTO thu_cung_so_huu (ma_so_huu, ma_nguoi_dung, ma_thu_cung, dang_kich_hoat)
-    VALUES ($1, $2, $3, 0)
-  `, [ma_so_huu, ma_nguoi_dung, ma_thu_cung]);
+    VALUES ($1, $2, $3, $4)
+  `, [ma_so_huu, ma_nguoi_dung, ma_thu_cung, false]);
 
   return {
     thanh_cong: true,
@@ -72,10 +72,10 @@ async function equipPet(ma_thu_cung, ma_nguoi_dung) {
   }
 
   // Deactivate all pets of user first
-  await db.execute('UPDATE thu_cung_so_huu SET dang_kich_hoat = 0 WHERE ma_nguoi_dung = $1', [ma_nguoi_dung]);
+  await db.execute('UPDATE thu_cung_so_huu SET dang_kich_hoat = $1 WHERE ma_nguoi_dung = $2', [false, ma_nguoi_dung]);
 
   // Activate selected pet
-  await db.execute('UPDATE thu_cung_so_huu SET dang_kich_hoat = 1 WHERE ma_nguoi_dung = $1 AND ma_thu_cung = $2', [ma_nguoi_dung, ma_thu_cung]);
+  await db.execute('UPDATE thu_cung_so_huu SET dang_kich_hoat = $1 WHERE ma_nguoi_dung = $2 AND ma_thu_cung = $3', [true, ma_nguoi_dung, ma_thu_cung]);
 
   const pet = await db.queryOne('SELECT * FROM thu_cung WHERE ma_thu_cung = $1', [ma_thu_cung]);
   return {

@@ -36,8 +36,8 @@ async function formatUserResponse(user) {
     SELECT tc.ma_thu_cung, tc.ten_thu_cung, tc.mo_ta, tc.anh_dai_dien, tc.spritesheet_url, tc.he_so_sat_thuong
     FROM thu_cung_so_huu sh
     JOIN thu_cung tc ON sh.ma_thu_cung = tc.ma_thu_cung
-    WHERE sh.ma_nguoi_dung = $1 AND sh.dang_kich_hoat = 1
-  `, [user.ma_nguoi_dung]);
+    WHERE sh.ma_nguoi_dung = $1 AND sh.dang_kich_hoat = $2
+  `, [user.ma_nguoi_dung, true]);
 
   return {
     ma_nguoi_dung: user.ma_nguoi_dung,
@@ -98,15 +98,15 @@ async function register({ ten_dang_nhap, email, mat_khau, ten_hien_thi }) {
       ma_nguoi_dung, ten_dang_nhap, email, mat_khau_hash, ten_hien_thi,
       khung_avatar, vai_tro, tong_diem_kinh_nghiem, xu_tri_thuc, chuoi_streak_ngay,
       ngay_hoat_dong_cuoi, che_do_giao_dien, bat_am_thanh
-    ) VALUES ($1, $2, $3, $4, $5, 'khung_khoi_dau', 'NGUOI_HOC', 0, 0, 0, CAST(SYSDATETIME() AS DATE), 'TOI', 1)
-  `, [ma_nguoi_dung, finalUsername, finalEmail, mat_khau_hash, displayName]);
+    ) VALUES ($1, $2, $3, $4, $5, 'khung_khoi_dau', 'NGUOI_HOC', 0, 0, 0, CAST(SYSDATETIME() AS DATE), 'TOI', $6)
+  `, [ma_nguoi_dung, finalUsername, finalEmail, mat_khau_hash, displayName, true]);
 
   // Grant starting pet Sparky
   const ma_so_huu = `own_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   await db.execute(`
     INSERT INTO thu_cung_so_huu (ma_so_huu, ma_nguoi_dung, ma_thu_cung, dang_kich_hoat)
-    VALUES ($1, $2, 'pet_sparky', 1)
-  `, [ma_so_huu, ma_nguoi_dung]);
+    VALUES ($1, $2, 'pet_sparky', $3)
+  `, [ma_so_huu, ma_nguoi_dung, true]);
 
   const newUser = await db.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1', [ma_nguoi_dung]);
   const token = generateToken(newUser);
@@ -183,7 +183,7 @@ async function updateSettings(ma_nguoi_dung, { che_do_giao_dien, bat_am_thanh, t
   if (!user) throw new Error('Người dùng không tồn tại.');
 
   const newTheme = che_do_giao_dien || user.che_do_giao_dien;
-  const newSound = bat_am_thanh !== undefined ? (bat_am_thanh ? 1 : 0) : user.bat_am_thanh;
+  const newSound = bat_am_thanh !== undefined ? Boolean(bat_am_thanh) : Boolean(user.bat_am_thanh);
   const newName = ten_hien_thi || user.ten_hien_thi;
 
   await db.execute(`

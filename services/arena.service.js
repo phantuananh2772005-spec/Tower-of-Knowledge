@@ -23,15 +23,15 @@ async function createMatch(player1Id, player2Id, ma_mon = 'mon_csdl') {
   const pet1 = await db.queryOne(`
     SELECT tc.ma_thu_cung, tc.he_so_sat_thuong 
     FROM thu_cung_so_huu sh JOIN thu_cung tc ON sh.ma_thu_cung = tc.ma_thu_cung 
-    WHERE sh.ma_nguoi_dung = $1 AND sh.dang_kich_hoat = 1
-  `, [player1Id]);
+    WHERE sh.ma_nguoi_dung = $1 AND sh.dang_kich_hoat = $2
+  `, [player1Id, true]);
 
   // Player 2 pet
   const pet2 = await db.queryOne(`
     SELECT tc.ma_thu_cung, tc.he_so_sat_thuong 
     FROM thu_cung_so_huu sh JOIN thu_cung tc ON sh.ma_thu_cung = tc.ma_thu_cung 
-    WHERE sh.ma_nguoi_dung = $1 AND sh.dang_kich_hoat = 1
-  `, [player2Id]);
+    WHERE sh.ma_nguoi_dung = $1 AND sh.dang_kich_hoat = $2
+  `, [player2Id, true]);
 
   const p1IdInMatch = `pm_${ma_tran}_1`;
   const p2IdInMatch = `pm_${ma_tran}_2`;
