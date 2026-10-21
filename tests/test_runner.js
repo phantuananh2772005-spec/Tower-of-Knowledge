@@ -271,6 +271,25 @@ async function main() {
     const step1 = await courseService.getCheckpointContent(moc1.ma_moc, userId, 1);
     assert.ok(step1.danh_sach_cau_hoi.length > 0);
 
+    // Realtime check-answer evaluation
+    const firstQ = step1.danh_sach_cau_hoi[0];
+    const checkRes = await courseService.checkSingleQuestion(moc1.ma_moc, firstQ.ma_cau_hoi, {
+      ma_cau_hoi: firstQ.ma_cau_hoi,
+      chi_muc_chon: 999
+    });
+    assert.strictEqual(checkRes.la_dung, false);
+    assert.ok(checkRes.giai_thich.length > 0);
+
+    // Complete checkpoint via submit (Queue completion)
+    const submitRes = await courseService.submitQuizCheckpoint(moc1.ma_moc, [], userId);
+    assert.strictEqual(submitRes.success, true);
+    assert.strictEqual(submitRes.da_hoan_thanh, true);
+    assert.ok(submitRes.moc_ke_tiep_mo_khoa);
+
+    // Verify m1 is DA_HOAN_THANH and next is DA_MO
+    const updatedDetails = await courseService.getCourseDetails('co-so-du-lieu', userId);
+    assert.strictEqual(updatedDetails.cac_chuong[0].cac_moc[0].trang_thai, 'DA_HOAN_THANH');
+
     // Cleanup
     const db = require('../database/db');
     await db.execute('DELETE FROM nguoi_dung WHERE ma_nguoi_dung = $1', [userId]);

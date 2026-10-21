@@ -555,10 +555,117 @@ async function completeTheoreticalCheckpoint(ma_moc, ma_nguoi_dung) {
 }
 
 /**
- * Submit quiz submission (backward compatibility wrapper)
+ * Check a single question answer in real-time
+ */
+async function checkSingleQuestion(ma_moc, ma_cau_hoi, tra_loi) {
+  const q = await db.queryOne('SELECT * FROM cau_hoi WHERE ma_cau_hoi = $1 AND ma_moc = $2', [ma_cau_hoi, ma_moc]);
+  if (!q) throw new Error('Không tìm thấy câu hỏi.');
+
+  const evalResult = evaluateQuizSubmission([tra_loi], [q], 0, 0, 0);
+  const detail = evalResult.details[0] || { la_dung: false, giai_thich: q.giai_thich || '' };
+
+  return {
+    la_dung: detail.la_dung,
+    giai_thich: q.giai_thich || 'Khái niệm trọng tâm giúp khắc sâu kiến thức.',
+    dap_an_dung: detail.dap_an_dung
+  };
+}
+
+/**
+ * Submit quiz submission: marks checkpoint as completed, awards rewards, and unlocks next checkpoint
  */
 async function submitQuizCheckpoint(ma_moc, submissions, ma_nguoi_dung) {
-  return await submitStep(ma_moc, 1, submissions, ma_nguoi_dung);
+  const checkpoint = await db.queryOne('SELECT * FROM moc_bai_hoc WHERE ma_moc = $1', [ma_moc]);
+  if (!checkpoint) throw new Error('Không tìm thấy mốc bài học.');
+
+  let questions = await db.query('SELECT * FROM cau_hoi WHERE ma_moc = $1 ORDER BY ma_cau_hoi ASC', [ma_moc]);
+  if (!questions || questions.length === 0) {
+    return await completeTheoreticalCheckpoint(ma_moc, ma_nguoi_dung);
+  }
+
+  const rewardCoins = checkpoint.xu_thuong || 15;
+  const rewardExp = checkpoint.diem_thuong || 25;
+  const evaluation = evaluateQuizSubmission(submissions, questions, 60, rewardCoins, rewardExp);
+
+  let nextCheckpointUnlocked = null;
+  if (ma_nguoi_dung) {
+    await db.execute(`
+      UPDATE tien_do_moc_bai_hoc
+      SET trang_thai = 'DA_HOAN_THANH',
+          buoc_hien_tai = 5,
+          cac_buoc_hoan_thanh = '4/4',
+          thoi_diem_hoan_thanh = SYSDATETIME(),
+          diem_dat_duoc = diem_dat_duoc + $1,
+          xu_da_nhan = xu_da_nhan + $2
+      WHERE ma_nguoi_dung = $3 AND ma_moc = $4
+    `, [evaluation.earnedExp || rewardExp, evaluation.earnedCoins || rewardCoins, ma_nguoi_dung, ma_moc]);
+
+    // Unlock next checkpoint
+    const courseChapter = await db.queryOne('SELECT ma_mon FROM chuong_hoc WHERE ma_chuong = $1', [checkpoint.ma_chuong]);
+    if (courseChapter) {
+      const allCourseCheckpoints = await db.query(`
+        SELECT m.ma_moc, m.thu_tu, c.thu_tu as chuong_thu_tu
+        FROM moc_bai_hoc m
+        JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
+        WHERE c.ma_mon = $1
+        ORDER BY c.thu_tu ASC, m.thu_tu ASC
+      `, [courseChapter.ma_mon]);
+
+      const nextUnlock = findNextCheckpointToUnlock(allCourseCheckpoints, ma_moc);
+      if (nextUnlock && nextUnlock.nextCheckpoint) {
+        nextCheckpointUnlocked = nextUnlock.nextCheckpoint;
+        const nextProg = await db.queryOne(
+          'SELECT ma_tien_do_moc FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2',
+          [ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc]
+        );
+        if (!nextProg) {
+          const newMocProgId = `pck_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+          await db.execute(`
+            INSERT INTO tien_do_moc_bai_hoc (ma_tien_do_moc, ma_nguoi_dung, ma_moc, trang_thai, diem_dat_duoc, xu_da_nhan, buoc_hien_tai, cac_buoc_hoan_thanh)
+            VALUES ($1, $2, $3, 'DA_MO', 0, 0, 1, '0/4')
+          `, [newMocProgId, ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc]);
+        }
+      }
+
+      // Recalculate course completion percentage
+      const completedCountResult = await db.queryOne(`
+        SELECT COUNT(*) as count
+        FROM tien_do_moc_bai_hoc p
+        JOIN moc_bai_hoc m ON p.ma_moc = m.ma_moc
+        JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
+        WHERE p.ma_nguoi_dung = $1 AND c.ma_mon = $2 AND p.trang_thai = 'DA_HOAN_THANH'
+      `, [ma_nguoi_dung, courseChapter.ma_mon]);
+
+      const compPct = calculateCompletionPercentage(allCourseCheckpoints.length, completedCountResult ? completedCountResult.count : 0);
+
+      await db.execute(`
+        UPDATE tien_do_mon_hoc
+        SET phan_tram_hoan_thanh = $1,
+            ngay_hoan_thanh = CASE WHEN $1 >= 100 THEN SYSDATETIME() ELSE NULL END
+        WHERE ma_nguoi_dung = $2 AND ma_mon = $3
+      `, [compPct, ma_nguoi_dung, courseChapter.ma_mon]);
+    }
+
+    const coinsToAward = evaluation.earnedCoins || rewardCoins;
+    const expToAward = evaluation.earnedExp || rewardExp;
+    if (coinsToAward > 0) {
+      await mutateCoins(ma_nguoi_dung, coinsToAward, 'HOAN_THANH_MOC', `Hoàn thành mốc ${checkpoint.tieu_de}`);
+    }
+    if (expToAward > 0) {
+      await addExperience(ma_nguoi_dung, expToAward);
+    }
+  }
+
+  return {
+    success: true,
+    da_hoan_thanh: true,
+    scorePercentage: evaluation.scorePercentage,
+    correctCount: evaluation.correctCount,
+    totalQuestions: evaluation.totalQuestions,
+    earnedCoins: evaluation.earnedCoins || rewardCoins,
+    earnedExp: evaluation.earnedExp || rewardExp,
+    moc_ke_tiep_mo_khoa: nextCheckpointUnlocked ? nextCheckpointUnlocked.ma_moc : null
+  };
 }
 
 module.exports = {
@@ -570,5 +677,6 @@ module.exports = {
   completeTheoreticalCheckpoint,
   submitQuizCheckpoint,
   submitStep,
+  checkSingleQuestion,
   ensureCourseInitialized
 };

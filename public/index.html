@@ -278,27 +278,60 @@
 
     </section>
 
-    <!-- ================= VIEW 2: MÀN HÌNH LÀM BÀI TẬP DUOLINGO TƯƠNG TÁC ĐA DẠNG ================= -->
+    <!-- ================= VIEW 2: MÀN HÌNH BÀI HỌC THEO MỐC (THẺ GHI NHỚ LÝ THUYẾT + LUYỆN TẬP DUOLINGO) ================= -->
     <section id="view-play" class="hidden flex-1 flex flex-col justify-between max-w-2xl w-full mx-auto p-6 sm:p-10">
       <div>
         <div class="flex items-center justify-between text-xs text-[var(--muted-foreground)] mb-3">
           <div class="flex items-center gap-2 min-w-0">
-            <span id="play-title" class="font-bold text-sm text-[var(--foreground)] truncate">Chương 1 · Mốc 1.1</span>
-            <span id="play-step-badge" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 font-mono shrink-0">Bước 1/4: 100% Nhớ</span>
+            <span id="play-title" class="font-bold text-sm text-[var(--foreground)] truncate">Mốc 1.1</span>
+            <span id="play-step-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 font-mono shrink-0">📖 Thẻ ghi nhớ</span>
           </div>
           <button id="btn_play_ve_bando" onclick="closePlay()" class="hover:text-[var(--foreground)] border border-[var(--border)] px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer shrink-0">
             ✕ Về bản đồ
           </button>
         </div>
         <div class="w-full h-2 bg-[var(--border)] rounded-full overflow-hidden">
-          <div id="play-progress" class="h-full bg-emerald-500 transition-all duration-300" style="width: 10%"></div>
+          <div id="play-progress" class="h-full bg-emerald-500 transition-all duration-300" style="width: 0%"></div>
         </div>
       </div>
 
-      <div class="py-6 space-y-6 flex-1 flex flex-col justify-center">
+      <!-- MAIN CONTAINER: PHASE 1 (THẺ GHI NHỚ LÝ THUYẾT) -->
+      <div id="play-theory-container" class="py-6 space-y-5 flex-1 flex flex-col justify-center">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 font-mono">
+            💡 THẺ GHI NHỚ NGUYÊN TỬ
+          </span>
+          <span id="card-counter" class="text-xs text-[var(--muted-foreground)] font-mono font-bold">Thẻ 1/3</span>
+        </div>
+
+        <!-- Animated Flashcard Box -->
+        <div class="bg-[var(--card)] border-2 border-emerald-500/30 rounded-3xl p-6 sm:p-8 shadow-xl space-y-4 relative animate-in fade-in zoom-in-95 duration-200">
+          <div class="flex items-center gap-2.5 pb-2 border-b border-[var(--border)]">
+            <span class="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center font-bold text-sm shrink-0">💡</span>
+            <h3 id="card-title" class="text-base sm:text-lg font-bold text-[var(--foreground)] leading-tight">Khái niệm cốt lõi</h3>
+          </div>
+          <div id="card-content" class="text-xs sm:text-sm text-[var(--foreground)]/90 leading-relaxed space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
+            <!-- Dynamic Flashcard Body -->
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <button id="btn-skip-theory" onclick="startPracticePhase()" class="text-xs text-[var(--muted-foreground)] hover:text-emerald-600 transition underline cursor-pointer">
+            Bỏ qua bài giảng, vào làm bài ngay ⚡
+          </button>
+          <button id="btn-next-card" onclick="nextTheoryCard()" class="px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5">
+            <span>Tiếp tục</span> <span>→</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- MAIN CONTAINER: PHASE 2 (BÀI TẬP DUOLINGO VỚI HÀNG ĐỢI LÀM SAI ĐẨY RA CUỐI) -->
+      <div id="play-practice-container" class="hidden py-6 space-y-6 flex-1 flex flex-col justify-center">
         <!-- Question Header info -->
         <div class="flex items-center justify-between">
-          <span id="q-bloom-tag" class="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 font-mono">100% NHỚ · ĐỊNH NGHĨA CỐT LÕI</span>
+          <span id="q-bloom-tag" class="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 font-mono">
+            🎯 CÂU HỎI LUYỆN TẬP
+          </span>
           <span id="q-counter" class="text-xs text-[var(--muted-foreground)] font-mono font-bold">Câu 1/10</span>
         </div>
 
@@ -314,16 +347,16 @@
           <div class="flex items-center gap-2 font-bold text-xs" id="q-feedback-title"></div>
           <p id="q-feedback-desc" class="text-[var(--foreground)]/90 leading-relaxed font-sans"></p>
         </div>
-      </div>
 
-      <!-- Action Footer -->
-      <div class="pt-4 border-t border-[var(--border)] flex justify-between items-center">
-        <button id="btn-quiz-theory-hint" onclick="viewCurrentTheoryFromQuiz()" class="text-xs font-semibold text-[var(--muted-foreground)] hover:text-[var(--foreground)] flex items-center gap-1.5 cursor-pointer transition">
-          <span>📖</span> <span class="underline">Xem tóm tắt lý thuyết</span>
-        </button>
-        <button id="btn-next-step" onclick="handleQuizAction()" class="px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5">
-          <span>Kiểm tra</span> <span>✓</span>
-        </button>
+        <!-- Action Footer -->
+        <div class="pt-4 border-t border-[var(--border)] flex justify-between items-center">
+          <button id="btn-quiz-theory-hint" onclick="reopenTheoryCards()" class="text-xs font-semibold text-[var(--muted-foreground)] hover:text-[var(--foreground)] flex items-center gap-1.5 cursor-pointer transition">
+            <span>📖</span> <span class="underline">Xem lại thẻ bài giảng</span>
+          </button>
+          <button id="btn-next-step" onclick="handleMocPracticeAction()" class="px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5">
+            <span>Kiểm tra</span> <span>✓</span>
+          </button>
+        </div>
       </div>
     </section>
 
@@ -817,23 +850,23 @@
               </div>
               <div class="flex items-center justify-between font-mono">
                 <span class="font-bold text-sm text-[var(--foreground)]"><span id="profile-rank-pts">0</span> <span class="text-[10px] font-normal text-[var(--muted-foreground)]">EXP</span></span>
-                <span id="profile-rank-percent" class="text-[10px] text-[var(--muted-foreground)]">30%</span>
+                <span id="profile-rank-percent" class="text-[10px] text-[var(--muted-foreground)]">0%</span>
               </div>
               <div class="w-full h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
-                <div id="profile-rank-bar" class="h-full bg-amber-500 rounded-full transition-all duration-300" style="width: 30%"></div>
+                <div id="profile-rank-bar" class="h-full bg-amber-500 rounded-full transition-all duration-300" style="width: 0%"></div>
               </div>
             </div>
             <div class="bg-[var(--background)] p-3 rounded-2xl border border-[var(--border)] space-y-1.5">
               <div class="flex items-center justify-between">
-                <span class="text-[11px] text-[var(--muted-foreground)] font-medium">Tiến độ CSDL</span>
-                <span id="profile-csdl-rank-badge" class="font-bold text-emerald-600 text-xs">Đang học</span>
+                <span id="profile-course-title" class="text-[11px] text-[var(--muted-foreground)] font-medium truncate max-w-[100px]">Môn đang học</span>
+                <span id="profile-csdl-rank-badge" class="font-bold text-[var(--muted-foreground)] text-xs">Chưa học</span>
               </div>
               <div class="flex items-center justify-between font-mono">
-                <span class="font-bold text-sm text-[var(--foreground)]"><span id="profile-csdl-mocs-stat">1/8</span> <span class="text-[10px] font-normal text-[var(--muted-foreground)]">mốc</span></span>
-                <span id="profile-csdl-percent" class="text-[10px] text-[var(--muted-foreground)]">13%</span>
+                <span class="font-bold text-sm text-[var(--foreground)]"><span id="profile-csdl-mocs-stat">0 môn</span> <span class="text-[10px] font-normal text-[var(--muted-foreground)]">mốc</span></span>
+                <span id="profile-csdl-percent" class="text-[10px] text-[var(--muted-foreground)]">0%</span>
               </div>
               <div class="w-full h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
-                <div id="profile-csdl-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-300" style="width: 13%"></div>
+                <div id="profile-csdl-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-300" style="width: 0%"></div>
               </div>
             </div>
           </div>
@@ -869,21 +902,25 @@
             🏅 Huy hiệu vinh danh
           </h4>
           <div class="grid grid-cols-4 gap-2.5 text-center text-xs">
-            <div class="bg-[var(--background)] p-2.5 rounded-2xl border border-emerald-500/30 flex flex-col items-center gap-1 shadow-2xs">
+            <div id="badge-card-khoi-dau" class="bg-[var(--background)] p-2.5 rounded-2xl border border-dashed border-[var(--border)] opacity-40 grayscale flex flex-col items-center gap-1 shadow-2xs select-none">
               <span class="text-xl select-none">🌱</span>
-              <span class="text-[11px] font-bold leading-tight">Khởi Đầu</span>
+              <span class="text-[11px] font-medium text-[var(--muted-foreground)] leading-tight">Khởi Đầu</span>
+              <span class="text-[9px] font-mono text-[var(--muted-foreground)]">🔒 Chưa mở</span>
             </div>
-            <div class="bg-[var(--background)] p-2.5 rounded-2xl border border-amber-500/30 flex flex-col items-center gap-1 shadow-2xs">
+            <div id="badge-card-than-toc" class="bg-[var(--background)] p-2.5 rounded-2xl border border-dashed border-[var(--border)] opacity-40 grayscale flex flex-col items-center gap-1 shadow-2xs select-none">
               <span class="text-xl select-none">⚡</span>
-              <span class="text-[11px] font-bold leading-tight">Thần Tốc</span>
+              <span class="text-[11px] font-medium text-[var(--muted-foreground)] leading-tight">Thần Tốc</span>
+              <span class="text-[9px] font-mono text-[var(--muted-foreground)]">🔒 Chưa mở</span>
             </div>
-            <div class="bg-[var(--background)] p-2.5 rounded-2xl border border-blue-500/30 flex flex-col items-center gap-1 shadow-2xs">
+            <div id="badge-card-kien-cuong" class="bg-[var(--background)] p-2.5 rounded-2xl border border-dashed border-[var(--border)] opacity-40 grayscale flex flex-col items-center gap-1 shadow-2xs select-none">
               <span class="text-xl select-none">🛡️</span>
-              <span class="text-[11px] font-bold leading-tight">Kiên Cường</span>
+              <span class="text-[11px] font-medium text-[var(--muted-foreground)] leading-tight">Kiên Cường</span>
+              <span class="text-[9px] font-mono text-[var(--muted-foreground)]">🔒 Chưa mở</span>
             </div>
-            <div class="bg-[var(--background)] p-2.5 rounded-2xl border border-purple-500/30 flex flex-col items-center gap-1 shadow-2xs">
+            <div id="badge-card-dot-pha" class="bg-[var(--background)] p-2.5 rounded-2xl border border-dashed border-[var(--border)] opacity-40 grayscale flex flex-col items-center gap-1 shadow-2xs select-none">
               <span class="text-xl select-none">👑</span>
-              <span class="text-[11px] font-bold leading-tight">Đột Phá</span>
+              <span class="text-[11px] font-medium text-[var(--muted-foreground)] leading-tight">Đột Phá</span>
+              <span class="text-[9px] font-mono text-[var(--muted-foreground)]">🔒 Chưa mở</span>
             </div>
           </div>
         </div>
@@ -1472,6 +1509,44 @@
             <span>Bắt đầu Luyện tập Bước 1</span> <span>→</span>
           </button>
         </div>
+      </div>
+    </div>
+
+    <!-- ================= MODAL CHÚC MỪNG HOÀN THÀNH MỐC HỌC (VICTORY MODAL) ================= -->
+    <div id="modal-moc-congrats" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm transition-opacity duration-200">
+      <div class="bg-[var(--card)] border border-emerald-500/50 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-5 text-center relative animate-in fade-in zoom-in-95 duration-200">
+        <div class="w-20 h-20 mx-auto rounded-full bg-emerald-500/15 border-2 border-emerald-500 flex items-center justify-center text-4xl shadow-inner animate-bounce">
+          🏆
+        </div>
+        <div class="space-y-1.5">
+          <span class="text-[10px] uppercase font-bold tracking-widest text-emerald-600 font-mono">HOÀN THÀNH MỐC HỌC</span>
+          <h3 id="congrats-moc-title" class="font-bold text-lg sm:text-xl text-[var(--foreground)]">Mốc 1.1: Khái niệm CSDL</h3>
+          <p class="text-xs text-[var(--muted-foreground)]">Xuất sắc! Bạn đã làm chủ toàn bộ bài giảng và bài tập của mốc này.</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-3 gap-2.5 text-center">
+          <div class="bg-[var(--background)] p-3 rounded-2xl border border-[var(--border)]">
+            <span class="text-base block mb-0.5">🎯</span>
+            <span id="congrats-accuracy" class="font-mono font-bold text-sm text-emerald-600">100%</span>
+            <span class="text-[10px] text-[var(--muted-foreground)] block">Độ chính xác</span>
+          </div>
+          <div class="bg-[var(--background)] p-3 rounded-2xl border border-[var(--border)]">
+            <span class="text-base block mb-0.5">⭐</span>
+            <span id="congrats-exp" class="font-mono font-bold text-sm text-amber-500">+25</span>
+            <span class="text-[10px] text-[var(--muted-foreground)] block">Kinh nghiệm</span>
+          </div>
+          <div class="bg-[var(--background)] p-3 rounded-2xl border border-[var(--border)]">
+            <span class="text-base block mb-0.5">🪙</span>
+            <span id="congrats-coins" class="font-mono font-bold text-sm text-blue-500">+15</span>
+            <span class="text-[10px] text-[var(--muted-foreground)] block">Xu thưởng</span>
+          </div>
+        </div>
+
+        <button id="btn_congrats_continue" onclick="finishMocAndReturnToMap()" class="w-full py-3 rounded-2xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 transition shadow-lg cursor-pointer flex items-center justify-center gap-2">
+          <span>🚀 Tiếp tục hành trình leo tháp</span>
+          <span>→</span>
+        </button>
       </div>
     </div>
 
@@ -2332,16 +2407,24 @@
     }
 
     function renderUserProfileModal() {
-      const user = currentUserAccount;
+      const user = currentUserAccount || {};
       document.querySelectorAll('.user-display-name').forEach(el => {
-        el.textContent = user.displayName;
+        el.textContent = user.displayName || 'Học viên';
       });
 
       const rankBadge = document.getElementById('profile-rank-badge');
       if (rankBadge) rankBadge.textContent = user.rankTitle || 'TẬP SỰ';
 
+      const currentExp = Number(user.exp || 0);
       const rankPts = document.getElementById('profile-rank-pts');
-      if (rankPts) rankPts.textContent = user.exp || 0;
+      if (rankPts) rankPts.textContent = currentExp;
+
+      // 0 EXP -> 0% bar (avoid fake/hardcoded 30%)
+      const rankPercent = Math.min(100, Math.round((currentExp % 100)));
+      const rankPctEl = document.getElementById('profile-rank-percent');
+      if (rankPctEl) rankPctEl.textContent = `${rankPercent}%`;
+      const rankBarEl = document.getElementById('profile-rank-bar');
+      if (rankBarEl) rankBarEl.style.width = `${rankPercent}%`;
 
       const streakVal = document.getElementById('profile-stat-streak');
       if (streakVal) streakVal.textContent = (userStreak || 0) + ' ngày';
@@ -2354,21 +2437,67 @@
         liveCourseData.cac_chuong.forEach(ch => {
           (ch.cac_moc || []).forEach(m => {
             totalMocs++;
-            if (m.trang_thai === 'HOAN_THANH') compMocs++;
+            if (m.trang_thai === 'HOAN_THANH' || m.trang_thai === 'DA_HOAN_THANH') compMocs++;
           });
         });
       }
       const mocsVal = document.getElementById('profile-stat-mocs');
       if (mocsVal) mocsVal.textContent = compMocs + ' mốc';
 
+      const isEnrolled = myEnrolledCourses && myEnrolledCourses.length > 0;
+      const courseTitleEl = document.getElementById('profile-course-title');
+      const courseBadgeEl = document.getElementById('profile-csdl-rank-badge');
       const csdlStat = document.getElementById('profile-csdl-mocs-stat');
-      if (csdlStat) csdlStat.textContent = `${compMocs}/${totalMocs || 8}`;
-
-      const pct = totalMocs > 0 ? Math.round((compMocs / totalMocs) * 100) : 0;
       const csdlPct = document.getElementById('profile-csdl-percent');
-      if (csdlPct) csdlPct.textContent = pct + '%';
       const csdlBar = document.getElementById('profile-csdl-bar');
-      if (csdlBar) csdlBar.style.width = pct + '%';
+
+      if (!isEnrolled) {
+        if (courseTitleEl) courseTitleEl.textContent = 'Môn đang học';
+        if (courseBadgeEl) {
+          courseBadgeEl.textContent = 'Chưa đăng ký';
+          courseBadgeEl.className = 'font-bold text-xs text-[var(--muted-foreground)]';
+        }
+        if (csdlStat) csdlStat.textContent = '0 môn';
+        if (csdlPct) csdlPct.textContent = '0%';
+        if (csdlBar) csdlBar.style.width = '0%';
+      } else {
+        const activeCourse = myEnrolledCourses[0];
+        if (courseTitleEl) courseTitleEl.textContent = `Tiến độ ${activeCourse.ten_mon ? activeCourse.ten_mon.split('&')[0].trim() : 'CSDL'}`;
+        if (courseBadgeEl) {
+          courseBadgeEl.textContent = 'Đang học';
+          courseBadgeEl.className = 'font-bold text-xs text-emerald-600';
+        }
+        const pct = totalMocs > 0 ? Math.round((compMocs / totalMocs) * 100) : 0;
+        if (csdlStat) csdlStat.textContent = `${compMocs}/${totalMocs || 8} mốc`;
+        if (csdlPct) csdlPct.textContent = `${pct}%`;
+        if (csdlBar) csdlBar.style.width = `${pct}%`;
+      }
+
+      // Update 4 Real Badges (Khởi Đầu, Thần Tốc, Kiên Cường, Đột Phá)
+      const updateBadgeCard = (id, isUnlocked, title, icon, lockDesc) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (isUnlocked) {
+          el.className = "p-2.5 rounded-2xl border border-emerald-500/50 bg-emerald-500/10 flex flex-col items-center gap-1 shadow-xs transition hover:scale-105 select-none";
+          el.innerHTML = `
+            <span class="text-xl select-none">${icon}</span>
+            <span class="text-[11px] font-bold text-emerald-600 leading-tight">${title}</span>
+            <span class="text-[9px] font-bold text-emerald-500">✓ Đạt được</span>
+          `;
+        } else {
+          el.className = "p-2.5 rounded-2xl border border-dashed border-[var(--border)] bg-[var(--background)] flex flex-col items-center gap-1 opacity-40 grayscale select-none";
+          el.innerHTML = `
+            <span class="text-xl select-none">${icon}</span>
+            <span class="text-[11px] font-medium text-[var(--muted-foreground)] leading-tight">${title}</span>
+            <span class="text-[9px] font-mono text-[var(--muted-foreground)]" title="${lockDesc}">🔒 Chưa mở</span>
+          `;
+        }
+      };
+
+      updateBadgeCard('badge-card-khoi-dau', compMocs >= 1, 'Khởi Đầu', '🌱', 'Cần hoàn thành mốc học đầu tiên');
+      updateBadgeCard('badge-card-than-toc', (userStreak || 0) >= 3, 'Thần Tốc', '⚡', 'Cần đạt streak 3 ngày');
+      updateBadgeCard('badge-card-kien-cuong', currentExp >= 100, 'Kiên Cường', '🛡️', 'Cần đạt 100 EXP');
+      updateBadgeCard('badge-card-dot-pha', compMocs >= 4, 'Đột Phá', '👑', 'Cần hoàn thành 4 mốc học');
     }
 
   async function startMatchmaking() {
@@ -4045,11 +4174,10 @@
             // Boss Node
             htmlOutput += `
               <div class="flex flex-col items-center text-center ${isLocked ? 'opacity-40' : ''} my-2">
-                <button id="btn_moc_boss_${m.ma_moc}" onclick="${isLocked ? `showToast('Cần hoàn thành các mốc trước để khiêu chiến Boss!', 'info')` : `openCheckpointModal('${m.ma_moc}')`}" title="${escapeHtml(m.tieu_de)}" class="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl saga-circle bg-amber-500/20 border-4 border-amber-400 text-amber-500 flex items-center justify-center text-4xl sm:text-5xl shadow-2xl ${isLocked ? 'cursor-not-allowed opacity-50' : 'crown-glow hover:scale-105 transition cursor-pointer'}">
+                <button id="btn_moc_boss_${m.ma_moc}" onclick="${isLocked ? `showToast('Cần hoàn thành các mốc trước để khiêu chiến Boss!', 'info')` : `startMocLearning('${m.ma_moc}')`}" title="${escapeHtml(m.tieu_de)}" class="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl saga-circle bg-amber-500/20 border-4 border-amber-400 text-amber-500 flex items-center justify-center text-4xl sm:text-5xl shadow-2xl ${isLocked ? 'cursor-not-allowed opacity-50' : 'crown-glow hover:scale-105 transition cursor-pointer'}">
                   👑
                 </button>
                 <span class="text-xs font-bold mt-2 uppercase tracking-wider text-amber-600">${escapeHtml(m.tieu_de)}</span>
-                ${renderMicroStepsDots(m.cac_buoc_hoan_thanh, isCompleted)}
               </div>
             `;
           } else if (isActive) {
@@ -4064,22 +4192,20 @@
                     <span class="text-3xl pet-animated">${currentEquippedPet ? currentEquippedPet.icon : '🐉'}</span>
                   </div>
                 </div>
-                <button id="btn_moc_active_${m.ma_moc}" onclick="openCheckpointModal('${m.ma_moc}')" title="Bắt đầu: ${escapeHtml(m.tieu_de)}" class="w-12 h-12 rounded-full saga-circle bg-emerald-600 text-white font-bold text-sm flex items-center justify-center shadow-xl node-current border-3 border-emerald-300 hover:scale-115 transition active:scale-95 cursor-pointer">
+                <button id="btn_moc_active_${m.ma_moc}" onclick="startMocLearning('${m.ma_moc}')" title="Bắt đầu: ${escapeHtml(m.tieu_de)}" class="w-12 h-12 rounded-full saga-circle bg-emerald-600 text-white font-bold text-sm flex items-center justify-center shadow-xl node-current border-3 border-emerald-300 hover:scale-115 transition active:scale-95 cursor-pointer">
                   ▶
                 </button>
                 <span class="text-[11px] font-bold mt-1 text-emerald-600 max-w-[150px] text-center truncate">${escapeHtml(m.tieu_de.split(':')[0])}</span>
-                ${renderMicroStepsDots(m.cac_buoc_hoan_thanh, false)}
               </div>
             `;
           } else if (isCompleted) {
             // Completed Checkmark Node
             htmlOutput += `
               <div class="flex flex-col items-center ${offsetClass}">
-                <button id="btn_moc_done_${m.ma_moc}" onclick="openCheckpointModal('${m.ma_moc}')" title="Ôn tập: ${escapeHtml(m.tieu_de)}" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full saga-circle bg-emerald-500 text-white font-bold text-xs flex items-center justify-center shadow-sm hover:scale-110 transition cursor-pointer">
+                <button id="btn_moc_done_${m.ma_moc}" onclick="startMocLearning('${m.ma_moc}')" title="Ôn tập: ${escapeHtml(m.tieu_de)}" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full saga-circle bg-emerald-500 text-white font-bold text-xs flex items-center justify-center shadow-sm hover:scale-110 transition cursor-pointer">
                   ✓
                 </button>
                 <span class="text-[10px] font-medium mt-1 text-[var(--muted-foreground)] max-w-[140px] text-center truncate">${escapeHtml(m.tieu_de.split(':')[0])}</span>
-                ${renderMicroStepsDots(m.cac_buoc_hoan_thanh, true)}
               </div>
             `;
           } else {
@@ -4091,7 +4217,6 @@
                   🔒
                 </div>
                 <span class="text-[10px] font-medium mt-1 text-[var(--muted-foreground)] max-w-[140px] text-center truncate">${escapeHtml(m.tieu_de.split(':')[0])}</span>
-                ${renderMicroStepsDots(m.cac_buoc_hoan_thanh, false)}
               </div>
             `;
           }
@@ -4139,6 +4264,437 @@
     function escapeHtml(str) {
       if (!str) return '';
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    // =========================================================================
+    // HỆ THỐNG HỌC TẬP THEO MỐC: THẺ GHI NHỚ LÝ THUYẾT + LUYỆN TẬP DUOLINGO
+    // ("Đi theo điểm màn -> Thẻ ghi nhớ -> Bài tập làm sai đẩy ra cuối -> Chúc mừng -> Mở mốc tiếp theo & Pet di chuyển")
+    // =========================================================================
+    let currentMocSession = null;
+
+    function parseTheoryToCards(markdownText, defaultTitle) {
+      if (!markdownText) {
+        return [{
+          title: defaultTitle || 'Khái niệm cốt lõi',
+          body: '<p>Nội dung bài học đang được cập nhật.</p>'
+        }];
+      }
+
+      // Tách theo các tiêu đề cấp 3 (### )
+      const rawSections = markdownText.split(/(?=###\s+)/g);
+      const cards = [];
+
+      rawSections.forEach((sec, idx) => {
+        const trimmed = sec.trim();
+        if (!trimmed) return;
+        const lines = trimmed.split('\n');
+        let title = lines[0].replace(/^###\s+/, '').trim();
+        if (!title) title = `Nội dung ${idx + 1}`;
+        const bodyLines = lines.slice(1).join('\n').trim();
+        const htmlBody = formatMarkdownToCardHtml(bodyLines || lines[0]);
+        cards.push({
+          title,
+          body: htmlBody
+        });
+      });
+
+      if (cards.length === 0) {
+        cards.push({
+          title: defaultTitle || 'Khái niệm cốt lõi',
+          body: formatMarkdownToCardHtml(markdownText)
+        });
+      }
+
+      return cards;
+    }
+
+    function formatMarkdownToCardHtml(text) {
+      if (!text) return '';
+      let out = escapeHtml(text);
+      // In đậm **text**
+      out = out.replace(/\*\*(.*?)\*\*/g, '<strong class="text-emerald-600 font-bold">$1</strong>');
+      // Danh sách gạch đầu dòng
+      const lines = out.split('\n');
+      const formattedLines = lines.map(line => {
+        const l = line.trim();
+        if (l.startsWith('- ') || l.startsWith('* ')) {
+          return `<div class="flex items-start gap-2 my-2"><span class="text-emerald-500 font-bold text-sm leading-tight">•</span><div class="flex-1">${l.substring(2)}</div></div>`;
+        }
+        if (l.match(/^\d+\.\s+/)) {
+          const num = l.match(/^(\d+)\.\s+/)[1];
+          const rest = l.replace(/^\d+\.\s+/, '');
+          return `<div class="flex items-start gap-2 my-2"><span class="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-600 text-xs font-bold flex items-center justify-center shrink-0 leading-none">${num}</span><div class="flex-1">${rest}</div></div>`;
+        }
+        return l ? `<p class="my-1.5">${l}</p>` : '';
+      });
+      return formattedLines.join('');
+    }
+
+    async function startMocLearning(mocId) {
+      closeCheckpointModal();
+      const token = localStorage.getItem('tok_token');
+      try {
+        const resp = await fetch('/api/checkpoints/' + mocId, {
+          headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+        });
+        const res = await resp.json();
+        if (res.success && res.data) {
+          const d = res.data;
+          const parsedCards = parseTheoryToCards(d.noi_dung_ly_thuyet, d.tieu_de);
+          const rawQuestions = d.danh_sach_cau_hoi || [];
+
+          currentMocSession = {
+            mocId: d.ma_moc,
+            tieuDe: d.tieu_de,
+            loaiMoc: d.loai_moc,
+            cards: parsedCards,
+            cardIndex: 0,
+            phase: 'THEORY_CARDS',
+            questionsQueue: [...rawQuestions],
+            totalOriginalQuestions: rawQuestions.length,
+            masteredCount: 0,
+            firstAttemptCorrectCount: 0,
+            failedQuestionsSet: new Set(),
+            currentAnswer: null,
+            isAnswerChecked: false,
+            questions: rawQuestions,
+            qIndex: 0,
+            matchingState: null,
+            dienTuChosen: null,
+            arrangedTokens: []
+          };
+
+          currentQuizSession = currentMocSession;
+
+          navTo('play');
+          renderMocLearningScreen();
+        } else {
+          showToast(res.error?.message || 'Không thể mở mốc bài học!', 'error');
+        }
+      } catch (err) {
+        showToast('Lỗi kết nối khi tải mốc bài học!', 'error');
+      }
+    }
+
+    function renderMocLearningScreen() {
+      if (!currentMocSession) return;
+      const s = currentMocSession;
+
+      const titleEl = document.getElementById('play-title');
+      if (titleEl) titleEl.textContent = s.tieuDe;
+
+      const progEl = document.getElementById('play-progress');
+
+      if (s.phase === 'THEORY_CARDS') {
+        const theoryContainer = document.getElementById('play-theory-container');
+        const practiceContainer = document.getElementById('play-practice-container');
+        if (theoryContainer) theoryContainer.classList.remove('hidden');
+        if (practiceContainer) practiceContainer.classList.add('hidden');
+
+        const stepBadge = document.getElementById('play-step-badge');
+        if (stepBadge) stepBadge.textContent = `📖 Thẻ ghi nhớ ${s.cardIndex + 1}/${s.cards.length}`;
+
+        if (progEl) {
+          const pct = Math.round(((s.cardIndex + 1) / s.cards.length) * 100);
+          progEl.style.width = `${pct}%`;
+        }
+
+        const cardCounter = document.getElementById('card-counter');
+        if (cardCounter) cardCounter.textContent = `Thẻ ${s.cardIndex + 1}/${s.cards.length}`;
+
+        const card = s.cards[s.cardIndex] || { title: 'Bài giảng', body: '' };
+        const cardTitle = document.getElementById('card-title');
+        const cardContent = document.getElementById('card-content');
+        if (cardTitle) cardTitle.textContent = card.title;
+        if (cardContent) cardContent.innerHTML = card.body;
+
+        const nextBtn = document.getElementById('btn-next-card');
+        if (nextBtn) {
+          if (s.cardIndex >= s.cards.length - 1) {
+            nextBtn.innerHTML = '<span>🚀 Bắt đầu Luyện tập ngay!</span>';
+            nextBtn.onclick = startPracticePhase;
+          } else {
+            nextBtn.innerHTML = '<span>Tiếp tục</span> <span>→</span>';
+            nextBtn.onclick = nextTheoryCard;
+          }
+        }
+      } else {
+        const theoryContainer = document.getElementById('play-theory-container');
+        const practiceContainer = document.getElementById('play-practice-container');
+        if (theoryContainer) theoryContainer.classList.add('hidden');
+        if (practiceContainer) practiceContainer.classList.remove('hidden');
+
+        const stepBadge = document.getElementById('play-step-badge');
+        if (stepBadge) stepBadge.textContent = '🎯 Luyện tập củng cố';
+
+        if (s.questionsQueue.length === 0) {
+          completeAllPractice();
+          return;
+        }
+
+        renderCurrentPracticeQuestion();
+      }
+    }
+
+    function nextTheoryCard() {
+      if (!currentMocSession) return;
+      currentMocSession.cardIndex++;
+      if (currentMocSession.cardIndex >= currentMocSession.cards.length) {
+        startPracticePhase();
+      } else {
+        renderMocLearningScreen();
+        if (audioSettings && audioSettings.quiz) playAdvancedSound('click');
+      }
+    }
+
+    function startPracticePhase() {
+      if (!currentMocSession) return;
+      currentMocSession.phase = 'PRACTICE_QUEUE';
+      if (currentMocSession.questionsQueue.length === 0) {
+        completeAllPractice();
+        return;
+      }
+      renderMocLearningScreen();
+      if (audioSettings && audioSettings.quiz) playAdvancedSound('click');
+    }
+
+    function reopenTheoryCards() {
+      if (!currentMocSession) return;
+      currentMocSession.phase = 'THEORY_CARDS';
+      currentMocSession.cardIndex = 0;
+      renderMocLearningScreen();
+      if (audioSettings && audioSettings.quiz) playAdvancedSound('click');
+    }
+
+    function renderCurrentPracticeQuestion() {
+      if (!currentMocSession || currentMocSession.questionsQueue.length === 0) return;
+      const s = currentMocSession;
+      const q = s.questionsQueue[0];
+
+      s.questions = s.questionsQueue;
+      s.qIndex = 0;
+      s.currentAnswer = null;
+      s.isAnswerChecked = false;
+      s.matchingState = null;
+      s.dienTuChosen = null;
+      s.arrangedTokens = [];
+      currentQuizSession = s;
+
+      const progEl = document.getElementById('play-progress');
+      if (progEl) {
+        const pct = Math.round((s.masteredCount / Math.max(1, s.totalOriginalQuestions)) * 100);
+        progEl.style.width = `${pct}%`;
+      }
+
+      const qBloomTag = document.getElementById('q-bloom-tag');
+      if (qBloomTag) {
+        qBloomTag.textContent = `[BLOOM: ${q.muc_bloom || 'NHO'}] · [DẠNG: ${formatQuestionTypeName(q.loai_cau_hoi)}]`;
+      }
+
+      const qCounter = document.getElementById('q-counter');
+      if (qCounter) {
+        const remaining = s.questionsQueue.length;
+        const mastered = s.masteredCount || 0;
+        qCounter.textContent = `Đã làm chủ: ${mastered}/${s.totalOriginalQuestions} câu (Còn lại: ${remaining})`;
+      }
+
+      const qPrompt = document.getElementById('q-prompt');
+      if (qPrompt) qPrompt.textContent = q.noi_dung;
+
+      const fbBox = document.getElementById('q-feedback-box');
+      if (fbBox) fbBox.classList.add('hidden');
+
+      const nextBtn = document.getElementById('btn-next-step');
+      if (nextBtn) {
+        nextBtn.innerHTML = '<span>Kiểm tra</span> <span>✓</span>';
+        nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5";
+      }
+
+      const container = document.getElementById('q-options-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (q.loai_cau_hoi === 'NOI_CAP') {
+        renderNoiCapUI(q, container);
+      } else if (q.loai_cau_hoi === 'DIEN_TU') {
+        renderDienTuUI(q, container);
+      } else if (q.loai_cau_hoi === 'SAP_XEP_CAU') {
+        renderSapXepCauUI(q, container);
+      } else {
+        renderTracNghiem4UI(q, container);
+      }
+    }
+
+    let lastPracticeCheckResult = null;
+
+    async function handleMocPracticeAction() {
+      if (!currentMocSession) {
+        handleQuizAction();
+        return;
+      }
+      const s = currentMocSession;
+      if (!s.questionsQueue || s.questionsQueue.length === 0) {
+        completeAllPractice();
+        return;
+      }
+      const currentQ = s.questionsQueue[0];
+
+      if (!s.isAnswerChecked) {
+        if (!s.currentAnswer) {
+          showToast('Vui lòng hoàn thành thao tác hoặc chọn đáp án!', 'info');
+          return;
+        }
+
+        try {
+          const token = localStorage.getItem('tok_token');
+          const resp = await fetch(`/api/checkpoints/${s.mocId}/check-answer`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+            },
+            body: JSON.stringify({
+              ma_cau_hoi: currentQ.ma_cau_hoi,
+              tra_loi: s.currentAnswer
+            })
+          });
+          const res = await resp.json();
+
+          if (res.success && res.data) {
+            const isCorrect = res.data.la_dung;
+            const explanation = res.data.giai_thich || currentQ.giai_thich || 'Khái niệm trọng tâm giúp khắc sâu kiến thức.';
+
+            s.isAnswerChecked = true;
+            lastPracticeCheckResult = isCorrect;
+
+            if (!s.failedQuestionsSet.has(currentQ.ma_cau_hoi)) {
+              if (isCorrect) {
+                s.firstAttemptCorrectCount++;
+              } else {
+                s.failedQuestionsSet.add(currentQ.ma_cau_hoi);
+              }
+            }
+
+            const fbBox = document.getElementById('q-feedback-box');
+            const fbTitle = document.getElementById('q-feedback-title');
+            const fbDesc = document.getElementById('q-feedback-desc');
+            const nextBtn = document.getElementById('btn-next-step');
+
+            if (fbBox && fbTitle && fbDesc) {
+              if (isCorrect) {
+                if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-correct');
+                fbBox.className = "rounded-2xl p-4 border border-emerald-500/40 bg-emerald-500/10 text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200";
+                fbTitle.innerHTML = `<span class="text-emerald-600 font-bold">✓ Rất chính xác! Tuyệt vời!</span>`;
+                fbDesc.textContent = explanation;
+                if (nextBtn) {
+                  nextBtn.innerHTML = '<span>Tiếp tục</span> <span>→</span>';
+                  nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5";
+                }
+              } else {
+                if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-wrong');
+                fbBox.className = "rounded-2xl p-4 border border-amber-500/40 bg-amber-500/10 text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200";
+                fbTitle.innerHTML = `<span class="text-amber-600 font-bold">⚠️ Chưa chính xác (Câu này sẽ gặp lại ở cuối để làm chủ!)</span>`;
+                fbDesc.textContent = explanation;
+                if (nextBtn) {
+                  nextBtn.innerHTML = '<span>Đã hiểu · Luyện lại ở cuối</span> <span>↺</span>';
+                  nextBtn.className = "px-6 py-2.5 rounded-xl bg-amber-600 text-white font-bold text-xs hover:bg-amber-700 transition cursor-pointer shadow-md flex items-center gap-1.5";
+                }
+              }
+              fbBox.classList.remove('hidden');
+            }
+          } else {
+            showToast(res.error?.message || 'Không thể kiểm tra câu trả lời!', 'error');
+          }
+        } catch (err) {
+          showToast('Lỗi kết nối khi kiểm tra câu hỏi!', 'error');
+        }
+      } else {
+        s.isAnswerChecked = false;
+        const isCorrect = lastPracticeCheckResult;
+
+        if (isCorrect) {
+          s.questionsQueue.shift();
+          s.masteredCount = (s.masteredCount || 0) + 1;
+        } else {
+          // Push failed question to end of queue ("làm sai đẩy câu đó ra cuối")
+          const failed = s.questionsQueue.shift();
+          s.questionsQueue.push(failed);
+        }
+
+        if (s.questionsQueue.length === 0) {
+          completeAllPractice();
+        } else {
+          renderCurrentPracticeQuestion();
+        }
+      }
+    }
+
+    async function completeAllPractice() {
+      if (!currentMocSession) return;
+      const s = currentMocSession;
+      const token = localStorage.getItem('tok_token');
+      const total = s.totalOriginalQuestions || 1;
+      const firstCorrect = s.firstAttemptCorrectCount || 0;
+      const accuracyPct = Math.round((firstCorrect / total) * 100);
+
+      try {
+        const resp = await fetch(`/api/checkpoints/${s.mocId}/submit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+          },
+          body: JSON.stringify({
+            cau_tra_loi: []
+          })
+        });
+        const res = await resp.json();
+
+        const earnedCoins = res.data?.earnedCoins || 15;
+        const earnedExp = res.data?.earnedExp || 25;
+
+        const congratsModal = document.getElementById('modal-moc-congrats');
+        const titleEl = document.getElementById('congrats-moc-title');
+        const accEl = document.getElementById('congrats-accuracy');
+        const expEl = document.getElementById('congrats-exp');
+        const coinsEl = document.getElementById('congrats-coins');
+
+        if (titleEl) titleEl.textContent = s.tieuDe;
+        if (accEl) accEl.textContent = `${accuracyPct}%`;
+        if (expEl) expEl.textContent = `+${earnedExp}`;
+        if (coinsEl) coinsEl.textContent = `+${earnedCoins}`;
+
+        if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-correct');
+
+        if (congratsModal) {
+          congratsModal.classList.remove('hidden');
+          document.body.style.overflow = 'hidden';
+        }
+      } catch (err) {
+        showToast('Lỗi khi nộp bài tập hoàn thành!', 'error');
+      }
+    }
+
+    async function finishMocAndReturnToMap() {
+      const congratsModal = document.getElementById('modal-moc-congrats');
+      if (congratsModal) congratsModal.classList.add('hidden');
+      document.body.style.overflow = '';
+
+      navTo('saga');
+
+      await Promise.all([
+        refreshUserData(),
+        loadCourseRoadmap()
+      ]);
+
+      setTimeout(() => {
+        scrollToActiveNode(true);
+        const petEl = document.getElementById('roadmap-pet-avatar');
+        if (petEl) {
+          petEl.classList.add('animate-bounce');
+          setTimeout(() => petEl.classList.remove('animate-bounce'), 1800);
+        }
+      }, 150);
     }
 
     // --- 2. Duolingo Stepping Checkpoint Controller ---

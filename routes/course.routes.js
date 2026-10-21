@@ -80,7 +80,7 @@ router.post('/checkpoints/:id/submit-step', authenticate, async (req, res) => {
   }
 });
 
-// 8. Legacy submit checkpoint
+// 8. Submit checkpoint (completes checkpoint, unlocks next node, awards EXP and coins)
 router.post('/checkpoints/:id/submit', authenticate, async (req, res) => {
   try {
     const { cau_tra_loi } = req.body;
@@ -91,6 +91,20 @@ router.post('/checkpoints/:id/submit', authenticate, async (req, res) => {
     return res.apiSuccess(result);
   } catch (err) {
     return res.apiError(err.message, 'SUBMIT_FAILED', 400);
+  }
+});
+
+// 9. Real-time Single Question Evaluation for Duolingo Practice
+router.post('/checkpoints/:id/check-answer', authenticate, async (req, res) => {
+  try {
+    const { ma_cau_hoi, tra_loi } = req.body;
+    if (!ma_cau_hoi || tra_loi === undefined) {
+      return res.apiError('Thiếu mã câu hỏi hoặc câu trả lời.', 'INVALID_INPUT', 400);
+    }
+    const result = await courseService.checkSingleQuestion(req.params.id, ma_cau_hoi, tra_loi);
+    return res.apiSuccess(result);
+  } catch (err) {
+    return res.apiError(err.message, 'CHECK_ANSWER_FAILED', 400);
   }
 });
 
