@@ -125,7 +125,7 @@
           </div>
           <div class="sidebar-text min-w-0">
             <span class="user-display-name font-bold text-xs tracking-tight block leading-tight text-[var(--foreground)] group-hover:text-emerald-600 transition truncate">
-              Đang tải...
+              Chưa đăng nhập
             </span>
             <span class="text-[10px] text-amber-600 font-semibold font-mono flex items-center gap-1">
               <span id="sidebar-user-rank">🌱 Khởi nguyên I</span>
@@ -494,9 +494,8 @@
       <div id="arena-fight" class="space-y-4">
         <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 text-center space-y-5 relative shadow-xs">
           <!-- Nút BXH hình cúp ở góc phải trên của thẻ đấu -->
-          <button onclick="arenaTab('rank')" class="absolute top-4 right-4 p-2.5 rounded-2xl border border-[var(--border)] bg-[var(--background)] hover:bg-emerald-500/10 hover:border-emerald-500/30 text-amber-500 hover:text-amber-400 transition cursor-pointer shadow-2xs group flex items-center gap-1.5" title="Bảng xếp hạng đấu trường">
+          <button onclick="arenaTab('rank')" class="absolute top-4 right-4 p-2.5 rounded-2xl border border-[var(--border)] bg-[var(--background)] hover:bg-emerald-500/10 hover:border-emerald-500/30 text-amber-500 hover:text-amber-400 transition cursor-pointer shadow-2xs group flex items-center gap-1.5 flex items-center justify-center" title="Bảng xếp hạng đấu trường">
             <span class="text-base group-hover:scale-110 transition-transform">🏆</span>
-            <span class="text-xs font-bold text-[var(--foreground)] hidden sm:inline">BXH</span>
           </button>
           <div class="flex items-center justify-center gap-10 text-7xl select-none">
             <div onclick="navTo('pet')" title="Đổi linh vật ra trận" class="cursor-pointer group flex flex-col items-center">
@@ -525,13 +524,13 @@
           <div class="grid grid-cols-2 gap-3 max-w-sm mx-auto text-xs">
             <div class="rounded-xl border border-[var(--border)] p-3 space-y-1">
               <p class="text-[10px] uppercase tracking-wider text-[var(--muted-foreground)] font-semibold">Hạng môn</p>
-              <p id="lobby-sub-tier" class="font-bold text-amber-600"></p>
-              <p id="lobby-sub-pts" class="font-mono font-bold text-base"></p>
+              <p id="lobby-sub-tier" class="font-bold text-amber-600">🌱 Khởi nguyên I</p>
+              <p id="lobby-sub-pts" class="font-mono font-bold text-base">0 điểm</p>
             </div>
             <div class="rounded-xl border border-[var(--border)] p-3 space-y-1">
               <p class="text-[10px] uppercase tracking-wider text-[var(--muted-foreground)] font-semibold">Hạng tổng</p>
-              <p id="lobby-all-tier" class="font-bold text-amber-600"></p>
-              <p id="lobby-all-pts" class="font-mono font-bold text-base"></p>
+              <p id="lobby-all-tier" class="font-bold text-amber-600">🌱 Khởi nguyên I</p>
+              <p id="lobby-all-pts" class="font-mono font-bold text-base">0 điểm</p>
             </div>
           </div>
           <button onclick="startMatchmaking()" class="px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition shadow-md flex items-center justify-center gap-2 mx-auto cursor-pointer hover:scale-105 active:scale-95 duration-150">
@@ -1128,15 +1127,19 @@
             </div>
 
             <!-- 4. Tài khoản GG (nếu chưa liên kết thêm dòng xanh liên kết ngay) -->
-            <div class="p-3 rounded-2xl bg-[var(--background)] border border-[var(--border)] flex items-center justify-between">
-              <div>
-                <span class="text-[10px] uppercase font-bold text-[var(--muted-foreground)] block">Tài khoản GG</span>
-                <div id="auth-google-display-slot" class="mt-0.5">
-                  <!-- Render động qua renderAuthGoogleSlot() -->
+            <div class="p-3 rounded-2xl bg-[var(--background)] border border-[var(--border)] space-y-2">
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="text-[10px] uppercase font-bold text-[var(--muted-foreground)] block">Tài khoản Google</span>
+                  <div id="auth-google-display-slot" class="mt-0.5"></div>
                 </div>
+                <div id="auth-google-action-slot"></div>
               </div>
-              <div id="auth-google-action-slot">
-                <!-- Render động qua renderAuthGoogleSlot() -->
+              <div id="edit-box-google" class="hidden pt-2 border-t border-[var(--border)] flex items-center gap-2">
+                <input type="email" id="input-edit-google" placeholder="Nhập địa chỉ Gmail..." class="flex-1 px-2.5 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-xs font-mono focus:outline-none focus:border-emerald-500">
+                <button onclick="saveEditGoogle()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition cursor-pointer">
+                  Lưu
+                </button>
               </div>
             </div>
 
@@ -1289,8 +1292,7 @@
           <div class="flex items-center gap-2.5">
             <span class="text-2xl select-none">🎓</span>
             <div>
-              <h3 id="auth-modal-title" class="font-bold text-base sm:text-lg tracking-tight">Tạo tài khoản học tập</h3>
-              <p class="text-[11px] text-[var(--muted-foreground)]">Hỗ trợ tạo nhanh không cần Gmail hoặc 1 chạm Google</p>
+              <h3 id="auth-modal-title" class="font-bold text-base sm:text-lg tracking-tight">Tạo tài khoản</h3>
             </div>
           </div>
           <button onclick="closeAuthModal()" class="w-8 h-8 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold transition cursor-pointer shrink-0">
@@ -1301,10 +1303,10 @@
         <!-- Mode Tab Switcher: Đăng ký vs Đăng nhập -->
         <div class="flex items-center p-1 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs font-semibold">
           <button id="tab-auth-register" onclick="authTab('register')" class="flex-1 py-1.5 rounded-lg bg-[var(--foreground)] text-[var(--background)] font-semibold transition cursor-pointer text-center">
-            ✨ Tạo tài khoản mới
+            Tạo tài khoản mới
           </button>
           <button id="tab-auth-login" onclick="authTab('login')" class="flex-1 py-1.5 rounded-lg text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium transition cursor-pointer text-center">
-            🔑 Đăng nhập
+            Đăng nhập
           </button>
         </div>
 
@@ -1325,42 +1327,35 @@
         <div class="relative flex items-center justify-center my-1">
           <div class="border-t border-[var(--border)] w-full"></div>
           <span class="bg-[var(--card)] px-3 text-[10px] font-bold text-[var(--muted-foreground)] uppercase tracking-wider relative shrink-0">
-            HOẶC DÙNG TÊN ĐĂNG NHẬP (KHÔNG CẦN GMAIL)
+            HOẶC
           </span>
         </div>
 
         <!-- CÁCH 2: USERNAME + PASSWORD (KHÔNG CẦN GMAIL) -->
         <form onsubmit="handleAuthSubmit(event)" class="space-y-3">
           <div class="space-y-1">
-            <div class="flex items-center justify-between">
-              <label class="text-[11px] font-bold text-[var(--muted-foreground)]">Tên đăng nhập (Username)</label>
-              <span class="text-[9px] text-emerald-600 font-bold bg-emerald-500/10 px-1.5 py-0.2 rounded">Không cần email</span>
-            </div>
-            <input type="text" id="auth-username" required placeholder="Ví dụ: hoctap2026, student99..." class="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs font-mono focus:outline-none focus:border-emerald-500">
+            <label class="text-[11px] font-bold text-[var(--muted-foreground)]">Tên đăng nhập hoặc Email</label>
+            <input type="text" id="auth-username" required placeholder="Nhập tên đăng nhập hoặc email..." class="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs font-mono focus:outline-none focus:border-emerald-500">
           </div>
 
           <div class="space-y-1">
             <label class="text-[11px] font-bold text-[var(--muted-foreground)]">Mật khẩu</label>
-            <input type="password" id="auth-password" required placeholder="Tối thiểu 4 ký tự..." class="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs focus:outline-none focus:border-emerald-500">
+            <input type="password" id="auth-password" required placeholder="Nhập mật khẩu..." class="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs focus:outline-none focus:border-emerald-500">
           </div>
 
           <div id="auth-confirm-box" class="space-y-1">
             <label class="text-[11px] font-bold text-[var(--muted-foreground)]">Nhập lại mật khẩu</label>
-            <input type="password" id="auth-password-confirm" placeholder="Xác nhận lại mật khẩu..." class="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs focus:outline-none focus:border-emerald-500">
-          </div>
-
-          <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-700 dark:text-emerald-400">
-            💡 <strong>Tiện lợi:</strong> Bạn có thể vào học và leo tháp ngay lập tức. Sau này có thể liên kết thêm Gmail trong phần Cài đặt bất cứ lúc nào.
+            <input type="password" id="auth-password-confirm" placeholder="Nhập lại mật khẩu..." class="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs focus:outline-none focus:border-emerald-500">
           </div>
 
           <button type="submit" id="auth-submit-btn" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition cursor-pointer shadow-xs">
-            🚀 Tạo tài khoản & Vào học ngay
+            Tạo tài khoản
           </button>
         </form>
 
         <div class="pt-1 text-center">
           <button id="auth-toggle-btn" onclick="toggleAuthMode()" class="text-xs text-[var(--muted-foreground)] hover:text-emerald-600 transition cursor-pointer">
-            Đã có tài khoản? <span class="font-bold underline">Đăng nhập ngay</span>
+            Đã có tài khoản? <span class="font-bold underline">Đăng nhập</span>
           </button>
         </div>
 
@@ -2929,6 +2924,7 @@
     };
 
     // Hàm hiển thị thông báo Toast gọn nhẹ
+    window.alert = function(msg) { if (typeof showToast === 'function') showToast(msg); };
     function showToast(message, type = 'success') {
       let toast = document.getElementById('app-toast');
       if (!toast) {
@@ -3837,50 +3833,50 @@
     }
 
     function updateLinkedEmail() {
-      const newEmail = prompt('Nhập địa chỉ Gmail mới để liên kết:', currentUserAccount.email || 'hocvien@gmail.com');
-      if (newEmail !== null) {
-        const trimmed = newEmail.trim();
-        if (!trimmed.includes('@')) {
-          showToast('Địa chỉ email không hợp lệ!', 'error');
-          return;
-        }
-        currentUserAccount.email = trimmed;
-        currentUserAccount.hasGoogleLinked = true;
-        renderAuthGoogleSlot();
-        syncUserDataToUI();
-        showToast('Đã cập nhật Gmail liên kết thành công!');
-      }
+      const box = document.getElementById('edit-box-google');
+      const input = document.getElementById('input-edit-google');
+      if (input) input.value = currentUserAccount.email || '';
+      if (box) box.classList.toggle('hidden');
     }
 
     function unlinkGoogleAccount() {
-      if (confirm('Bạn có chắc chắn muốn hủy liên kết Google? Bạn vẫn có thể đăng nhập bằng Tên đăng nhập & Mật khẩu.')) {
-        currentUserAccount.hasGoogleLinked = false;
-        currentUserAccount.email = '';
-        renderAuthGoogleSlot();
-        syncUserDataToUI();
-        showToast('Đã hủy liên kết Google.');
-      }
+      currentUserAccount.hasGoogleLinked = false;
+      currentUserAccount.email = '';
+      renderAuthGoogleSlot();
+      syncUserDataToUI();
+      showToast('Đã hủy liên kết Google.');
     }
 
     function linkGoogleAccount() {
-      const email = prompt('Nhập địa chỉ Gmail để liên kết tài khoản:', 'hocvien@gmail.com');
-      if (email && email.trim() && email.includes('@')) {
-        currentUserAccount.hasGoogleLinked = true;
-        currentUserAccount.email = email.trim();
-        renderAuthGoogleSlot();
-        syncUserDataToUI();
-        showToast('✓ Đã liên kết tài khoản Google thành công!');
+      const box = document.getElementById('edit-box-google');
+      const input = document.getElementById('input-edit-google');
+      if (input) input.value = '';
+      if (box) box.classList.toggle('hidden');
+    }
+
+    function saveEditGoogle() {
+      const input = document.getElementById('input-edit-google');
+      const email = input ? input.value.trim() : '';
+      if (!email || !email.includes('@')) {
+        showToast('Địa chỉ email không hợp lệ!', 'error');
+        return;
       }
+      currentUserAccount.hasGoogleLinked = true;
+      currentUserAccount.email = email;
+      const box = document.getElementById('edit-box-google');
+      if (box) box.classList.add('hidden');
+      renderAuthGoogleSlot();
+      syncUserDataToUI();
+      showToast('✓ Đã cập nhật email liên kết thành công!');
     }
 
     function logoutAndOpenAuth() {
-      if (confirm('Bạn có chắc chắn muốn đăng xuất khỏi tài khoản hiện tại?')) {
-        closeSettingsModal();
-        showToast('Đã đăng xuất.');
-        setTimeout(() => {
-          openAuthModal('login');
-        }, 300);
-      }
+      closeSettingsModal();
+      localStorage.removeItem('tok_token');
+      showToast('✓ Đã đăng xuất khỏi tài khoản.');
+      setTimeout(() => {
+        openAuthModal('login');
+      }, 300);
     }
 
     let currentAvatar = {
@@ -4056,15 +4052,6 @@
       }
     }
 
-    function quickFillAdminLogin() {
-      authTab('login');
-      const u = document.getElementById('auth-username');
-      const p = document.getElementById('auth-password');
-      if (u) u.value = 'admin';
-      if (p) p.value = 'Admin123@';
-      handleAuthSubmit();
-    }
-
     function authTab(mode) {
       authMode = mode;
       const btnReg = document.getElementById('tab-auth-register');
@@ -4079,17 +4066,17 @@
       if (mode === 'login') {
         if (btnReg) btnReg.className = inactiveClass;
         if (btnLog) btnLog.className = activeClass;
-        if (title) title.textContent = 'Đăng nhập Tháp Tri Thức';
+        if (title) title.textContent = 'Đăng nhập';
         if (confirmBox) confirmBox.classList.add('hidden');
-        if (submitBtn) submitBtn.innerHTML = '🔑 Đăng nhập ngay';
-        if (toggleBtn) toggleBtn.innerHTML = 'Chưa có tài khoản? <span class="font-bold underline">Tạo tài khoản mới</span>';
+        if (submitBtn) submitBtn.innerHTML = 'Đăng nhập';
+        if (toggleBtn) toggleBtn.innerHTML = 'Chưa có tài khoản? <span class="font-bold underline">Tạo tài khoản</span>';
       } else {
         if (btnReg) btnReg.className = activeClass;
         if (btnLog) btnLog.className = inactiveClass;
-        if (title) title.textContent = 'Tạo tài khoản học tập';
+        if (title) title.textContent = 'Tạo tài khoản';
         if (confirmBox) confirmBox.classList.remove('hidden');
-        if (submitBtn) submitBtn.innerHTML = '🚀 Tạo tài khoản & Vào học ngay';
-        if (toggleBtn) toggleBtn.innerHTML = 'Đã có tài khoản? <span class="font-bold underline">Đăng nhập ngay</span>';
+        if (submitBtn) submitBtn.innerHTML = 'Tạo tài khoản';
+        if (toggleBtn) toggleBtn.innerHTML = 'Đã có tài khoản? <span class="font-bold underline">Đăng nhập</span>';
       }
     }
 
@@ -4251,7 +4238,9 @@
         el.textContent = userCoins;
       });
       const streakEl = document.querySelector('[title="Chuỗi học tập"]');
-      if (streakEl) streakEl.textContent = '🔥 ' + (typeof userStreak !== 'undefined' ? userStreak : 5);
+      if (streakEl) streakEl.textContent = '🔥 ' + (typeof userStreak !== 'undefined' ? userStreak : 0);
+      const rankEl = document.getElementById('sidebar-user-rank');
+      if (rankEl) rankEl.textContent = currentUserAccount.rankTitle || '🌱 Khởi nguyên I';
       const adminBtn = document.getElementById('nav-admin');
       if (adminBtn) adminBtn.classList.remove('hidden');
     }

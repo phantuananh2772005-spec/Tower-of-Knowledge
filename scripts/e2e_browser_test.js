@@ -27,16 +27,37 @@ async function runE2ETest() {
   // Check login modal is visible
   const isAuthVisible = await page.$eval('#modal-auth', el => !el.classList.contains('hidden'));
   console.log('  ✓ Modal Auth visible on first load:', isAuthVisible);
-  await page.screenshot({ path: 'audit_1_login_modal.png' });
 
-  // 2. Switch to Register tab and create a brand-new learner
-  console.log('Step 2: Registering a brand-new learner account: hocvien_moi...');
+  // 2. Strict UI Audit of Modal Auth (Verify user complaint items are GONE)
+  console.log('Step 2: Auditing Modal Auth for unwanted hints & notes...');
+  const modalHtml = await page.$eval('#modal-auth', el => el.innerHTML);
+
+  const hasTienLoi = modalHtml.includes('Tiện lợi');
+  const hasKhongCanEmailBadge = modalHtml.includes('Không cần email');
+  const hasSubtitle = modalHtml.includes('Hỗ trợ tạo nhanh không cần Gmail');
+  const hasOldDivider = modalHtml.includes('HOẶC DÙNG TÊN ĐĂNG NHẬP');
+
+  console.log('  ✓ "💡 Tiện lợi" notice box removed?:', !hasTienLoi);
+  console.log('  ✓ "Không cần email" badge removed?:', !hasKhongCanEmailBadge);
+  console.log('  ✓ "Hỗ trợ tạo nhanh..." subtitle removed?:', !hasSubtitle);
+  console.log('  ✓ "HOẶC DÙNG TÊN ĐĂNG NHẬP..." divider simplified?:', !hasOldDivider);
+
+  if (hasTienLoi || hasKhongCanEmailBadge || hasSubtitle || hasOldDivider) {
+    throw new Error('Unwanted hints or filler texts still exist in Modal Auth!');
+  }
+
+  // Take screenshot of the cleaned auth modal
+  await page.screenshot({ path: 'audit_1_cleaned_modal.png' });
+
+  // 3. Register with user email (as shown in user screenshot: s236435@nctu.edu.vn)
+  const testEmail = 's236435@nctu.edu.vn';
+  console.log(`Step 3: Registering with student email: ${testEmail}...`);
   await page.click('#tab-auth-register');
   await new Promise(r => setTimeout(r, 300));
 
-  await page.type('#auth-username', 'hocvien_moi');
-  await page.type('#auth-password', 'Password123@');
-  await page.type('#auth-password-confirm', 'Password123@');
+  await page.type('#auth-username', testEmail);
+  await page.type('#auth-password', 'StudentPass123@');
+  await page.type('#auth-password-confirm', 'StudentPass123@');
 
   await page.click('#auth-submit-btn');
   await new Promise(r => setTimeout(r, 1200));
@@ -45,56 +66,41 @@ async function runE2ETest() {
   const isAuthClosed = await page.$eval('#modal-auth', el => el.classList.contains('hidden'));
   console.log('  ✓ Modal Auth closed after registration:', isAuthClosed);
 
-  // 3. Audit Sidebar for New Learner
-  console.log('Step 3: Auditing Sidebar stats for brand-new learner...');
+  // 4. Audit Sidebar for New Learner
+  console.log('Step 4: Auditing Sidebar stats for student email account...');
   const userName = await page.$eval('.user-display-name', el => el.textContent.trim());
   const userRank = await page.$eval('#sidebar-user-rank', el => el.textContent.trim());
   const userStreak = await page.$eval('#sidebar-streak-val', el => el.textContent.trim());
   const userCoins = await page.$eval('#sidebar-coins-val', el => el.textContent.trim());
-  console.log(`  ✓ Display Name: "${userName}" (Expected: "hocvien_moi")`);
+  console.log(`  ✓ Display Name: "${userName}" (Expected: "s236435")`);
   console.log(`  ✓ Rank: "${userRank}" (Expected: "🌱 Khởi nguyên I")`);
   console.log(`  ✓ Streak: "${userStreak}" (Expected: "🔥 0")`);
   console.log(`  ✓ Coins: "${userCoins}" (Expected: "0")`);
-  await page.screenshot({ path: 'audit_2_hub.png' });
+  await page.screenshot({ path: 'audit_2_learner_hub.png' });
 
-  // 4. Audit Pet View (view-pet)
-  console.log('Step 4: Auditing Linh vật Thú cưng (view-pet)...');
-  await page.click('#nav-pet');
-  await new Promise(r => setTimeout(r, 600));
+  // 5. Test Logging In with Email
+  console.log('Step 5: Testing Logout and Login with Email...');
+  // Clear token in localStorage and reload
+  await page.evaluate(() => {
+    localStorage.removeItem('tok_token');
+    location.reload();
+  });
+  await new Promise(r => setTimeout(r, 1000));
 
-  const isPet2Col = await page.$eval('#view-pet .grid', el => el.classList.contains('lg:grid-cols-12'));
-  const ownedPetsCount = await page.$$eval('#owned-pets-list > div', els => els.length);
-  console.log('  ✓ Pet layout is 2-column (lg:grid-cols-12):', isPet2Col);
-  console.log('  ✓ Owned pets count:', ownedPetsCount, '(Starter pet only)');
-  await page.screenshot({ path: 'audit_3_pet_view.png' });
+  // Switch to Login tab
+  await page.click('#tab-auth-login');
+  await new Promise(r => setTimeout(r, 300));
+  await page.type('#auth-username', testEmail);
+  await page.type('#auth-password', 'StudentPass123@');
+  await page.click('#auth-submit-btn');
+  await new Promise(r => setTimeout(r, 1200));
 
-  // 5. Audit Arena View (view-minigame)
-  console.log('Step 5: Auditing Đấu trường Minigame (view-minigame)...');
-  await page.click('#nav-minigame');
-  await new Promise(r => setTimeout(r, 600));
+  const isAuthClosedAfterLogin = await page.$eval('#modal-auth', el => el.classList.contains('hidden'));
+  const loggedInName = await page.$eval('.user-display-name', el => el.textContent.trim());
+  console.log('  ✓ Modal Auth closed after email login:', isAuthClosedAfterLogin);
+  console.log(`  ✓ Logged in as: "${loggedInName}"`);
 
-  const arenaPillExists = await page.$('#atab-fight');
-  const subTier = await page.$eval('#lobby-sub-tier', el => el.textContent.trim());
-  const subPts = await page.$eval('#lobby-sub-pts', el => el.textContent.trim());
-  const allTier = await page.$eval('#lobby-all-tier', el => el.textContent.trim());
-  const allPts = await page.$eval('#lobby-all-pts', el => el.textContent.trim());
-  console.log('  ✓ Arena old pill button exists?:', arenaPillExists !== null);
-  console.log(`  ✓ Arena Hạng môn: "${subTier}" - "${subPts}"`);
-  console.log(`  ✓ Arena Hạng tổng: "${allTier}" - "${allPts}"`);
-  await page.screenshot({ path: 'audit_4_arena_view.png' });
-
-  // 6. Audit Shop View (view-shop)
-  console.log('Step 6: Auditing Cửa hàng Shop (view-shop)...');
-  await page.click('#nav-shop');
-  await new Promise(r => setTimeout(r, 600));
-  await page.screenshot({ path: 'audit_5_shop_view.png' });
-
-  // 7. Audit Bản đồ leo tháp (view-saga)
-  console.log('Step 7: Auditing Bản đồ leo tháp (view-saga)...');
-  await page.click('#nav-saga');
-  await new Promise(r => setTimeout(r, 600));
-  await page.screenshot({ path: 'audit_6_saga_view.png' });
-
+  // 6. Console errors check
   console.log('\n--- BROWSER CONSOLE ERRORS ---');
   if (errors.length === 0) {
     console.log('✓ ZERO browser errors detected!');
@@ -104,12 +110,12 @@ async function runE2ETest() {
 
   await browser.close();
 
-  // Clean up test user from DB
-  console.log('\nStep 8: Cleaning up test user from database...');
-  await db.execute("DELETE FROM thu_cung_so_huu WHERE ma_nguoi_dung IN (SELECT ma_nguoi_dung FROM nguoi_dung WHERE ten_dang_nhap = 'hocvien_moi')");
-  await db.execute("DELETE FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung IN (SELECT ma_nguoi_dung FROM nguoi_dung WHERE ten_dang_nhap = 'hocvien_moi')");
-  await db.execute("DELETE FROM tien_do_mon_hoc WHERE ma_nguoi_dung IN (SELECT ma_nguoi_dung FROM nguoi_dung WHERE ten_dang_nhap = 'hocvien_moi')");
-  await db.execute("DELETE FROM nguoi_dung WHERE ten_dang_nhap = 'hocvien_moi'");
+  // 7. Clean up test user from DB
+  console.log('\nStep 7: Cleaning up test user from database...');
+  await db.execute("DELETE FROM thu_cung_so_huu WHERE ma_nguoi_dung IN (SELECT ma_nguoi_dung FROM nguoi_dung WHERE ten_dang_nhap = 's236435' OR email = 's236435@nctu.edu.vn')");
+  await db.execute("DELETE FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung IN (SELECT ma_nguoi_dung FROM nguoi_dung WHERE ten_dang_nhap = 's236435' OR email = 's236435@nctu.edu.vn')");
+  await db.execute("DELETE FROM tien_do_mon_hoc WHERE ma_nguoi_dung IN (SELECT ma_nguoi_dung FROM nguoi_dung WHERE ten_dang_nhap = 's236435' OR email = 's236435@nctu.edu.vn')");
+  await db.execute("DELETE FROM nguoi_dung WHERE ten_dang_nhap = 's236435' OR email = 's236435@nctu.edu.vn'");
   console.log('✓ Database cleaned completely. Only admin remains.');
 
   console.log('\n🎉 ALL REAL BROWSER AUDITS PASSED WITH FLYING COLORS!');

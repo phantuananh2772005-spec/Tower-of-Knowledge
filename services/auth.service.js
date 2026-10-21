@@ -62,15 +62,26 @@ async function formatUserResponse(user) {
  */
 async function register({ ten_dang_nhap, email, mat_khau, ten_hien_thi }) {
   if (!ten_dang_nhap || !mat_khau) {
-    throw new Error('Vui lòng điền đầy đủ tên đăng nhập và mật khẩu.');
+    throw new Error('Vui lòng điền đầy đủ tên đăng nhập hoặc email và mật khẩu.');
   }
 
-  const userEmail = email || `${ten_dang_nhap}@hocvien.tok.vn`;
+  let finalUsername = String(ten_dang_nhap).trim();
+  let finalEmail = (email || '').trim();
+
+  // If user typed an email into username field
+  if (finalUsername.includes('@')) {
+    if (!finalEmail) finalEmail = finalUsername;
+    finalUsername = finalUsername.split('@')[0];
+  }
+
+  if (!finalEmail) {
+    finalEmail = `${finalUsername}@hocvien.tok.vn`;
+  }
 
   // Check unique username & email
   const existing = await db.queryOne(
     'SELECT ma_nguoi_dung FROM nguoi_dung WHERE ten_dang_nhap = $1 OR email = $2',
-    [ten_dang_nhap, userEmail]
+    [finalUsername, finalEmail]
   );
   if (existing) {
     throw new Error('Tên đăng nhập hoặc email đã được sử dụng.');
@@ -79,7 +90,7 @@ async function register({ ten_dang_nhap, email, mat_khau, ten_hien_thi }) {
   const salt = bcrypt.genSaltSync(10);
   const mat_khau_hash = bcrypt.hashSync(mat_khau, salt);
   const ma_nguoi_dung = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-  const displayName = ten_hien_thi || ten_dang_nhap;
+  const displayName = ten_hien_thi || finalUsername;
 
   // Insert user: 0 EXP, 0 coins, 0 streak
   await db.execute(`
@@ -88,7 +99,7 @@ async function register({ ten_dang_nhap, email, mat_khau, ten_hien_thi }) {
       khung_avatar, vai_tro, tong_diem_kinh_nghiem, xu_tri_thuc, chuoi_streak_ngay,
       ngay_hoat_dong_cuoi, che_do_giao_dien, bat_am_thanh
     ) VALUES ($1, $2, $3, $4, $5, 'khung_khoi_dau', 'NGUOI_HOC', 0, 0, 0, CAST(SYSDATETIME() AS DATE), 'TOI', 1)
-  `, [ma_nguoi_dung, ten_dang_nhap, userEmail, mat_khau_hash, displayName]);
+  `, [ma_nguoi_dung, finalUsername, finalEmail, mat_khau_hash, displayName]);
 
   // Grant starting pet Sparky
   const ma_so_huu = `own_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
@@ -109,10 +120,11 @@ async function register({ ten_dang_nhap, email, mat_khau, ten_hien_thi }) {
  */
 async function login({ ten_dang_nhap, mat_khau }) {
   if (!ten_dang_nhap || !mat_khau) {
-    throw new Error('Vui lòng nhập tên đăng nhập và mật khẩu.');
+    throw new Error('Vui lòng nhập tên đăng nhập hoặc email và mật khẩu.');
   }
 
-  const user = await db.queryOne('SELECT * FROM nguoi_dung WHERE ten_dang_nhap = $1', [ten_dang_nhap]);
+  const identifier = String(ten_dang_nhap).trim();
+  const user = await db.queryOne('SELECT * FROM nguoi_dung WHERE ten_dang_nhap = $1 OR email = $1', [identifier]);
   if (!user) {
     throw new Error('Tài khoản hoặc mật khẩu không chính xác.');
   }
