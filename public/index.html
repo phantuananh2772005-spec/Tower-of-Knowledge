@@ -2039,11 +2039,8 @@
   function arenaTab(t) {
     document.getElementById('arena-fight').classList.toggle('hidden', t !== 'fight');
     document.getElementById('arena-rank').classList.toggle('hidden', t !== 'rank');
-    const on = "px-4 py-1.5 rounded-lg bg-[var(--foreground)] text-[var(--background)]";
-    const off = "px-4 py-1.5 rounded-lg text-[var(--muted-foreground)]";
-    document.getElementById('atab-fight').className = t === 'fight' ? on : off;
-    document.getElementById('atab-rank').className = t === 'rank' ? on : off;
     if (t === 'rank') renderRank(); else { renderLobby(); syncAllPetDisplays(); }
+  }
   }
 
   // ===== BXH =====
@@ -2350,7 +2347,7 @@
       if (audioSettings && audioSettings.battle) playAdvancedSound('click');
 
       if (!matchedOpponent) {
-        matchedOpponent = { name: 'Hiệp Sĩ Lan Anh', petIcon: '🦊', petName: 'Hồ Ly Kitsune', tier: '⚡ Tinh thông III' };
+        matchedOpponent = { name: 'Hiệp Sĩ Lan Anh', petIcon: '🦊', petName: 'Hồ Ly Kitsune', tier: '🌱 Khởi nguyên I' };
       }
 
       setTimeout(() => {
