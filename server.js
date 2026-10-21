@@ -47,7 +47,11 @@ app.get('/admin', (req, res) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.apiSuccess({ status: 'HEALTHY', database: process.env.DATABASE_URL ? 'PostgreSQL' : 'MSSQL' });
+  res.apiSuccess({
+    status: 'HEALTHY',
+    version: '520af08_v2',
+    database: process.env.DATABASE_URL ? 'PostgreSQL' : 'MSSQL'
+  });
 });
 
 // API Routes
