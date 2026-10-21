@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cổng Quản Trị Hệ Thống - Tower of Knowledge</title>
+  <title>Cổng Quản Trị Hệ Thống - Tháp Tri Thức (Tower of Knowledge)</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <style>
     :root {
@@ -26,15 +26,15 @@
 </head>
 <body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen flex font-sans">
 
-  <!-- ADMIN LOGIN MODAL (shown if not logged in as admin) -->
+  <!-- ADMIN LOGIN MODAL -->
   <div id="modal-admin-login" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
       <div class="text-center space-y-1">
         <div class="w-14 h-14 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-2xl shadow-inner">
           🛡️
         </div>
-        <h2 class="text-xl font-bold tracking-tight">Đăng Nhập Quản Trị Viên</h2>
-        <p class="text-xs text-[var(--muted)]">Hệ Thống Tháp Tri Thức (Tower of Knowledge)</p>
+        <h2 class="text-xl font-bold tracking-tight">Cổng Quản Trị Hệ Thống</h2>
+        <p class="text-xs text-[var(--muted)]">Tháp Tri Thức (Tower of Knowledge) · Dành riêng cho Quản trị viên</p>
       </div>
 
       <form id="form-admin-login" onsubmit="handleAdminLogin(event)" class="space-y-4">
@@ -53,7 +53,7 @@
       </form>
 
       <div class="text-center pt-2 border-t border-[var(--border)]">
-        <a href="/" class="text-xs text-[var(--muted)] hover:text-emerald-500 transition">← Quay lại Ứng dụng Học Viên</a>
+        <a href="/" class="text-xs text-[var(--muted)] hover:text-emerald-500 transition">← Xem Ứng Dụng Học Viên</a>
       </div>
     </div>
   </div>
@@ -66,27 +66,39 @@
           🛡️
         </div>
         <div class="min-w-0">
-          <span class="font-bold text-sm tracking-tight block truncate text-amber-500">ADMIN PORTAL</span>
-          <span class="text-[10px] text-[var(--muted)] font-mono block truncate">Tower of Knowledge</span>
+          <span class="font-bold text-sm tracking-tight block truncate text-amber-500">ADMIN CONTROL</span>
+          <span class="text-[10px] text-[var(--muted)] font-mono block truncate">Tháp Tri Thức</span>
         </div>
       </div>
 
       <nav class="space-y-1 text-xs font-medium">
         <button onclick="switchTab('analytics')" id="nav-tab-analytics" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 bg-[var(--background)] text-amber-500 font-semibold border border-[var(--border)] shadow-xs transition">
           <span class="text-base">📊</span>
-          <span>Tổng quan & KPI</span>
+          <span>Báo Cáo & KPI</span>
         </button>
         <button onclick="switchTab('curriculum')" id="nav-tab-curriculum" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
           <span class="text-base">📚</span>
-          <span>Quản lý Giáo trình</span>
+          <span>Lộ Trình & Môn Học</span>
         </button>
         <button onclick="switchTab('questions')" id="nav-tab-questions" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
           <span class="text-base">❓</span>
-          <span>Ngân hàng Câu hỏi</span>
+          <span>Ngân Hàng Câu Hỏi</span>
         </button>
         <button onclick="switchTab('users')" id="nav-tab-users" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
           <span class="text-base">👥</span>
-          <span>Quản lý Người dùng</span>
+          <span>Quản Lý Học Viên</span>
+        </button>
+        <button onclick="switchTab('logs')" id="nav-tab-logs" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
+          <span class="text-base">📈</span>
+          <span>Lịch Sử Học Tập</span>
+        </button>
+        <button onclick="switchTab('transactions')" id="nav-tab-transactions" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
+          <span class="text-base">🪙</span>
+          <span>Lịch Sử Giao Dịch Xu</span>
+        </button>
+        <button onclick="switchTab('pets')" id="nav-tab-pets" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
+          <span class="text-base">🐾</span>
+          <span>Quản Lý Linh Thú</span>
         </button>
       </nav>
     </div>
@@ -98,7 +110,7 @@
         <p class="text-[10px] text-amber-500 font-mono">QUẢN TRỊ VIÊN</p>
       </div>
       <div class="flex items-center gap-1">
-        <a href="/" title="Xem ứng dụng học viên" class="p-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] transition">🏠</a>
+        <a href="/" target="_blank" title="Xem ứng dụng học viên" class="p-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] transition">🏠</a>
         <button onclick="handleAdminLogout()" title="Đăng xuất" class="p-1.5 rounded-lg border border-[var(--border)] hover:bg-rose-500/20 text-rose-400 transition cursor-pointer">🚪</button>
       </div>
     </div>
@@ -111,7 +123,7 @@
       <div class="flex items-center gap-3 text-xs">
         <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 font-mono text-[11px] border border-emerald-500/20">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          CSDL: SQL Server (Live)
+          CSDL: SQL Server / PostgreSQL (Live)
         </span>
         <button onclick="document.documentElement.classList.toggle('dark')" class="p-2 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--background)] transition cursor-pointer">
           🌓
@@ -128,12 +140,12 @@
           <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
             <span class="text-xs text-[var(--muted)] font-medium">Tổng Người Học</span>
             <div id="stat-users" class="text-2xl font-bold font-mono text-emerald-400 mt-1">--</div>
-            <span class="text-[10px] text-emerald-500/80 font-medium">Đang hoạt động</span>
+            <span class="text-[10px] text-emerald-500/80 font-medium">Tài khoản học viên</span>
           </div>
           <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
             <span class="text-xs text-[var(--muted)] font-medium">Tổng Môn Học</span>
             <div id="stat-courses" class="text-2xl font-bold font-mono text-blue-400 mt-1">--</div>
-            <span class="text-[10px] text-blue-500/80 font-medium">Giáo trình chuẩn hóa</span>
+            <span class="text-[10px] text-blue-500/80 font-medium">Giáo trình đào tạo</span>
           </div>
           <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
             <span class="text-xs text-[var(--muted)] font-medium">Ngân Hàng Câu Hỏi</span>
@@ -159,7 +171,7 @@
               <table class="w-full text-xs text-left">
                 <thead class="text-[11px] text-[var(--muted)] border-b border-[var(--border)]">
                   <tr>
-                    <th class="py-2">Tên</th>
+                    <th class="py-2">Tên hiển thị</th>
                     <th class="py-2">Vai trò</th>
                     <th class="py-2">EXP</th>
                     <th class="py-2">Xu</th>
@@ -202,12 +214,17 @@
       <section id="panel-curriculum" class="hidden space-y-6">
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-base font-bold">Cây Cấu Trúc Khóa Học & Giáo Trình</h2>
+            <h2 class="text-base font-bold">Cây Cấu Trúc Khóa Học & Lộ Trình</h2>
             <p class="text-xs text-[var(--muted)]">Quản lý Môn học → Chương học → Mốc bài học (Lý thuyết / Trắc nghiệm / Boss)</p>
           </div>
-          <button onclick="openAddChapterModal()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5">
-            <span>+</span> Thêm Chương Mới
-          </button>
+          <div class="flex items-center gap-2">
+            <button onclick="openAddCourseModal()" class="px-3 py-1.5 rounded-xl border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 font-bold text-xs transition cursor-pointer flex items-center gap-1.5">
+              <span>+</span> Thêm Môn Học
+            </button>
+            <button onclick="openAddChapterModal()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5">
+              <span>+</span> Thêm Chương Mới
+            </button>
+          </div>
         </div>
 
         <div id="curriculum-tree-container" class="space-y-4">
@@ -224,7 +241,7 @@
           </div>
           <div class="flex items-center gap-2">
             <button onclick="openBulkImportModal()" class="px-3 py-1.5 rounded-xl border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 font-bold text-xs transition cursor-pointer flex items-center gap-1.5">
-              <span>📥</span> Nhập Hàng Loạt (JSON/CSV)
+              <span>📥</span> Nhập Hàng Loạt (JSON)
             </button>
             <button onclick="openAddQuestionModal()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5">
               <span>+</span> Thêm Câu Hỏi Mới
@@ -258,8 +275,8 @@
       <section id="panel-users" class="hidden space-y-6">
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-base font-bold">Danh Sách Người Dùng & Phân Quyền</h2>
-            <p class="text-xs text-[var(--muted)]">Quản lý quyền hạn Quản trị viên / Người học, xem số dư Xu và Chuỗi học tập</p>
+            <h2 class="text-base font-bold">Danh Sách Tài Khoản & Học Viên</h2>
+            <p class="text-xs text-[var(--muted)]">Theo dõi tiến độ, phân quyền quản trị và điều chỉnh số dư Xu</p>
           </div>
         </div>
 
@@ -269,17 +286,114 @@
               <thead class="text-[11px] text-[var(--muted)] border-b border-[var(--border)]">
                 <tr>
                   <th class="py-2.5 px-3">Mã</th>
-                  <th class="py-2.5 px-3">Tài khoản</th>
+                  <th class="py-2.5 px-3">Username</th>
                   <th class="py-2.5 px-3">Tên hiển thị</th>
                   <th class="py-2.5 px-3">Vai trò</th>
                   <th class="py-2.5 px-3">Xu Tri Thức</th>
-                  <th class="py-2.5 px-3">Điểm EXP</th>
-                  <th class="py-2.5 px-3">Streak</th>
-                  <th class="py-2.5 px-3 text-right">Hành động</th>
+                  <th class="py-2.5 px-3">EXP</th>
+                  <th class="py-2.5 px-3">Chuỗi Streak</th>
+                  <th class="py-2.5 px-3 text-right">Thao tác</th>
                 </tr>
               </thead>
-              <tbody id="table-users" class="divide-y divide-[var(--border)]">
-                <tr><td colspan="8" class="py-4 text-center text-[var(--muted)]">Đang tải người dùng...</td></tr>
+              <tbody id="table-users" class="divide-y divide-[var(--border)] font-mono">
+                <tr><td colspan="8" class="py-4 text-center text-[var(--muted)]">Đang tải danh sách người dùng...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: LEARNING ACTIVITY LOGS -->
+      <section id="panel-logs" class="hidden space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold">Lịch Sử Hoạt Động & Tiến Độ Học Tập</h2>
+            <p class="text-xs text-[var(--muted)]">Nhật ký chi tiết các lượt học bài, nộp trắc nghiệm và điểm số đạt được</p>
+          </div>
+          <button onclick="loadActivityLogs()" class="px-3 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card)] text-xs font-semibold">🔄 Làm mới</button>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-3">
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+              <thead class="text-[11px] text-[var(--muted)] border-b border-[var(--border)]">
+                <tr>
+                  <th class="py-2.5 px-3">Học viên</th>
+                  <th class="py-2.5 px-3">Chương / Môn</th>
+                  <th class="py-2.5 px-3">Mốc bài học</th>
+                  <th class="py-2.5 px-3">Trạng thái</th>
+                  <th class="py-2.5 px-3">Điểm EXP</th>
+                  <th class="py-2.5 px-3">Xu nhận</th>
+                  <th class="py-2.5 px-3">Thời điểm</th>
+                </tr>
+              </thead>
+              <tbody id="table-learning-logs" class="divide-y divide-[var(--border)] font-mono">
+                <tr><td colspan="7" class="py-4 text-center text-[var(--muted)]">Đang tải nhật ký...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 6: TRANSACTIONS LOG -->
+      <section id="panel-transactions" class="hidden space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold">Lịch Sử Giao Dịch Xu Tri Thức</h2>
+            <p class="text-xs text-[var(--muted)]">Toàn bộ biến động kinh tế: Thưởng mốc học, Đấu trường 1v1, Thưởng Streak, Mua Pet</p>
+          </div>
+          <button onclick="loadTransactions()" class="px-3 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card)] text-xs font-semibold">🔄 Làm mới</button>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-3">
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+              <thead class="text-[11px] text-[var(--muted)] border-b border-[var(--border)]">
+                <tr>
+                  <th class="py-2.5 px-3">Mã GD</th>
+                  <th class="py-2.5 px-3">Học viên</th>
+                  <th class="py-2.5 px-3">Số lượng Xu</th>
+                  <th class="py-2.5 px-3">Số dư sau</th>
+                  <th class="py-2.5 px-3">Nguồn giao dịch</th>
+                  <th class="py-2.5 px-3">Mô tả chi tiết</th>
+                  <th class="py-2.5 px-3">Thời gian</th>
+                </tr>
+              </thead>
+              <tbody id="table-transactions" class="divide-y divide-[var(--border)] font-mono">
+                <tr><td colspan="7" class="py-4 text-center text-[var(--muted)]">Đang tải lịch sử giao dịch...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 7: PETS MANAGEMENT -->
+      <section id="panel-pets" class="hidden space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold">Quản Lý Linh Thú & Cửa Hàng Shop</h2>
+            <p class="text-xs text-[var(--muted)]">Danh sách linh thú đồng hành, giá Xu và hệ số buff sát thương PvP</p>
+          </div>
+          <button onclick="openAddPetModal()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5">
+            <span>+</span> Thêm Linh Thú Mới
+          </button>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-3">
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+              <thead class="text-[11px] text-[var(--muted)] border-b border-[var(--border)]">
+                <tr>
+                  <th class="py-2.5 px-3">Mã</th>
+                  <th class="py-2.5 px-3">Tên linh thú</th>
+                  <th class="py-2.5 px-3">Mô tả & Buff</th>
+                  <th class="py-2.5 px-3">Giá Xu</th>
+                  <th class="py-2.5 px-3">Hệ số sát thương</th>
+                  <th class="py-2.5 px-3 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="table-pets" class="divide-y divide-[var(--border)]">
+                <tr><td colspan="6" class="py-4 text-center text-[var(--muted)]">Đang tải danh sách linh thú...</td></tr>
               </tbody>
             </table>
           </div>
@@ -289,69 +403,109 @@
     </div>
   </main>
 
-  <!-- BULK IMPORT MODAL -->
-  <div id="modal-bulk-import" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
-      <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
-        <h3 class="text-base font-bold flex items-center gap-2">
-          <span>📥</span> Nhập Hàng Loạt Câu Hỏi Vào Ngân Hàng
-        </h3>
-        <button onclick="closeBulkImportModal()" class="text-lg text-[var(--muted)] hover:text-[var(--foreground)]">✕</button>
-      </div>
-
-      <div class="space-y-3 overflow-y-auto flex-1 text-xs">
+  <!-- MODAL: ADD COURSE -->
+  <div id="modal-add-course" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-md w-full p-6 space-y-4">
+      <h3 class="text-base font-bold">Thêm Môn Học Mới</h3>
+      <form onsubmit="handleSaveCourse(event)" class="space-y-3 text-xs">
         <div>
-          <label class="block font-semibold mb-1 text-[var(--muted)]">Chọn Mốc Bài Học mặc định:</label>
-          <select id="bulk-import-moc" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] focus:outline-none">
-            <option value="moc_csdl_01_02">Mốc 1.2: Trắc nghiệm Kiến thức Cốt lõi DBMS</option>
-            <option value="moc_csdl_02_02">Mốc 2.2: Trắc nghiệm Thiết kế Lược đồ & ERD</option>
-            <option value="moc_csdl_03_02">Mốc 3.2: Thử thách Truy vấn SQL</option>
-            <option value="moc_csdl_04_02">Mốc 4.2: TRẬN ĐẤU BOSS CUỐI - Chuẩn Hóa CSDL</option>
-          </select>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Tên môn học</label>
+          <input type="text" id="course-ten" required placeholder="Ví dụ: Cấu trúc Dữ liệu & Giải thuật" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]">
         </div>
-
         <div>
-          <label class="block font-semibold mb-1 text-[var(--muted)]">Dán dữ liệu JSON mảng câu hỏi:</label>
-          <textarea id="bulk-import-json" rows="10" placeholder='[
-  {
-    "noi_dung": "Mô hình ERD dùng để làm gì?",
-    "dap_an_a": "Thiết kế mức quan niệm",
-    "dap_an_b": "Lưu file trên đĩa cứng",
-    "dap_an_c": "Gửi email tự động",
-    "dap_an_d": "Biên dịch mã C#",
-    "vi_tri_dap_an_dung": 0,
-    "giai_thich": "ERD mô tả các thực thể và quan hệ thế giới thực ở mức quan niệm.",
-    "do_kho": 1
-  }
-]' class="w-full p-3 font-mono text-[11px] rounded-xl bg-[var(--background)] border border-[var(--border)] focus:outline-none"></textarea>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Slug (Đường dẫn)</label>
+          <input type="text" id="course-slug" required placeholder="cau-truc-du-lieu" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] font-mono">
         </div>
-      </div>
-
-      <div class="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border)]">
-        <button onclick="closeBulkImportModal()" class="px-4 py-2 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] font-medium text-xs">Hủy</button>
-        <button onclick="executeBulkImport()" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md transition cursor-pointer">Thực Hiện Nhập Vào CSDL</button>
-      </div>
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Mô tả giáo trình</label>
+          <textarea id="course-mota" rows="3" class="w-full p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]"></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeAddCourseModal()" class="px-4 py-2 rounded-xl border border-[var(--border)]">Hủy</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold">Tạo Môn Học</button>
+        </div>
+      </form>
     </div>
   </div>
 
-  <!-- ADD / EDIT QUESTION MODAL -->
-  <div id="modal-edit-question" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+  <!-- MODAL: ADD CHAPTER -->
+  <div id="modal-add-chapter" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-md w-full p-6 space-y-4">
+      <h3 class="text-base font-bold">Thêm Chương Mới Vào Giáo Trình</h3>
+      <form onsubmit="handleSaveChapter(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Chọn Môn Học</label>
+          <select id="chapter-course-id" required class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]"></select>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Tiêu đề chương</label>
+          <input type="text" id="chapter-title" required placeholder="Chương 5: Chỉ mục & Tối ưu hóa truy vấn" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Mô tả chương</label>
+          <textarea id="chapter-desc" rows="2" class="w-full p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]"></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeAddChapterModal()" class="px-4 py-2 rounded-xl border border-[var(--border)]">Hủy</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold">Lưu Chương</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD CHECKPOINT -->
+  <div id="modal-add-checkpoint" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-md w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <h3 class="text-base font-bold">Thêm Mốc Bài Học Mới</h3>
+      <form onsubmit="handleSaveCheckpoint(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="cp-chapter-id">
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Tiêu đề mốc</label>
+          <input type="text" id="cp-title" required placeholder="Mốc 5.1: Cây B-Tree và Nguyên lý Index" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Loại mốc</label>
+            <select id="cp-type" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] font-bold">
+              <option value="LY_THUYET">Lý Thuyết (LY_THUYET)</option>
+              <option value="TRAC_NGHIEM">Trắc Nghiệm (TRAC_NGHIEM)</option>
+              <option value="THU_THACH_BOSS">Đại Chiến Boss (THU_THACH_BOSS)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Thưởng Xu</label>
+            <input type="number" id="cp-coins" value="15" required class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] font-mono">
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Thưởng Điểm EXP</label>
+          <input type="number" id="cp-exp" value="20" required class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] font-mono">
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Nội dung bài học lý thuyết (nếu có)</label>
+          <textarea id="cp-theory" rows="4" placeholder="Nội dung kiến thức cốt lõi truyền đạt cho học viên..." class="w-full p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]"></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeAddCheckpointModal()" class="px-4 py-2 rounded-xl border border-[var(--border)]">Hủy</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold">Tạo Mốc</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD / EDIT QUESTION -->
+  <div id="modal-edit-question" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
     <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
         <h3 id="modal-question-title" class="text-base font-bold">Thêm Câu Hỏi Mới</h3>
-        <button onclick="closeQuestionModal()" class="text-lg text-[var(--muted)] hover:text-[var(--foreground)]">✕</button>
+        <button onclick="closeQuestionModal()" class="text-xs text-[var(--muted)] hover:text-white">✕</button>
       </div>
 
       <form id="form-question" onsubmit="handleSaveQuestion(event)" class="space-y-3 text-xs">
         <input type="hidden" id="edit-q-id">
         <div>
-          <label class="block font-semibold mb-1 text-[var(--muted)]">Mốc bài học</label>
-          <select id="edit-q-moc" required class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]">
-            <option value="moc_csdl_01_02">Mốc 1.2: Trắc nghiệm Kiến thức Cốt lõi DBMS</option>
-            <option value="moc_csdl_02_02">Mốc 2.2: Trắc nghiệm Thiết kế Lược đồ & ERD</option>
-            <option value="moc_csdl_03_02">Mốc 3.2: Thử thách Truy vấn SQL</option>
-            <option value="moc_csdl_04_02">Mốc 4.2: TRẬN ĐẤU BOSS CUỐI - Chuẩn Hóa CSDL</option>
-          </select>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Gán vào Mốc bài học</label>
+          <select id="edit-q-moc" required class="w-full p-2 rounded-xl bg-[var(--background)] border border-[var(--border)] font-mono text-[11px]"></select>
         </div>
 
         <div>
@@ -404,10 +558,30 @@
         </div>
 
         <div class="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border)]">
-          <button type="button" onclick="closeQuestionModal()" class="px-4 py-2 rounded-xl border border-[var(--border)] hover:bg-[var(--background)]">Hủy</button>
+          <button type="button" onclick="closeQuestionModal()" class="px-4 py-2 rounded-xl border border-[var(--border)]">Hủy</button>
           <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow-md cursor-pointer">Lưu Câu Hỏi</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: BULK IMPORT -->
+  <div id="modal-bulk-import" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-lg w-full p-6 space-y-4">
+      <h3 class="text-base font-bold">Nhập Câu Hỏi Hàng Loạt (JSON)</h3>
+      <p class="text-xs text-[var(--muted)]">Dán mảng đối tượng JSON chứa danh sách câu hỏi theo chuẩn hệ thống.</p>
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-[var(--muted)]">Gán mặc định cho mốc</label>
+        <select id="bulk-import-moc" class="w-full p-2 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs font-mono"></select>
+      </div>
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-[var(--muted)]">Dữ liệu JSON</label>
+        <textarea id="bulk-import-json" rows="6" placeholder='[{"noi_dung":"...","dap_an_a":"...","dap_an_b":"...","dap_an_c":"...","dap_an_d":"...","vi_tri_dap_an_dung":0,"giai_thich":"..."}]' class="w-full p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] font-mono text-[11px]"></textarea>
+      </div>
+      <div class="flex justify-end gap-2">
+        <button onclick="closeBulkImportModal()" class="px-4 py-2 rounded-xl border border-[var(--border)] text-xs">Hủy</button>
+        <button onclick="executeBulkImport()" class="px-5 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs">Nhập Dữ Liệu</button>
+      </div>
     </div>
   </div>
 
@@ -418,9 +592,9 @@
   </div>
 
   <script>
-    // State management
     let adminToken = localStorage.getItem('tok_admin_token') || '';
     let currentAdminUser = null;
+    let allMocOptions = [];
 
     function showToast(msg, isError = false) {
       const toast = document.getElementById('admin-toast');
@@ -429,13 +603,8 @@
       msgEl.innerText = msg;
       iconEl.innerText = isError ? '⚠️' : '✅';
       toast.className = toast.className.replace('translate-y-20 opacity-0', 'translate-y-0 opacity-100');
-      if (isError) {
-        toast.style.borderColor = '#f43f5e';
-        toast.style.color = '#fda4af';
-      } else {
-        toast.style.borderColor = '#f59e0b';
-        toast.style.color = '#fde68a';
-      }
+      toast.style.borderColor = isError ? '#f43f5e' : '#f59e0b';
+      toast.style.color = isError ? '#fda4af' : '#fde68a';
       setTimeout(() => {
         toast.className = toast.className.replace('translate-y-0 opacity-100', 'translate-y-20 opacity-0');
       }, 3200);
@@ -507,21 +676,37 @@
     }
 
     function switchTab(tab) {
-      const tabs = ['analytics', 'curriculum', 'questions', 'users'];
+      const tabs = ['analytics', 'curriculum', 'questions', 'users', 'logs', 'transactions', 'pets'];
       tabs.forEach(t => {
-        document.getElementById(`panel-${t}`).classList.add('hidden');
+        const panel = document.getElementById(`panel-${t}`);
+        if (panel) panel.classList.add('hidden');
         const btn = document.getElementById(`nav-tab-${t}`);
-        btn.className = 'w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition';
+        if (btn) btn.className = 'w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition';
       });
 
-      document.getElementById(`panel-${tab}`).classList.remove('hidden');
+      const activePanel = document.getElementById(`panel-${tab}`);
+      if (activePanel) activePanel.classList.remove('hidden');
       const activeBtn = document.getElementById(`nav-tab-${tab}`);
-      activeBtn.className = 'w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 bg-[var(--background)] text-amber-500 font-semibold border border-[var(--border)] shadow-xs transition';
+      if (activeBtn) activeBtn.className = 'w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 bg-[var(--background)] text-amber-500 font-semibold border border-[var(--border)] shadow-xs transition';
+
+      const titles = {
+        analytics: 'Báo Cáo Tổng Quan & Thống Kê KPI',
+        curriculum: 'Quản Lý Cấu Trúc Khóa Học & Lộ Trình',
+        questions: 'Quản Lý Ngân Hàng Câu Hỏi Trắc Nghiệm',
+        users: 'Quản Lý Học Viên & Tài Khoản Hệ Thống',
+        logs: 'Nhật Ký Học Tập & Hoạt Động',
+        transactions: 'Lịch Sử Giao Dịch Xu Tri Thức',
+        pets: 'Quản Lý Danh Sách Linh Thú'
+      };
+      document.getElementById('admin-header-title').innerText = titles[tab] || 'Quản Trị Hệ Thống';
 
       if (tab === 'analytics') loadAnalytics();
       if (tab === 'curriculum') loadCurriculumTree();
       if (tab === 'questions') loadQuestions();
       if (tab === 'users') loadUsers();
+      if (tab === 'logs') loadActivityLogs();
+      if (tab === 'transactions') loadTransactions();
+      if (tab === 'pets') loadPets();
     }
 
     async function loadAnalytics() {
@@ -532,7 +717,6 @@
         document.getElementById('stat-questions').innerText = stats.tong_quan.tong_cau_hoi;
         document.getElementById('stat-matches').innerText = stats.tong_quan.tong_tran_dau;
 
-        // Render Recent Users
         const tbodyUsers = document.getElementById('table-recent-users');
         tbodyUsers.innerHTML = stats.nguoi_dung_moi.map(u => `
           <tr class="hover:bg-[var(--background)]/40 transition">
@@ -544,13 +728,12 @@
           </tr>
         `).join('') || '<tr><td colspan="5" class="py-3 text-center text-[var(--muted)]">Chưa có người dùng</td></tr>';
 
-        // Render Recent Matches
         const tbodyMatches = document.getElementById('table-recent-matches');
         tbodyMatches.innerHTML = stats.tran_dau_gan_day.map(m => `
           <tr class="hover:bg-[var(--background)]/40 transition">
             <td class="py-2.5 font-bold truncate max-w-[100px]">${m.ma_tran}</td>
             <td class="py-2.5"><span class="px-1.5 py-0.5 rounded text-[10px] bg-purple-500/10 text-purple-400">${m.trang_thai}</span></td>
-            <td class="py-2.5">${m.nguoi_thang_cuoc || 'Chưa xác định'}</td>
+            <td class="py-2.5">${m.nguoi_thang_cuoc || 'Chưa kết thúc'}</td>
             <td class="py-2.5 text-emerald-400">${m.ly_do_ket_thuc || '--'}</td>
           </tr>
         `).join('') || '<tr><td colspan="4" class="py-3 text-center text-[var(--muted)]">Chưa có trận đấu nào</td></tr>';
@@ -564,6 +747,13 @@
         const courses = await apiFetch('/api/courses');
         const container = document.getElementById('curriculum-tree-container');
         container.innerHTML = '';
+        allMocOptions = [];
+
+        // Course select for modals
+        const courseSelect = document.getElementById('chapter-course-id');
+        if (courseSelect) {
+          courseSelect.innerHTML = courses.map(c => `<option value="${c.ma_mon}">${c.ten_mon}</option>`).join('');
+        }
 
         for (const c of courses) {
           const detail = await apiFetch(`/api/courses/${c.slug}`);
@@ -577,35 +767,168 @@
                 <h3 class="text-base font-bold text-emerald-400">${detail.mon_hoc.ten_mon}</h3>
                 <p class="text-xs text-[var(--muted)]">${detail.mon_hoc.mo_ta || ''}</p>
               </div>
-              <span class="text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-lg border border-emerald-500/20">${detail.cac_chuong.length} Chương</span>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-lg border border-emerald-500/20">${detail.cac_chuong.length} Chương</span>
+                <button onclick="deleteCourse('${c.ma_mon}')" class="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 text-xs font-bold transition">Xóa Môn</button>
+              </div>
             </div>
 
             <div class="space-y-3">
-              ${detail.cac_chuong.map(ch => `
-                <div class="p-3.5 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-2">
-                  <div class="flex items-center justify-between">
-                    <span class="font-bold text-xs flex items-center gap-2">
-                      <span class="text-amber-500">📖</span> ${ch.tieu_de}
-                    </span>
-                    <span class="text-[10px] font-mono text-[var(--muted)]">${ch.cac_moc.length} Mốc bài học</span>
-                  </div>
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-4 border-l-2 border-emerald-500/30">
-                    ${ch.cac_moc.map(m => `
-                      <div class="p-2 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center justify-between text-xs">
-                        <div class="min-w-0 pr-2">
-                          <p class="font-semibold truncate text-[11px]">${m.tieu_de}</p>
-                          <span class="text-[9px] px-1 py-0.2 rounded font-mono ${m.loai_moc === 'THU_THACH_BOSS' ? 'bg-rose-500/20 text-rose-400 font-bold' : m.loai_moc === 'TRAC_NGHIEM' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}">${m.loai_moc}</span>
-                        </div>
-                        <span class="text-[10px] font-mono text-amber-400 shrink-0 font-bold">+${m.xu_thuong}🪙</span>
+              ${detail.cac_chuong.map(ch => {
+                ch.cac_moc.forEach(m => allMocOptions.push({ id: m.ma_moc, title: m.tieu_de }));
+                return `
+                  <div class="p-3.5 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-2">
+                    <div class="flex items-center justify-between">
+                      <span class="font-bold text-xs flex items-center gap-2">
+                        <span class="text-amber-500">📖</span> ${ch.tieu_de}
+                      </span>
+                      <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-mono text-[var(--muted)]">${ch.cac_moc.length} Mốc</span>
+                        <button onclick="openAddCheckpointModal('${ch.ma_chuong}')" class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">+ Mốc</button>
+                        <button onclick="deleteChapter('${ch.ma_chuong}')" class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 text-[10px] font-bold">Xóa Chương</button>
                       </div>
-                    `).join('')}
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-4 border-l-2 border-emerald-500/30">
+                      ${ch.cac_moc.map(m => `
+                        <div class="p-2.5 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center justify-between text-xs group">
+                          <div class="min-w-0 pr-2">
+                            <p class="font-semibold truncate text-[11px]">${m.tieu_de}</p>
+                            <span class="text-[9px] px-1 py-0.2 rounded font-mono ${m.loai_moc === 'THU_THACH_BOSS' ? 'bg-rose-500/20 text-rose-400 font-bold' : m.loai_moc === 'TRAC_NGHIEM' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}">${m.loai_moc}</span>
+                          </div>
+                          <div class="flex items-center gap-2 shrink-0">
+                            <span class="text-[10px] font-mono text-amber-400 font-bold">+${m.xu_thuong}🪙</span>
+                            <button onclick="deleteCheckpoint('${m.ma_moc}')" class="text-rose-400 hover:text-rose-300 opacity-60 group-hover:opacity-100 transition">✕</button>
+                          </div>
+                        </div>
+                      `).join('')}
+                    </div>
                   </div>
-                </div>
-              `).join('')}
+                `;
+              }).join('')}
             </div>
           `;
           container.appendChild(courseCard);
         }
+
+        // Update selects for questions
+        const qMocSelect = document.getElementById('edit-q-moc');
+        const bulkMocSelect = document.getElementById('bulk-import-moc');
+        if (qMocSelect) qMocSelect.innerHTML = allMocOptions.map(m => `<option value="${m.id}">${m.title}</option>`).join('');
+        if (bulkMocSelect) bulkMocSelect.innerHTML = allMocOptions.map(m => `<option value="${m.id}">${m.title}</option>`).join('');
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function deleteCourse(id) {
+      if (!confirm(`Bạn có chắc chắn muốn xóa môn học ${id}?`)) return;
+      try {
+        await apiFetch(`/api/admin/courses/${id}`, { method: 'DELETE' });
+        showToast('Đã xóa môn học!');
+        loadCurriculumTree();
+        loadAnalytics();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function deleteChapter(id) {
+      if (!confirm(`Bạn có chắc chắn muốn xóa chương ${id}?`)) return;
+      try {
+        await apiFetch(`/api/admin/chapters/${id}`, { method: 'DELETE' });
+        showToast('Đã xóa chương!');
+        loadCurriculumTree();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function deleteCheckpoint(id) {
+      if (!confirm(`Bạn có chắc chắn muốn xóa mốc ${id}?`)) return;
+      try {
+        await apiFetch(`/api/admin/checkpoints/${id}`, { method: 'DELETE' });
+        showToast('Đã xóa mốc bài học!');
+        loadCurriculumTree();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    function openAddCourseModal() {
+      document.getElementById('modal-add-course').classList.remove('hidden');
+    }
+    function closeAddCourseModal() {
+      document.getElementById('modal-add-course').classList.add('hidden');
+    }
+    async function handleSaveCourse(e) {
+      e.preventDefault();
+      try {
+        await apiFetch('/api/admin/courses', {
+          method: 'POST',
+          body: JSON.stringify({
+            ten_mon: document.getElementById('course-ten').value.trim(),
+            slug: document.getElementById('course-slug').value.trim(),
+            mo_ta: document.getElementById('course-mota').value.trim()
+          })
+        });
+        showToast('Đã tạo môn học mới thành công!');
+        closeAddCourseModal();
+        loadCurriculumTree();
+        loadAnalytics();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    function openAddChapterModal() {
+      document.getElementById('modal-add-chapter').classList.remove('hidden');
+    }
+    function closeAddChapterModal() {
+      document.getElementById('modal-add-chapter').classList.add('hidden');
+    }
+    async function handleSaveChapter(e) {
+      e.preventDefault();
+      try {
+        await apiFetch('/api/admin/chapters', {
+          method: 'POST',
+          body: JSON.stringify({
+            ma_mon: document.getElementById('chapter-course-id').value,
+            tieu_de: document.getElementById('chapter-title').value.trim(),
+            mo_ta: document.getElementById('chapter-desc').value.trim()
+          })
+        });
+        showToast('Đã thêm chương mới vào giáo trình!');
+        closeAddChapterModal();
+        loadCurriculumTree();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    function openAddCheckpointModal(chapterId) {
+      document.getElementById('cp-chapter-id').value = chapterId;
+      document.getElementById('modal-add-checkpoint').classList.remove('hidden');
+    }
+    function closeAddCheckpointModal() {
+      document.getElementById('modal-add-checkpoint').classList.add('hidden');
+    }
+    async function handleSaveCheckpoint(e) {
+      e.preventDefault();
+      try {
+        await apiFetch('/api/admin/checkpoints', {
+          method: 'POST',
+          body: JSON.stringify({
+            ma_chuong: document.getElementById('cp-chapter-id').value,
+            tieu_de: document.getElementById('cp-title').value.trim(),
+            loai_moc: document.getElementById('cp-type').value,
+            xu_thuong: parseInt(document.getElementById('cp-coins').value, 10),
+            diem_thuong: parseInt(document.getElementById('cp-exp').value, 10),
+            noi_dung_ly_thuyet: document.getElementById('cp-theory').value.trim()
+          })
+        });
+        showToast('Đã tạo mốc bài học thành công!');
+        closeAddCheckpointModal();
+        loadCurriculumTree();
       } catch (err) {
         showToast(err.message, true);
       }
@@ -653,7 +976,6 @@
     function closeBulkImportModal() {
       document.getElementById('modal-bulk-import').classList.add('hidden');
     }
-
     async function executeBulkImport() {
       const mocId = document.getElementById('bulk-import-moc').value;
       const text = document.getElementById('bulk-import-json').value.trim();
@@ -661,14 +983,13 @@
         showToast('Vui lòng dán dữ liệu JSON trước khi nhập.', true);
         return;
       }
-
       try {
         const questionsArray = JSON.parse(text);
         const result = await apiFetch('/api/admin/questions/bulk', {
           method: 'POST',
           body: JSON.stringify({ questions: questionsArray, default_moc_id: mocId })
         });
-        showToast(`Nhập thành công ${result.tong_so_nhap} câu hỏi vào CSDL SQL Server!`);
+        showToast(`Nhập thành công ${result.tong_so_nhap} câu hỏi vào CSDL!`);
         closeBulkImportModal();
         loadQuestions();
         loadAnalytics();
@@ -691,7 +1012,6 @@
     function closeQuestionModal() {
       document.getElementById('modal-edit-question').classList.add('hidden');
     }
-
     async function handleSaveQuestion(e) {
       e.preventDefault();
       const payload = {
@@ -705,13 +1025,12 @@
         do_kho: parseInt(document.getElementById('edit-q-diff').value, 10),
         giai_thich: document.getElementById('edit-q-explain').value.trim()
       };
-
       try {
         await apiFetch('/api/admin/questions', {
           method: 'POST',
           body: JSON.stringify(payload)
         });
-        showToast('Đã thêm câu hỏi vào CSDL SQL Server!');
+        showToast('Đã thêm câu hỏi vào CSDL!');
         closeQuestionModal();
         loadQuestions();
         loadAnalytics();
@@ -766,7 +1085,6 @@
       if (!amountStr) return;
       const amount = parseInt(amountStr, 10);
       if (isNaN(amount) || amount === 0) return;
-
       const reason = prompt(`Nhập lý do điều chỉnh:`, "Thưởng hoạt động xuất sắc từ Quản trị viên");
       try {
         await apiFetch(`/api/admin/users/${userId}/coins`, {
@@ -775,6 +1093,91 @@
         });
         showToast(`Đã điều chỉnh ${amount} xu cho người dùng!`);
         loadUsers();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function loadActivityLogs() {
+      try {
+        const logs = await apiFetch('/api/admin/logs');
+        const tbody = document.getElementById('table-learning-logs');
+        tbody.innerHTML = logs.map(l => `
+          <tr class="hover:bg-[var(--background)]/40 transition">
+            <td class="py-2.5 px-3 font-semibold text-[var(--foreground)]">${l.ten_hien_thi} <span class="text-[10px] text-[var(--muted)] font-mono">(@${l.ten_dang_nhap})</span></td>
+            <td class="py-2.5 px-3 text-[11px] text-[var(--muted)] truncate max-w-[120px]">${l.ten_chuong}</td>
+            <td class="py-2.5 px-3 font-semibold text-emerald-400 truncate max-w-[180px]">${l.ten_moc}</td>
+            <td class="py-2.5 px-3"><span class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 font-bold">${l.trang_thai}</span></td>
+            <td class="py-2.5 px-3 text-blue-400 font-bold">+${l.diem_dat_duoc} EXP</td>
+            <td class="py-2.5 px-3 text-amber-400 font-bold">+${l.xu_da_nhan} 🪙</td>
+            <td class="py-2.5 px-3 text-[10px] text-[var(--muted)]">${l.thoi_diem_hoan_thanh ? new Date(l.thoi_diem_hoan_thanh).toLocaleString('vi-VN') : '--'}</td>
+          </tr>
+        `).join('') || '<tr><td colspan="7" class="py-4 text-center text-[var(--muted)]">Chưa có nhật ký học tập nào</td></tr>';
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function loadTransactions() {
+      try {
+        const txList = await apiFetch('/api/admin/transactions');
+        const tbody = document.getElementById('table-transactions');
+        tbody.innerHTML = txList.map(t => {
+          const isPlus = t.so_luong > 0;
+          return `
+            <tr class="hover:bg-[var(--background)]/40 transition">
+              <td class="py-2.5 px-3 font-mono text-[10px] text-[var(--muted)]">${t.ma_giao_dich}</td>
+              <td class="py-2.5 px-3 font-semibold">${t.ten_hien_thi} <span class="text-[10px] text-[var(--muted)]">(@${t.ten_dang_nhap})</span></td>
+              <td class="py-2.5 px-3 font-bold ${isPlus ? 'text-emerald-400' : 'text-rose-400'}">${isPlus ? '+' : ''}${t.so_luong} 🪙</td>
+              <td class="py-2.5 px-3 font-bold text-amber-400">${t.so_du_sau} 🪙</td>
+              <td class="py-2.5 px-3"><span class="px-1.5 py-0.5 rounded text-[10px] bg-amber-500/10 text-amber-400">${t.nguon_giao_dich}</span></td>
+              <td class="py-2.5 px-3 text-[11px] text-[var(--muted)]">${t.mo_ta || '--'}</td>
+              <td class="py-2.5 px-3 text-[10px] text-[var(--muted)]">${new Date(t.thoi_diem_tao).toLocaleString('vi-VN')}</td>
+            </tr>
+          `;
+        }).join('') || '<tr><td colspan="7" class="py-4 text-center text-[var(--muted)]">Chưa có giao dịch nào</td></tr>';
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function loadPets() {
+      try {
+        const pets = await apiFetch('/api/admin/pets');
+        const tbody = document.getElementById('table-pets');
+        tbody.innerHTML = pets.map(p => `
+          <tr class="hover:bg-[var(--background)]/40 transition">
+            <td class="py-2.5 px-3 font-mono font-bold text-[11px] text-[var(--muted)]">${p.ma_thu_cung}</td>
+            <td class="py-2.5 px-3 font-bold text-amber-400 flex items-center gap-2">
+              <span class="text-xl">🐾</span> ${p.ten_thu_cung}
+            </td>
+            <td class="py-2.5 px-3 text-xs text-[var(--muted)] max-w-xs">${p.mo_ta || '--'}</td>
+            <td class="py-2.5 px-3 font-mono font-bold text-emerald-400">${p.gia_xu} 🪙</td>
+            <td class="py-2.5 px-3 font-mono font-bold text-purple-400">x${p.he_so_sat_thuong}</td>
+            <td class="py-2.5 px-3 text-right">
+              <button onclick="promptEditPet('${p.ma_thu_cung}', '${p.ten_thu_cung}', ${p.gia_xu}, ${p.he_so_sat_thuong})" class="px-2 py-1 rounded bg-amber-500/20 text-amber-400 text-xs font-bold">Sửa</button>
+            </td>
+          </tr>
+        `).join('') || '<tr><td colspan="6" class="py-4 text-center text-[var(--muted)]">Chưa có linh thú nào</td></tr>';
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function promptEditPet(id, name, currentPrice, currentBuff) {
+      const newPriceStr = prompt(`Cập nhật giá Xu cho linh thú [${name}]:`, currentPrice);
+      if (newPriceStr === null) return;
+      const newPrice = parseInt(newPriceStr, 10);
+      const newBuffStr = prompt(`Cập nhật hệ số sát thương PvP (ví dụ: 1.25):`, currentBuff);
+      if (newBuffStr === null) return;
+      const newBuff = parseFloat(newBuffStr);
+      try {
+        await apiFetch(`/api/admin/pets/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ gia_xu: newPrice, he_so_sat_thuong: newBuff })
+        });
+        showToast('Đã cập nhật linh thú thành công!');
+        loadPets();
       } catch (err) {
         showToast(err.message, true);
       }

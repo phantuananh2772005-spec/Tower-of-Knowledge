@@ -18,6 +18,30 @@ router.post('/create-match', authenticate, async (req, res) => {
   }
 });
 
+// Leaderboard from real database users
+router.get('/leaderboard', async (req, res) => {
+  try {
+    const db = require('../database/db');
+    const { deriveRankTitle } = require('../core/rules/economy.rules');
+    const users = await db.query(`
+      SELECT u.ma_nguoi_dung, u.ten_hien_thi, u.tong_diem_kinh_nghiem, u.chuoi_streak_ngay,
+             p.ten_thu_cung, p.anh_dai_dien
+      FROM nguoi_dung u
+      LEFT JOIN thu_cung_so_huu tcsh ON u.ma_nguoi_dung = tcsh.ma_nguoi_dung AND tcsh.dang_kich_hoat = 1
+      LEFT JOIN thu_cung p ON tcsh.ma_thu_cung = p.ma_thu_cung
+      WHERE u.vai_tro != 'QUAN_TRI_VIEN'
+      ORDER BY u.tong_diem_kinh_nghiem DESC
+    `);
+    const enriched = users.map(u => ({
+      ...u,
+      danh_hieu: deriveRankTitle(u.tong_diem_kinh_nghiem)
+    }));
+    return res.apiSuccess(enriched);
+  } catch (err) {
+    return res.apiError(err.message, 'FETCH_LEADERBOARD_FAILED', 500);
+  }
+});
+
 router.get('/:matchId', authenticate, async (req, res) => {
   try {
     const matchState = await arenaService.getMatchState(req.params.matchId);

@@ -177,4 +177,61 @@ router.post('/users/:id/coins', async (req, res) => {
   }
 });
 
+// Activity and Learning Logs
+router.get('/logs', async (req, res) => {
+  try {
+    const logs = await adminService.getActivityLogs();
+    return res.apiSuccess(logs);
+  } catch (err) {
+    return res.apiError(err.message, 'FETCH_LOGS_FAILED', 500);
+  }
+});
+
+// All System Coin Transactions
+router.get('/transactions', async (req, res) => {
+  try {
+    const tx = await adminService.getAllTransactions();
+    return res.apiSuccess(tx);
+  } catch (err) {
+    return res.apiError(err.message, 'FETCH_TRANSACTIONS_FAILED', 500);
+  }
+});
+
+// Pets Management
+router.get('/pets', async (req, res) => {
+  try {
+    const pets = await adminService.listPets();
+    return res.apiSuccess(pets);
+  } catch (err) {
+    return res.apiError(err.message, 'FETCH_PETS_FAILED', 500);
+  }
+});
+
+router.post('/pets', async (req, res) => {
+  try {
+    const pet = await adminService.createPet(req.body);
+    return res.apiSuccess(pet, 201);
+  } catch (err) {
+    return res.apiError(err.message, 'CREATE_PET_FAILED', 400);
+  }
+});
+
+router.put('/pets/:id', async (req, res) => {
+  try {
+    const pet = await adminService.updatePet(req.params.id, req.body);
+    return res.apiSuccess(pet);
+  } catch (err) {
+    return res.apiError(err.message, 'UPDATE_PET_FAILED', 400);
+  }
+});
+
+router.delete('/pets/:id', async (req, res) => {
+  try {
+    const result = await adminService.deletePet(req.params.id);
+    return res.apiSuccess(result);
+  } catch (err) {
+    return res.apiError(err.message, 'DELETE_PET_FAILED', 400);
+  }
+});
+
 module.exports = router;

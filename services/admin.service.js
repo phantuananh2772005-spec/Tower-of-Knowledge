@@ -241,6 +241,65 @@ async function adjustUserCoins(ma_nguoi_dung, amount, reason) {
   return await mutateCoins(ma_nguoi_dung, amount, 'THUONG_STREAK', reason || 'Điều chỉnh bởi Quản trị viên');
 }
 
+/**
+ * Access & Learning Activity Logs
+ */
+async function getActivityLogs() {
+  const learningLogs = await db.query(`
+    SELECT t.ma_tien_do_moc, u.ten_hien_thi, u.ten_dang_nhap, m.tieu_de as ten_moc, c.tieu_de as ten_chuong,
+           t.trang_thai, t.diem_dat_duoc, t.xu_da_nhan, t.thoi_diem_hoan_thanh
+    FROM tien_do_moc_bai_hoc t
+    JOIN nguoi_dung u ON t.ma_nguoi_dung = u.ma_nguoi_dung
+    JOIN moc_bai_hoc m ON t.ma_moc = m.ma_moc
+    JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
+    ORDER BY t.thoi_diem_hoan_thanh DESC
+  `);
+  return learningLogs;
+}
+
+async function getAllTransactions() {
+  const tx = await db.query(`
+    SELECT g.ma_giao_dich, u.ten_hien_thi, u.ten_dang_nhap, g.so_luong, g.so_du_sau, g.nguon_giao_dich, g.mo_ta, g.thoi_diem_tao
+    FROM giao_dich_xu g
+    JOIN nguoi_dung u ON g.ma_nguoi_dung = u.ma_nguoi_dung
+    ORDER BY g.thoi_diem_tao DESC
+  `);
+  return tx;
+}
+
+/**
+ * Pets Management
+ */
+async function listPets() {
+  return await db.query('SELECT * FROM thu_cung ORDER BY gia_xu ASC');
+}
+
+async function createPet({ ma_thu_cung, ten_thu_cung, mo_ta, gia_xu, he_so_sat_thuong, anh_dai_dien, spritesheet_url }) {
+  const id = ma_thu_cung || `pet_${Date.now()}`;
+  await db.execute(`
+    INSERT INTO thu_cung (ma_thu_cung, ten_thu_cung, mo_ta, gia_xu, he_so_sat_thuong, anh_dai_dien, spritesheet_url, cap_do_yeu_cau)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, 1)
+  `, [id, ten_thu_cung, mo_ta || '', gia_xu || 0, he_so_sat_thuong || 1.1, anh_dai_dien || 'pet.png', spritesheet_url || 'pet_sheet.png']);
+  return await db.queryOne('SELECT * FROM thu_cung WHERE ma_thu_cung = $1', [id]);
+}
+
+async function updatePet(id, { ten_thu_cung, mo_ta, gia_xu, he_so_sat_thuong }) {
+  await db.execute(`
+    UPDATE thu_cung
+    SET ten_thu_cung = COALESCE($1, ten_thu_cung),
+        mo_ta = COALESCE($2, mo_ta),
+        gia_xu = COALESCE($3, gia_xu),
+        he_so_sat_thuong = COALESCE($4, he_so_sat_thuong)
+    WHERE ma_thu_cung = $5
+  `, [ten_thu_cung, mo_ta, gia_xu, he_so_sat_thuong, id]);
+  return await db.queryOne('SELECT * FROM thu_cung WHERE ma_thu_cung = $1', [id]);
+}
+
+async function deletePet(id) {
+  await db.execute('DELETE FROM thu_cung WHERE ma_thu_cung = $1', [id]);
+  return { thanh_cong: true, ma_thu_cung: id };
+}
+
 module.exports = {
   getSystemStats,
   createCourse,
@@ -259,5 +318,11 @@ module.exports = {
   bulkImportQuestions,
   listUsers,
   updateUserRole,
-  adjustUserCoins
+  adjustUserCoins,
+  getActivityLogs,
+  getAllTransactions,
+  listPets,
+  createPet,
+  updatePet,
+  deletePet
 };

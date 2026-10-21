@@ -23,7 +23,8 @@
 function evaluateQuizSubmission(submittedAnswers, officialQuestions, passScore = 70, rewardCoins = 20, rewardExp = 50) {
   const answerMap = new Map();
   for (const a of (submittedAnswers || [])) {
-    answerMap.set(String(a.ma_cau_hoi), Number(a.lua_chon));
+    const val = a.lua_chon !== undefined ? a.lua_chon : a.chi_muc_chon;
+    answerMap.set(String(a.ma_cau_hoi), Number(val));
   }
 
   const totalQuestions = officialQuestions.length;
@@ -49,14 +50,24 @@ function evaluateQuizSubmission(submittedAnswers, officialQuestions, passScore =
 
   const scorePercentage = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
   const isPassed = scorePercentage >= passScore;
+  const earnedCoins = isPassed ? rewardCoins : 0;
+  const earnedExp = isPassed ? rewardExp : Math.round(rewardExp * 0.2);
 
   return {
     totalQuestions,
     correctCount,
     scorePercentage,
     isPassed,
-    earnedCoins: isPassed ? rewardCoins : 0,
-    earnedExp: isPassed ? rewardExp : Math.round(rewardExp * 0.2), // Nhận 20% exp động viên dù chưa đạt
+    earnedCoins,
+    earnedExp,
+    awardedCoins: earnedCoins,
+    awardedExp: earnedExp,
+    tong_cau: totalQuestions,
+    so_cau_dung: correctCount,
+    diem_so: scorePercentage,
+    dat_yeu_cau: isPassed,
+    xu_nhan_duoc: earnedCoins,
+    exp_nhan_duoc: earnedExp,
     details
   };
 }

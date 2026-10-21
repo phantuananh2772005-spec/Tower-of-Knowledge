@@ -274,13 +274,13 @@ async function submitQuizCheckpoint(ma_moc, submissions, ma_nguoi_dung) {
   }
 
   // Grade using pure business rule
-  const result = evaluateQuizSubmission({
-    questions,
+  const result = evaluateQuizSubmission(
     submissions,
-    passingScorePercentage: 70,
-    baseCoinReward: checkpoint.xu_thuong,
-    baseExpReward: checkpoint.diem_thuong
-  });
+    questions,
+    70,
+    checkpoint.xu_thuong,
+    checkpoint.diem_thuong
+  );
 
   const prog = await db.queryOne(
     'SELECT trang_thai FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2',
@@ -336,21 +336,15 @@ async function unlockNextCheckpoint(currentMocId, ma_nguoi_dung) {
 
   // Fetch all checkpoints in course in natural order
   const allMocs = await db.query(`
-    SELECT m.ma_moc
+    SELECT m.ma_moc, c.thu_tu * 100 + m.thu_tu AS thu_tu
     FROM moc_bai_hoc m
     JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
     WHERE c.ma_mon = $1
     ORDER BY c.thu_tu ASC, m.thu_tu ASC
   `, [ma_mon]);
 
-  const completedMocs = await db.query(`
-    SELECT ma_moc 
-    FROM tien_do_moc_bai_hoc 
-    WHERE ma_nguoi_dung = $1 AND trang_thai = 'HOAN_THANH'
-  `, [ma_nguoi_dung]);
-
-  const completedIds = completedMocs.map(c => c.ma_moc);
-  const nextMocId = findNextCheckpointToUnlock(allMocs, completedIds);
+  const unlockResult = findNextCheckpointToUnlock(allMocs, currentMocId);
+  const nextMocId = unlockResult?.nextCheckpoint?.ma_moc;
 
   if (nextMocId) {
     const existing = await db.queryOne(
@@ -366,6 +360,13 @@ async function unlockNextCheckpoint(currentMocId, ma_nguoi_dung) {
       `, [ma_tien_do_moc, ma_nguoi_dung, nextMocId]);
     }
   }
+
+  const completedMocs = await db.query(`
+    SELECT ma_moc 
+    FROM tien_do_moc_bai_hoc 
+    WHERE ma_nguoi_dung = $1 AND trang_thai = 'HOAN_THANH'
+  `, [ma_nguoi_dung]);
+  const completedIds = completedMocs.map(c => c.ma_moc);
 
   // Recalculate course percentage
   const totalCheckpoints = allMocs.length;

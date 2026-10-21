@@ -19,7 +19,13 @@ INSERT INTO nguoi_dung (ma_nguoi_dung, ten_dang_nhap, email, mat_khau_hash, ten_
 VALUES 
 ('usr_admin_001', 'admin', 'admin@towerofknowledge.edu.vn', '$2a$10$RE9vsn6NderNjirHDtSP9urgC/WotN.WfzRPbhJ.KGNMT1F8wGOnm', N'Đại Sư Quản Trị', 'khung_vang_dai_su', 'QUAN_TRI_VIEN', 2500, 850, 7, CAST(SYSDATETIME() AS DATE), 'TOI', 1),
 ('usr_demo_002', 'demo_user', 'student@towerofknowledge.edu.vn', '$2a$10$W04xIE.JXjb4d6l0vksEzOHJXn60IrjvN42c1/tTqDEoqJmwgq806', N'Dũng Sĩ SQL', 'khung_khoi_dau', 'NGUOI_HOC', 120, 160, 3, CAST(SYSDATETIME() AS DATE), 'TOI', 1),
-('usr_bot_003', 'rival_bot', 'bot@towerofknowledge.edu.vn', '$2a$10$W04xIE.JXjb4d6l0vksEzOHJXn60IrjvN42c1/tTqDEoqJmwgq806', N'Chiến Binh Lữ Khách', 'khung_bac_tap_su', 'NGUOI_HOC', 180, 210, 4, CAST(SYSDATETIME() AS DATE), 'TOI', 1);
+('usr_bot_003', 'rival_bot', 'bot@towerofknowledge.edu.vn', '$2a$10$W04xIE.JXjb4d6l0vksEzOHJXn60IrjvN42c1/tTqDEoqJmwgq806', N'Chiến Binh Lữ Khách', 'khung_bac_tap_su', 'NGUOI_HOC', 180, 210, 4, CAST(SYSDATETIME() AS DATE), 'TOI', 1),
+('usr_std_004', 'lan_anh', 'lananh@student.edu.vn', '$2a$10$W04xIE.JXjb4d6l0vksEzOHJXn60IrjvN42c1/tTqDEoqJmwgq806', N'Hiệp Sĩ Lan Anh', 'khung_khoi_dau', 'NGUOI_HOC', 1740, 320, 14, CAST(SYSDATETIME() AS DATE), 'TOI', 1),
+('usr_std_005', 'minh_khoa', 'minhkhoa@student.edu.vn', '$2a$10$W04xIE.JXjb4d6l0vksEzOHJXn60IrjvN42c1/tTqDEoqJmwgq806', N'Pháp Sư Minh Khoa', 'khung_khoi_dau', 'NGUOI_HOC', 1620, 280, 11, CAST(SYSDATETIME() AS DATE), 'TOI', 1),
+('usr_std_006', 'quoc_bao', 'quocbao@student.edu.vn', '$2a$10$W04xIE.JXjb4d6l0vksEzOHJXn60IrjvN42c1/tTqDEoqJmwgq806', N'Đấu Sĩ Quốc Bảo', 'khung_khoi_dau', 'NGUOI_HOC', 1380, 230, 8, CAST(SYSDATETIME() AS DATE), 'TOI', 1),
+('usr_std_007', 'thu_ha', 'thuha@student.edu.vn', '$2a$10$W04xIE.JXjb4d6l0vksEzOHJXn60IrjvN42c1/tTqDEoqJmwgq806', N'Hiền Giả Thu Hà', 'khung_khoi_dau', 'NGUOI_HOC', 1250, 190, 6, CAST(SYSDATETIME() AS DATE), 'TOI', 1),
+('usr_std_008', 'gia_huy', 'giahuy@student.edu.vn', '$2a$10$W04xIE.JXjb4d6l0vksEzOHJXn60IrjvN42c1/tTqDEoqJmwgq806', N'Chiến Binh Gia Huy', 'khung_khoi_dau', 'NGUOI_HOC', 1120, 170, 5, CAST(SYSDATETIME() AS DATE), 'TOI', 1),
+('usr_std_009', 'ngoc_mai', 'ngocmai@student.edu.vn', '$2a$10$W04xIE.JXjb4d6l0vksEzOHJXn60IrjvN42c1/tTqDEoqJmwgq806', N'Tập Sự Ngọc Mai', 'khung_khoi_dau', 'NGUOI_HOC', 950, 120, 2, CAST(SYSDATETIME() AS DATE), 'TOI', 1);
 GO
 
 -- 2. THU CUNG
