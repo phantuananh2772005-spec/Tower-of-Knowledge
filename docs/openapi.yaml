@@ -1,0 +1,367 @@
+openapi: 3.0.3
+info:
+  title: Tower of Knowledge API (Nền Tảng Học Tập Gamification & Đấu Trường 1v1)
+  description: >
+    Tài liệu hợp đồng API chuẩn mực cho hệ thống EdTech Gamification.
+    Kiến trúc Clean Architecture, phân tách rõ ràng tầng nghiệp vụ và tầng giao vận.
+    Được thiết kế để dễ dàng chuyển đổi sang ASP.NET Core (C#) sau này.
+  version: 1.0.0
+  contact:
+    name: Anh-2005-pta
+    email: s236435@nctu.edu.vn
+
+servers:
+  - url: http://localhost:5000
+    description: Máy chủ thử nghiệm cục bộ (Local Development)
+  - url: https://tower-of-knowledge.onrender.com
+    description: Máy chủ triển khai Render (Production/Staging)
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    UnifiedSuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+
+    UnifiedErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: "INVALID_CREDENTIALS"
+            message:
+              type: string
+              example: "Tên đăng nhập hoặc mật khẩu không chính xác."
+        timestamp:
+          type: string
+          format: date-time
+
+    RegisterDTO:
+      type: object
+      required:
+        - ten_dang_nhap
+        - email
+        - mat_khau
+      properties:
+        ten_dang_nhap:
+          type: string
+          example: "nguyen_van_a"
+        email:
+          type: string
+          format: email
+          example: "a.nguyen@example.com"
+        mat_khau:
+          type: string
+          format: password
+          example: "MatKhau123@"
+        ten_hien_thi:
+          type: string
+          example: "Nguyễn Văn A"
+
+    LoginDTO:
+      type: object
+      required:
+        - ten_dang_nhap
+        - mat_khau
+      properties:
+        ten_dang_nhap:
+          type: string
+          example: "nguyen_van_a"
+        mat_khau:
+          type: string
+          format: password
+          example: "MatKhau123@"
+
+    NguoiDungDTO:
+      type: object
+      properties:
+        ma_nguoi_dung:
+          type: string
+        ten_dang_nhap:
+          type: string
+        email:
+          type: string
+        ten_hien_thi:
+          type: string
+        khung_avatar:
+          type: string
+        tong_diem_kinh_nghiem:
+          type: integer
+        danh_hieu:
+          type: string
+          enum: [TAN_THU, TAP_SU, THONG_THAI_1, THONG_THAI_2, THONG_THAI_3, DAI_SU]
+        xu_tri_thuc:
+          type: integer
+        chuoi_streak_ngay:
+          type: integer
+        ngay_hoat_dong_cuoi:
+          type: string
+          format: date
+        che_do_giao_dien:
+          type: string
+          enum: [SANG, TOI]
+        bat_am_thanh:
+          type: boolean
+        vai_tro:
+          type: string
+          enum: [LEARNER, ADMIN]
+
+    SubmitQuizDTO:
+      type: object
+      required:
+        - ma_moc
+        - danh_sach_tra_loi
+      properties:
+        ma_moc:
+          type: string
+        danh_sach_tra_loi:
+          type: array
+          items:
+            type: object
+            required:
+              - ma_cau_hoi
+              - lua_chon
+            properties:
+              ma_cau_hoi:
+                type: string
+              lua_chon:
+                type: integer
+                description: "Chỉ số lựa chọn của người học (0-based: 0=A, 1=B, 2=C, 3=D)"
+
+paths:
+  /api/auth/register:
+    post:
+      summary: Đăng ký tài khoản người học
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDTO'
+      responses:
+        '201':
+          description: Đăng ký thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnifiedSuccessResponse'
+        '400':
+          description: Dữ liệu không hợp lệ hoặc tài khoản đã tồn tại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnifiedErrorResponse'
+
+  /api/auth/login:
+    post:
+      summary: Đăng nhập vào hệ thống
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginDTO'
+      responses:
+        '200':
+          description: Đăng nhập thành công, trả về JWT Token và User DTO
+        '401':
+          description: Sai thông tin đăng nhập
+        '429':
+          description: Quá số lần đăng nhập sai (Rate limited)
+
+  /api/auth/me:
+    get:
+      summary: Lấy thông tin tài khoản hiện tại kèm tiến độ streak
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Thành công
+
+  /api/courses:
+    get:
+      summary: Lấy danh sách tất cả các môn học kèm trạng thái theo học
+      responses:
+        '200':
+          description: Danh sách môn học
+
+  /api/courses/{slug}:
+    get:
+      summary: Lấy chi tiết môn học, danh sách chương và bản đồ mốc bài học (Lazy Status)
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Chi tiết lộ trình môn học
+
+  /api/courses/{slug}/enroll:
+    post:
+      summary: Bắt đầu theo học môn (tạo Tien_do_mon_hoc và mở khóa mốc đầu tiên)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Đã mở khóa môn và mốc đầu tiên
+
+  /api/checkpoints/{id}:
+    get:
+      summary: Lấy nội dung mốc bài học (Lý thuyết hoặc các câu hỏi không kèm đáp án đúng)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Dữ liệu mốc bài học
+
+  /api/checkpoints/{id}/submit:
+    post:
+      summary: Nộp bài trắc nghiệm mốc học tập, máy chủ chấm điểm độc lập
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitQuizDTO'
+      responses:
+        '200':
+          description: Kết quả chấm bài, xu thưởng, exp thưởng, và mốc kế tiếp được mở khóa
+
+  /api/pets:
+    get:
+      summary: Lấy danh mục thú cưng và trạng thái sở hữu của người dùng
+      responses:
+        '200':
+          description: Danh sách thú cưng
+
+  /api/pets/buy:
+    post:
+      summary: Mua thú cưng bằng Xu Tri Thức (ACID Transaction)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ma_thu_cung]
+              properties:
+                ma_thu_cung:
+                  type: string
+                idempotency_key:
+                  type: string
+      responses:
+        '200':
+          description: Mua thành công
+
+  /api/pets/equip:
+    post:
+      summary: Trang bị thú cưng làm bạn đồng hành (đảm bảo tối đa 1 pet kích hoạt)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ma_thu_cung]
+              properties:
+                ma_thu_cung:
+                  type: string
+      responses:
+        '200':
+          description: Đã trang bị thú cưng
+
+  /api/economy/transactions:
+    get:
+      summary: Lấy lịch sử sổ cái biến động xu của người dùng
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Danh sách giao dịch xu
+
+  /api/admin/courses:
+    get:
+      summary: [Admin] Lấy danh sách toàn bộ môn học để quản lý
+      security:
+        - BearerAuth: []
+    post:
+      summary: [Admin] Tạo mới môn học
+      security:
+        - BearerAuth: []
+
+  /api/admin/questions/import:
+    post:
+      summary: [Admin] Nhập danh sách câu hỏi hàng loạt từ JSON / CSV
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ma_moc, questions]
+              properties:
+                ma_moc:
+                  type: string
+                questions:
+                  type: array
+                  items:
+                    type: object
+      responses:
+        '200':
+          description: Đã nhập câu hỏi thành công
+
+  /api/admin/analytics:
+    get:
+      summary: [Admin] Thống kê hệ thống (người dùng, tỷ lệ qua môn, số trận 1v1)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Số liệu phân tích hệ thống

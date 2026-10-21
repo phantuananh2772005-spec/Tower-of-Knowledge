@@ -1,0 +1,87 @@
+/**
+ * Tower of Knowledge - Main Server
+ * Express 4 + Socket.IO + PostgreSQL / MSSQL
+ */
+
+require('dotenv').config();
+const http = require('http');
+const path = require('path');
+const express = require('express');
+const cors = require('cors');
+const { Server } = require('socket.io');
+
+const { responseFormatter } = require('./middlewares/response.middleware');
+const { initArenaSocket } = require('./sockets/arena.socket');
+
+// Import routes
+const authRoutes = require('./routes/auth.routes');
+const courseRoutes = require('./routes/course.routes');
+const petRoutes = require('./routes/pet.routes');
+const arenaRoutes = require('./routes/arena.routes');
+const economyRoutes = require('./routes/economy.routes');
+const adminRoutes = require('./routes/admin.routes');
+
+const app = express();
+const server = http.createServer(app);
+
+// Initialize Socket.IO
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+    methods: ['GET', 'POST']
+  }
+});
+initArenaSocket(io);
+
+// Core Middlewares
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(responseFormatter);
+
+// Serve static assets & frontend applications
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/admin', express.static(path.join(__dirname, 'public', 'admin')));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.apiSuccess({ status: 'HEALTHY', database: process.env.DATABASE_URL ? 'PostgreSQL' : 'MSSQL' });
+});
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api', courseRoutes);
+app.use('/api', petRoutes);
+app.use('/api/arena', arenaRoutes);
+app.use('/api/economy', economyRoutes);
+app.use('/api/admin', adminRoutes);
+
+// Fallback 404 handler
+app.use('/api/*', (req, res) => {
+  res.apiError('Endpoint API không tồn tại.', 'NOT_FOUND', 404);
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('[GLOBAL ERROR]', err);
+  res.status(err.status || 500).json({
+    success: false,
+    error: {
+      code: err.code || 'INTERNAL_SERVER_ERROR',
+      message: err.message || 'Đã xảy ra lỗi nội bộ trên máy chủ.'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`================================================================`);
+  console.log(`🚀 TOWER OF KNOWLEDGE SERVER IS RUNNING ON PORT ${PORT}`);
+  console.log(`📚 Learner UI: http://localhost:${PORT}/`);
+  console.log(`🛡️ Admin Portal: http://localhost:${PORT}/admin/`);
+  console.log(`📖 API Health: http://localhost:${PORT}/health`);
+  console.log(`================================================================`);
+});
+
+module.exports = { app, server };

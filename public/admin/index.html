@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cổng Quản Trị Hệ Thống - Tower of Knowledge</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    :root {
+      --background: #f8fafc;
+      --foreground: #0f172a;
+      --card: #ffffff;
+      --card-foreground: #0f172a;
+      --border: #e2e8f0;
+      --muted: #64748b;
+    }
+    .dark {
+      --background: #090a0f;
+      --foreground: #f1f5f9;
+      --card: #0f121d;
+      --card-foreground: #f1f5f9;
+      --border: #1e293b;
+      --muted: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen flex font-sans">
+
+  <!-- ADMIN LOGIN MODAL (shown if not logged in as admin) -->
+  <div id="modal-admin-login" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-5">
+      <div class="text-center space-y-1">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-2xl shadow-inner">
+          🛡️
+        </div>
+        <h2 class="text-xl font-bold tracking-tight">Đăng Nhập Quản Trị Viên</h2>
+        <p class="text-xs text-[var(--muted)]">Hệ Thống Tháp Tri Thức (Tower of Knowledge)</p>
+      </div>
+
+      <form id="form-admin-login" onsubmit="handleAdminLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-[var(--muted)]">Tên đăng nhập</label>
+          <input type="text" id="admin-login-user" value="admin" required class="w-full px-3 py-2 text-sm rounded-xl bg-[var(--background)] border border-[var(--border)] focus:outline-none focus:border-amber-500 font-mono">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-[var(--muted)]">Mật khẩu</label>
+          <input type="password" id="admin-login-pass" value="Admin123@" required class="w-full px-3 py-2 text-sm rounded-xl bg-[var(--background)] border border-[var(--border)] focus:outline-none focus:border-amber-500 font-mono">
+        </div>
+
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 transition cursor-pointer">
+          Đăng Nhập Cổng Quản Trị
+        </button>
+      </form>
+
+      <div class="text-center pt-2 border-t border-[var(--border)]">
+        <a href="/" class="text-xs text-[var(--muted)] hover:text-emerald-500 transition">← Quay lại Ứng dụng Học Viên</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN SIDEBAR -->
+  <aside class="w-64 border-r border-[var(--border)] bg-[var(--card)] flex flex-col justify-between shrink-0 h-screen sticky top-0 z-20">
+    <div class="p-4 space-y-6">
+      <div class="flex items-center gap-3 px-1">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center text-lg shadow-md shrink-0">
+          🛡️
+        </div>
+        <div class="min-w-0">
+          <span class="font-bold text-sm tracking-tight block truncate text-amber-500">ADMIN PORTAL</span>
+          <span class="text-[10px] text-[var(--muted)] font-mono block truncate">Tower of Knowledge</span>
+        </div>
+      </div>
+
+      <nav class="space-y-1 text-xs font-medium">
+        <button onclick="switchTab('analytics')" id="nav-tab-analytics" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 bg-[var(--background)] text-amber-500 font-semibold border border-[var(--border)] shadow-xs transition">
+          <span class="text-base">📊</span>
+          <span>Tổng quan & KPI</span>
+        </button>
+        <button onclick="switchTab('curriculum')" id="nav-tab-curriculum" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
+          <span class="text-base">📚</span>
+          <span>Quản lý Giáo trình</span>
+        </button>
+        <button onclick="switchTab('questions')" id="nav-tab-questions" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
+          <span class="text-base">❓</span>
+          <span>Ngân hàng Câu hỏi</span>
+        </button>
+        <button onclick="switchTab('users')" id="nav-tab-users" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
+          <span class="text-base">👥</span>
+          <span>Quản lý Người dùng</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Admin Footer -->
+    <div class="p-3 border-t border-[var(--border)] flex items-center justify-between text-xs">
+      <div class="min-w-0">
+        <p id="admin-user-name" class="font-semibold text-[11px] truncate">Admin</p>
+        <p class="text-[10px] text-amber-500 font-mono">QUẢN TRỊ VIÊN</p>
+      </div>
+      <div class="flex items-center gap-1">
+        <a href="/" title="Xem ứng dụng học viên" class="p-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] transition">🏠</a>
+        <button onclick="handleAdminLogout()" title="Đăng xuất" class="p-1.5 rounded-lg border border-[var(--border)] hover:bg-rose-500/20 text-rose-400 transition cursor-pointer">🚪</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN ADMIN CONTENT -->
+  <main class="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
+    <header class="shrink-0 h-16 border-b border-[var(--border)] bg-[var(--background)]/90 backdrop-blur-md px-6 flex items-center justify-between">
+      <h1 id="admin-header-title" class="text-lg font-bold tracking-tight">Báo Cáo Tổng Quan & Thống Kê KPI</h1>
+      <div class="flex items-center gap-3 text-xs">
+        <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 font-mono text-[11px] border border-emerald-500/20">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          CSDL: SQL Server (Live)
+        </span>
+        <button onclick="document.documentElement.classList.toggle('dark')" class="p-2 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--background)] transition cursor-pointer">
+          🌓
+        </button>
+      </div>
+    </header>
+
+    <div class="flex-1 overflow-y-auto p-6 space-y-6">
+
+      <!-- TAB 1: ANALYTICS / KPI -->
+      <section id="panel-analytics" class="space-y-6">
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
+            <span class="text-xs text-[var(--muted)] font-medium">Tổng Người Học</span>
+            <div id="stat-users" class="text-2xl font-bold font-mono text-emerald-400 mt-1">--</div>
+            <span class="text-[10px] text-emerald-500/80 font-medium">Đang hoạt động</span>
+          </div>
+          <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
+            <span class="text-xs text-[var(--muted)] font-medium">Tổng Môn Học</span>
+            <div id="stat-courses" class="text-2xl font-bold font-mono text-blue-400 mt-1">--</div>
+            <span class="text-[10px] text-blue-500/80 font-medium">Giáo trình chuẩn hóa</span>
+          </div>
+          <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
+            <span class="text-xs text-[var(--muted)] font-medium">Ngân Hàng Câu Hỏi</span>
+            <div id="stat-questions" class="text-2xl font-bold font-mono text-amber-400 mt-1">--</div>
+            <span class="text-[10px] text-amber-500/80 font-medium">Câu hỏi trắc nghiệm</span>
+          </div>
+          <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
+            <span class="text-xs text-[var(--muted)] font-medium">Trận Đấu 1v1 Đã Diễn Ra</span>
+            <div id="stat-matches" class="text-2xl font-bold font-mono text-purple-400 mt-1">--</div>
+            <span class="text-[10px] text-purple-500/80 font-medium">Đấu trường PvP</span>
+          </div>
+        </div>
+
+        <!-- Recent Tables Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Recent Users -->
+          <div class="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-3">
+            <h3 class="text-sm font-bold flex items-center justify-between">
+              <span>Học Viên Mới Nhất</span>
+              <span class="text-xs text-emerald-400 font-mono">Top 5</span>
+            </h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left">
+                <thead class="text-[11px] text-[var(--muted)] border-b border-[var(--border)]">
+                  <tr>
+                    <th class="py-2">Tên</th>
+                    <th class="py-2">Vai trò</th>
+                    <th class="py-2">EXP</th>
+                    <th class="py-2">Xu</th>
+                    <th class="py-2">Streak</th>
+                  </tr>
+                </thead>
+                <tbody id="table-recent-users" class="divide-y divide-[var(--border)] font-mono">
+                  <tr><td colspan="5" class="py-3 text-center text-[var(--muted)]">Đang tải...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Recent Matches -->
+          <div class="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-3">
+            <h3 class="text-sm font-bold flex items-center justify-between">
+              <span>Trận Đấu 1v1 Gần Đây</span>
+              <span class="text-xs text-purple-400 font-mono">Đấu trường</span>
+            </h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-xs text-left">
+                <thead class="text-[11px] text-[var(--muted)] border-b border-[var(--border)]">
+                  <tr>
+                    <th class="py-2">Mã trận</th>
+                    <th class="py-2">Trạng thái</th>
+                    <th class="py-2">Người thắng</th>
+                    <th class="py-2">Kết quả</th>
+                  </tr>
+                </thead>
+                <tbody id="table-recent-matches" class="divide-y divide-[var(--border)] font-mono">
+                  <tr><td colspan="4" class="py-3 text-center text-[var(--muted)]">Đang tải...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: CURRICULUM MANAGEMENT -->
+      <section id="panel-curriculum" class="hidden space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold">Cây Cấu Trúc Khóa Học & Giáo Trình</h2>
+            <p class="text-xs text-[var(--muted)]">Quản lý Môn học → Chương học → Mốc bài học (Lý thuyết / Trắc nghiệm / Boss)</p>
+          </div>
+          <button onclick="openAddChapterModal()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5">
+            <span>+</span> Thêm Chương Mới
+          </button>
+        </div>
+
+        <div id="curriculum-tree-container" class="space-y-4">
+          <!-- Dynamic Curriculum Tree rendered here -->
+        </div>
+      </section>
+
+      <!-- TAB 3: QUESTION BANK -->
+      <section id="panel-questions" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div>
+            <h2 class="text-base font-bold">Ngân Hàng Câu Hỏi Trắc Nghiệm</h2>
+            <p class="text-xs text-[var(--muted)]">Toàn bộ câu hỏi phục vụ các Mốc bài tập và Đấu trường 1v1</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="openBulkImportModal()" class="px-3 py-1.5 rounded-xl border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 font-bold text-xs transition cursor-pointer flex items-center gap-1.5">
+              <span>📥</span> Nhập Hàng Loạt (JSON/CSV)
+            </button>
+            <button onclick="openAddQuestionModal()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5">
+              <span>+</span> Thêm Câu Hỏi Mới
+            </button>
+          </div>
+        </div>
+
+        <!-- Question List Table -->
+        <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-3">
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+              <thead class="text-[11px] text-[var(--muted)] border-b border-[var(--border)]">
+                <tr>
+                  <th class="py-2.5 px-3">Mã</th>
+                  <th class="py-2.5 px-3">Mốc</th>
+                  <th class="py-2.5 px-3 w-1/3">Nội dung câu hỏi</th>
+                  <th class="py-2.5 px-3">Đáp án đúng</th>
+                  <th class="py-2.5 px-3">Độ khó</th>
+                  <th class="py-2.5 px-3 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="table-questions" class="divide-y divide-[var(--border)]">
+                <tr><td colspan="6" class="py-4 text-center text-[var(--muted)]">Đang tải danh sách câu hỏi...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: USERS MANAGEMENT -->
+      <section id="panel-users" class="hidden space-y-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-bold">Danh Sách Người Dùng & Phân Quyền</h2>
+            <p class="text-xs text-[var(--muted)]">Quản lý quyền hạn Quản trị viên / Người học, xem số dư Xu và Chuỗi học tập</p>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-3">
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+              <thead class="text-[11px] text-[var(--muted)] border-b border-[var(--border)]">
+                <tr>
+                  <th class="py-2.5 px-3">Mã</th>
+                  <th class="py-2.5 px-3">Tài khoản</th>
+                  <th class="py-2.5 px-3">Tên hiển thị</th>
+                  <th class="py-2.5 px-3">Vai trò</th>
+                  <th class="py-2.5 px-3">Xu Tri Thức</th>
+                  <th class="py-2.5 px-3">Điểm EXP</th>
+                  <th class="py-2.5 px-3">Streak</th>
+                  <th class="py-2.5 px-3 text-right">Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="table-users" class="divide-y divide-[var(--border)]">
+                <tr><td colspan="8" class="py-4 text-center text-[var(--muted)]">Đang tải người dùng...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- BULK IMPORT MODAL -->
+  <div id="modal-bulk-import" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+        <h3 class="text-base font-bold flex items-center gap-2">
+          <span>📥</span> Nhập Hàng Loạt Câu Hỏi Vào Ngân Hàng
+        </h3>
+        <button onclick="closeBulkImportModal()" class="text-lg text-[var(--muted)] hover:text-[var(--foreground)]">✕</button>
+      </div>
+
+      <div class="space-y-3 overflow-y-auto flex-1 text-xs">
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Chọn Mốc Bài Học mặc định:</label>
+          <select id="bulk-import-moc" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] focus:outline-none">
+            <option value="moc_csdl_01_02">Mốc 1.2: Trắc nghiệm Kiến thức Cốt lõi DBMS</option>
+            <option value="moc_csdl_02_02">Mốc 2.2: Trắc nghiệm Thiết kế Lược đồ & ERD</option>
+            <option value="moc_csdl_03_02">Mốc 3.2: Thử thách Truy vấn SQL</option>
+            <option value="moc_csdl_04_02">Mốc 4.2: TRẬN ĐẤU BOSS CUỐI - Chuẩn Hóa CSDL</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Dán dữ liệu JSON mảng câu hỏi:</label>
+          <textarea id="bulk-import-json" rows="10" placeholder='[
+  {
+    "noi_dung": "Mô hình ERD dùng để làm gì?",
+    "dap_an_a": "Thiết kế mức quan niệm",
+    "dap_an_b": "Lưu file trên đĩa cứng",
+    "dap_an_c": "Gửi email tự động",
+    "dap_an_d": "Biên dịch mã C#",
+    "vi_tri_dap_an_dung": 0,
+    "giai_thich": "ERD mô tả các thực thể và quan hệ thế giới thực ở mức quan niệm.",
+    "do_kho": 1
+  }
+]' class="w-full p-3 font-mono text-[11px] rounded-xl bg-[var(--background)] border border-[var(--border)] focus:outline-none"></textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border)]">
+        <button onclick="closeBulkImportModal()" class="px-4 py-2 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] font-medium text-xs">Hủy</button>
+        <button onclick="executeBulkImport()" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md transition cursor-pointer">Thực Hiện Nhập Vào CSDL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD / EDIT QUESTION MODAL -->
+  <div id="modal-edit-question" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+        <h3 id="modal-question-title" class="text-base font-bold">Thêm Câu Hỏi Mới</h3>
+        <button onclick="closeQuestionModal()" class="text-lg text-[var(--muted)] hover:text-[var(--foreground)]">✕</button>
+      </div>
+
+      <form id="form-question" onsubmit="handleSaveQuestion(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="edit-q-id">
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Mốc bài học</label>
+          <select id="edit-q-moc" required class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+            <option value="moc_csdl_01_02">Mốc 1.2: Trắc nghiệm Kiến thức Cốt lõi DBMS</option>
+            <option value="moc_csdl_02_02">Mốc 2.2: Trắc nghiệm Thiết kế Lược đồ & ERD</option>
+            <option value="moc_csdl_03_02">Mốc 3.2: Thử thách Truy vấn SQL</option>
+            <option value="moc_csdl_04_02">Mốc 4.2: TRẬN ĐẤU BOSS CUỐI - Chuẩn Hóa CSDL</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Nội dung câu hỏi</label>
+          <textarea id="edit-q-content" rows="3" required class="w-full p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Đáp án A</label>
+            <input type="text" id="edit-q-a" required class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Đáp án B</label>
+            <input type="text" id="edit-q-b" required class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Đáp án C</label>
+            <input type="text" id="edit-q-c" required class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Đáp án D</label>
+            <input type="text" id="edit-q-d" required class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Vị trí đáp án đúng</label>
+            <select id="edit-q-correct" required class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)] font-bold text-amber-500">
+              <option value="0">Đáp án A (Vị trí 0)</option>
+              <option value="1">Đáp án B (Vị trí 1)</option>
+              <option value="2">Đáp án C (Vị trí 2)</option>
+              <option value="3">Đáp án D (Vị trí 3)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Độ khó (1-3)</label>
+            <select id="edit-q-diff" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+              <option value="1">1 - Dễ (Nhận biết)</option>
+              <option value="2">2 - Trung bình (Thông hiểu)</option>
+              <option value="3">3 - Khó (Vận dụng / Boss)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Giải thích chi tiết</label>
+          <textarea id="edit-q-explain" rows="2" class="w-full p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]"></textarea>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border)]">
+          <button type="button" onclick="closeQuestionModal()" class="px-4 py-2 rounded-xl border border-[var(--border)] hover:bg-[var(--background)]">Hủy</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow-md cursor-pointer">Lưu Câu Hỏi</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="admin-toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none px-4 py-2.5 rounded-xl bg-slate-900 border border-amber-500/40 text-amber-300 text-xs font-semibold shadow-xl flex items-center gap-2">
+    <span id="toast-icon">✨</span>
+    <span id="toast-msg">Thông báo</span>
+  </div>
+
+  <script>
+    // State management
+    let adminToken = localStorage.getItem('tok_admin_token') || '';
+    let currentAdminUser = null;
+
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('admin-toast');
+      const msgEl = document.getElementById('toast-msg');
+      const iconEl = document.getElementById('toast-icon');
+      msgEl.innerText = msg;
+      iconEl.innerText = isError ? '⚠️' : '✅';
+      toast.className = toast.className.replace('translate-y-20 opacity-0', 'translate-y-0 opacity-100');
+      if (isError) {
+        toast.style.borderColor = '#f43f5e';
+        toast.style.color = '#fda4af';
+      } else {
+        toast.style.borderColor = '#f59e0b';
+        toast.style.color = '#fde68a';
+      }
+      setTimeout(() => {
+        toast.className = toast.className.replace('translate-y-0 opacity-100', 'translate-y-20 opacity-0');
+      }, 3200);
+    }
+
+    async function apiFetch(endpoint, options = {}) {
+      const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+      if (adminToken) headers['Authorization'] = `Bearer ${adminToken}`;
+      const res = await fetch(endpoint, { ...options, headers });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error ? json.error.message : 'Lỗi yêu cầu API');
+      return json.data;
+    }
+
+    async function checkAdminAuth() {
+      if (!adminToken) {
+        document.getElementById('modal-admin-login').classList.remove('hidden');
+        return;
+      }
+      try {
+        currentAdminUser = await apiFetch('/api/auth/me');
+        if (currentAdminUser.vai_tro !== 'QUAN_TRI_VIEN') {
+          showToast('Tài khoản này không có quyền quản trị viên.', true);
+          handleAdminLogout();
+          return;
+        }
+        document.getElementById('modal-admin-login').classList.add('hidden');
+        document.getElementById('admin-user-name').innerText = currentAdminUser.ten_hien_thi;
+        loadAnalytics();
+      } catch (err) {
+        localStorage.removeItem('tok_admin_token');
+        adminToken = '';
+        document.getElementById('modal-admin-login').classList.remove('hidden');
+      }
+    }
+
+    async function handleAdminLogin(e) {
+      e.preventDefault();
+      const username = document.getElementById('admin-login-user').value.trim();
+      const password = document.getElementById('admin-login-pass').value;
+
+      try {
+        const data = await apiFetch('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ ten_dang_nhap: username, mat_khau: password })
+        });
+
+        if (data.nguoi_dung.vai_tro !== 'QUAN_TRI_VIEN') {
+          throw new Error('Chỉ tài khoản Quản trị viên mới được đăng nhập vào đây.');
+        }
+
+        adminToken = data.token;
+        localStorage.setItem('tok_admin_token', adminToken);
+        currentAdminUser = data.nguoi_dung;
+        document.getElementById('modal-admin-login').classList.add('hidden');
+        document.getElementById('admin-user-name').innerText = currentAdminUser.ten_hien_thi;
+        showToast('Đăng nhập Quản trị viên thành công!');
+        loadAnalytics();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    function handleAdminLogout() {
+      localStorage.removeItem('tok_admin_token');
+      adminToken = '';
+      currentAdminUser = null;
+      document.getElementById('modal-admin-login').classList.remove('hidden');
+    }
+
+    function switchTab(tab) {
+      const tabs = ['analytics', 'curriculum', 'questions', 'users'];
+      tabs.forEach(t => {
+        document.getElementById(`panel-${t}`).classList.add('hidden');
+        const btn = document.getElementById(`nav-tab-${t}`);
+        btn.className = 'w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition';
+      });
+
+      document.getElementById(`panel-${tab}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`nav-tab-${tab}`);
+      activeBtn.className = 'w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 bg-[var(--background)] text-amber-500 font-semibold border border-[var(--border)] shadow-xs transition';
+
+      if (tab === 'analytics') loadAnalytics();
+      if (tab === 'curriculum') loadCurriculumTree();
+      if (tab === 'questions') loadQuestions();
+      if (tab === 'users') loadUsers();
+    }
+
+    async function loadAnalytics() {
+      try {
+        const stats = await apiFetch('/api/admin/stats');
+        document.getElementById('stat-users').innerText = stats.tong_quan.tong_nguoi_dung;
+        document.getElementById('stat-courses').innerText = stats.tong_quan.tong_mon_hoc;
+        document.getElementById('stat-questions').innerText = stats.tong_quan.tong_cau_hoi;
+        document.getElementById('stat-matches').innerText = stats.tong_quan.tong_tran_dau;
+
+        // Render Recent Users
+        const tbodyUsers = document.getElementById('table-recent-users');
+        tbodyUsers.innerHTML = stats.nguoi_dung_moi.map(u => `
+          <tr class="hover:bg-[var(--background)]/40 transition">
+            <td class="py-2.5 font-bold">${u.ten_hien_thi}</td>
+            <td class="py-2.5"><span class="px-1.5 py-0.5 rounded text-[10px] ${u.vai_tro === 'QUAN_TRI_VIEN' ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/10 text-emerald-400'}">${u.vai_tro}</span></td>
+            <td class="py-2.5 text-blue-400 font-bold">${u.tong_diem_kinh_nghiem}</td>
+            <td class="py-2.5 text-amber-400 font-bold">${u.xu_tri_thuc} 🪙</td>
+            <td class="py-2.5 text-rose-400">🔥 ${u.chuoi_streak_ngay}</td>
+          </tr>
+        `).join('') || '<tr><td colspan="5" class="py-3 text-center text-[var(--muted)]">Chưa có người dùng</td></tr>';
+
+        // Render Recent Matches
+        const tbodyMatches = document.getElementById('table-recent-matches');
+        tbodyMatches.innerHTML = stats.tran_dau_gan_day.map(m => `
+          <tr class="hover:bg-[var(--background)]/40 transition">
+            <td class="py-2.5 font-bold truncate max-w-[100px]">${m.ma_tran}</td>
+            <td class="py-2.5"><span class="px-1.5 py-0.5 rounded text-[10px] bg-purple-500/10 text-purple-400">${m.trang_thai}</span></td>
+            <td class="py-2.5">${m.nguoi_thang_cuoc || 'Chưa xác định'}</td>
+            <td class="py-2.5 text-emerald-400">${m.ly_do_ket_thuc || '--'}</td>
+          </tr>
+        `).join('') || '<tr><td colspan="4" class="py-3 text-center text-[var(--muted)]">Chưa có trận đấu nào</td></tr>';
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function loadCurriculumTree() {
+      try {
+        const courses = await apiFetch('/api/courses');
+        const container = document.getElementById('curriculum-tree-container');
+        container.innerHTML = '';
+
+        for (const c of courses) {
+          const detail = await apiFetch(`/api/courses/${c.slug}`);
+          const courseCard = document.createElement('div');
+          courseCard.className = 'p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-4';
+
+          courseCard.innerHTML = `
+            <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+              <div>
+                <span class="text-[10px] font-mono font-bold text-amber-500 uppercase tracking-wider">MÔN HỌC</span>
+                <h3 class="text-base font-bold text-emerald-400">${detail.mon_hoc.ten_mon}</h3>
+                <p class="text-xs text-[var(--muted)]">${detail.mon_hoc.mo_ta || ''}</p>
+              </div>
+              <span class="text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-lg border border-emerald-500/20">${detail.cac_chuong.length} Chương</span>
+            </div>
+
+            <div class="space-y-3">
+              ${detail.cac_chuong.map(ch => `
+                <div class="p-3.5 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-2">
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-xs flex items-center gap-2">
+                      <span class="text-amber-500">📖</span> ${ch.tieu_de}
+                    </span>
+                    <span class="text-[10px] font-mono text-[var(--muted)]">${ch.cac_moc.length} Mốc bài học</span>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-4 border-l-2 border-emerald-500/30">
+                    ${ch.cac_moc.map(m => `
+                      <div class="p-2 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center justify-between text-xs">
+                        <div class="min-w-0 pr-2">
+                          <p class="font-semibold truncate text-[11px]">${m.tieu_de}</p>
+                          <span class="text-[9px] px-1 py-0.2 rounded font-mono ${m.loai_moc === 'THU_THACH_BOSS' ? 'bg-rose-500/20 text-rose-400 font-bold' : m.loai_moc === 'TRAC_NGHIEM' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}">${m.loai_moc}</span>
+                        </div>
+                        <span class="text-[10px] font-mono text-amber-400 shrink-0 font-bold">+${m.xu_thuong}🪙</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+          container.appendChild(courseCard);
+        }
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function loadQuestions() {
+      try {
+        const questions = await apiFetch('/api/admin/questions');
+        const tbody = document.getElementById('table-questions');
+        tbody.innerHTML = questions.map(q => {
+          const optLetter = ['A', 'B', 'C', 'D'][q.vi_tri_dap_an_dung] || 'A';
+          return `
+            <tr class="hover:bg-[var(--background)]/40 transition">
+              <td class="py-2.5 px-3 font-mono font-bold text-[11px] text-[var(--muted)]">${q.ma_cau_hoi}</td>
+              <td class="py-2.5 px-3 font-mono text-[10px] text-amber-500">${q.ma_moc || '--'}</td>
+              <td class="py-2.5 px-3 font-medium">${q.noi_dung}</td>
+              <td class="py-2.5 px-3 font-mono font-bold text-emerald-400">Đáp án ${optLetter}</td>
+              <td class="py-2.5 px-3 font-mono">${q.do_kho === 3 ? '🔴 Khó (Boss)' : q.do_kho === 2 ? '🟡 TB' : '🟢 Dễ'}</td>
+              <td class="py-2.5 px-3 text-right space-x-1 shrink-0">
+                <button onclick="deleteQuestion('${q.ma_cau_hoi}')" class="px-2 py-1 rounded bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 text-[10px] font-bold cursor-pointer">Xóa</button>
+              </td>
+            </tr>
+          `;
+        }).join('') || '<tr><td colspan="6" class="py-4 text-center text-[var(--muted)]">Không có câu hỏi</td></tr>';
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function deleteQuestion(id) {
+      if (!confirm(`Bạn có chắc muốn xóa câu hỏi ${id} khỏi ngân hàng CSDL?`)) return;
+      try {
+        await apiFetch(`/api/admin/questions/${id}`, { method: 'DELETE' });
+        showToast(`Đã xóa câu hỏi ${id}`);
+        loadQuestions();
+        loadAnalytics();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    function openBulkImportModal() {
+      document.getElementById('modal-bulk-import').classList.remove('hidden');
+    }
+    function closeBulkImportModal() {
+      document.getElementById('modal-bulk-import').classList.add('hidden');
+    }
+
+    async function executeBulkImport() {
+      const mocId = document.getElementById('bulk-import-moc').value;
+      const text = document.getElementById('bulk-import-json').value.trim();
+      if (!text) {
+        showToast('Vui lòng dán dữ liệu JSON trước khi nhập.', true);
+        return;
+      }
+
+      try {
+        const questionsArray = JSON.parse(text);
+        const result = await apiFetch('/api/admin/questions/bulk', {
+          method: 'POST',
+          body: JSON.stringify({ questions: questionsArray, default_moc_id: mocId })
+        });
+        showToast(`Nhập thành công ${result.tong_so_nhap} câu hỏi vào CSDL SQL Server!`);
+        closeBulkImportModal();
+        loadQuestions();
+        loadAnalytics();
+      } catch (err) {
+        showToast('Dữ liệu JSON không hợp lệ: ' + err.message, true);
+      }
+    }
+
+    function openAddQuestionModal() {
+      document.getElementById('modal-question-title').innerText = 'Thêm Câu Hỏi Mới Vào Ngân Hàng';
+      document.getElementById('edit-q-id').value = '';
+      document.getElementById('edit-q-content').value = '';
+      document.getElementById('edit-q-a').value = '';
+      document.getElementById('edit-q-b').value = '';
+      document.getElementById('edit-q-c').value = '';
+      document.getElementById('edit-q-d').value = '';
+      document.getElementById('edit-q-explain').value = '';
+      document.getElementById('modal-edit-question').classList.remove('hidden');
+    }
+    function closeQuestionModal() {
+      document.getElementById('modal-edit-question').classList.add('hidden');
+    }
+
+    async function handleSaveQuestion(e) {
+      e.preventDefault();
+      const payload = {
+        ma_moc: document.getElementById('edit-q-moc').value,
+        noi_dung: document.getElementById('edit-q-content').value.trim(),
+        dap_an_a: document.getElementById('edit-q-a').value.trim(),
+        dap_an_b: document.getElementById('edit-q-b').value.trim(),
+        dap_an_c: document.getElementById('edit-q-c').value.trim(),
+        dap_an_d: document.getElementById('edit-q-d').value.trim(),
+        vi_tri_dap_an_dung: parseInt(document.getElementById('edit-q-correct').value, 10),
+        do_kho: parseInt(document.getElementById('edit-q-diff').value, 10),
+        giai_thich: document.getElementById('edit-q-explain').value.trim()
+      };
+
+      try {
+        await apiFetch('/api/admin/questions', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        showToast('Đã thêm câu hỏi vào CSDL SQL Server!');
+        closeQuestionModal();
+        loadQuestions();
+        loadAnalytics();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function loadUsers() {
+      try {
+        const users = await apiFetch('/api/admin/users');
+        const tbody = document.getElementById('table-users');
+        tbody.innerHTML = users.map(u => `
+          <tr class="hover:bg-[var(--background)]/40 transition">
+            <td class="py-2.5 px-3 font-mono font-bold text-[11px] text-[var(--muted)]">${u.ma_nguoi_dung}</td>
+            <td class="py-2.5 px-3 font-mono font-bold text-amber-500">${u.ten_dang_nhap}</td>
+            <td class="py-2.5 px-3 font-semibold">${u.ten_hien_thi}</td>
+            <td class="py-2.5 px-3">
+              <select onchange="updateUserRole('${u.ma_nguoi_dung}', this.value)" class="px-2 py-1 rounded bg-[var(--background)] border border-[var(--border)] text-[11px] font-bold ${u.vai_tro === 'QUAN_TRI_VIEN' ? 'text-amber-400' : 'text-emerald-400'}">
+                <option value="NGUOI_HOC" ${u.vai_tro === 'NGUOI_HOC' ? 'selected' : ''}>NGUOI_HOC</option>
+                <option value="QUAN_TRI_VIEN" ${u.vai_tro === 'QUAN_TRI_VIEN' ? 'selected' : ''}>QUAN_TRI_VIEN</option>
+              </select>
+            </td>
+            <td class="py-2.5 px-3 font-mono text-amber-400 font-bold">${u.xu_tri_thuc} 🪙</td>
+            <td class="py-2.5 px-3 font-mono text-blue-400 font-bold">${u.tong_diem_kinh_nghiem}</td>
+            <td class="py-2.5 px-3 font-mono text-rose-400">🔥 ${u.chuoi_streak_ngay}</td>
+            <td class="py-2.5 px-3 text-right">
+              <button onclick="promptAdjustCoins('${u.ma_nguoi_dung}', '${u.ten_dang_nhap}')" class="px-2.5 py-1 rounded-lg border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 text-[11px] font-bold cursor-pointer">Cộng Xu</button>
+            </td>
+          </tr>
+        `).join('') || '<tr><td colspan="8" class="py-4 text-center text-[var(--muted)]">Không có người dùng</td></tr>';
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function updateUserRole(userId, newRole) {
+      try {
+        await apiFetch(`/api/admin/users/${userId}/role`, {
+          method: 'PUT',
+          body: JSON.stringify({ vai_tro: newRole })
+        });
+        showToast(`Đã cập nhật vai trò người dùng thành ${newRole}`);
+      } catch (err) {
+        showToast(err.message, true);
+        loadUsers();
+      }
+    }
+
+    async function promptAdjustCoins(userId, username) {
+      const amountStr = prompt(`Nhập số lượng xu muốn thưởng hoặc trừ cho [${username}] (Ví dụ: 100 hoặc -50):`, "50");
+      if (!amountStr) return;
+      const amount = parseInt(amountStr, 10);
+      if (isNaN(amount) || amount === 0) return;
+
+      const reason = prompt(`Nhập lý do điều chỉnh:`, "Thưởng hoạt động xuất sắc từ Quản trị viên");
+      try {
+        await apiFetch(`/api/admin/users/${userId}/coins`, {
+          method: 'POST',
+          body: JSON.stringify({ amount, reason })
+        });
+        showToast(`Đã điều chỉnh ${amount} xu cho người dùng!`);
+        loadUsers();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    // Auto-check on load
+    checkAdminAuth();
+  </script>
+</body>
+</html>

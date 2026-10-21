@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tháp Tri Thức - Nền Tảng Học Tập Gamification & Đấu Trường 1v1</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    @keyframes lunge { 0%,100%{transform:translateX(0)} 40%{transform:translateX(50px) scale(1.1)} }
+    @keyframes lungeL { 0%,100%{transform:translateX(0) scaleX(-1)} 40%{transform:translateX(-50px) scaleX(-1) scale(1.1)} }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+    @keyframes floatUp { 0%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-30px)} }
+    @keyframes radarSweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes pulseGlow { 0%,100%{box-shadow: 0 0 15px rgba(16,185,129,0.3)} 50%{box-shadow: 0 0 30px rgba(16,185,129,0.7)} }
+    @keyframes bossGlow { 0%,100%{box-shadow: 0 0 15px rgba(244,63,94,0.4)} 50%{box-shadow: 0 0 35px rgba(244,63,94,0.85)} }
+
+    .do-lunge { animation: lunge .4s ease-out; }
+    .do-lungeL { animation: lungeL .4s ease-out; }
+    .do-shake { animation: shake .3s; }
+    .do-float { animation: floatUp .8s ease-out forwards; }
+    .radar-beam { animation: radarSweep 2s linear infinite; }
+    .node-active { animation: pulseGlow 2s infinite ease-in-out; }
+    .boss-active { animation: bossGlow 2s infinite ease-in-out; }
+
+    :root {
+      --background: #f8fafc;
+      --foreground: #0f172a;
+      --card: #ffffff;
+      --card-foreground: #0f172a;
+      --border: #e2e8f0;
+      --muted: #64748b;
+    }
+    .dark {
+      --background: #090a0f;
+      --foreground: #f1f5f9;
+      --card: #0f121d;
+      --card-foreground: #f1f5f9;
+      --border: #1e293b;
+      --muted: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen flex font-sans select-none">
+
+  <!-- ================= 1. SIDEBAR (LEFT NAVIGATION) ================= -->
+  <aside id="app-sidebar" class="w-64 border-r border-[var(--border)] bg-[var(--card)] flex flex-col justify-between shrink-0 h-screen sticky top-0 z-30 transition-all duration-200">
+    <div class="p-3 pt-4 space-y-5">
+      <!-- Profile Header / Quick Login -->
+      <div id="sidebar-user-pill" onclick="handleUserPillClick()" class="flex items-center gap-2.5 p-2 rounded-xl border border-[var(--border)] bg-[var(--background)] hover:border-emerald-500/50 cursor-pointer transition group">
+        <div id="u-avatar" class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-base shadow-xs shrink-0 border border-emerald-500/30">
+          👦
+        </div>
+        <div class="min-w-0 flex-1">
+          <span id="u-name" class="font-bold text-xs tracking-tight block truncate group-hover:text-emerald-500 transition">Đang tải...</span>
+          <span id="u-rank" class="text-[10px] text-amber-500 font-semibold font-mono flex items-center gap-1">
+            <span>⚡ TÂN THỦ</span>
+          </span>
+        </div>
+        <span class="text-xs text-[var(--muted)] group-hover:text-emerald-400">⚙️</span>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="space-y-1 text-xs font-medium">
+        <button onclick="navTo('hub')" id="nav-hub" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
+          <div class="flex items-center gap-3">
+            <span class="text-base shrink-0">🏠</span>
+            <span>Trang chủ chính</span>
+          </div>
+        </button>
+
+        <button onclick="navTo('saga')" id="nav-saga" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between bg-[var(--background)] text-emerald-500 font-semibold border border-[var(--border)] shadow-xs transition">
+          <div class="flex items-center gap-3">
+            <span class="text-base shrink-0">🗺️</span>
+            <span>Bản đồ leo tháp</span>
+          </div>
+          <span id="nav-saga-badge" class="text-[10px] bg-emerald-500/10 text-emerald-500 font-bold px-1.5 py-0.5 rounded font-mono">CSDL</span>
+        </button>
+
+        <button onclick="navTo('arena')" id="nav-arena" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
+          <div class="flex items-center gap-3">
+            <span class="text-base shrink-0">⚔️</span>
+            <span>Đấu trường 1v1</span>
+          </div>
+          <span class="text-[9px] bg-rose-500/20 text-rose-400 font-bold px-1.5 py-0.5 rounded font-mono uppercase">PvP</span>
+        </button>
+
+        <button onclick="navTo('pets')" id="nav-pets" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
+          <div class="flex items-center gap-3">
+            <span class="text-base shrink-0">🐾</span>
+            <span>Linh thú đồng hành</span>
+          </div>
+        </button>
+
+        <button onclick="navTo('shop')" id="nav-shop" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
+          <div class="flex items-center gap-3">
+            <span class="text-base shrink-0">🛍️</span>
+            <span>Cửa hàng Tri Thức</span>
+          </div>
+        </button>
+
+        <div id="admin-nav-link" class="pt-2 border-t border-[var(--border)] hidden">
+          <a href="/admin/" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-amber-400 hover:bg-amber-500/10 border border-amber-500/20 transition font-bold">
+            <span class="text-base shrink-0">🛡️</span>
+            <span>Cổng Quản Trị (Admin)</span>
+          </a>
+        </div>
+      </nav>
+    </div>
+
+    <!-- Sidebar Footer -->
+    <div class="p-3 border-t border-[var(--border)] flex items-center justify-between text-xs">
+      <div class="flex items-center gap-2 min-w-0 flex-1 mr-2">
+        <span id="footer-pet-avatar" class="text-base shrink-0">🐉</span>
+        <div class="min-w-0">
+          <p id="footer-pet-name" class="font-semibold text-[11px] leading-tight truncate">Rồng Sparky</p>
+          <p id="footer-pet-buff" class="text-[10px] text-emerald-500 font-mono font-medium truncate">+15% Sát thương</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 font-mono font-bold text-[11px] shrink-0 bg-[var(--background)] border border-[var(--border)] px-2 py-1 rounded-lg">
+        <span id="footer-streak" title="Chuỗi ngày học" class="text-rose-400">🔥 0</span>
+        <span class="text-[var(--border)]">|</span>
+        <span id="footer-coins" title="Xu Tri Thức" class="text-amber-400">100 🪙</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= 2. MAIN WORKSPACE ================= -->
+  <div class="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
+
+    <!-- Topbar -->
+    <header class="shrink-0 h-16 border-b border-[var(--border)] bg-[var(--background)]/90 backdrop-blur-md px-6 flex items-center justify-between z-20">
+      <div class="min-w-0 flex-1 pr-4">
+        <div class="flex items-center gap-1.5 text-[11px] text-[var(--muted)] mb-0.5">
+          <span>Giáo trình</span>
+          <span>/</span>
+          <span class="font-semibold text-emerald-500 font-mono">Cơ sở Dữ liệu (Database Systems)</span>
+        </div>
+        <h1 id="topbar-chapter-title" class="font-bold tracking-tight text-base truncate">Chương 1: Tổng quan về Hệ CSDL</h1>
+      </div>
+
+      <div class="flex items-center gap-3 shrink-0">
+        <!-- Course Progress -->
+        <div class="text-right">
+          <span id="topbar-progress-txt" class="text-xs font-bold text-emerald-500 font-mono">Tiến độ 25%</span>
+          <div class="w-28 h-1.5 bg-[var(--border)] rounded-full mt-1 overflow-hidden ml-auto">
+            <div id="topbar-progress-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 25%"></div>
+          </div>
+        </div>
+
+        <!-- Audio Toggle -->
+        <button onclick="toggleAudio()" id="btn-audio-toggle" title="Bật/Tắt Âm thanh" class="w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:border-emerald-500/50 flex items-center justify-center text-xs transition cursor-pointer">
+          <span id="audio-icon">🔊</span>
+        </button>
+
+        <!-- Theme Toggle -->
+        <button onclick="toggleTheme()" title="Chế độ Sáng / Tối" class="w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:border-amber-500/50 flex items-center justify-center text-xs transition cursor-pointer">
+          <span id="theme-icon">🌙</span>
+        </button>
+
+        <!-- Login / User Button -->
+        <button onclick="openAuthModal()" id="btn-auth-action" class="px-3 py-1.5 rounded-lg border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10 font-bold text-xs transition cursor-pointer">
+          Đổi Tài Khoản
+        </button>
+      </div>
+    </header>
+
+    <!-- Scrollable Workspace -->
+    <main class="flex-1 overflow-y-auto">
+
+      <!-- VIEW 1: SAGA ROADMAP (BẢN ĐỒ LEO THÁP) -->
+      <section id="view-saga" class="max-w-2xl mx-auto px-4 py-8 space-y-10">
+        <div class="text-center space-y-1">
+          <span class="text-xs font-mono font-bold text-emerald-500 tracking-wider uppercase">Lộ trình chuẩn hóa đại học</span>
+          <h2 class="text-2xl font-black tracking-tight">Tháp Tri Thức: Hệ Cơ Sở Dữ Liệu</h2>
+          <p class="text-xs text-[var(--muted)]">Vượt qua các mốc Lý thuyết, Trắc nghiệm và Thử thách Boss để leo tháp</p>
+        </div>
+
+        <!-- Dynamic Roadmap Chapters & Nodes -->
+        <div id="saga-nodes-container" class="space-y-12">
+          <!-- Filled dynamically by JavaScript -->
+        </div>
+      </section>
+
+      <!-- VIEW 2: HUB (TRANG CHỦ) -->
+      <section id="view-hub" class="hidden max-w-4xl mx-auto px-6 py-8 space-y-8">
+        <div class="p-6 rounded-3xl bg-gradient-to-r from-emerald-950/40 via-[var(--card)] to-teal-950/30 border border-emerald-500/30 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
+          <div class="space-y-2">
+            <span class="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 font-mono text-[11px] font-bold border border-emerald-500/20">
+              🔥 Chuỗi học: <span id="hub-streak-val">3</span> ngày liên tiếp
+            </span>
+            <h2 class="text-2xl font-black">Chào mừng trở lại, <span id="hub-user-name" class="text-emerald-400">Dũng Sĩ SQL</span>!</h2>
+            <p class="text-xs text-[var(--muted)] max-w-md">Tiếp tục hành trình chinh phục Giáo trình Cơ sở Dữ liệu hoặc tham gia Đấu trường 1v1 để rèn luyện tư duy phản xạ!</p>
+          </div>
+          <div class="flex items-center gap-3 shrink-0">
+            <button onclick="navTo('saga')" class="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 transition cursor-pointer">
+              Tiếp Tục Học Mốc Mới →
+            </button>
+            <button onclick="navTo('arena')" class="px-5 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs shadow-lg shadow-rose-500/20 transition cursor-pointer">
+              Vào Đấu Trường 1v1 ⚔️
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-1">
+            <span class="text-xs text-[var(--muted)]">Tổng Điểm EXP</span>
+            <div id="hub-exp-val" class="text-2xl font-bold font-mono text-blue-400">120</div>
+            <span id="hub-rank-badge" class="text-[10px] text-amber-400 font-bold">⚡ TÂN THỦ</span>
+          </div>
+          <div class="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-1">
+            <span class="text-xs text-[var(--muted)]">Xu Tri Thức Đang Có</span>
+            <div id="hub-coins-val" class="text-2xl font-bold font-mono text-amber-400">160 🪙</div>
+            <span class="text-[10px] text-[var(--muted)]">Dùng đổi linh thú tại Shop</span>
+          </div>
+          <div class="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-1">
+            <span class="text-xs text-[var(--muted)]">Linh Thú Đang Dùng</span>
+            <div id="hub-pet-name" class="text-xl font-bold text-emerald-400">Rồng Sparky</div>
+            <span class="text-[10px] text-emerald-500/80 font-mono">+15% Sát thương chiến đấu</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 3: ARENA 1V1 (ĐẤU TRƯỜNG THỜI GIAN THỰC) -->
+      <section id="view-arena" class="hidden max-w-3xl mx-auto px-4 py-8 space-y-8">
+        
+        <!-- ARENA LOBBY (FIND MATCH) -->
+        <div id="arena-lobby" class="p-8 rounded-3xl bg-[var(--card)] border border-[var(--border)] text-center space-y-6 shadow-xl">
+          <div class="w-20 h-20 mx-auto rounded-3xl bg-rose-500/10 border-2 border-rose-500/30 flex items-center justify-center text-4xl shadow-inner">
+            ⚔️
+          </div>
+          <div class="space-y-2">
+            <h2 class="text-2xl font-black tracking-tight">Đấu Trường Tri Thức 1v1</h2>
+            <p class="text-xs text-[var(--muted)] max-w-md mx-auto">Ghép đấu thời gian thực với đối thủ ngẫu nhiên. Trả lời đúng và nhanh hơn để tung đòn sát thương hạ gục đối phương (K.O.)!</p>
+          </div>
+
+          <div class="flex justify-center">
+            <button onclick="startMatchmaking()" id="btn-find-match" class="px-8 py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white font-black text-sm tracking-wide shadow-xl shadow-rose-500/30 transition transform hover:scale-105 cursor-pointer flex items-center gap-2">
+              <span>⚔️</span> BẮT ĐẦU TÌM TRẬN 1V1
+            </button>
+          </div>
+        </div>
+
+        <!-- RADAR MATCHMAKING SEARCHING OVERLAY -->
+        <div id="arena-searching" class="hidden p-10 rounded-3xl bg-[var(--card)] border border-[var(--border)] text-center space-y-6 shadow-2xl">
+          <div class="relative w-36 h-36 mx-auto rounded-full border-2 border-rose-500/40 bg-rose-950/20 overflow-hidden flex items-center justify-center shadow-inner">
+            <div class="absolute inset-0 rounded-full border border-rose-500/20"></div>
+            <div class="absolute w-24 h-24 rounded-full border border-rose-500/30"></div>
+            <div class="absolute w-12 h-12 rounded-full border border-rose-500/40"></div>
+            <div class="absolute inset-0 bg-gradient-to-tr from-transparent via-rose-500/20 to-rose-500/60 origin-bottom-left radar-beam"></div>
+            <span class="text-2xl z-10 animate-pulse">📡</span>
+          </div>
+
+          <div class="space-y-1">
+            <h3 class="text-lg font-bold text-rose-400">Đang Quét Radar Tìm Đối Thủ...</h3>
+            <p class="text-xs text-[var(--muted)]">Hệ thống sẽ tự động ghép với Lữ Khách Bot nếu không có người chơi chờ</p>
+          </div>
+
+          <button onclick="cancelMatchmaking()" class="px-5 py-2 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] font-medium text-xs transition cursor-pointer">
+            Hủy Tìm Trận
+          </button>
+        </div>
+
+        <!-- VS SCREEN COUNTDOWN (3 - 2 - 1) -->
+        <div id="arena-vs-countdown" class="hidden p-8 rounded-3xl bg-[var(--card)] border border-[var(--border)] text-center space-y-6 shadow-2xl">
+          <div class="grid grid-cols-3 items-center">
+            <div class="space-y-2">
+              <div id="vs-p1-avatar" class="w-16 h-16 mx-auto rounded-2xl bg-emerald-500/20 border-2 border-emerald-500 flex items-center justify-center text-3xl">👦</div>
+              <p id="vs-p1-name" class="font-bold text-sm text-emerald-400 truncate">Dũng Sĩ SQL</p>
+              <p id="vs-p1-pet" class="text-[10px] text-[var(--muted)]">🐉 Rồng Sparky</p>
+            </div>
+            <div>
+              <div id="vs-countdown-number" class="text-5xl font-black text-amber-400 animate-ping">3</div>
+              <span class="text-xs font-mono font-bold text-rose-500 uppercase tracking-widest mt-2 block">CHUẨN BỊ</span>
+            </div>
+            <div class="space-y-2">
+              <div id="vs-p2-avatar" class="w-16 h-16 mx-auto rounded-2xl bg-rose-500/20 border-2 border-rose-500 flex items-center justify-center text-3xl">🥷</div>
+              <p id="vs-p2-name" class="font-bold text-sm text-rose-400 truncate">Chiến Binh Bot</p>
+              <p id="vs-p2-pet" class="text-[10px] text-[var(--muted)]">🦊 Hồ Ly Kitsune</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- BATTLE SCREEN -->
+        <div id="arena-battle" class="hidden space-y-4">
+          <!-- Combat Arena Top: Health Bars & Pet Animations -->
+          <div class="p-6 rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-xl relative overflow-hidden">
+            <!-- Damage Floater -->
+            <div id="damage-float-p1" class="hidden absolute top-10 left-20 z-30 text-rose-500 font-black text-2xl font-mono do-float">-25</div>
+            <div id="damage-float-p2" class="hidden absolute top-10 right-20 z-30 text-rose-500 font-black text-2xl font-mono do-float">-25</div>
+
+            <div class="grid grid-cols-2 gap-8 items-center">
+              <!-- Player 1 Box -->
+              <div id="box-p1" class="space-y-2">
+                <div class="flex items-center justify-between text-xs">
+                  <span id="battle-p1-name" class="font-bold text-emerald-400">Bạn</span>
+                  <span id="battle-p1-hp-text" class="font-mono font-bold text-xs">100/100 HP</span>
+                </div>
+                <div class="w-full h-3 bg-[var(--border)] rounded-full overflow-hidden">
+                  <div id="battle-p1-hp-bar" class="h-full bg-emerald-500 transition-all duration-300" style="width: 100%"></div>
+                </div>
+                <div id="pet-sprite-p1" class="text-4xl text-left pt-2 transition select-none">🐉</div>
+              </div>
+
+              <!-- Player 2 Box (Opponent) -->
+              <div id="box-p2" class="space-y-2 text-right">
+                <div class="flex items-center justify-between text-xs flex-row-reverse">
+                  <span id="battle-p2-name" class="font-bold text-rose-400">Đối thủ</span>
+                  <span id="battle-p2-hp-text" class="font-mono font-bold text-xs">100/100 HP</span>
+                </div>
+                <div class="w-full h-3 bg-[var(--border)] rounded-full overflow-hidden flex justify-end">
+                  <div id="battle-p2-hp-bar" class="h-full bg-rose-500 transition-all duration-300" style="width: 100%"></div>
+                </div>
+                <div id="pet-sprite-p2" class="text-4xl text-right pt-2 transition select-none">🦊</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question Card -->
+          <div class="p-6 rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-xl space-y-5">
+            <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+              <span id="battle-round-badge" class="px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-400 font-mono font-bold text-xs border border-rose-500/20">
+                Câu 1 / 5
+              </span>
+              <span id="battle-timer-text" class="font-mono font-bold text-xs text-amber-400">⏱️ 10s</span>
+            </div>
+
+            <h3 id="battle-q-content" class="text-base font-bold leading-relaxed">Đang tải câu hỏi...</h3>
+
+            <!-- 4 Options -->
+            <div id="battle-options-container" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <!-- Dynamically populated options -->
+            </div>
+
+            <div id="battle-turn-feedback" class="hidden p-3 rounded-xl bg-slate-900 border border-emerald-500/30 text-xs space-y-1">
+              <span id="battle-fb-status" class="font-bold text-emerald-400">Chính xác! (+28 Sát thương)</span>
+              <p id="battle-fb-explain" class="text-[11px] text-[var(--muted)]">Giải thích chi tiết...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- MATCH ENDED MODAL / CARD -->
+        <div id="arena-result" class="hidden p-8 rounded-3xl bg-[var(--card)] border border-[var(--border)] text-center space-y-6 shadow-2xl">
+          <div id="result-icon" class="text-6xl animate-bounce">🏆</div>
+          <div class="space-y-1">
+            <h2 id="result-title" class="text-3xl font-black text-amber-400">K.O. VICTORY!</h2>
+            <p id="result-subtitle" class="text-xs text-[var(--muted)]">Bạn đã xuất sắc hạ gục đối thủ bằng kiến thức CSDL!</p>
+          </div>
+
+          <div class="flex justify-center gap-6 py-2 font-mono">
+            <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+              <span class="text-[10px] text-[var(--muted)] block">Thưởng Xu</span>
+              <span id="result-coins" class="text-base font-bold text-amber-400">+35 🪙</span>
+            </div>
+            <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+              <span class="text-[10px] text-[var(--muted)] block">Thưởng EXP</span>
+              <span id="result-exp" class="text-base font-bold text-blue-400">+50 EXP</span>
+            </div>
+          </div>
+
+          <div class="flex justify-center gap-3">
+            <button onclick="resetArena()" class="px-6 py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs shadow-md transition cursor-pointer">
+              Đấu Trận Khác ⚔️
+            </button>
+            <button onclick="navTo('saga')" class="px-6 py-2.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] font-medium text-xs transition cursor-pointer">
+              Về Lộ Trình Leo Tháp
+            </button>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- VIEW 4: PET SANCTUARY (LINH THÚ) -->
+      <section id="view-pets" class="hidden max-w-3xl mx-auto px-4 py-8 space-y-6">
+        <div class="text-center space-y-1">
+          <span class="text-xs font-mono font-bold text-emerald-500 tracking-wider uppercase">Đồng đội tri thức</span>
+          <h2 class="text-2xl font-black tracking-tight">Linh Thú Đồng Hành</h2>
+          <p class="text-xs text-[var(--muted)]">Linh thú tăng cường sát thương và gia tăng điểm EXP trong các trận đấu</p>
+        </div>
+
+        <div id="pets-list-container" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+
+      <!-- VIEW 5: SHOP -->
+      <section id="view-shop" class="hidden max-w-3xl mx-auto px-4 py-8 space-y-6">
+        <div class="text-center space-y-1">
+          <span class="text-xs font-mono font-bold text-amber-500 tracking-wider uppercase">Cửa hàng vật phẩm</span>
+          <h2 class="text-2xl font-black tracking-tight">Cửa Hàng Tri Thức</h2>
+          <p class="text-xs text-[var(--muted)]">Sử dụng Xu Tri Thức tích lũy từ bài học để mua linh thú độc quyền</p>
+        </div>
+
+        <div id="shop-list-container" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ================= 3. MODALS ================= -->
+
+  <!-- THEORY CHECKPOINT MODAL -->
+  <div id="modal-theory" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-5 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+        <div>
+          <span class="text-[10px] font-mono font-bold text-blue-400 uppercase tracking-wider">MỐC LÝ THUYẾT</span>
+          <h3 id="theory-modal-title" class="text-lg font-bold text-emerald-400">Tiêu đề mốc lý thuyết</h3>
+        </div>
+        <button onclick="closeTheoryModal()" class="text-xl text-[var(--muted)] hover:text-[var(--foreground)]">✕</button>
+      </div>
+
+      <div id="theory-modal-body" class="space-y-4 overflow-y-auto flex-1 text-xs sm:text-sm leading-relaxed pr-2 font-sans">
+        <!-- Markdown content rendered here -->
+      </div>
+
+      <div class="flex items-center justify-between pt-4 border-t border-[var(--border)]">
+        <div class="flex items-center gap-3 font-mono text-xs">
+          <span class="text-blue-400 font-bold">+15 EXP</span>
+          <span class="text-amber-400 font-bold">+10 🪙 Xu</span>
+        </div>
+        <button onclick="confirmCompleteTheory()" id="btn-complete-theory" class="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs shadow-md transition cursor-pointer">
+          Hoàn Thành Bài Đọc & Nhận Thưởng ✓
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUIZ / BOSS CHECKPOINT MODAL -->
+  <div id="modal-quiz" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-5 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+        <div>
+          <span id="quiz-badge-type" class="text-[10px] font-mono font-bold text-purple-400 uppercase tracking-wider">MỐC TRẮC NGHIỆM</span>
+          <h3 id="quiz-modal-title" class="text-lg font-bold text-purple-400">Thực Hành Kiến Thức</h3>
+        </div>
+        <button onclick="closeQuizModal()" class="text-xl text-[var(--muted)] hover:text-[var(--foreground)]">✕</button>
+      </div>
+
+      <!-- Quiz Form Body -->
+      <div id="quiz-modal-body" class="space-y-6 overflow-y-auto flex-1 text-xs sm:text-sm pr-2">
+        <!-- Render questions list -->
+      </div>
+
+      <!-- Quiz Result / Review Overlay (shown after submission) -->
+      <div id="quiz-review-section" class="hidden space-y-4 overflow-y-auto flex-1 text-xs">
+        <!-- Render grading results & explanations -->
+      </div>
+
+      <div id="quiz-footer" class="flex items-center justify-between pt-4 border-t border-[var(--border)]">
+        <span id="quiz-rewards-text" class="font-mono text-xs text-amber-400 font-bold">Thưởng: +25 EXP, +20 🪙</span>
+        <button onclick="submitActiveQuiz()" id="btn-submit-quiz" class="px-6 py-2.5 rounded-xl bg-purple-500 hover:bg-purple-600 text-white font-bold text-xs shadow-md transition cursor-pointer">
+          Nộp Bài Kiểm Tra →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUTHENTICATION MODAL -->
+  <div id="modal-auth" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5">
+      <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+        <h3 class="text-base font-bold">Đăng Nhập / Đổi Tài Khoản</h3>
+        <button onclick="closeAuthModal()" class="text-lg text-[var(--muted)] hover:text-[var(--foreground)]">✕</button>
+      </div>
+
+      <!-- Quick Switch Presets -->
+      <div class="space-y-2">
+        <span class="text-[11px] font-semibold text-[var(--muted)]">Tài khoản có sẵn trong CSDL:</span>
+        <div class="grid grid-cols-2 gap-2">
+          <button onclick="quickLogin('demo_user', 'User123@')" class="p-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-bold text-left transition cursor-pointer">
+            👦 Dũng Sĩ SQL<br><span class="text-[10px] font-normal text-[var(--muted)]">demo_user</span>
+          </button>
+          <button onclick="quickLogin('admin', 'Admin123@')" class="p-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-xs font-bold text-left transition cursor-pointer">
+            🛡️ Quản Trị Viên<br><span class="text-[10px] font-normal text-[var(--muted)]">admin</span>
+          </button>
+        </div>
+      </div>
+
+      <form id="form-user-login" onsubmit="handleUserLogin(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Tên đăng nhập</label>
+          <input type="text" id="auth-input-user" required class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Mật khẩu</label>
+          <input type="password" id="auth-input-pass" required class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)]">
+        </div>
+
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs shadow-md transition cursor-pointer">
+          Đăng Nhập
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="user-toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none px-4 py-2.5 rounded-xl bg-slate-900 border border-emerald-500/40 text-emerald-300 text-xs font-semibold shadow-xl flex items-center gap-2">
+    <span id="u-toast-icon">✨</span>
+    <span id="u-toast-msg">Thông báo</span>
+  </div>
+
+  <!-- APPLICATION JAVASCRIPT LOGIC -->
+  <script>
+    // State
+    let authToken = localStorage.getItem('tok_user_token') || '';
+    let currentUser = null;
+    let currentCourse = null;
+    let activeCheckpoint = null;
+    let activeQuizQuestions = [];
+    let audioEnabled = true;
+    let socket = null;
+
+    // Web Audio Synthesizer
+    let audioCtx = null;
+    function playSound(type) {
+      if (!audioEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'click') {
+          osc.frequency.setValueAtTime(600, now);
+          gain.gain.setValueAtTime(0.05, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+          osc.start(now);
+          osc.stop(now + 0.05);
+        } else if (type === 'coin') {
+          osc.frequency.setValueAtTime(987.77, now); // B5
+          osc.frequency.setValueAtTime(1318.51, now + 0.08); // E6
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+          osc.start(now);
+          osc.stop(now + 0.25);
+        } else if (type === 'win') {
+          // Arpeggio
+          [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.connect(g);
+            g.connect(audioCtx.destination);
+            o.frequency.setValueAtTime(freq, now + i * 0.08);
+            g.gain.setValueAtTime(0.12, now + i * 0.08);
+            g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.3);
+            o.start(now + i * 0.08);
+            o.stop(now + i * 0.08 + 0.3);
+          });
+        } else if (type === 'hit') {
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(180, now);
+          osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+          osc.start(now);
+          osc.stop(now + 0.15);
+        }
+      } catch (e) {}
+    }
+
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('user-toast');
+      document.getElementById('u-toast-msg').innerText = msg;
+      document.getElementById('u-toast-icon').innerText = isError ? '⚠️' : '✨';
+      toast.className = toast.className.replace('translate-y-20 opacity-0', 'translate-y-0 opacity-100');
+      toast.style.borderColor = isError ? '#f43f5e' : '#10b981';
+      toast.style.color = isError ? '#fda4af' : '#a7f3d0';
+      setTimeout(() => {
+        toast.className = toast.className.replace('translate-y-0 opacity-100', 'translate-y-20 opacity-0');
+      }, 3000);
+    }
+
+    async function apiFetch(endpoint, options = {}) {
+      const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+      const res = await fetch(endpoint, { ...options, headers });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error ? json.error.message : 'Lỗi yêu cầu API');
+      return json.data;
+    }
+
+    // Initialize App
+    async function initApp() {
+      // If no token, default login as demo_user
+      if (!authToken) {
+        try {
+          const authData = await apiFetch('/api/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ ten_dang_nhap: 'demo_user', mat_khau: 'User123@' })
+          });
+          authToken = authData.token;
+          localStorage.setItem('tok_user_token', authToken);
+          currentUser = authData.nguoi_dung;
+        } catch (e) {}
+      } else {
+        try {
+          currentUser = await apiFetch('/api/auth/me');
+        } catch (e) {
+          localStorage.removeItem('tok_user_token');
+          authToken = '';
+          return initApp();
+        }
+      }
+
+      updateUserUI();
+      await loadCurriculum();
+      initSocket();
+    }
+
+    function updateUserUI() {
+      if (!currentUser) return;
+      document.getElementById('u-name').innerText = currentUser.ten_hien_thi;
+      document.getElementById('u-rank').innerHTML = `<span>⚡ ${currentUser.danh_hieu}</span>`;
+      document.getElementById('footer-streak').innerText = `🔥 ${currentUser.chuoi_streak_ngay}`;
+      document.getElementById('footer-coins').innerText = `${currentUser.xu_tri_thuc} 🪙`;
+
+      // Hub UI
+      document.getElementById('hub-user-name').innerText = currentUser.ten_hien_thi;
+      document.getElementById('hub-streak-val').innerText = currentUser.chuoi_streak_ngay;
+      document.getElementById('hub-exp-val').innerText = currentUser.tong_diem_kinh_nghiem;
+      document.getElementById('hub-coins-val').innerText = `${currentUser.xu_tri_thuc} 🪙`;
+      document.getElementById('hub-rank-badge').innerText = `⚡ ${currentUser.danh_hieu}`;
+
+      if (currentUser.thu_cung_dang_dung) {
+        document.getElementById('footer-pet-name').innerText = currentUser.thu_cung_dang_dung.ten_thu_cung;
+        document.getElementById('hub-pet-name').innerText = currentUser.thu_cung_dang_dung.ten_thu_cung;
+      }
+
+      // Show admin link if admin
+      if (currentUser.vai_tro === 'QUAN_TRI_VIEN') {
+        document.getElementById('admin-nav-link').classList.remove('hidden');
+      } else {
+        document.getElementById('admin-nav-link').classList.add('hidden');
+      }
+    }
+
+    async function loadCurriculum() {
+      try {
+        currentCourse = await apiFetch('/api/courses/co-so-du-lieu');
+        renderRoadmap();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    function renderRoadmap() {
+      if (!currentCourse) return;
+      const { mon_hoc, cac_chuong } = currentCourse;
+
+      // Update progress bar
+      document.getElementById('topbar-progress-txt').innerText = `Tiến độ ${mon_hoc.phan_tram_hoan_thanh}%`;
+      document.getElementById('topbar-progress-bar').style.width = `${mon_hoc.phan_tram_hoan_thanh}%`;
+
+      const container = document.getElementById('saga-nodes-container');
+      container.innerHTML = '';
+
+      cac_chuong.forEach((ch, chIdx) => {
+        const chDiv = document.createElement('div');
+        chDiv.className = 'p-6 rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-md space-y-6';
+
+        chDiv.innerHTML = `
+          <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+            <div>
+              <span class="text-[10px] font-mono font-bold text-emerald-500 uppercase tracking-wider">CHƯƠNG ${chIdx + 1}</span>
+              <h3 class="text-base font-bold text-[var(--foreground)]">${ch.tieu_de}</h3>
+            </div>
+            <span class="text-xs font-mono text-[var(--muted)]">${ch.cac_moc.length} Mốc</span>
+          </div>
+
+          <div class="flex flex-col items-center gap-4 py-2">
+            ${ch.cac_moc.map((m, mIdx) => {
+              const isLocked = m.trang_thai === 'KHOA';
+              const isDone = m.trang_thai === 'HOAN_THANH';
+              const isBoss = m.loai_moc === 'THU_THACH_BOSS';
+              const isTheory = m.loai_moc === 'LY_THUYET';
+
+              let icon = isDone ? '✓' : (isLocked ? '🔒' : (isBoss ? '👑' : (isTheory ? '📖' : '❓')));
+              let nodeClass = 'w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-lg cursor-pointer transition transform hover:scale-105 shadow-md ';
+
+              if (isDone) {
+                nodeClass += 'bg-emerald-500 text-slate-950 font-black shadow-emerald-500/20';
+              } else if (isLocked) {
+                nodeClass += 'bg-[var(--background)] text-[var(--muted)] border border-[var(--border)] cursor-not-allowed opacity-50';
+              } else {
+                // Active / Open
+                if (isBoss) {
+                  nodeClass += 'bg-rose-500 text-white font-black boss-active';
+                } else {
+                  nodeClass += 'bg-emerald-500/20 border-2 border-emerald-500 text-emerald-400 font-black node-active';
+                }
+              }
+
+              return `
+                <div class="flex flex-col items-center text-center">
+                  <div onclick="handleNodeClick('${m.ma_moc}')" class="${nodeClass}">
+                    ${icon}
+                  </div>
+                  <span class="text-[11px] font-semibold mt-1.5 max-w-[200px] truncate text-[var(--foreground)]">${m.tieu_de}</span>
+                  <span class="text-[10px] font-mono text-amber-500 font-bold">+${m.xu_thuong}🪙 (+${m.diem_thuong} EXP)</span>
+                </div>
+                ${mIdx < ch.cac_moc.length - 1 ? '<div class="w-1 h-6 bg-[var(--border)] rounded-full"></div>' : ''}
+              `;
+            }).join('')}
+          </div>
+        `;
+
+        container.appendChild(chDiv);
+      });
+    }
+
+    async function handleNodeClick(ma_moc) {
+      playSound('click');
+      try {
+        const content = await apiFetch(`/api/checkpoints/${ma_moc}`);
+        activeCheckpoint = content;
+
+        if (content.loai_moc === 'LY_THUYET') {
+          openTheoryModal(content);
+        } else {
+          openQuizModal(content);
+        }
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    // THEORY MODAL
+    function openTheoryModal(content) {
+      document.getElementById('theory-modal-title').innerText = content.tieu_de;
+      const body = document.getElementById('theory-modal-body');
+      
+      // Simple markdown parser
+      let html = content.noi_dung_ly_thuyet
+        .replace(/### (.*?)\n/g, '<h4 class="font-bold text-sm text-emerald-400 mt-3 mb-1">$1</h4>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-amber-400 font-semibold">$1</strong>')
+        .replace(/- (.*?)\n/g, '<li class="ml-4 list-disc text-[var(--muted)]">$1</li>');
+
+      body.innerHTML = html;
+      document.getElementById('modal-theory').classList.remove('hidden');
+    }
+
+    function closeTheoryModal() {
+      document.getElementById('modal-theory').classList.add('hidden');
+    }
+
+    async function confirmCompleteTheory() {
+      if (!activeCheckpoint) return;
+      try {
+        const res = await apiFetch(`/api/checkpoints/${activeCheckpoint.ma_moc}/complete-theory`, { method: 'POST' });
+        playSound('win');
+        playSound('coin');
+        showToast(`Tuyệt vời! Bạn nhận được +${res.diem_thuong} EXP và +${res.xu_thuong} Xu Tri Thức!`);
+        closeTheoryModal();
+        currentUser = await apiFetch('/api/auth/me');
+        updateUserUI();
+        await loadCurriculum();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    // QUIZ MODAL
+    function openQuizModal(content) {
+      document.getElementById('quiz-modal-title').innerText = content.tieu_de;
+      document.getElementById('quiz-badge-type').innerText = content.loai_moc === 'THU_THACH_BOSS' ? '👑 ĐẠI CHIẾN BOSS' : 'MỐC TRẮC NGHIỆM';
+      document.getElementById('quiz-modal-body').classList.remove('hidden');
+      document.getElementById('quiz-review-section').classList.add('hidden');
+      document.getElementById('btn-submit-quiz').classList.remove('hidden');
+
+      activeQuizQuestions = content.danh_sach_cau_hoi;
+      const body = document.getElementById('quiz-modal-body');
+
+      body.innerHTML = activeQuizQuestions.map((q, qIdx) => `
+        <div class="p-4 rounded-2xl bg-[var(--background)] border border-[var(--border)] space-y-3">
+          <p class="font-bold text-xs sm:text-sm text-[var(--foreground)]">
+            <span class="text-purple-400 font-mono">Câu ${qIdx + 1}:</span> ${q.noi_dung}
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+            ${q.dap_an.map((opt, optIdx) => `
+              <label class="flex items-center gap-2.5 p-2.5 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:border-purple-500/50 cursor-pointer transition">
+                <input type="radio" name="q_${q.ma_cau_hoi}" value="${optIdx}" class="text-purple-500 focus:ring-0">
+                <span class="font-medium">${['A', 'B', 'C', 'D'][optIdx]}. ${opt}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+
+      document.getElementById('modal-quiz').classList.remove('hidden');
+    }
+
+    function closeQuizModal() {
+      document.getElementById('modal-quiz').classList.add('hidden');
+    }
+
+    async function submitActiveQuiz() {
+      if (!activeCheckpoint) return;
+      const submissions = [];
+
+      for (const q of activeQuizQuestions) {
+        const selected = document.querySelector(`input[name="q_${q.ma_cau_hoi}"]:checked`);
+        if (!selected) {
+          showToast(`Vui lòng trả lời đầy đủ tất cả câu hỏi trước khi nộp.`, true);
+          return;
+        }
+        submissions.push({
+          ma_cau_hoi: q.ma_cau_hoi,
+          vi_tri_dap_an_chon: parseInt(selected.value, 10)
+        });
+      }
+
+      try {
+        const result = await apiFetch(`/api/checkpoints/${activeCheckpoint.ma_moc}/submit`, {
+          method: 'POST',
+          body: JSON.stringify({ cau_tra_loi: submissions })
+        });
+
+        if (result.isPassed) {
+          playSound('win');
+          playSound('coin');
+          showToast(`Chúc mừng! Bạn đạt ${result.scorePercentage}% (+${result.awardedCoins} Xu, +${result.awardedExp} EXP)`);
+        } else {
+          playSound('hit');
+          showToast(`Chưa đạt điểm qua mốc (${result.scorePercentage}%). Hãy xem lại lời giải và thử lại!`, true);
+        }
+
+        // Show review explanations
+        document.getElementById('quiz-modal-body').classList.add('hidden');
+        document.getElementById('btn-submit-quiz').classList.add('hidden');
+        const reviewSec = document.getElementById('quiz-review-section');
+        reviewSec.classList.remove('hidden');
+
+        reviewSec.innerHTML = `
+          <div class="p-4 rounded-2xl ${result.isPassed ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-rose-500/10 border-rose-500/30 text-rose-400'} border text-center space-y-1">
+            <h4 class="text-lg font-bold">${result.isPassed ? '🎉 VƯỢT MỐC THÀNH CÔNG!' : '💔 CHƯA ĐẠT ĐIỂM YÊU CẦU'}</h4>
+            <p class="font-mono text-xs">Điểm số: ${result.scorePercentage}% (${result.correctAnswersCount}/${result.totalQuestions} câu đúng)</p>
+          </div>
+          <div class="space-y-3">
+            ${result.questionResults.map((qr, i) => `
+              <div class="p-3 rounded-xl bg-[var(--background)] border ${qr.isCorrect ? 'border-emerald-500/30' : 'border-rose-500/30'} space-y-1.5">
+                <div class="flex items-center justify-between text-xs font-bold">
+                  <span>Câu ${i + 1}: ${qr.isCorrect ? '🟢 Đúng' : '🔴 Sai'}</span>
+                  <span class="font-mono text-emerald-400">Đáp án đúng: ${['A', 'B', 'C', 'D'][qr.correctAnswerIndex]}</span>
+                </div>
+                <p class="text-[11px] text-[var(--muted)]">${qr.explanation || ''}</p>
+              </div>
+            `).join('')}
+          </div>
+        `;
+
+        currentUser = await apiFetch('/api/auth/me');
+        updateUserUI();
+        await loadCurriculum();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    // SOCKET & ARENA 1v1 REAL-TIME COMBAT
+    let activeMatch = null;
+    let battleRound = 1;
+    let roundTimer = null;
+    let roundTimeLeft = 10;
+    let hasAnsweredCurrentRound = false;
+
+    function initSocket() {
+      if (socket) return;
+      socket = io({ auth: { token: authToken } });
+
+      socket.on('queue_waiting', (data) => {
+        document.getElementById('arena-lobby').classList.add('hidden');
+        document.getElementById('arena-searching').classList.remove('hidden');
+      });
+
+      socket.on('queue_cancelled', () => {
+        document.getElementById('arena-searching').classList.add('hidden');
+        document.getElementById('arena-lobby').classList.remove('hidden');
+      });
+
+      socket.on('match_found', (data) => {
+        playSound('win');
+        document.getElementById('arena-searching').classList.add('hidden');
+        document.getElementById('arena-vs-countdown').classList.remove('hidden');
+
+        activeMatch = data;
+        const p1 = data.nguoi_choi[0];
+        const p2 = data.nguoi_choi[1];
+
+        document.getElementById('vs-p1-name').innerText = p1.ten_hien_thi;
+        document.getElementById('vs-p2-name').innerText = p2.ten_hien_thi;
+
+        let count = 3;
+        const countdownEl = document.getElementById('vs-countdown-number');
+        countdownEl.innerText = count;
+
+        const interval = setInterval(() => {
+          count--;
+          if (count > 0) {
+            countdownEl.innerText = count;
+            playSound('click');
+          } else {
+            clearInterval(interval);
+            startBattleScreen(data.ma_tran);
+          }
+        }, 1000);
+      });
+
+      socket.on('turn_resolved', (data) => {
+        handleTurnResolved(data);
+      });
+
+      socket.on('turn_feedback', (data) => {
+        const fbEl = document.getElementById('battle-turn-feedback');
+        fbEl.classList.remove('hidden');
+        document.getElementById('battle-fb-explain').innerText = data.giai_thich || '';
+      });
+
+      socket.on('match_ended', (data) => {
+        clearInterval(roundTimer);
+        setTimeout(() => {
+          showMatchResult(data);
+        }, 1200);
+      });
+    }
+
+    function startMatchmaking() {
+      playSound('click');
+      if (!socket) initSocket();
+      socket.emit('join_queue', { ma_mon: 'mon_csdl' });
+    }
+
+    function cancelMatchmaking() {
+      if (socket) socket.emit('leave_queue');
+      document.getElementById('arena-searching').classList.add('hidden');
+      document.getElementById('arena-lobby').classList.remove('hidden');
+    }
+
+    async function startBattleScreen(matchId) {
+      document.getElementById('arena-vs-countdown').classList.add('hidden');
+      document.getElementById('arena-battle').classList.remove('hidden');
+
+      const matchState = await apiFetch(`/api/arena/${matchId}`);
+      activeMatch = matchState;
+      battleRound = 1;
+      renderBattleRound();
+    }
+
+    function renderBattleRound() {
+      hasAnsweredCurrentRound = false;
+      document.getElementById('battle-turn-feedback').classList.add('hidden');
+      const q = activeMatch.cau_hoi[battleRound - 1];
+      if (!q) return;
+
+      document.getElementById('battle-round-badge').innerText = `Câu ${battleRound} / 5`;
+      document.getElementById('battle-q-content').innerText = q.noi_dung;
+
+      const optsContainer = document.getElementById('battle-options-container');
+      optsContainer.innerHTML = q.dap_an.map((opt, i) => `
+        <button onclick="submitBattleAnswer(${i})" class="p-3.5 rounded-2xl border border-[var(--border)] bg-[var(--background)] hover:border-rose-500/50 hover:bg-rose-500/10 text-left font-medium transition cursor-pointer flex items-center gap-2">
+          <span class="w-6 h-6 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center justify-center font-bold text-xs text-rose-400 shrink-0 font-mono">${['A', 'B', 'C', 'D'][i]}</span>
+          <span class="leading-tight">${opt}</span>
+        </button>
+      `).join('');
+
+      // 10s Timer
+      roundTimeLeft = 10;
+      document.getElementById('battle-timer-text').innerText = `⏱️ ${roundTimeLeft}s`;
+      clearInterval(roundTimer);
+      roundTimer = setInterval(() => {
+        roundTimeLeft--;
+        document.getElementById('battle-timer-text').innerText = `⏱️ ${roundTimeLeft}s`;
+        if (roundTimeLeft <= 0) {
+          clearInterval(roundTimer);
+          if (!hasAnsweredCurrentRound) {
+            submitBattleAnswer(-1); // Timed out
+          }
+        }
+      }, 1000);
+    }
+
+    function submitBattleAnswer(choiceIdx) {
+      if (hasAnsweredCurrentRound) return;
+      hasAnsweredCurrentRound = true;
+      playSound('click');
+
+      const elapsed = 10 - roundTimeLeft;
+      socket.emit('submit_answer', {
+        ma_tran: activeMatch.ma_tran,
+        thu_tu_cau: battleRound,
+        vi_tri_dap_an_chon: choiceIdx,
+        thoi_gian_giay: Math.max(1, elapsed)
+      });
+    }
+
+    function handleTurnResolved(data) {
+      const isMe = data.nguoi_tra_loi === currentUser.ma_nguoi_dung;
+      const targetBox = isMe ? document.getElementById('box-p2') : document.getElementById('box-p1');
+      const attackerSprite = isMe ? document.getElementById('pet-sprite-p1') : document.getElementById('pet-sprite-p2');
+
+      if (data.sat_thuong_gay_ra > 0) {
+        playSound('hit');
+        attackerSprite.classList.add(isMe ? 'do-lunge' : 'do-lungeL');
+        targetBox.classList.add('do-shake');
+
+        // Show damage floater
+        const floatEl = isMe ? document.getElementById('damage-float-p2') : document.getElementById('damage-float-p1');
+        floatEl.innerText = `-${data.sat_thuong_gay_ra}`;
+        floatEl.classList.remove('hidden');
+
+        setTimeout(() => {
+          attackerSprite.classList.remove('do-lunge', 'do-lungeL');
+          targetBox.classList.remove('do-shake');
+          floatEl.classList.add('hidden');
+        }, 800);
+      }
+
+      // Update HP Bars
+      const p1 = data.trang_thai_tran.nguoi_choi[0];
+      const p2 = data.trang_thai_tran.nguoi_choi[1];
+
+      document.getElementById('battle-p1-hp-text').innerText = `${p1.mau_hien_tai}/${p1.mau_toi_da} HP`;
+      document.getElementById('battle-p1-hp-bar').style.width = `${Math.max(0, p1.mau_hien_tai)}%`;
+
+      document.getElementById('battle-p2-hp-text').innerText = `${p2.mau_hien_tai}/${p2.mau_toi_da} HP`;
+      document.getElementById('battle-p2-hp-bar').style.width = `${Math.max(0, p2.mau_hien_tai)}%`;
+
+      // Next round if not ended
+      if (data.trang_thai_tran.trang_thai !== 'KET_THUC') {
+        setTimeout(() => {
+          battleRound++;
+          if (battleRound <= 5) {
+            renderBattleRound();
+          }
+        }, 2200);
+      }
+    }
+
+    function showMatchResult(data) {
+      document.getElementById('arena-battle').classList.add('hidden');
+      document.getElementById('arena-result').classList.remove('hidden');
+
+      const isWinner = data.nguoi_thang_cuoc === currentUser.ma_nguoi_dung;
+      if (isWinner) {
+        playSound('win');
+        document.getElementById('result-title').innerText = 'K.O. VICTORY!';
+        document.getElementById('result-title').className = 'text-3xl font-black text-amber-400';
+        document.getElementById('result-icon').innerText = '🏆';
+        document.getElementById('result-coins').innerText = '+35 🪙';
+        document.getElementById('result-exp').innerText = '+50 EXP';
+      } else {
+        playSound('hit');
+        document.getElementById('result-title').innerText = 'THẤT BẠI!';
+        document.getElementById('result-title').className = 'text-3xl font-black text-rose-500';
+        document.getElementById('result-icon').innerText = '💀';
+        document.getElementById('result-coins').innerText = '+10 🪙';
+        document.getElementById('result-exp').innerText = '+15 EXP';
+      }
+
+      // Refresh balance
+      apiFetch('/api/auth/me').then(u => {
+        currentUser = u;
+        updateUserUI();
+      });
+    }
+
+    function resetArena() {
+      document.getElementById('arena-result').classList.add('hidden');
+      document.getElementById('arena-battle').classList.add('hidden');
+      document.getElementById('arena-lobby').classList.remove('hidden');
+    }
+
+    // PET SANCTUARY & SHOP
+    async function loadPetsView() {
+      try {
+        const pets = await apiFetch('/api/pets');
+        const container = document.getElementById('pets-list-container');
+        container.innerHTML = pets.map(p => `
+          <div class="p-5 rounded-2xl bg-[var(--card)] border ${p.dang_kich_hoat ? 'border-emerald-500 shadow-emerald-500/20 shadow-lg' : 'border-[var(--border)]'} text-center space-y-3">
+            <div class="text-5xl">${p.ma_thu_cung === 'pet_sparky' ? '🐉' : p.ma_thu_cung === 'pet_kitsune' ? '🦊' : '🗿'}</div>
+            <h4 class="font-bold text-sm text-[var(--foreground)]">${p.ten_thu_cung}</h4>
+            <p class="text-[11px] text-[var(--muted)] leading-tight">${p.mo_ta || ''}</p>
+            <span class="text-xs font-mono font-bold text-emerald-400 block">+${Math.round((p.he_so_sat_thuong - 1) * 100)}% Sát thương</span>
+            
+            ${p.dang_kich_hoat ? `
+              <span class="inline-block px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold font-mono">ĐANG XUẤT TRẬN</span>
+            ` : (p.da_so_huu ? `
+              <button onclick="equipPet('${p.ma_thu_cung}')" class="w-full py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-xs transition cursor-pointer">
+                Xuất Trận
+              </button>
+            ` : `
+              <span class="text-xs text-[var(--muted)]">Chưa sở hữu (mua tại Shop)</span>
+            `)}
+          </div>
+        `).join('');
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function equipPet(petId) {
+      playSound('click');
+      try {
+        await apiFetch(`/api/pets/${petId}/equip`, { method: 'POST' });
+        showToast('Đã kích hoạt linh thú xuất trận!');
+        currentUser = await apiFetch('/api/auth/me');
+        updateUserUI();
+        loadPetsView();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function loadShopView() {
+      try {
+        const pets = await apiFetch('/api/pets');
+        const container = document.getElementById('shop-list-container');
+        container.innerHTML = pets.map(p => `
+          <div class="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] text-center space-y-3">
+            <div class="text-5xl">${p.ma_thu_cung === 'pet_sparky' ? '🐉' : p.ma_thu_cung === 'pet_kitsune' ? '🦊' : '🗿'}</div>
+            <h4 class="font-bold text-sm text-[var(--foreground)]">${p.ten_thu_cung}</h4>
+            <p class="text-[11px] text-[var(--muted)] leading-tight">${p.mo_ta || ''}</p>
+            <div class="text-base font-bold font-mono text-amber-400">${p.gia_xu} 🪙</div>
+
+            ${p.da_so_huu ? `
+              <span class="inline-block px-3 py-1 rounded-full bg-[var(--background)] text-emerald-400 text-xs font-bold border border-emerald-500/30">ĐÃ SỞ HỮU</span>
+            ` : `
+              <button onclick="buyPet('${p.ma_thu_cung}')" class="w-full py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md transition cursor-pointer">
+                Mua Linh Thú
+              </button>
+            `}
+          </div>
+        `).join('');
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    async function buyPet(petId) {
+      playSound('click');
+      try {
+        await apiFetch(`/api/pets/${petId}/buy`, { method: 'POST' });
+        playSound('coin');
+        showToast('Mua linh thú thành công!');
+        currentUser = await apiFetch('/api/auth/me');
+        updateUserUI();
+        loadShopView();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    // AUTH / LOGIN
+    function openAuthModal() {
+      document.getElementById('modal-auth').classList.remove('hidden');
+    }
+    function closeAuthModal() {
+      document.getElementById('modal-auth').classList.add('hidden');
+    }
+
+    async function quickLogin(user, pass) {
+      document.getElementById('auth-input-user').value = user;
+      document.getElementById('auth-input-pass').value = pass;
+      document.getElementById('form-user-login').requestSubmit();
+    }
+
+    async function handleUserLogin(e) {
+      e.preventDefault();
+      const user = document.getElementById('auth-input-user').value.trim();
+      const pass = document.getElementById('auth-input-pass').value;
+
+      try {
+        const data = await apiFetch('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ ten_dang_nhap: user, mat_khau: pass })
+        });
+        authToken = data.token;
+        localStorage.setItem('tok_user_token', authToken);
+        currentUser = data.nguoi_dung;
+        updateUserUI();
+        closeAuthModal();
+        showToast(`Đăng nhập thành công! Chào ${currentUser.ten_hien_thi}`);
+        await loadCurriculum();
+        if (socket) {
+          socket.disconnect();
+          socket = null;
+          initSocket();
+        }
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    function handleUserPillClick() {
+      openAuthModal();
+    }
+
+    // NAVIGATION
+    function navTo(tab) {
+      playSound('click');
+      const tabs = ['saga', 'hub', 'arena', 'pets', 'shop'];
+      tabs.forEach(t => {
+        document.getElementById(`view-${t}`).classList.add('hidden');
+        const btn = document.getElementById(`nav-${t}`);
+        if (btn) btn.className = 'w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition';
+      });
+
+      document.getElementById(`view-${tab}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`nav-${tab}`);
+      if (activeBtn) activeBtn.className = 'w-full text-left px-3 py-2.5 rounded-xl flex items-center justify-between bg-[var(--background)] text-emerald-500 font-semibold border border-[var(--border)] shadow-xs transition';
+
+      if (tab === 'pets') loadPetsView();
+      if (tab === 'shop') loadShopView();
+      if (tab === 'saga') renderRoadmap();
+    }
+
+    // AUDIO & THEME
+    function toggleAudio() {
+      audioEnabled = !audioEnabled;
+      document.getElementById('audio-icon').innerText = audioEnabled ? '🔊' : '🔇';
+      showToast(audioEnabled ? 'Đã bật âm thanh' : 'Đã tắt âm thanh');
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      document.getElementById('theme-icon').innerText = isDark ? '🌙' : '☀️';
+    }
+
+    // Start App
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
