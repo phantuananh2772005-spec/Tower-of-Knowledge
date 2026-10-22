@@ -4198,7 +4198,7 @@
       courseData.cac_chuong.forEach(ch => {
         (ch.cac_moc || []).forEach(m => {
           totalMocs++;
-          if (m.trang_thai === 'HOAN_THANH') completedMocs++;
+          if (m.trang_thai === 'DA_HOAN_THANH' || m.trang_thai === 'HOAN_THANH') completedMocs++;
         });
       });
 
@@ -4810,10 +4810,17 @@
           })
         });
         const res = await resp.json();
+        if (!res.success) {
+          showToast(res.error?.message || 'Lỗi khi lưu kết quả bài tập!', 'error');
+          return;
+        }
 
-        const earnedCoins = res.data?.earnedCoins || 15;
-        const earnedExp = res.data?.earnedExp || 25;
+        const earnedCoins = typeof res.data?.earnedCoins === 'number' ? res.data.earnedCoins : 0;
+        const earnedExp = typeof res.data?.earnedExp === 'number' ? res.data.earnedExp : 0;
         const telemetry = res.data?.telemetry;
+
+        // Cập nhật ngay số dư xu và exp thật từ máy chủ
+        await refreshUserData();
 
         const congratsModal = document.getElementById('modal-moc-congrats');
         const titleEl = document.getElementById('congrats-moc-title');
@@ -5811,7 +5818,7 @@
 
           // Configure Complete button
           const btnComplete = document.getElementById('btn-complete-theory');
-          if (res.data.trang_thai === 'HOAN_THANH') {
+          if (res.data.trang_thai === 'DA_HOAN_THANH' || res.data.trang_thai === 'HOAN_THANH') {
             btnComplete.innerHTML = '<span>✓ Đã hoàn thành (Xem lại)</span>';
             btnComplete.disabled = false;
           } else {
