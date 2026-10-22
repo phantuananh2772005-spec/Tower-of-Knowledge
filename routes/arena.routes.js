@@ -24,17 +24,31 @@ router.get('/leaderboard', async (req, res) => {
     const db = require('../database/db');
     const { deriveRankTitle } = require('../core/rules/economy.rules');
     const users = await db.query(`
-      SELECT u.ma_nguoi_dung, u.ten_hien_thi, u.tong_diem_kinh_nghiem, u.chuoi_streak_ngay,
+      SELECT u.ma_nguoi_dung, u.ten_dang_nhap, u.ten_hien_thi, u.tong_diem_kinh_nghiem, u.chuoi_streak_ngay,
              p.ten_thu_cung, p.anh_dai_dien
       FROM nguoi_dung u
-      LEFT JOIN thu_cung_so_huu tcsh ON u.ma_nguoi_dung = tcsh.ma_nguoi_dung AND tcsh.dang_kich_hoat = $1
+      LEFT JOIN thu_cung_so_huu tcsh ON u.ma_nguoi_dung = tcsh.ma_nguoi_dung AND tcsh.dang_kich_hoat = 1
       LEFT JOIN thu_cung p ON tcsh.ma_thu_cung = p.ma_thu_cung
       WHERE u.vai_tro NOT IN ('QUAN_TRI_VIEN', 'HE_THONG')
         AND u.ten_hien_thi NOT LIKE N'%Đối thủ%'
         AND u.ten_hien_thi NOT LIKE N'%Người chơi%'
+        AND u.ten_dang_nhap NOT LIKE '%cron%'
+        AND u.ten_dang_nhap NOT LIKE '%test_%'
+        AND u.ten_hien_thi NOT LIKE N'%Tester%'
       ORDER BY u.tong_diem_kinh_nghiem DESC
-    `, [true]);
-    const enriched = users.map(u => ({
+    `);
+    
+    // Khử trùng lặp theo ma_nguoi_dung (đảm bảo mỗi người dùng chỉ xuất hiện đúng 1 lần)
+    const seen = new Set();
+    const uniqueUsers = [];
+    for (const u of (users || [])) {
+      if (!seen.has(u.ma_nguoi_dung)) {
+        seen.add(u.ma_nguoi_dung);
+        uniqueUsers.push(u);
+      }
+    }
+
+    const enriched = uniqueUsers.map(u => ({
       ...u,
       danh_hieu: deriveRankTitle(u.tong_diem_kinh_nghiem)
     }));

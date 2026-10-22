@@ -459,14 +459,20 @@
               <div id="arena-lobby-pet" class="w-24 h-24 flex items-center justify-center select-none group-hover:scale-105 transition">
                 <span class="pet-animated">🦉</span>
               </div>
-              <span id="arena-lobby-pet-name" class="text-[11px] font-bold text-emerald-600 mt-1">Rồng Nhỏ Sparky</span>
+              <div class="text-center mt-1 space-y-0.5">
+                <span class="user-display-name text-xs font-bold text-[var(--foreground)] block">Bạn</span>
+                <span id="arena-lobby-pet-name" class="text-[10px] font-semibold text-emerald-500 block">🐾 Rồng Nhỏ Sparky</span>
+              </div>
             </div>
             <span class="text-3xl text-[var(--muted-foreground)]">VS</span>
             <div class="flex flex-col items-center">
               <div class="w-24 h-24 flex items-center justify-center select-none">
                 <span class="pet-animated text-7xl" style="animation-delay:.5s">❓</span>
               </div>
-              <span class="text-[11px] font-bold text-[var(--muted-foreground)] mt-1">Đối thủ</span>
+              <div class="text-center mt-1 space-y-0.5">
+                <span class="text-xs font-bold text-[var(--foreground)] block">Đối thủ</span>
+                <span class="text-[10px] font-semibold text-[var(--muted-foreground)] block">⚔️ Đang chờ ghép</span>
+              </div>
             </div>
           </div>
           <div class="flex flex-wrap items-center justify-center gap-3">
@@ -532,13 +538,14 @@
       <!-- Arena: hai pet + HP -->
       <div class="grid grid-cols-2 gap-6 items-start">
         <div class="space-y-2">
-          <div class="flex items-center justify-between text-xs font-semibold"><span>Bạn</span><span id="my-hp-txt" class="font-mono">100</span></div>
+          <div class="flex items-center justify-between text-xs font-semibold"><span class="user-display-name">Bạn</span><span id="my-hp-txt" class="font-mono">100</span></div>
           <div class="w-full h-3 bg-[var(--border)] rounded-full overflow-hidden"><div id="my-hp" class="h-full bg-emerald-500 transition-all duration-500" style="width:100%"></div></div>
           <div class="relative h-24 flex items-center justify-center">
             <div id="my-pet" class="w-24 h-24 flex items-center justify-center select-none text-7xl">🦉</div>
             <span id="my-shield" class="hidden absolute text-5xl opacity-70">🛡️</span>
             <span id="my-float" class="absolute -top-1 text-lg font-extrabold text-rose-500 opacity-0"></span>
           </div>
+          <div id="my-battle-pet-name" class="text-[10px] text-center font-semibold text-emerald-500 mt-1">🐾 Rồng Nhỏ Sparky</div>
         </div>
         <div class="space-y-2">
           <div class="flex items-center justify-between text-xs font-semibold"><span id="op-name">Đối thủ</span><span id="op-hp-txt" class="font-mono">100</span></div>
@@ -547,6 +554,7 @@
             <span id="op-pet" class="text-7xl select-none" style="transform:scaleX(-1)">🐺</span>
             <span id="op-float" class="absolute -top-1 text-lg font-extrabold text-rose-500 opacity-0"></span>
           </div>
+          <div id="op-battle-pet-name" class="text-[10px] text-center font-semibold text-rose-400 mt-1">🐾 Sói Băng Tuyết</div>
         </div>
       </div>
 
@@ -1411,11 +1419,11 @@
             
             <!-- Thông tin Người chơi -->
             <div class="text-center space-y-0.5">
-              <span id="vs-my-pet-name" class="text-xs sm:text-sm font-bold text-emerald-400 block truncate max-w-[130px]">
-                Rồng Nhỏ Sparky
-              </span>
-              <span class="user-display-name text-xs font-bold text-white block truncate max-w-[130px]">
+              <span class="user-display-name text-xs sm:text-sm font-bold text-white block truncate max-w-[130px]">
                 Học viên
+              </span>
+              <span id="vs-my-pet-name" class="text-[11px] font-semibold text-emerald-400 block truncate max-w-[130px]">
+                🐾 Rồng Nhỏ Sparky
               </span>
               <span id="vs-my-rank" class="text-[10px] text-amber-400 font-semibold bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 rounded-full inline-block">
                 TẬP SỰ
@@ -1457,11 +1465,11 @@
 
             <!-- Thông tin Đối thủ -->
             <div class="text-center space-y-0.5">
-              <span id="vs-op-pet-name" class="text-xs sm:text-sm font-bold text-rose-400 block truncate max-w-[130px]">
-                Sói Băng Tuyết
-              </span>
-              <span id="vs-op-user-name" class="text-xs font-bold text-white block truncate max-w-[130px]">
+              <span id="vs-op-user-name" class="text-xs sm:text-sm font-bold text-white block truncate max-w-[130px]">
                 Quốc Bảo
+              </span>
+              <span id="vs-op-pet-name" class="text-[11px] font-semibold text-rose-400 block truncate max-w-[130px]">
+                🐾 Sói Băng Tuyết
               </span>
               <span id="vs-op-tier" class="text-[10px] text-amber-400 font-semibold bg-amber-500/20 border border-amber-500/30 px-2 py-0.5 rounded-full inline-block">
                 ⚡ Tinh thông II
@@ -1917,7 +1925,7 @@
         }
       }
       const arenaLobbyName = document.getElementById('arena-lobby-pet-name');
-      if (arenaLobbyName) arenaLobbyName.textContent = name;
+      if (arenaLobbyName) arenaLobbyName.textContent = '🐾 ' + name;
 
       // Dropdown chọn nhanh pet tại sảnh đấu trường
       const arenaPetSelect = document.getElementById('arena-pet-select');
@@ -1948,7 +1956,7 @@
         }
       }
       const vsMyPetName = document.getElementById('vs-my-pet-name');
-      if (vsMyPetName) vsMyPetName.textContent = name;
+      if (vsMyPetName) vsMyPetName.textContent = '🐾 ' + name;
 
       // 7. Cập nhật danh sách pet sở hữu
       renderOwnedPets();
@@ -2159,19 +2167,34 @@
     if (!RANK_DATA[s] || !RANK_DATA[s][type]) return [];
     let rows = RANK_DATA[s][type].map(r => r.slice());
 
-    const myDisplayName = (currentUserAccount?.displayName || '').trim().toLowerCase();
+    const myUserId = (currentUserAccount?.userId || '').trim();
     const myUsername = (currentUserAccount?.username || '').trim().toLowerCase();
 
+    // CHỈ nhận diện duy nhất 1 hàng là "Bạn" dựa trên ID người dùng chính xác (hoặc username)
+    // TUYỆT ĐỐI không so sánh theo displayName vì nhiều người chơi có thể đặt tên giống nhau
+    let foundMe = false;
     rows.forEach(r => {
-      const name = (r[0] || '').trim().toLowerCase();
-      const isMe = (r[0] === ME || (myDisplayName && name === myDisplayName) || (myUsername && name === myUsername));
+      const rowUserId = (r[4] || '').trim();
+      const rowUsername = (r[5] || '').trim().toLowerCase();
+      
+      const isMe = !foundMe && (
+        (myUserId && rowUserId && rowUserId === myUserId) ||
+        (myUsername && rowUsername && rowUsername === myUsername) ||
+        (!rowUserId && !rowUsername && r[0] === ME)
+      );
+
       if (isMe) {
+        foundMe = true;
         r[0] = ME;
         if (type === 'hang') {
           const myPts = (typeof overallPts === 'function' ? overallPts() : (currentUserAccount?.exp || 0));
           r[3] = String(myPts);
         }
+      } else if (r[0] === ME) {
+        // Tránh trùng lặp từ mock template cũ
+        r[0] = r[5] || 'Người chơi';
       }
+
       if (type === 'hang') {
         r[2] = tierOf(+r[3], s === 'all');
       }
@@ -2913,7 +2936,7 @@
     const opUserName = document.getElementById('vs-op-user-name');
     if (opUserName) opUserName.textContent = opponent.name || 'Chiến Binh Lữ Khách';
     const opPetName = document.getElementById('vs-op-pet-name');
-    if (opPetName) opPetName.textContent = opponent.petName || 'Linh vật đối thủ';
+    if (opPetName) opPetName.textContent = '🐾 ' + (opponent.petName || 'Linh vật đối thủ');
     const opTier = document.getElementById('vs-op-tier');
     if (opTier) opTier.textContent = opponent.tier || '🌱 Khởi nguyên I';
 
@@ -3075,6 +3098,10 @@
 
     document.getElementById('op-name').textContent = opName;
     document.getElementById('op-pet').textContent = opIcon;
+    const myBattlePetName = document.getElementById('my-battle-pet-name');
+    if (myBattlePetName) myBattlePetName.textContent = '🐾 ' + (currentEquippedPet?.name || 'Linh vật đồng hành');
+    const opBattlePetName = document.getElementById('op-battle-pet-name');
+    if (opBattlePetName) opBattlePetName.textContent = '🐾 ' + (opponent?.petName || 'Linh vật đối thủ');
     document.getElementById('b-result').classList.add('hidden');
     document.getElementById('my-shield').classList.add('hidden');
     const skillBtn = document.getElementById('b-skill');
@@ -6884,27 +6911,27 @@
             const isFox = (u.ten_thu_cung || '').includes('Kitsune') || (u.ten_thu_cung || '').includes('Cáo');
             const isDragon = (u.ten_thu_cung || '').includes('Sparky') || (u.ten_thu_cung || '').includes('Rồng');
             const icon = isFox ? '🦊' : (isDragon ? '🐉' : '🛡️');
-            return [u.ten_hien_thi, icon, u.danh_hieu || 'TẬP SỰ', String(u.tong_diem_kinh_nghiem || 0)];
+            return [u.ten_hien_thi, icon, u.danh_hieu || 'TẬP SỰ', String(u.tong_diem_kinh_nghiem || 0), u.ma_nguoi_dung, u.ten_dang_nhap];
           });
 
           const speedRows = res.data.map((u, i) => {
             const isFox = (u.ten_thu_cung || '').includes('Kitsune') || (u.ten_thu_cung || '').includes('Cáo');
             const icon = isFox ? '🦊' : '🐉';
             const speed = (2.2 + (i * 0.4)).toFixed(1) + 's';
-            return [u.ten_hien_thi, icon, '', speed];
+            return [u.ten_hien_thi, icon, '', speed, u.ma_nguoi_dung, u.ten_dang_nhap];
           });
 
           const accRows = res.data.map((u, i) => {
             const isFox = (u.ten_thu_cung || '').includes('Kitsune') || (u.ten_thu_cung || '').includes('Cáo');
             const icon = isFox ? '🦊' : '🐉';
             const acc = Math.max(65, 96 - (i * 3)) + '%';
-            return [u.ten_hien_thi, icon, '', acc];
+            return [u.ten_hien_thi, icon, '', acc, u.ma_nguoi_dung, u.ten_dang_nhap];
           });
 
           const streakRows = res.data.map(u => {
             const isFox = (u.ten_thu_cung || '').includes('Kitsune') || (u.ten_thu_cung || '').includes('Cáo');
             const icon = isFox ? '🦊' : '🐉';
-            return [u.ten_hien_thi, icon, '', String(u.chuoi_streak_ngay || 1)];
+            return [u.ten_hien_thi, icon, '', String(u.chuoi_streak_ngay || 1), u.ma_nguoi_dung, u.ten_dang_nhap];
           });
 
           RANK_DATA.all.hang = hangRows;
