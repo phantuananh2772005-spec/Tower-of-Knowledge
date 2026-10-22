@@ -46,12 +46,29 @@ async function runTest() {
     }, { timeout: 10000 });
     await new Promise(r => setTimeout(r, 600));
 
-    // 3. Verify KPI cards
+    // 3. Verify KPI cards (System-wide)
     const kpiSessions = await page.$eval('#log-stat-sessions', el => el.innerText.trim());
     const kpiAccuracy = await page.$eval('#log-stat-accuracy', el => el.innerText.trim());
     const kpiTime = await page.$eval('#log-stat-time', el => el.innerText.trim());
     const kpiLookups = await page.$eval('#log-stat-lookups', el => el.innerText.trim());
     console.log('3. Các thẻ KPI toàn hệ thống:', { kpiSessions, kpiAccuracy, kpiTime, kpiLookups });
+
+    // Test switching scope to specific user
+    console.log('3b. Kiểm tra chọn học viên trong dropdown phạm vi dữ liệu (#select-telemetry-user-scope)...');
+    await page.select('#select-telemetry-user-scope', 'usr_admin_001');
+    await new Promise(r => setTimeout(r, 400));
+    const userKpiSessions = await page.$eval('#log-stat-sessions', el => el.innerText.trim());
+    const scopeTitle = await page.$eval('#telemetry-scope-title', el => el.innerText.trim());
+    console.log('    Đã chuyển sang xem riêng:', { scopeTitle, userKpiSessions });
+    
+    // Capture user scope screenshot
+    const ssScopePath = path.join(ARTIFACT_DIR, 'admin_telemetry_user_scope.png');
+    await page.screenshot({ path: ssScopePath });
+    console.log('    Đã chụp ảnh màn hình chuyển đổi phạm vi:', ssScopePath);
+
+    // Switch back to ALL
+    await page.select('#select-telemetry-user-scope', 'ALL');
+    await new Promise(r => setTimeout(r, 300));
 
     // 4. Verify 10 recent activities table
     const recentRowsCount = await page.$$eval('#table-recent-activities tr', rows => rows.length);

@@ -458,27 +458,45 @@
           </button>
         </div>
 
-        <!-- System-wide Telemetry KPI Cards -->
+        <!-- Telemetry Scope Bar with User Selector -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-[var(--card)] border border-[var(--border)]">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
+              📊 PHẠM VI DỮ LIỆU
+            </span>
+            <span id="telemetry-scope-title" class="text-xs font-bold text-[var(--foreground)]">
+              Chỉ Số Toàn Hệ Thống (Cộng dồn tất cả học viên)
+            </span>
+          </div>
+          <div class="flex items-center gap-2">
+            <label for="select-telemetry-user-scope" class="text-[11px] text-[var(--muted)] font-medium">Xem chỉ số của:</label>
+            <select id="select-telemetry-user-scope" onchange="onScopeUserChanged(this.value)" class="px-3 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs text-[var(--foreground)] font-semibold focus:outline-none focus:border-amber-500 transition cursor-pointer max-w-[280px]">
+              <option value="ALL">🌐 Toàn Hệ Thống (Tất cả học viên)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Telemetry KPI Cards -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
             <span class="text-xs text-[var(--muted)] font-medium">⚡ Tổng Lượt Làm Bài</span>
             <div id="log-stat-sessions" class="text-2xl font-bold font-mono text-emerald-400 mt-1">--</div>
-            <span class="text-[10px] text-[var(--muted)] block mt-0.5">Tất cả phiên học & quiz</span>
+            <span id="log-stat-sessions-sub" class="text-[10px] text-[var(--muted)] block mt-0.5">Cộng dồn tất cả học viên</span>
           </div>
           <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
             <span class="text-xs text-[var(--muted)] font-medium">🎯 Tỷ Lệ Đúng Trung Bình</span>
             <div id="log-stat-accuracy" class="text-2xl font-bold font-mono text-amber-400 mt-1">--%</div>
-            <span class="text-[10px] text-[var(--muted)] block mt-0.5">Điểm chuẩn toàn hệ thống</span>
+            <span id="log-stat-accuracy-sub" class="text-[10px] text-[var(--muted)] block mt-0.5">Điểm chuẩn toàn hệ thống</span>
           </div>
           <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
             <span class="text-xs text-[var(--muted)] font-medium">⏱️ Thời Gian Học Tích Lũy</span>
             <div id="log-stat-time" class="text-2xl font-bold font-mono text-blue-400 mt-1">--</div>
-            <span class="text-[10px] text-[var(--muted)] block mt-0.5">Thời gian thực tế làm bài</span>
+            <span id="log-stat-time-sub" class="text-[10px] text-[var(--muted)] block mt-0.5">Tổng thời gian học thực tế</span>
           </div>
           <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
             <span class="text-xs text-[var(--muted)] font-medium">📖 Lượt Xem Giải Thích</span>
             <div id="log-stat-lookups" class="text-2xl font-bold font-mono text-purple-400 mt-1">--</div>
-            <span class="text-[10px] text-[var(--muted)] block mt-0.5">Tra cứu khi gặp câu khó</span>
+            <span id="log-stat-lookups-sub" class="text-[10px] text-[var(--muted)] block mt-0.5">Tra cứu khi gặp câu khó</span>
           </div>
         </div>
 
@@ -2392,21 +2410,17 @@
     let allLoadedLearners = [];
     let currentActiveLearnerTelemetry = null;
     let activeModalLearnerSubTab = 'sessions';
+    let systemTelemetrySummary = null;
 
     async function loadActivityLogs() {
       try {
         // 1. Fetch live activity feed & summary
         const feed = await apiFetch('/api/admin/learning-activity');
+        systemTelemetrySummary = feed.summary || null;
         
-        // Populate system telemetry KPIs
-        const elSessions = document.getElementById('log-stat-sessions');
-        const elAccuracy = document.getElementById('log-stat-accuracy');
-        const elTime = document.getElementById('log-stat-time');
-        const elLookups = document.getElementById('log-stat-lookups');
-        if (elSessions) elSessions.innerText = feed.summary ? feed.summary.total_sessions : 0;
-        if (elAccuracy) elAccuracy.innerText = feed.summary ? (feed.summary.avg_accuracy + '%') : '0%';
-        if (elTime) elTime.innerText = feed.summary ? (feed.summary.formatted_total_time || '0s') : '0s';
-        if (elLookups) elLookups.innerText = feed.summary ? feed.summary.total_lookups : 0;
+        // Populate system telemetry KPIs based on current scope selector
+        const scopeVal = document.getElementById('select-telemetry-user-scope')?.value || 'ALL';
+        onScopeUserChanged(scopeVal);
 
         // Render recent live activity table (10 items)
         const recentTbody = document.getElementById('table-recent-activities');
@@ -2470,9 +2484,60 @@
       try {
         const learners = await apiFetch('/api/admin/learners');
         allLoadedLearners = learners || [];
+        populateUserScopeSelect();
         filterLearnersTable();
       } catch (err) {
         console.warn('Could not load learners directory:', err.message);
+      }
+    }
+
+    function populateUserScopeSelect() {
+      const sel = document.getElementById('select-telemetry-user-scope');
+      if (!sel) return;
+      const currentVal = sel.value;
+      sel.innerHTML = '<option value="ALL">🌐 Toàn Hệ Thống (Tất cả học viên)</option>' +
+        allLoadedLearners.map(l => `<option value="${l.ma_nguoi_dung}">👤 ${escapeHtml(l.ten_hien_thi)} (@${escapeHtml(l.ten_dang_nhap)})</option>`).join('');
+      if (currentVal && (currentVal === 'ALL' || allLoadedLearners.some(l => l.ma_nguoi_dung === currentVal))) {
+        sel.value = currentVal;
+      }
+    }
+
+    function onScopeUserChanged(val) {
+      const titleEl = document.getElementById('telemetry-scope-title');
+      const elSessions = document.getElementById('log-stat-sessions');
+      const elAccuracy = document.getElementById('log-stat-accuracy');
+      const elTime = document.getElementById('log-stat-time');
+      const elLookups = document.getElementById('log-stat-lookups');
+      const subSessions = document.getElementById('log-stat-sessions-sub');
+      const subAccuracy = document.getElementById('log-stat-accuracy-sub');
+      const subTime = document.getElementById('log-stat-time-sub');
+      const subLookups = document.getElementById('log-stat-lookups-sub');
+
+      if (!val || val === 'ALL') {
+        if (titleEl) titleEl.innerText = 'Chỉ Số Toàn Hệ Thống (Cộng dồn tất cả học viên)';
+        if (systemTelemetrySummary) {
+          if (elSessions) elSessions.innerText = systemTelemetrySummary.total_sessions || 0;
+          if (elAccuracy) elAccuracy.innerText = (systemTelemetrySummary.avg_accuracy !== undefined ? systemTelemetrySummary.avg_accuracy : 0) + '%';
+          if (elTime) elTime.innerText = systemTelemetrySummary.formatted_total_time || '0s';
+          if (elLookups) elLookups.innerText = systemTelemetrySummary.total_lookups || 0;
+        }
+        if (subSessions) subSessions.innerText = 'Cộng dồn tất cả học viên';
+        if (subAccuracy) subAccuracy.innerText = 'Điểm chuẩn toàn hệ thống';
+        if (subTime) subTime.innerText = 'Tổng thời gian học thực tế';
+        if (subLookups) subLookups.innerText = 'Tra cứu khi gặp câu khó';
+      } else {
+        const learner = allLoadedLearners.find(l => l.ma_nguoi_dung === val);
+        if (learner) {
+          if (titleEl) titleEl.innerText = `Chỉ Số Riêng: ${learner.ten_hien_thi} (@${learner.ten_dang_nhap})`;
+          if (elSessions) elSessions.innerText = learner.tong_so_phien;
+          if (elAccuracy) elAccuracy.innerText = `${learner.ti_le_dung_tb}%`;
+          if (elTime) elTime.innerText = learner.thoi_gian_dinh_dang || '0s';
+          if (elLookups) elLookups.innerText = learner.tong_so_lan_tra_cuu;
+          if (subSessions) subSessions.innerText = `Của riêng @${learner.ten_dang_nhap}`;
+          if (subAccuracy) subAccuracy.innerText = `Tỷ lệ đúng của @${learner.ten_dang_nhap}`;
+          if (subTime) subTime.innerText = `Thời gian học của @${learner.ten_dang_nhap}`;
+          if (subLookups) subLookups.innerText = `Xem giải thích của @${learner.ten_dang_nhap}`;
+        }
       }
     }
 
