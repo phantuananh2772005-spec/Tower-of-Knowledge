@@ -241,11 +241,11 @@ function setupSmartBotTurns(io, roomName, matchId, humanUserId, botUserId) {
   let userCombo = 0;
 
   function scheduleNextBotTurn() {
-    if (currentQuestion > 5) return;
-
     // Fetch match state to compute dynamic adaptive parameters
     arenaService.getMatchState(matchId).then((matchState) => {
       if (matchState.trang_thai === 'KET_THUC') return;
+      const totalQuestions = matchState.cau_hoi?.length || 10;
+      if (currentQuestion > totalQuestions) return;
 
       const qInMatch = matchState.cau_hoi[currentQuestion - 1];
       if (!qInMatch) return;

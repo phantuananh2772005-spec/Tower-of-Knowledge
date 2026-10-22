@@ -15,6 +15,9 @@ async function testArenaCombatFlow() {
   if (match.nguoi_choi.length !== 2) {
     throw new Error(`Expected 2 players in match, but got ${match.nguoi_choi.length}`);
   }
+  if (match.cau_hoi.length !== 10) {
+    throw new Error(`Expected 10 questions in match session, but got ${match.cau_hoi.length}`);
+  }
 
   // 2. Submit Turn 1 for Player 1 (Correct answer, fast reaction 2.5s)
   const q1 = match.cau_hoi[0];

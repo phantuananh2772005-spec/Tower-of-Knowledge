@@ -46,9 +46,9 @@ async function createMatch(player1Id, player2Id, ma_mon = 'mon_csdl') {
     VALUES ($1, $2, $3, $4, 100, 100, 'CHUA_KET_THUC')
   `, [p2IdInMatch, ma_tran, player2Id, pet2 ? pet2.ma_thu_cung : null]);
 
-  // Pick 5 questions from course (must be 4-choice multiple choice questions with valid answers)
+  // Pick 10 questions from course (must be 4-choice multiple choice questions with valid answers)
   const questions = await db.query(`
-    SELECT TOP 5 q.ma_cau_hoi
+    SELECT TOP 10 q.ma_cau_hoi
     FROM cau_hoi q
     JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
     JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
@@ -58,9 +58,9 @@ async function createMatch(player1Id, player2Id, ma_mon = 'mon_csdl') {
 
   // If NEWID() returns fewer or not supported, pick all questions and shuffle
   let selectedQuestions = questions;
-  if (!selectedQuestions || selectedQuestions.length < 5) {
+  if (!selectedQuestions || selectedQuestions.length < 10) {
     const all = await db.query('SELECT ma_cau_hoi FROM cau_hoi WHERE vi_tri_dap_an_dung IS NOT NULL AND dap_an_a IS NOT NULL');
-    selectedQuestions = (all || []).slice(0, 5);
+    selectedQuestions = (all || []).slice(0, 10);
   }
 
   for (let i = 0; i < selectedQuestions.length; i++) {
@@ -191,7 +191,7 @@ async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap
   const { damage, isCritical } = calculateDamage({
     isCorrect,
     responseTimeSeconds: thoi_gian_giay,
-    baseDamage: 25,
+    baseDamage: 12,
     petDamageMultiplier: petMultiplier
   });
 
@@ -233,7 +233,7 @@ async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap
     matchEnded = true;
     await concludeMatch(ma_tran, player.ma_nguoi_dung, 'KO_VICTORY');
   } else {
-    // Check if this was question 5 and all players have answered
+    // Check if all questions in match have been answered by both players
     const totalTurns = await db.query(`
       SELECT count(*) as cnt
       FROM luot_tra_loi l
@@ -242,7 +242,9 @@ async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap
     `, [ma_tran]);
 
     const count = totalTurns && totalTurns[0] ? totalTurns[0].cnt : 0;
-    if (count >= 10) { // 5 questions * 2 players
+    const qCountRows = await db.query('SELECT count(*) as qcnt FROM cau_hoi_trong_tran WHERE ma_tran = $1', [ma_tran]);
+    const qCount = qCountRows && qCountRows[0] ? qCountRows[0].qcnt : 10;
+    if (count >= qCount * 2) {
       matchEnded = true;
       // Resolve by final scores
       await concludeMatchByScore(ma_tran);
@@ -281,8 +283,8 @@ async function concludeMatch(ma_tran, winnerUserId, reason = 'KO_VICTORY') {
   for (const p of players) {
     const isWinner = p.ma_nguoi_dung === winnerUserId;
     const ket_qua = isWinner ? 'THANG' : 'THUA';
-    const xuThuong = isWinner ? 35 : 10;
-    const expThuong = isWinner ? 50 : 15;
+    const xuThuong = isWinner ? 50 : 20;
+    const expThuong = isWinner ? 75 : 25;
 
     await db.execute(`
       UPDATE nguoi_choi_trong_tran
@@ -331,14 +333,14 @@ async function concludeMatchByScore(ma_tran) {
 
   for (const p of players) {
     let ket_qua = 'HOA';
-    let xuThuong = 15;
-    let expThuong = 20;
+    let xuThuong = 25;
+    let expThuong = 35;
 
     if (winnerId) {
       const isWinner = p.ma_nguoi_dung === winnerId;
       ket_qua = isWinner ? 'THANG' : 'THUA';
-      xuThuong = isWinner ? 35 : 10;
-      expThuong = isWinner ? 50 : 15;
+      xuThuong = isWinner ? 50 : 20;
+      expThuong = isWinner ? 75 : 25;
     }
 
     await db.execute(`

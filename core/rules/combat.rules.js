@@ -3,7 +3,7 @@
  * Thuần hàm: nhận dữ liệu, tính toán, trả kết quả.
  */
 
-const BASE_DAMAGE = 25; // Mỗi câu đúng gây 25 sát thương (HP tối đa = 100)
+const BASE_DAMAGE = 12; // Mỗi câu đúng gây 12 sát thương tiêu chuẩn (HP tối đa = 100, trận đấu 10-15 câu)
 
 /**
  * Tính toán lượng sát thương gây ra dựa trên tốc độ và tính đúng sai.
@@ -30,9 +30,9 @@ function calculateDamage(isCorrectOrObj, timeElapsedSec, timeLimitSec = 10) {
     return res;
   }
 
-  // Trả lời càng nhanh (dưới 50% thời gian) thì nhận thêm sát thương chí mạng (+5)
+  // Trả lời càng nhanh (dưới 50% thời gian) thì nhận thêm sát thương chí mạng (+3)
   const isCritical = timeElapsed <= timeLimit * 0.5;
-  const bonus = isCritical ? 5 : 0;
+  const bonus = isCritical ? 3 : 0;
   const finalDamage = Math.round((baseDmg + bonus) * petMult);
 
   const res = { damage: finalDamage, isCritical, raw: finalDamage };

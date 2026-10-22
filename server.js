@@ -49,7 +49,7 @@ app.get('/admin', (req, res) => {
 app.get('/health', (req, res) => {
   res.apiSuccess({
     status: 'HEALTHY',
-    version: 'b891a2e_v4',
+    version: 'd901b3a_v5',
     database: process.env.DATABASE_URL ? 'PostgreSQL' : 'MSSQL'
   });
 });

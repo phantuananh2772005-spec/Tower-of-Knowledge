@@ -554,9 +554,12 @@
       <div class="space-y-2">
         <div class="w-full h-1.5 bg-[var(--border)] rounded-full overflow-hidden"><div id="b-timer" class="h-full bg-amber-500" style="width:100%"></div></div>
         <div class="flex items-center justify-between text-[11px] text-[var(--muted-foreground)]">
-          <span id="b-combo" class="font-bold text-amber-500"></span>
+          <div class="flex items-center gap-2">
+            <span id="b-round-badge" class="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 font-bold border border-amber-500/20 text-[10px]">Hiệp 1/10</span>
+            <span id="b-combo" class="font-bold text-amber-500"></span>
+          </div>
           <span id="b-bot-status" class="text-[11px] font-medium text-[var(--muted-foreground)] transition-all">💭 Đối thủ đang đọc câu hỏi...</span>
-          <button id="b-skill" onclick="useShield()" class="px-3 py-1 rounded-lg border border-[var(--border)] font-semibold hover:bg-[var(--card)] transition">🛡️ Khiên</button>
+          <button id="b-skill" onclick="useShield()" class="px-3 py-1 rounded-lg border border-[var(--border)] font-semibold hover:bg-[var(--card)] transition cursor-pointer">🛡️ Khiên</button>
         </div>
       </div>
 
@@ -2534,7 +2537,7 @@
       updateBadgeCard('badge-card-dot-pha', compMocs >= 4, 'Đột Phá', '👑', 'Cần hoàn thành 4 mốc học');
     }
 
-  // Bộ câu hỏi dự phòng CSDL chuẩn học thuật cho Đấu trường 1v1
+  // Bộ câu hỏi dự phòng CSDL chuẩn học thuật cho Đấu trường 1v1 (15 câu toàn diện)
   const FALLBACK_BATTLE_QUESTIONS = [
     {
       q: 'Trong CSDL quan hệ, Khóa chính (Primary Key) có đặc điểm bắt buộc nào sau đây?',
@@ -2569,6 +2572,46 @@
     {
       q: 'Trong kiến trúc ANSI/SPARC 3 mức của DBMS, mức nào thể hiện góc nhìn cá nhân của từng nhóm người dùng?',
       o: ['Mức ngoài (External / View Level)', 'Mức quan niệm (Conceptual Level)', 'Mức trong (Internal Level)', 'Mức mạng (Network Level)'],
+      a: 0
+    },
+    {
+      q: 'Mục đích chính của việc tạo INDEX (Chỉ mục) trên một cột trong CSDL là gì?',
+      o: ['Tăng tốc độ truy vấn tìm kiếm dữ liệu', 'Giảm dung lượng lưu trữ của bảng', 'Tự động sao lưu dữ liệu', 'Khóa bảng khi có người truy cập'],
+      a: 0
+    },
+    {
+      q: 'Trong mô hình giao dịch CSDL (Transaction), chữ cái "A" trong từ viết tắt ACID đại diện cho tính chất nào?',
+      o: ['Atomicity (Tính nguyên tố / toàn vẹn)', 'Accuracy (Tính chính xác)', 'Availability (Tính sẵn sàng)', 'Authorization (Tính phân quyền)'],
+      a: 0
+    },
+    {
+      q: 'Hàm tổng hợp nào trong SQL dùng để đếm số lượng bản ghi thỏa mãn điều kiện lọc?',
+      o: ['COUNT()', 'SUM()', 'TOTAL()', 'NUMBER()'],
+      a: 0
+    },
+    {
+      q: 'Dạng chuẩn 2NF (Second Normal Form) khắc phục nhược điểm nào so với dạng chuẩn 1NF?',
+      o: ['Loại bỏ phụ thuộc hàm một phần vào khóa chính', 'Loại bỏ phụ thuộc bắc cầu', 'Loại bỏ giá trị đa trị', 'Loại bỏ khóa ngoại'],
+      a: 0
+    },
+    {
+      q: 'Dạng chuẩn 3NF (Third Normal Form) yêu cầu quan hệ không được chứa loại phụ thuộc nào?',
+      o: ['Phụ thuộc hàm bắc cầu (Transitive Dependency)', 'Phụ thuộc hàm đầy đủ', 'Phụ thuộc phản xạ', 'Phụ thuộc nối'],
+      a: 0
+    },
+    {
+      q: 'Lệnh nào trong SQL xóa toàn bộ dữ liệu trong bảng nhanh hơn và không ghi log từng dòng đơn lẻ?',
+      o: ['TRUNCATE TABLE', 'DELETE FROM', 'DROP TABLE', 'CLEAR TABLE'],
+      a: 0
+    },
+    {
+      q: 'Kết quả của phép LEFT OUTER JOIN sẽ giữ lại toàn bộ các dòng của bảng nào?',
+      o: ['Bảng bên trái (bảng đứng trước mệnh đề JOIN)', 'Bảng bên phải', 'Chỉ các dòng khớp ở cả 2 bảng', 'Tất cả các dòng của cả 2 bảng không điều kiện'],
+      a: 0
+    },
+    {
+      q: 'Khi một bảng B tham chiếu đến khóa chính của bảng A, bảng B được gọi là gì?',
+      o: ['Bảng con (Child table / Foreign table)', 'Bảng cha (Parent table)', 'Bảng tạm thời (Temporary table)', 'Bảng độc lập'],
       a: 0
     }
   ];
@@ -2873,6 +2916,10 @@
     B.bDone = false;
     B.locked = false;
 
+    const totalQ = B.list.length || 10;
+    const roundBadge = document.getElementById('b-round-badge');
+    if (roundBadge) roundBadge.textContent = `Hiệp ${B.qi}/${totalQ}`;
+
     const promptEl = document.getElementById('b-prompt');
     if (promptEl) promptEl.textContent = q.q;
 
@@ -2933,9 +2980,9 @@
   }
 
   function dmgFor(ms) {
-    if (ms < 3000) return 30; // Chí mạng
-    if (ms < 7000) return 25; // Chuẩn
-    return 15;                // Muộn
+    if (ms < 3000) return 15; // Chí mạng (dưới 3s)
+    if (ms < 7000) return 12; // Chuẩn (dưới 7s)
+    return 8;                 // Muộn (sau 7s)
   }
 
   function popFloat(id, txt) {
@@ -3087,15 +3134,15 @@
       if (win) {
         if (koBadge) koBadge.className = "inline-block bg-gradient-to-r from-fuchsia-600 via-rose-500 to-cyan-400 text-white px-6 py-2 rounded-2xl transform -rotate-2 shadow-xl border-2 border-white animate-bounce";
         if (koTitle) koTitle.textContent = "K.O. VICTORY!";
-        if (koSub) koSub.textContent = "COMBO STREAK · CHIẾN THẮNG TUYỆT ĐỐI! (+35 XU, +50 EXP)";
+        if (koSub) koSub.textContent = "COMBO STREAK · CHIẾN THẮNG TUYỆT ĐỐI! (+50 XU, +75 EXP)";
         if (audioSettings.outcome) playAdvancedSound('win-fanfare');
-        showToast('🎉 Chiến thắng Đấu trường! Bạn nhận được +35 Xu và +50 EXP.', 'success');
+        showToast('🎉 Chiến thắng Đấu trường 10 hiệp! Bạn nhận được +50 Xu và +75 EXP.', 'success');
       } else {
         if (koBadge) koBadge.className = "inline-block bg-gradient-to-r from-rose-700 to-red-600 text-white px-6 py-2 rounded-2xl transform rotate-2 shadow-xl border-2 border-white/80";
         if (koTitle) koTitle.textContent = "K.O. THẤT BẠI";
-        if (koSub) koSub.textContent = "BẠN ĐÃ BỊ HẠ GỤC · HÃY RÈN LUYỆN THÊM! (+10 XU THAM GIA)";
+        if (koSub) koSub.textContent = "BẠN ĐÃ BỊ HẠ GỤC · HÃY RÈN LUYỆN THÊM! (+20 XU THAM GIA)";
         if (audioSettings.outcome) playAdvancedSound('defeat-sad');
-        showToast('Bạn đã bị hạ gục. Nhận được +10 Xu khích lệ.', 'info');
+        showToast('Bạn đã bị hạ gục. Nhận được +20 Xu khích lệ.', 'info');
       }
 
       // Render pet in result
