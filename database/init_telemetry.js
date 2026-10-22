@@ -44,6 +44,16 @@ async function initTelemetrySchema() {
         tao_luc TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
     `);
+
+    // 3. Ensure phan_tram_hoan_thanh in tien_do_mon_hoc accepts floating-point percentages (e.g. 18.2%)
+    await db.execute(`
+      DO $$ 
+      BEGIN 
+        ALTER TABLE tien_do_mon_hoc ALTER COLUMN phan_tram_hoan_thanh TYPE REAL; 
+      EXCEPTION WHEN OTHERS THEN 
+        NULL; 
+      END $$;
+    `);
   } else {
     // MSSQL
     await db.execute(`
