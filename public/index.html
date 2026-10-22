@@ -555,6 +555,7 @@
         <div class="w-full h-1.5 bg-[var(--border)] rounded-full overflow-hidden"><div id="b-timer" class="h-full bg-amber-500" style="width:100%"></div></div>
         <div class="flex items-center justify-between text-[11px] text-[var(--muted-foreground)]">
           <span id="b-combo" class="font-bold text-amber-500"></span>
+          <span id="b-bot-status" class="text-[11px] font-medium text-[var(--muted-foreground)] transition-all">💭 Đối thủ đang đọc câu hỏi...</span>
           <button id="b-skill" onclick="useShield()" class="px-3 py-1 rounded-lg border border-[var(--border)] font-semibold hover:bg-[var(--card)] transition">🛡️ Khiên</button>
         </div>
       </div>
@@ -1801,8 +1802,7 @@
         showToast("🪙 Bạn không đủ Xu! Hãy học bài để nhận thêm Xu nhé.", "error");
         return;
       }
-      userCoins -= 10;
-      updateCoinsUI();
+      addCoins(-10, 'Cho thú cưng ăn');
       document.getElementById('pet-mood-txt').textContent = "Cực kỳ vui vẻ (100%)";
       document.getElementById('pet-mood-bar').style.width = "100%";
       showToast("🍎 Bạn đã cho pet ăn! Pet rất vui và hồi phục 100% năng lượng.");
@@ -2010,9 +2010,8 @@
         showToast(`🪙 Bạn còn thiếu ${price - userCoins} Xu! Hãy học bài để nhận thêm Xu.`, "error");
         return;
       }
-      userCoins -= price;
+      addCoins(-price, `Mua thú cưng ${name}`);
       ownedPets[petId] = true;
-      updateCoinsUI();
       const btn = document.getElementById(`btn-buy-${petId}`);
       if (btn) {
         btn.className = "shrink-0 py-1.5 px-2.5 rounded-lg bg-emerald-600/20 text-emerald-600 border border-emerald-500/40 font-bold text-[11px] transition cursor-pointer";
@@ -2028,8 +2027,7 @@
         showToast(`🪙 Bạn còn thiếu ${price - userCoins} Xu để mua ${itemName}!`, "error");
         return;
       }
-      userCoins -= price;
-      updateCoinsUI();
+      addCoins(-price, `Mua vật phẩm ${itemName}`);
       showToast(`🎉 Đã mua thành công ${itemName}!`);
     }
 
@@ -2536,6 +2534,90 @@
       updateBadgeCard('badge-card-dot-pha', compMocs >= 4, 'Đột Phá', '👑', 'Cần hoàn thành 4 mốc học');
     }
 
+  // Bộ câu hỏi dự phòng CSDL chuẩn học thuật cho Đấu trường 1v1
+  const FALLBACK_BATTLE_QUESTIONS = [
+    {
+      q: 'Trong CSDL quan hệ, Khóa chính (Primary Key) có đặc điểm bắt buộc nào sau đây?',
+      o: ['Có thể chứa giá trị NULL', 'Duy nhất (Unique) và không được NULL', 'Có thể trùng lặp nếu bảng dưới 100 dòng', 'Chỉ được là kiểu số nguyên'],
+      a: 1
+    },
+    {
+      q: 'Phép toán nào trong SQL dùng để kết hợp dữ liệu từ hai hay nhiều bảng dựa trên điều kiện quan hệ?',
+      o: ['JOIN', 'GROUP BY', 'DISTINCT', 'HAVING'],
+      a: 0
+    },
+    {
+      q: 'Dạng chuẩn 1NF (First Normal Form) yêu cầu mọi thuộc tính trong quan hệ phải thỏa mãn điều kiện gì?',
+      o: ['Không chứa khóa ngoại', 'Mỗi thuộc tính phải mang giá trị nguyên tử (Atomic)', 'Phụ thuộc hàm đầy đủ vào khóa chính', 'Không có phụ thuộc bắc cầu'],
+      a: 1
+    },
+    {
+      q: 'Mệnh đề nào trong SQL được dùng để lọc dữ liệu sau khi đã thực hiện gom nhóm (GROUP BY)?',
+      o: ['WHERE', 'HAVING', 'ORDER BY', 'LIMIT'],
+      a: 1
+    },
+    {
+      q: 'Ràng buộc toàn vẹn tham chiếu (Referential Integrity) được hiện thực hóa qua đối tượng nào?',
+      o: ['Foreign Key (Khóa ngoại)', 'Check Constraint', 'Default Constraint', 'Unique Index'],
+      a: 0
+    },
+    {
+      q: 'Mô hình Dữ liệu Quan hệ (Relational Model) ban đầu do ai đề xuất vào năm 1970?',
+      o: ['E.F. Codd (Edgar Frank Codd)', 'Alan Turing', 'Tim Berners-Lee', 'Linus Torvalds'],
+      a: 0
+    },
+    {
+      q: 'Trong kiến trúc ANSI/SPARC 3 mức của DBMS, mức nào thể hiện góc nhìn cá nhân của từng nhóm người dùng?',
+      o: ['Mức ngoài (External / View Level)', 'Mức quan niệm (Conceptual Level)', 'Mức trong (Internal Level)', 'Mức mạng (Network Level)'],
+      a: 0
+    }
+  ];
+
+  /**
+   * Công thức tính toán tốc độ phản xạ và độ chính xác thích ứng động của Bot (Dynamic Adaptive AI)
+   */
+  function calculateClientBotTurnParams({ questionContent, myHp, botHp, userCombo }) {
+    const qLen = (questionContent || '').length;
+    // Thời gian đọc đề tự nhiên theo độ dài câu hỏi (~22ms/ký tự)
+    const baseReadingTimeSec = Math.min(2.8, Math.max(1.2, 0.8 + qLen * 0.022));
+
+    const hpDiff = myHp - botHp; // Dương: người chơi đang dẫn trước; Âm: bot đang dẫn
+    let willAnswerCorrectly = true;
+    let thinkDurationSec = 2.0;
+    let isAggressive = false;
+
+    // TÌNH HUỐNG 1: Người chơi đang dẫn trước (hpDiff >= 20) hoặc người chơi có chuỗi Combo (userCombo >= 2)
+    // => Bot kích hoạt chế độ "RƯỢT ĐUỔI / GÂY ÁP LỰC": Trả lời nhanh chớp nhoáng, tỉ lệ đúng 85%
+    if (hpDiff >= 20 || userCombo >= 2) {
+      isAggressive = true;
+      willAnswerCorrectly = Math.random() < 0.85;
+      thinkDurationSec = 0.8 + Math.random() * 1.4; // 0.8s - 2.2s suy nghĩ
+    }
+    // TÌNH HUỐNG 2: Người chơi đang gặp nguy hiểm (myHp <= 35) hoặc Bot đang dẫn trước sâu (hpDiff <= -25)
+    // => Bot kích hoạt chế độ "DO DỰ / SƠ HỞ": Giảm tốc độ, tỉ lệ đúng 52%, tạo cơ hội Lội ngược dòng (Comeback)
+    else if (myHp <= 35 || hpDiff <= -25) {
+      willAnswerCorrectly = Math.random() < 0.52;
+      thinkDurationSec = 3.2 + Math.random() * 2.8; // 3.2s - 6.0s suy nghĩ
+    }
+    // TÌNH HUỐNG 3: Trận đấu cân bằng (-20 < hpDiff < 20)
+    // => Bot thi đấu chuẩn mực học viên: tỉ lệ đúng 72%, nhịp suy nghĩ trung bình
+    else {
+      willAnswerCorrectly = Math.random() < 0.72;
+      thinkDurationSec = 1.8 + Math.random() * 2.2;
+    }
+
+    const totalDelaySec = Math.min(8.8, Math.max(2.0, baseReadingTimeSec + thinkDurationSec));
+    const delayMs = Math.round(totalDelaySec * 1000);
+
+    return {
+      delayMs,
+      totalDelaySec,
+      willAnswerCorrectly,
+      isAggressive
+    };
+  }
+
+  // Khởi tạo và quản lý tìm trận 1v1
   async function startMatchmaking() {
     clearBattleTimers();
     if (matchmakingInterval) clearInterval(matchmakingInterval);
@@ -2552,86 +2634,110 @@
     const timerEl = document.getElementById('matchmaking-timer');
     const statusEl = document.getElementById('matchmaking-status');
     if (timerEl) timerEl.textContent = '00:00';
-    if (statusEl) statusEl.textContent = 'Đang tìm đối thủ cùng bậc rank...';
+    if (statusEl) statusEl.textContent = 'Đang tìm kiếm đối thủ trực tuyến cùng bậc rank...';
 
     matchmakingInterval = setInterval(() => {
       matchmakingSeconds++;
       const s = matchmakingSeconds < 10 ? '0' + matchmakingSeconds : matchmakingSeconds;
       if (timerEl) timerEl.textContent = '00:' + s;
-      if (matchmakingSeconds === 1 && statusEl) {
-        statusEl.textContent = 'Đang kết nối sàn đấu trực tuyến...';
+      if (matchmakingSeconds === 2 && statusEl) {
+        statusEl.textContent = 'Đang kết nối phòng chờ sàn đấu tri thức...';
+      } else if (matchmakingSeconds === 4 && statusEl) {
+        statusEl.textContent = 'Đang kích hoạt cơ chế bảo vệ ghép trận thông minh...';
       }
     }, 1000);
 
-    // Call real create-match endpoint
+    const subCode = document.getElementById('lobby-subject') ? document.getElementById('lobby-subject').value : 'csdl';
+    const maMon = subCode === 'ctdl' ? 'mon_ctdl' : 'mon_csdl';
     const token = localStorage.getItem('tok_token');
-    try {
-      // Pick random real opponent from leaderboard if available
-      let opponentId = 'usr_bot_003';
-      let opponentName = 'Chiến Binh Lữ Khách';
-      let opponentPetIcon = '🛡️';
 
-      if (RANK_DATA.all.hang && RANK_DATA.all.hang.length > 0) {
-        const candidates = RANK_DATA.all.hang.filter(r => r[0] !== ME && r[0] !== currentUserAccount.displayName);
-        if (candidates.length > 0) {
-          const chosen = candidates[Math.floor(Math.random() * candidates.length)];
-          opponentName = chosen[0];
-          opponentPetIcon = chosen[1];
-        }
-      }
+    // 1. Thử ghép nối qua Socket.IO thời gian thực (nếu socket đã kết nối)
+    let socketMatched = false;
+    if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected) {
+      liveSocket.emit('join_queue', { ma_mon: maMon });
+      liveSocket.once('match_found', (data) => {
+        if (socketMatched) return;
+        socketMatched = true;
+        clearInterval(matchmakingInterval);
+        clearTimeout(matchmakingTimeout);
 
-      const resp = await fetch('/api/arena/create-match', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': 'Bearer ' + token } : {})
-        },
-        body: JSON.stringify({
-          doi_thu_id: opponentId,
-          ma_mon: 'mon_csdl'
-        })
-      });
-      const res = await resp.json();
+        if (statusEl) statusEl.textContent = '🎯 Đã tìm thấy đối thủ!';
+        if (audioSettings && audioSettings.battle) playAdvancedSound('click');
 
-      if (res.success && res.data) {
-        currentLiveMatch = res.data;
+        const opUser = (data.nguoi_choi || []).find(p => p.ma_nguoi_dung !== currentUserAccount.userId) || {};
         matchedOpponent = {
-          name: opponentName,
-          petIcon: opponentPetIcon,
-          petName: opponentName.includes('Lan Anh') ? 'Hồ Ly Kitsune' : (opponentName.includes('Minh Khoa') ? 'Rồng Lửa Sparky' : 'Chiến Binh Đồng Hành'),
-          tier: '⚡ Tinh thông II'
+          name: opUser.ten_hien_thi || 'Chiến Binh Lữ Khách',
+          petIcon: opUser.thu_cung?.ten_thu_cung?.includes('Hồ Ly') ? '🦊' : (opUser.thu_cung?.ten_thu_cung?.includes('Thạch') ? '🗿' : '🦉'),
+          petName: opUser.thu_cung?.ten_thu_cung || 'Linh Thú Đối Thủ',
+          tier: opUser.danh_hieu || '🌱 Khởi nguyên I'
         };
-      }
-    } catch (e) {
-      console.warn('Fallback matchmaking:', e);
+
+        setTimeout(() => {
+          if (mmModal) mmModal.classList.add('hidden');
+          showVersusScreen(matchedOpponent, data.matchState || data);
+        }, 400);
+      });
     }
 
-    matchmakingTimeout = setTimeout(() => {
+    // 2. Cơ chế Bảo vệ Chờ đợi (Safe Fallback Protection):
+    // Nếu sau 4.5 giây chưa có người thật kết nối socket, tự động khởi tạo trận đấu với Bot AI
+    matchmakingTimeout = setTimeout(async () => {
+      if (socketMatched) return;
       clearInterval(matchmakingInterval);
-      if (statusEl) statusEl.textContent = '🎯 Đã tìm thấy đối thủ!';
+      if (statusEl) statusEl.textContent = '🎯 Đã ghép nối đối thủ!';
       if (audioSettings && audioSettings.battle) playAdvancedSound('click');
 
-      if (!matchedOpponent) {
-        matchedOpponent = { name: 'Đấu Sĩ Tập Sự', petIcon: '🤖', petName: 'Robot Đồng Hành', tier: '🌱 Khởi nguyên I' };
+      // Chọn bot thông minh từ pool canonical
+      const botPool = [
+        { id: 'usr_bot_001', name: 'Đấu Sĩ Tập Sự', petIcon: '🦉', petName: 'Rồng Lửa Sparky', tier: '🌱 Khởi nguyên I' },
+        { id: 'usr_bot_002', name: 'Chiến Binh Lữ Khách', petIcon: '🦊', petName: 'Hồ Ly Kitsune', tier: '⚡ Tinh thông II' },
+        { id: 'usr_bot_003', name: 'Hộ Vệ Tri Thức', petIcon: '🗿', petName: 'Thạch Cự Nhân Golem', tier: '👑 Cao thủ III' }
+      ];
+      const chosenBot = botPool[Math.floor(Math.random() * botPool.length)];
+
+      let liveMatchData = null;
+      try {
+        const resp = await fetch('/api/arena/create-match', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+          },
+          body: JSON.stringify({
+            doi_thu_id: chosenBot.id,
+            ma_mon: maMon
+          })
+        });
+        const res = await resp.json();
+        if (res.success && res.data) {
+          liveMatchData = res.data;
+          currentLiveMatch = res.data;
+        }
+      } catch (e) {
+        console.warn('REST fallback match:', e);
       }
 
+      matchedOpponent = chosenBot;
       setTimeout(() => {
         if (mmModal) mmModal.classList.add('hidden');
-        showVersusScreen(matchedOpponent);
+        showVersusScreen(matchedOpponent, liveMatchData);
       }, 400);
-    }, 2000);
+    }, 4500);
   }
 
   function cancelMatchmaking() {
     if (matchmakingInterval) clearInterval(matchmakingInterval);
     if (matchmakingTimeout) clearTimeout(matchmakingTimeout);
+    if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected) {
+      liveSocket.emit('leave_queue');
+    }
     const mmModal = document.getElementById('modal-matchmaking');
     if (mmModal) mmModal.classList.add('hidden');
     document.body.style.overflow = '';
-    showToast('Đã hủy tìm trận đấu.');
+    showToast('Đã hủy tìm kiếm trận đấu.');
   }
 
-  function showVersusScreen(opponent) {
+  function showVersusScreen(opponent, matchData) {
     const vsModal = document.getElementById('modal-versus');
     if (!vsModal) return;
     vsModal.classList.remove('hidden');
@@ -2643,10 +2749,10 @@
     // Đồng bộ Pet Đối thủ
     const opPetBox = document.getElementById('vs-op-pet');
     if (opPetBox) {
-      opPetBox.innerHTML = `<span class="text-6xl sm:text-7xl select-none inline-block transform scale-x-[-1] pet-animated block">${opponent.petIcon || opponent[1]}</span>`;
+      opPetBox.innerHTML = `<span class="text-6xl sm:text-7xl select-none inline-block transform scale-x-[-1] pet-animated block">${opponent.petIcon || '🤖'}</span>`;
     }
     const opUserName = document.getElementById('vs-op-user-name');
-    if (opUserName) opUserName.textContent = opponent.name || opponent[0];
+    if (opUserName) opUserName.textContent = opponent.name || 'Chiến Binh Lữ Khách';
     const opPetName = document.getElementById('vs-op-pet-name');
     if (opPetName) opPetName.textContent = opponent.petName || 'Linh vật đối thủ';
     const opTier = document.getElementById('vs-op-tier');
@@ -2659,11 +2765,11 @@
       setTimeout(() => { pBar.style.width = '100%'; }, 50);
     }
 
-    // Sau 2.2 giây, chuyển vào sàn đấu
+    // Sau 2.2 giây chuyển vào sàn đấu
     vsTimeout = setTimeout(() => {
       vsModal.classList.add('hidden');
       document.body.style.overflow = '';
-      startActualBattle(opponent);
+      startActualBattle(opponent, matchData);
     }, 2200);
   }
 
@@ -2671,12 +2777,24 @@
     startMatchmaking();
   }
 
-  function startActualBattle(opponent) {
+  function startActualBattle(opponent, matchData) {
     clearBattleTimers();
-    B.subject = document.getElementById('lobby-subject').value;
-    Object.assign(B, { my:100, op:100, combo:0, qi:0, shield:false, shieldUsed:false, over:false });
-    B.list = [...BQ].sort(() => Math.random() - .5);
-    
+    B.subject = document.getElementById('lobby-subject') ? document.getElementById('lobby-subject').value : 'csdl';
+    Object.assign(B, { my: 100, op: 100, combo: 0, qi: 0, shield: false, shieldUsed: false, over: false });
+
+    // Trích xuất câu hỏi từ backend CSDL thật hoặc câu hỏi chuẩn dự phòng
+    if (matchData && matchData.cau_hoi && Array.isArray(matchData.cau_hoi) && matchData.cau_hoi.length > 0) {
+      currentLiveMatch = matchData;
+      B.list = matchData.cau_hoi.map(q => ({
+        q: q.noi_dung,
+        o: q.dap_an || [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d].filter(Boolean),
+        a: typeof q.vi_tri_dap_an_dung === 'number' ? q.vi_tri_dap_an_dung : 0,
+        ma_cau_trong_tran: q.ma_cau_trong_tran
+      }));
+    } else {
+      B.list = [...FALLBACK_BATTLE_QUESTIONS].sort(() => Math.random() - 0.5);
+    }
+
     const opName = opponent ? (opponent.name || opponent[0]) : 'Đấu Sĩ Tập Sự';
     const opIcon = opponent ? (opponent.petIcon || opponent[1]) : '🤖';
 
@@ -2684,110 +2802,282 @@
     document.getElementById('op-pet').textContent = opIcon;
     document.getElementById('b-result').classList.add('hidden');
     document.getElementById('my-shield').classList.add('hidden');
-    document.getElementById('b-skill').disabled = false;
-    document.getElementById('b-skill').classList.remove('opacity-40');
+    const skillBtn = document.getElementById('b-skill');
+    if (skillBtn) {
+      skillBtn.disabled = false;
+      skillBtn.classList.remove('opacity-40');
+    }
+
+    const botStatus = document.getElementById('b-bot-status');
+    if (botStatus) {
+      botStatus.textContent = '💭 Đối thủ đang đọc câu hỏi...';
+      botStatus.className = 'text-[11px] font-medium text-[var(--muted-foreground)] transition-all';
+    }
+
     syncAllPetDisplays();
     navTo('battle');
     updHp();
     nextRound();
   }
-  function clearBattleTimers() { clearInterval(B.tick); clearTimeout(B.botT); }
-  function leaveBattle() { clearBattleTimers(); navTo('minigame'); arenaTab('fight'); }
+
+  function clearBattleTimers() {
+    clearInterval(B.tick);
+    clearTimeout(B.botT);
+  }
+
+  function leaveBattle() {
+    clearBattleTimers();
+    navTo('minigame');
+    arenaTab('fight');
+  }
+
   setTimeout(renderLobby, 0);
 
-  // Escape key handler update
   function updHp() {
-    document.getElementById('my-hp').style.width = B.my + '%';
-    document.getElementById('op-hp').style.width = B.op + '%';
-    document.getElementById('my-hp-txt').textContent = B.my;
-    document.getElementById('op-hp-txt').textContent = B.op;
-    document.getElementById('b-combo').textContent = B.combo >= 2 ? '🔥 Combo x' + B.combo : '';
+    const myBar = document.getElementById('my-hp');
+    const opBar = document.getElementById('op-hp');
+    if (myBar) myBar.style.width = B.my + '%';
+    if (opBar) opBar.style.width = B.op + '%';
+    const myTxt = document.getElementById('my-hp-txt');
+    const opTxt = document.getElementById('op-hp-txt');
+    if (myTxt) myTxt.textContent = B.my;
+    if (opTxt) opTxt.textContent = B.op;
+    const comboEl = document.getElementById('b-combo');
+    if (comboEl) comboEl.textContent = B.combo >= 2 ? '🔥 Combo x' + B.combo : '';
   }
+
   function useShield() {
     if (B.shieldUsed || B.over) return;
-    B.shieldUsed = true; B.shield = true;
-    document.getElementById('my-shield').classList.remove('hidden');
-    const b = document.getElementById('b-skill'); b.disabled = true; b.classList.add('opacity-40');
+    B.shieldUsed = true;
+    B.shield = true;
+    const shieldEl = document.getElementById('my-shield');
+    if (shieldEl) shieldEl.classList.remove('hidden');
+    const b = document.getElementById('b-skill');
+    if (b) {
+      b.disabled = true;
+      b.classList.add('opacity-40');
+    }
+    showToast('Đã kích hoạt Khiên Hộ Thể! Sát thương tiếp theo sẽ bị triệt tiêu.', 'success');
   }
+
   function nextRound() {
     if (B.over) return;
-    const q = B.list[B.qi % B.list.length]; B.qi++;
-    B.pDone = false; B.bDone = false; B.locked = false;
-    document.getElementById('b-prompt').textContent = q.q;
-    const box = document.getElementById('b-options'); box.innerHTML = '';
-    q.o.forEach((t, i) => {
-      const bt = document.createElement('button');
-      bt.className = "w-full text-left p-3.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card)] transition text-xs";
-      bt.textContent = t;
-      bt.onclick = () => playerAnswer(i, q, bt);
-      box.appendChild(bt);
-    });
+    if (B.qi >= B.list.length) {
+      checkEnd();
+      return;
+    }
+
+    const q = B.list[B.qi % B.list.length];
+    B.qi++;
+    B.pDone = false;
+    B.bDone = false;
+    B.locked = false;
+
+    const promptEl = document.getElementById('b-prompt');
+    if (promptEl) promptEl.textContent = q.q;
+
+    const box = document.getElementById('b-options');
+    if (box) {
+      box.innerHTML = '';
+      (q.o || []).forEach((t, i) => {
+        const bt = document.createElement('button');
+        bt.className = "w-full text-left p-3.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card)] transition text-xs font-medium cursor-pointer";
+        bt.textContent = `${['A', 'B', 'C', 'D'][i]}. ${t}`;
+        bt.onclick = () => playerAnswer(i, q, bt);
+        box.appendChild(bt);
+      });
+    }
+
     B.t0 = Date.now();
     const bar = document.getElementById('b-timer');
     clearInterval(B.tick);
     B.tick = setInterval(() => {
       const left = Math.max(0, 10000 - (Date.now() - B.t0));
-      bar.style.width = (left / 100) + '%';
-      if (left <= 0) { clearInterval(B.tick); if (!B.pDone) playerAnswer(-1, q, null); }
+      if (bar) bar.style.width = (left / 100) + '%';
+      if (left <= 0) {
+        clearInterval(B.tick);
+        if (!B.pDone) playerAnswer(-1, q, null);
+      }
     }, 100);
-    // Bot trả lời sau 2-8s, đúng 70%
-    const botTime = 2000 + Math.random() * 6000, botOk = Math.random() < 0.7;
+
+    // Tính toán thông số Bot thích ứng động theo diễn biến trận đấu
+    const botParams = calculateClientBotTurnParams({
+      questionContent: q.q,
+      myHp: B.my,
+      botHp: B.op,
+      userCombo: B.combo
+    });
+
+    const botStatus = document.getElementById('b-bot-status');
+    if (botStatus) {
+      if (botParams.isAggressive) {
+        botStatus.textContent = '⚡ Đối thủ đang phản xạ dồn dập!';
+        botStatus.className = 'text-[11px] font-bold text-amber-500 animate-pulse';
+      } else if (B.my <= 35) {
+        botStatus.textContent = '🤔 Đối thủ đang do dự cân nhắc...';
+        botStatus.className = 'text-[11px] font-medium text-emerald-400';
+      } else {
+        botStatus.textContent = '💭 Đối thủ đang suy nghĩ...';
+        botStatus.className = 'text-[11px] font-medium text-[var(--muted-foreground)]';
+      }
+    }
+
     clearTimeout(B.botT);
-    B.botT = setTimeout(() => botAnswer(botOk, botTime), botTime);
+    B.botT = setTimeout(() => {
+      if (botStatus) {
+        botStatus.textContent = '🎯 Đối thủ đã chốt đáp án!';
+        botStatus.className = 'text-[11px] font-semibold text-cyan-400';
+      }
+      botAnswer(botParams.willAnswerCorrectly, botParams.delayMs);
+    }, botParams.delayMs);
   }
-  function dmgFor(ms) { return ms < 3000 ? 25 : ms < 8000 ? 15 : 8; }
+
+  function dmgFor(ms) {
+    if (ms < 3000) return 30; // Chí mạng
+    if (ms < 7000) return 25; // Chuẩn
+    return 15;                // Muộn
+  }
+
   function popFloat(id, txt) {
-    const el = document.getElementById(id); el.textContent = txt;
-    el.classList.remove('do-float'); void el.offsetWidth; el.classList.add('do-float');
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = txt;
+    el.classList.remove('do-float');
+    void el.offsetWidth;
+    el.classList.add('do-float');
   }
-  function anim(id, cls) { const el = document.getElementById(id); el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+
+  function anim(id, cls) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+  }
 
   function playerAnswer(i, q, btn) {
     if (B.pDone || B.over) return;
     B.pDone = true;
-    const ms = Date.now() - B.t0, ok = i === q.a;
+    const ms = Date.now() - B.t0;
+    const ok = (i === q.a);
+
     document.querySelectorAll('#b-options button').forEach((b, k) => {
       b.disabled = true;
-      if (k === q.a) b.classList.add('border-emerald-500', 'bg-emerald-500/10', 'text-emerald-600', 'font-medium');
+      if (k === q.a) b.classList.add('border-emerald-500', 'bg-emerald-500/10', 'text-emerald-600', 'font-bold');
       else if (k === i) b.classList.add('border-rose-500', 'bg-rose-500/10', 'text-rose-600');
       else b.classList.add('opacity-40');
     });
+
     if (ok) {
       B.combo++;
-      let d = dmgFor(ms); if (B.combo >= 3) d = Math.round(d * 1.5);
+      let d = dmgFor(ms);
+      // Hệ số linh thú đang trang bị
+      const petMult = (userState.equippedPet === 'kitsune') ? 1.2 : 1.15;
+      d = Math.round(d * petMult);
+      if (B.combo >= 3) d = Math.round(d * 1.3); // Bonus Combo
+
       B.op = Math.max(0, B.op - d);
       anim('my-pet', 'do-lunge');
       if (audioSettings.battle) playAdvancedSound('sfx-slash');
-      setTimeout(() => { anim('op-pet', 'do-shake'); popFloat('op-float', '-' + d); updHp(); checkEnd(); }, 220);
-    } else { B.combo = 0; updHp(); }
+      setTimeout(() => {
+        anim('op-pet', 'do-shake');
+        popFloat('op-float', '-' + d);
+        updHp();
+        checkEnd();
+      }, 220);
+    } else {
+      B.combo = 0;
+      updHp();
+    }
+
+    // Gửi lượt lên backend (nếu có live match)
+    if (currentLiveMatch && currentLiveMatch.ma_tran) {
+      const token = localStorage.getItem('tok_token');
+      fetch(`/api/arena/${currentLiveMatch.ma_tran}/turn`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+        },
+        body: JSON.stringify({
+          thu_tu_cau: B.qi,
+          vi_tri_dap_an_chon: i,
+          thoi_gian_giay: Math.round(ms / 100) / 10
+        })
+      }).catch(() => {});
+    }
+
     roundCheck();
   }
+
   function botAnswer(ok, ms) {
     if (B.over) return;
     B.bDone = true;
+
     if (ok) {
       if (B.shield) {
-        B.shield = false; document.getElementById('my-shield').classList.add('hidden');
-        popFloat('my-float', 'Chặn!');
+        B.shield = false;
+        const shieldEl = document.getElementById('my-shield');
+        if (shieldEl) shieldEl.classList.add('hidden');
+        popFloat('my-float', '🛡️ Chặn!');
+        if (audioSettings.battle) playAdvancedSound('click');
       } else {
         const d = dmgFor(ms);
         B.my = Math.max(0, B.my - d);
         anim('op-pet', 'do-lungeL');
-        setTimeout(() => { anim('my-pet', 'do-shake'); popFloat('my-float', '-' + d); updHp(); checkEnd(); }, 220);
+        setTimeout(() => {
+          anim('my-pet', 'do-shake');
+          popFloat('my-float', '-' + d);
+          updHp();
+          checkEnd();
+        }, 220);
       }
     }
     roundCheck();
   }
+
   function roundCheck() {
     if (B.pDone && B.bDone && !B.over && !B.locked) {
-      B.locked = true; clearInterval(B.tick);
-      setTimeout(() => { if (!B.over) nextRound(); }, 1500);
+      B.locked = true;
+      clearInterval(B.tick);
+      setTimeout(() => {
+        if (!B.over) nextRound();
+      }, 1400);
     }
   }
-  function checkEnd() {
-    if (B.over || (B.my > 0 && B.op > 0)) return;
-    B.over = true; clearBattleTimers();
-    const win = B.op <= 0 && B.my > 0 ? true : B.my > B.op;
+
+  async function checkEnd() {
+    if (B.over || (B.my > 0 && B.op > 0 && B.qi < B.list.length)) return;
+    B.over = true;
+    clearBattleTimers();
+
+    const win = (B.op <= 0 && B.my > 0) || (B.my > B.op);
+
+    // Đồng bộ kết quả lên Backend CSDL thật (backend sẽ cộng Xu + EXP chính thức)
+    if (currentLiveMatch && currentLiveMatch.ma_tran) {
+      try {
+        const token = localStorage.getItem('tok_token');
+        const winnerId = win ? (currentUserAccount.userId || 'usr_current') : (currentLiveMatch.nguoi_choi?.find(p => p.ma_nguoi_dung !== currentUserAccount.userId)?.ma_nguoi_dung || 'usr_bot_003');
+        await fetch(`/api/arena/${currentLiveMatch.ma_tran}/conclude`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+          },
+          body: JSON.stringify({
+            winnerUserId: winnerId,
+            reason: B.op <= 0 ? 'KO_VICTORY' : 'TIMEOUT_SCORE'
+          })
+        });
+        // Cập nhật lại số dư Xu và EXP từ server
+        if (typeof refreshUserData === 'function') {
+          await refreshUserData();
+        }
+      } catch (err) {
+        console.warn('Could not record match conclusion on backend:', err);
+      }
+    }
+
     setTimeout(() => {
       const koBadge = document.getElementById('b-result-ko-badge');
       const koTitle = document.getElementById('b-result-title');
@@ -2797,15 +3087,15 @@
       if (win) {
         if (koBadge) koBadge.className = "inline-block bg-gradient-to-r from-fuchsia-600 via-rose-500 to-cyan-400 text-white px-6 py-2 rounded-2xl transform -rotate-2 shadow-xl border-2 border-white animate-bounce";
         if (koTitle) koTitle.textContent = "K.O. VICTORY!";
-        if (koSub) koSub.textContent = "COMBO STREAK · CHIẾN THẮNG TUYỆT ĐỐI!";
-        // ÂM THANH CHIẾN THẮNG: KÈN KHẢI HOÀN
+        if (koSub) koSub.textContent = "COMBO STREAK · CHIẾN THẮNG TUYỆT ĐỐI! (+35 XU, +50 EXP)";
         if (audioSettings.outcome) playAdvancedSound('win-fanfare');
+        showToast('🎉 Chiến thắng Đấu trường! Bạn nhận được +35 Xu và +50 EXP.', 'success');
       } else {
         if (koBadge) koBadge.className = "inline-block bg-gradient-to-r from-rose-700 to-red-600 text-white px-6 py-2 rounded-2xl transform rotate-2 shadow-xl border-2 border-white/80";
         if (koTitle) koTitle.textContent = "K.O. THẤT BẠI";
-        if (koSub) koSub.textContent = "BẠN ĐÃ BỊ HẠ GỤC · HÃY RÈN LUYỆN THÊM!";
-        // ÂM THANH THẤT BẠI: WOMP WOMP
+        if (koSub) koSub.textContent = "BẠN ĐÃ BỊ HẠ GỤC · HÃY RÈN LUYỆN THÊM! (+10 XU THAM GIA)";
         if (audioSettings.outcome) playAdvancedSound('defeat-sad');
+        showToast('Bạn đã bị hạ gục. Nhận được +10 Xu khích lệ.', 'info');
       }
 
       // Render pet in result
@@ -2815,12 +3105,9 @@
         else petImg.src = SPARKY_SQ_GIF;
       }
 
-      // Tính điểm (+25 / -15, thưởng +30 nếu còn >50% HP)
+      // Tính điểm rank (+25 / -15, thưởng +30 nếu còn >50% HP)
       const hpBonus = (win && B.my >= 50);
       const delta = win ? (hpBonus ? 30 : 25) : -15;
-      if (win) {
-        addCoins(10); // Thưởng 10 xu khi thắng trận
-      }
       const sub = B.subject || 'csdl';
       RANKS[sub] = Math.max(0, RANKS[sub] + delta);
 
@@ -2855,7 +3142,8 @@
       const elAllBar = document.getElementById('res-all-bar');
       if (elAllBar) elAllBar.style.width = tierProgress(overallPts(), true) + '%';
 
-      document.getElementById('b-result').classList.remove('hidden');
+      const resBox = document.getElementById('b-result');
+      if (resBox) resBox.classList.remove('hidden');
     }, 700);
   }
 
@@ -4170,6 +4458,11 @@
       if (inputEditU) inputEditU.value = currentUserAccount.username;
 
       syncUserDataToUI();
+
+      if (typeof liveSocket !== 'undefined' && liveSocket) {
+        liveSocket.auth = { token: localStorage.getItem('tok_token') };
+        if (!liveSocket.connected) liveSocket.connect();
+      }
     }
 
     function syncUserDataToUI() {
@@ -6108,9 +6401,15 @@
       // 2. Setup Socket.IO for Real-time 1v1 Arena
       if (typeof io !== 'undefined') {
         try {
-          liveSocket = io();
+          const tok = localStorage.getItem('tok_token');
+          liveSocket = io({
+            auth: { token: tok }
+          });
           liveSocket.on('connect', () => {
             console.log('✓ Socket.IO Đấu trường 1v1 đã kết nối:', liveSocket.id);
+          });
+          liveSocket.on('error_msg', (msg) => {
+            console.warn('Socket error message:', msg);
           });
         } catch (e) {
           console.warn('Socket.IO offline fallback:', e);

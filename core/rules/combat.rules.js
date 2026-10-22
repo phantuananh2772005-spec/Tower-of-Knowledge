@@ -7,19 +7,38 @@ const BASE_DAMAGE = 25; // Mỗi câu đúng gây 25 sát thương (HP tối đa
 
 /**
  * Tính toán lượng sát thương gây ra dựa trên tốc độ và tính đúng sai.
- * @param {boolean} isCorrect - Trả lời đúng hay không
- * @param {number} timeElapsedSec - Thời gian trả lời tính bằng giây
- * @param {number} timeLimitSec - Giới hạn thời gian của câu
- * @returns {number} Sát thương gây ra
+ * Hỗ trợ cả 2 dạng gọi: dạng đối tượng { isCorrect, responseTimeSeconds, petDamageMultiplier } hoặc tham số vị trí.
  */
-function calculateDamage(isCorrect, timeElapsedSec, timeLimitSec = 10) {
-  if (!isCorrect) return 0;
+function calculateDamage(isCorrectOrObj, timeElapsedSec, timeLimitSec = 10) {
+  let isCorrect, timeElapsed, timeLimit = 10, petMult = 1.0, baseDmg = BASE_DAMAGE;
+  if (typeof isCorrectOrObj === 'object' && isCorrectOrObj !== null) {
+    isCorrect = Boolean(isCorrectOrObj.isCorrect);
+    timeElapsed = isCorrectOrObj.responseTimeSeconds ?? isCorrectOrObj.timeElapsedSec ?? 5;
+    timeLimit = isCorrectOrObj.timeLimitSeconds ?? isCorrectOrObj.timeLimitSec ?? 10;
+    petMult = isCorrectOrObj.petDamageMultiplier || 1.0;
+    baseDmg = isCorrectOrObj.baseDamage || BASE_DAMAGE;
+  } else {
+    isCorrect = Boolean(isCorrectOrObj);
+    timeElapsed = Number(timeElapsedSec) || 5;
+    timeLimit = Number(timeLimitSec) || 10;
+  }
+
+  if (!isCorrect) {
+    const res = { damage: 0, isCritical: false, raw: 0 };
+    res.valueOf = () => 0;
+    res[Symbol.toPrimitive] = () => 0;
+    return res;
+  }
 
   // Trả lời càng nhanh (dưới 50% thời gian) thì nhận thêm sát thương chí mạng (+5)
-  if (timeElapsedSec <= timeLimitSec * 0.5) {
-    return BASE_DAMAGE + 5; // Chí mạng: 30 sát thương
-  }
-  return BASE_DAMAGE; // Tiêu chuẩn: 25 sát thương
+  const isCritical = timeElapsed <= timeLimit * 0.5;
+  const bonus = isCritical ? 5 : 0;
+  const finalDamage = Math.round((baseDmg + bonus) * petMult);
+
+  const res = { damage: finalDamage, isCritical, raw: finalDamage };
+  res.valueOf = () => finalDamage;
+  res[Symbol.toPrimitive] = () => finalDamage;
+  return res;
 }
 
 /**

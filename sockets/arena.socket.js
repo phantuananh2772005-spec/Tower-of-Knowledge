@@ -2,7 +2,7 @@
  * Arena 1v1 Socket.IO Handler
  * Decouples network transport from core combat logic.
  * Handles matchmaking queue, human-vs-human or human-vs-bot pairing,
- * and synchronized question rounds.
+ * safe fallback timeouts, and dynamic adaptive bot turn resolution.
  */
 
 const jwt = require('jsonwebtoken');
@@ -14,42 +14,93 @@ const matchmakingQueue = [];
 // Active bot timers mapped by matchId
 const botTimers = new Map();
 
+/**
+ * Dynamic Adaptive Bot Formula
+ * Calculates bot reaction delay, accuracy percentage, and psychological pacing
+ */
+function calculateBotTurnParams({ questionContent, myHp, botHp, userCombo }) {
+  const qLen = (questionContent || '').length;
+  // Natural reading baseline: ~22ms per char clamped between 1.2s and 2.8s
+  const baseReadingTimeSec = Math.min(2.8, Math.max(1.2, 0.8 + qLen * 0.022));
+
+  const hpDiff = myHp - botHp; // Positive: player leads; Negative: bot leads
+  let willAnswerCorrectly = true;
+  let thinkDurationSec = 2.0;
+  let isAggressive = false;
+
+  // SITUATION 1: Player leads significantly (>=20) or player is on fire (combo >= 2)
+  // Bot activates "Catch-up / Pressure" mode: faster reaction, ~85% accuracy
+  if (hpDiff >= 20 || userCombo >= 2) {
+    isAggressive = true;
+    willAnswerCorrectly = Math.random() < 0.85;
+    thinkDurationSec = 0.8 + Math.random() * 1.4; // Quick 0.8s - 2.2s reaction
+  }
+  // SITUATION 2: Player is in critical danger (<=35 HP) or Bot leads heavily
+  // Bot activates "Hesitation / Opportunity" mode: slower reaction, ~52% accuracy (allows comeback!)
+  else if (myHp <= 35 || hpDiff <= -25) {
+    willAnswerCorrectly = Math.random() < 0.52;
+    thinkDurationSec = 3.2 + Math.random() * 2.8; // Hesitant 3.2s - 6.0s reaction
+  }
+  // SITUATION 3: Balanced match
+  // Realistic student opponent: ~72% accuracy, medium pacing
+  else {
+    willAnswerCorrectly = Math.random() < 0.72;
+    thinkDurationSec = 1.8 + Math.random() * 2.2;
+  }
+
+  const totalDelaySec = Math.min(8.8, Math.max(2.0, baseReadingTimeSec + thinkDurationSec));
+  const delayMs = Math.round(totalDelaySec * 1000);
+
+  return {
+    delayMs,
+    totalDelaySec,
+    willAnswerCorrectly,
+    isAggressive
+  };
+}
+
 function initArenaSocket(io) {
-  // Middleware to authenticate socket
+  // Middleware to authenticate socket gracefully (supports registered users & guests)
   io.use((socket, next) => {
-    const token = socket.handshake.auth && socket.handshake.auth.token;
+    const token = (socket.handshake.auth && socket.handshake.auth.token) || socket.handshake.query?.token;
     if (!token) {
-      return next(new Error('Yêu cầu xác thực tài khoản.'));
+      const guestId = `guest_${Math.random().toString(36).substring(2, 9)}`;
+      socket.user = { ma_nguoi_dung: guestId, ten_dang_nhap: 'Khách', isGuest: true };
+      return next();
     }
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
       socket.user = decoded;
       next();
     } catch (err) {
-      next(new Error('Phiên xác thực không hợp lệ.'));
+      const guestId = `guest_${Math.random().toString(36).substring(2, 9)}`;
+      socket.user = { ma_nguoi_dung: guestId, ten_dang_nhap: 'Khách', isGuest: true };
+      next();
     }
   });
 
   io.on('connection', (socket) => {
     const userId = socket.user.ma_nguoi_dung;
-    const username = socket.user.ten_dang_nhap;
 
     // Join Matchmaking Queue
     socket.on('join_queue', async (data = {}) => {
       const ma_mon = data.ma_mon || 'mon_csdl';
 
-      // Check if already in queue
+      // Check if already in queue & clean previous
       const existingIdx = matchmakingQueue.findIndex(q => q.userId === userId);
       if (existingIdx !== -1) {
+        if (matchmakingQueue[existingIdx].timer) clearTimeout(matchmakingQueue[existingIdx].timer);
         matchmakingQueue.splice(existingIdx, 1);
       }
 
-      // Check if there is another player waiting for this course
+      // Check if there is another real player waiting for this course
       const matchCandidateIdx = matchmakingQueue.findIndex(q => q.userId !== userId && q.ma_mon === ma_mon);
 
       if (matchCandidateIdx !== -1) {
-        // MATCH FOUND with human!
+        // MATCH FOUND with real human player!
         const opponent = matchmakingQueue.splice(matchCandidateIdx, 1)[0];
+        if (opponent.timer) clearTimeout(opponent.timer);
+
         try {
           const matchState = await arenaService.createMatch(userId, opponent.userId, ma_mon);
           const roomName = `room_${matchState.ma_tran}`;
@@ -60,7 +111,9 @@ function initArenaSocket(io) {
           io.to(roomName).emit('match_found', {
             ma_tran: matchState.ma_tran,
             nguoi_choi: matchState.nguoi_choi,
-            thoi_gian_bat_dau_sau_giay: 3
+            thoi_gian_bat_dau_sau_giay: 2.2,
+            doi_thu_la_bot: false,
+            matchState
           });
         } catch (err) {
           socket.emit('error_msg', 'Không thể khởi tạo trận đấu: ' + err.message);
@@ -69,32 +122,37 @@ function initArenaSocket(io) {
         // Add to queue
         const queueEntry = { userId, socket, ma_mon, joinedAt: Date.now() };
         matchmakingQueue.push(queueEntry);
-        socket.emit('queue_waiting', { vi_tri: matchmakingQueue.length });
+        socket.emit('queue_waiting', { vi_tri: matchmakingQueue.length, safeTimeoutMs: 5000 });
 
-        // Auto-match with bot after 3.5 seconds if no human joins
-        setTimeout(async () => {
+        // Auto-match with smart bot after 5.0 seconds if no human joins (Safe Fallback Protection)
+        queueEntry.timer = setTimeout(async () => {
           const idx = matchmakingQueue.indexOf(queueEntry);
           if (idx !== -1) {
             matchmakingQueue.splice(idx, 1);
             try {
-              const matchState = await arenaService.createMatch(userId, 'usr_bot_003', ma_mon);
+              // Select canonical bot opponent (usr_bot_001, usr_bot_002, usr_bot_003)
+              const botPool = ['usr_bot_001', 'usr_bot_002', 'usr_bot_003'];
+              const chosenBotId = botPool[Math.floor(Math.random() * botPool.length)];
+
+              const matchState = await arenaService.createMatch(userId, chosenBotId, ma_mon);
               const roomName = `room_${matchState.ma_tran}`;
               socket.join(roomName);
 
               socket.emit('match_found', {
                 ma_tran: matchState.ma_tran,
                 nguoi_choi: matchState.nguoi_choi,
-                thoi_gian_bat_dau_sau_giay: 3,
-                doi_thu_la_bot: true
+                thoi_gian_bat_dau_sau_giay: 2.2,
+                doi_thu_la_bot: true,
+                matchState
               });
 
-              // Setup bot behavior
-              setupBotTurns(io, roomName, matchState.ma_tran, userId, 'usr_bot_003');
+              // Setup intelligent adaptive bot behavior
+              setupSmartBotTurns(io, roomName, matchState.ma_tran, userId, chosenBotId);
             } catch (err) {
-              socket.emit('error_msg', 'Lỗi ghép trận: ' + err.message);
+              socket.emit('error_msg', 'Lỗi ghép trận bot bảo vệ: ' + err.message);
             }
           }
-        }, 3500);
+        }, 5000);
       }
     });
 
@@ -102,6 +160,7 @@ function initArenaSocket(io) {
     socket.on('leave_queue', () => {
       const idx = matchmakingQueue.findIndex(q => q.userId === userId);
       if (idx !== -1) {
+        if (matchmakingQueue[idx].timer) clearTimeout(matchmakingQueue[idx].timer);
         matchmakingQueue.splice(idx, 1);
         socket.emit('queue_cancelled');
       }
@@ -137,7 +196,7 @@ function initArenaSocket(io) {
           trang_thai_tran: turnResult.trang_thai_tran
         });
 
-        // Send explanation only to caller
+        // Send feedback to caller
         socket.emit('turn_feedback', {
           vi_tri_dap_an_dung: turnResult.vi_tri_dap_an_dung,
           giai_thich: turnResult.giai_thich
@@ -160,6 +219,7 @@ function initArenaSocket(io) {
     socket.on('disconnect', () => {
       const idx = matchmakingQueue.findIndex(q => q.userId === userId);
       if (idx !== -1) {
+        if (matchmakingQueue[idx].timer) clearTimeout(matchmakingQueue[idx].timer);
         matchmakingQueue.splice(idx, 1);
       }
     });
@@ -174,75 +234,101 @@ function clearBotTimer(matchId) {
 }
 
 /**
- * Simulate intelligent bot turn for single-player practice
+ * Simulate dynamic adaptive bot turn with human-like pacing and psychology
  */
-function setupBotTurns(io, roomName, matchId, humanUserId, botUserId) {
+function setupSmartBotTurns(io, roomName, matchId, humanUserId, botUserId) {
   let currentQuestion = 1;
+  let userCombo = 0;
 
   function scheduleNextBotTurn() {
     if (currentQuestion > 5) return;
 
-    // Bot takes 2.2 to 3.8 seconds to answer
-    const delay = Math.floor(Math.random() * 1600) + 2200;
-    const timer = setTimeout(async () => {
-      try {
-        const matchState = await arenaService.getMatchState(matchId);
-        if (matchState.trang_thai === 'KET_THUC') return;
+    // Fetch match state to compute dynamic adaptive parameters
+    arenaService.getMatchState(matchId).then((matchState) => {
+      if (matchState.trang_thai === 'KET_THUC') return;
 
-        // Bot accuracy ~ 75%
-        const qInMatch = matchState.cau_hoi[currentQuestion - 1];
-        if (!qInMatch) return;
+      const qInMatch = matchState.cau_hoi[currentQuestion - 1];
+      if (!qInMatch) return;
 
-        // We query the question's correct answer
-        const db = require('../database/db');
-        const qDetail = await db.queryOne('SELECT vi_tri_dap_an_dung FROM cau_hoi WHERE noi_dung = $1', [qInMatch.noi_dung]);
-        let botChoice = 0;
-        if (qDetail) {
-          const willAnswerCorrectly = Math.random() < 0.75;
-          botChoice = willAnswerCorrectly ? qDetail.vi_tri_dap_an_dung : (qDetail.vi_tri_dap_an_dung + 1) % 4;
-        }
+      const humanPlayer = matchState.nguoi_choi.find(p => p.ma_nguoi_dung === humanUserId);
+      const botPlayer = matchState.nguoi_choi.find(p => p.ma_nguoi_dung === botUserId);
 
-        const turnResult = await arenaService.submitTurnAnswer({
-          ma_tran: matchId,
-          ma_nguoi_dung: botUserId,
-          thu_tu_cau: currentQuestion,
-          vi_tri_dap_an_chon: botChoice,
-          thoi_gian_giay: delay / 1000
-        });
+      const myHp = humanPlayer ? humanPlayer.mau_hien_tai : 100;
+      const botHp = botPlayer ? botPlayer.mau_hien_tai : 100;
 
-        io.to(roomName).emit('turn_resolved', {
-          nguoi_tra_loi: botUserId,
-          thu_tu_cau: currentQuestion,
-          la_dap_an_dung: turnResult.la_dap_an_dung,
-          sat_thuong_gay_ra: turnResult.sat_thuong_gay_ra,
-          la_chi_mang: turnResult.la_chi_mang,
-          trang_thai_tran: turnResult.trang_thai_tran
-        });
+      const botConfig = calculateBotTurnParams({
+        questionContent: qInMatch.noi_dung,
+        myHp,
+        botHp,
+        userCombo,
+        questionIndex: currentQuestion
+      });
 
-        if (turnResult.tran_ket_thuc) {
-          clearBotTimer(matchId);
-          io.to(roomName).emit('match_ended', {
+      // Emit typing / thinking state
+      io.to(roomName).emit('bot_thinking', {
+        thu_tu_cau: currentQuestion,
+        isAggressive: botConfig.isAggressive,
+        estimatedDelaySec: botConfig.totalDelaySec
+      });
+
+      const timer = setTimeout(async () => {
+        try {
+          const freshState = await arenaService.getMatchState(matchId);
+          if (freshState.trang_thai === 'KET_THUC') return;
+
+          // Find correct answer
+          const db = require('../database/db');
+          const qDetail = await db.queryOne('SELECT vi_tri_dap_an_dung FROM cau_hoi WHERE noi_dung = $1', [qInMatch.noi_dung]);
+          let botChoice = 0;
+          if (qDetail) {
+            botChoice = botConfig.willAnswerCorrectly
+              ? qDetail.vi_tri_dap_an_dung
+              : (qDetail.vi_tri_dap_an_dung + 1) % 4;
+          }
+
+          const turnResult = await arenaService.submitTurnAnswer({
             ma_tran: matchId,
-            nguoi_thang_cuoc: turnResult.trang_thai_tran.nguoi_thang_cuoc,
-            ly_do_ket_thuc: turnResult.trang_thai_tran.ly_do_ket_thuc,
-            trang_thai_cuoi: turnResult.trang_thai_tran
+            ma_nguoi_dung: botUserId,
+            thu_tu_cau: currentQuestion,
+            vi_tri_dap_an_chon: botChoice,
+            thoi_gian_giay: botConfig.totalDelaySec
           });
-        } else {
-          currentQuestion++;
-          scheduleNextBotTurn();
-        }
-      } catch (err) {
-        // Match might be concluded already
-      }
-    }, delay);
 
-    botTimers.set(matchId, timer);
+          io.to(roomName).emit('turn_resolved', {
+            nguoi_tra_loi: botUserId,
+            thu_tu_cau: currentQuestion,
+            la_dap_an_dung: turnResult.la_dap_an_dung,
+            sat_thuong_gay_ra: turnResult.sat_thuong_gay_ra,
+            la_chi_mang: turnResult.la_chi_mang,
+            trang_thai_tran: turnResult.trang_thai_tran
+          });
+
+          if (turnResult.tran_ket_thuc) {
+            clearBotTimer(matchId);
+            io.to(roomName).emit('match_ended', {
+              ma_tran: matchId,
+              nguoi_thang_cuoc: turnResult.trang_thai_tran.nguoi_thang_cuoc,
+              ly_do_ket_thuc: turnResult.trang_thai_tran.ly_do_ket_thuc,
+              trang_thai_cuoi: turnResult.trang_thai_tran
+            });
+          } else {
+            currentQuestion++;
+            scheduleNextBotTurn();
+          }
+        } catch (err) {
+          // Match might have concluded already
+        }
+      }, botConfig.delayMs);
+
+      botTimers.set(matchId, timer);
+    }).catch(() => {});
   }
 
-  // Start round 1 after VS screen countdown
-  setTimeout(scheduleNextBotTurn, 3500);
+  // Start round 1 after VS screen animation completes (~2.5 seconds)
+  setTimeout(scheduleNextBotTurn, 2500);
 }
 
 module.exports = {
-  initArenaSocket
+  initArenaSocket,
+  calculateBotTurnParams
 };

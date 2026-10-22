@@ -83,6 +83,14 @@ async function initTelemetrySchema() {
     `);
   }
 
+  // 4. Ensure canonical bot opponents exist for 1v1 Arena
+  try {
+    const { ensureBotUsers } = require('../scripts/seed_bots');
+    await ensureBotUsers();
+  } catch (botErr) {
+    console.warn('⚠️ Could not ensure bot users in initTelemetrySchema:', botErr.message);
+  }
+
   console.log('✅ Telemetry Schema initialized successfully!');
 }
 

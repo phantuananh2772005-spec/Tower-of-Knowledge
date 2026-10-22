@@ -67,4 +67,15 @@ router.post('/:matchId/turn', authenticate, async (req, res) => {
   }
 });
 
+router.post('/:matchId/conclude', authenticate, async (req, res) => {
+  try {
+    const { winnerUserId, reason } = req.body;
+    await arenaService.concludeMatch(req.params.matchId, winnerUserId, reason || 'KO_VICTORY');
+    const updatedState = await arenaService.getMatchState(req.params.matchId);
+    return res.apiSuccess(updatedState);
+  } catch (err) {
+    return res.apiError(err.message, 'CONCLUDE_MATCH_FAILED', 400);
+  }
+});
+
 module.exports = router;

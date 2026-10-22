@@ -46,21 +46,21 @@ async function createMatch(player1Id, player2Id, ma_mon = 'mon_csdl') {
     VALUES ($1, $2, $3, $4, 100, 100, 'CHUA_KET_THUC')
   `, [p2IdInMatch, ma_tran, player2Id, pet2 ? pet2.ma_thu_cung : null]);
 
-  // Pick 5 questions from course
+  // Pick 5 questions from course (must be 4-choice multiple choice questions with valid answers)
   const questions = await db.query(`
     SELECT TOP 5 q.ma_cau_hoi
     FROM cau_hoi q
     JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
     JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
-    WHERE c.ma_mon = $1
+    WHERE c.ma_mon = $1 AND q.vi_tri_dap_an_dung IS NOT NULL AND q.dap_an_a IS NOT NULL
     ORDER BY NEWID()
   `, [ma_mon]);
 
   // If NEWID() returns fewer or not supported, pick all questions and shuffle
   let selectedQuestions = questions;
   if (!selectedQuestions || selectedQuestions.length < 5) {
-    const all = await db.query('SELECT ma_cau_hoi FROM cau_hoi');
-    selectedQuestions = all.slice(0, 5);
+    const all = await db.query('SELECT ma_cau_hoi FROM cau_hoi WHERE vi_tri_dap_an_dung IS NOT NULL AND dap_an_a IS NOT NULL');
+    selectedQuestions = (all || []).slice(0, 5);
   }
 
   for (let i = 0; i < selectedQuestions.length; i++) {
@@ -93,7 +93,7 @@ async function getMatchState(ma_tran) {
 
   const questionsInMatch = await db.query(`
     SELECT qm.ma_cau_trong_tran, qm.thu_tu_cau, q.ma_cau_hoi, q.noi_dung,
-           q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d
+           q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d, q.vi_tri_dap_an_dung
     FROM cau_hoi_trong_tran qm
     JOIN cau_hoi q ON qm.ma_cau_hoi = q.ma_cau_hoi
     WHERE qm.ma_tran = $1
@@ -136,7 +136,8 @@ async function getMatchState(ma_tran) {
       ma_cau_trong_tran: q.ma_cau_trong_tran,
       thu_tu_cau: q.thu_tu_cau,
       noi_dung: q.noi_dung,
-      dap_an: [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d]
+      dap_an: [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d],
+      vi_tri_dap_an_dung: q.vi_tri_dap_an_dung !== null && q.vi_tri_dap_an_dung !== undefined ? Number(q.vi_tri_dap_an_dung) : 0
     })),
     luot_da_tra_loi: turns
   };
@@ -185,7 +186,7 @@ async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap
   }
 
   // Calculate damage
-  const isCorrect = vi_tri_dap_an_dung === questionInMatch.vi_tri_dap_an_dung;
+  const isCorrect = parseInt(vi_tri_dap_an_chon, 10) === parseInt(questionInMatch.vi_tri_dap_an_dung, 10);
   const petMultiplier = player.he_so_sat_thuong || 1.0;
   const { damage, isCritical } = calculateDamage({
     isCorrect,
@@ -214,8 +215,7 @@ async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap
   // Apply damage to opponent
   let newOpponentHp = opponent.mau_hien_tai;
   if (damage > 0) {
-    const damageResult = applyDamage(opponent.mau_hien_tai, damage);
-    newOpponentHp = damageResult.remainingHp;
+    newOpponentHp = applyDamage(opponent.mau_hien_tai, damage);
     await db.execute(
       'UPDATE nguoi_choi_trong_tran SET mau_hien_tai = $1 WHERE ma_nguoi_choi_trong_tran = $2',
       [newOpponentHp, opponent.ma_nguoi_choi_trong_tran]
@@ -266,6 +266,10 @@ async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap
  * Conclude match by specific winner
  */
 async function concludeMatch(ma_tran, winnerUserId, reason = 'KO_VICTORY') {
+  // Kiểm tra trận đã kết thúc chưa — tránh gọi concludeMatch trùng lặp
+  const match = await db.queryOne('SELECT trang_thai FROM tran_dau_1v1 WHERE ma_tran = $1', [ma_tran]);
+  if (!match || match.trang_thai === 'KET_THUC') return;
+
   await db.execute(`
     UPDATE tran_dau_1v1 
     SET trang_thai = 'KET_THUC', thoi_gian_ket_thuc = SYSDATETIME(), nguoi_thang_cuoc = $1, ly_do_ket_thuc = $2
@@ -286,11 +290,14 @@ async function concludeMatch(ma_tran, winnerUserId, reason = 'KO_VICTORY') {
       WHERE ma_nguoi_choi_trong_tran = $4
     `, [ket_qua, xuThuong, expThuong, p.ma_nguoi_choi_trong_tran]);
 
-    // Distribute rewards
-    const rewardType = isWinner ? 'THUONG_TRAN_DAU' : 'THUONG_THAM_GIA';
-    const note = isWinner ? 'Chiến thắng Đấu trường Tri thức 1v1' : 'Tham gia Đấu trường Tri thức 1v1';
-    await mutateCoins(p.ma_nguoi_dung, xuThuong, rewardType, note);
-    await addExperience(p.ma_nguoi_dung, expThuong);
+    // Chỉ phân phối Xu + EXP thật cho người chơi thật, không cộng cho bot
+    const isBot = p.ma_nguoi_dung.startsWith('usr_bot_');
+    if (!isBot) {
+      const rewardType = isWinner ? 'THUONG_TRAN_DAU' : 'THUONG_THAM_GIA';
+      const note = isWinner ? 'Chiến thắng Đấu trường Tri thức 1v1' : 'Tham gia Đấu trường Tri thức 1v1';
+      await mutateCoins(p.ma_nguoi_dung, xuThuong, rewardType, note);
+      await addExperience(p.ma_nguoi_dung, expThuong);
+    }
   }
 }
 
@@ -340,8 +347,12 @@ async function concludeMatchByScore(ma_tran) {
       WHERE ma_nguoi_choi_trong_tran = $4
     `, [ket_qua, xuThuong, expThuong, p.ma_nguoi_choi_trong_tran]);
 
-    await mutateCoins(p.ma_nguoi_dung, xuThuong, 'THUONG_TRAN_DAU', `Kết thúc trận đấu 1v1 (${ket_qua})`);
-    await addExperience(p.ma_nguoi_dung, expThuong);
+    // Chỉ phân phối Xu + EXP thật cho người chơi thật
+    const isBot = p.ma_nguoi_dung.startsWith('usr_bot_');
+    if (!isBot) {
+      await mutateCoins(p.ma_nguoi_dung, xuThuong, 'THUONG_TRAN_DAU', `Kết thúc trận đấu 1v1 (${ket_qua})`);
+      await addExperience(p.ma_nguoi_dung, expThuong);
+    }
   }
 }
 

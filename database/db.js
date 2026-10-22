@@ -90,6 +90,7 @@ async function queryMssql(sql, params = []) {
       '-S', process.env.MSSQL_SERVER || 'localhost',
       '-E',
       '-d', process.env.MSSQL_DATABASE || 'TowerOfKnowledge',
+      '-b',
       '-y', '0',
       '-w', '65535',
       '-f', '65001',
@@ -98,6 +99,9 @@ async function queryMssql(sql, params = []) {
 
     if (stderr && stderr.trim().length > 0 && !stderr.includes('Changed database context')) {
       throw new Error(stderr);
+    }
+    if (/Msg \d+, Level \d+/i.test(stdout)) {
+      throw new Error(stdout.trim());
     }
 
     if (isSelect) {
@@ -126,6 +130,7 @@ function adaptForPostgres(sql) {
   let adapted = sql
     .replace(/SYSDATETIME\(\)/gi, 'NOW()')
     .replace(/CAST\(NOW\(\)\s+AS\s+DATE\)/gi, 'CURRENT_DATE')
+    .replace(/NEWID\(\)/gi, 'RANDOM()')
     .replace(/\b([a-zA-Z0-9_.]+\.)?dang_kich_hoat\s*=\s*1\b/gi, '$1dang_kich_hoat = TRUE')
     .replace(/\b([a-zA-Z0-9_.]+\.)?dang_kich_hoat\s*=\s*0\b/gi, '$1dang_kich_hoat = FALSE')
     .replace(/\b([a-zA-Z0-9_.]+\.)?bat_am_thanh\s*=\s*1\b/gi, '$1bat_am_thanh = TRUE')
