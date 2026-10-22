@@ -1514,11 +1514,11 @@
           <p id="cp-modal-summary" class="text-xs text-[var(--foreground)]/80 leading-relaxed line-clamp-3"></p>
         </div>
 
-        <!-- Lộ trình 4 Chấm Duolingo Stepping (Bloom Taxonomy) -->
+        <!-- Lộ trình Duolingo Stepping (Bloom Taxonomy) -->
         <div class="space-y-2.5">
           <div class="flex items-center justify-between text-xs font-bold">
-            <span class="text-[var(--muted-foreground)] uppercase tracking-wider text-[10px]">🎯 4 Chấm Luyện tập Ghi nhớ & Làm chủ (Bloom):</span>
-            <span id="cp-modal-steps-progress" class="text-emerald-600 font-mono text-[11px]">0/4 hoàn thành</span>
+            <span id="cp-modal-steps-header" class="text-[var(--muted-foreground)] uppercase tracking-wider text-[10px]">🎯 Các Chặng Luyện tập Ghi nhớ & Làm chủ (Bloom):</span>
+            <span id="cp-modal-steps-progress" class="text-emerald-600 font-mono text-[11px]">Đang tải tiến độ...</span>
           </div>
           <div id="cp-modal-steps-container" class="space-y-2">
             <!-- Dynamic 4 steps rendered by JS -->
@@ -5267,14 +5267,18 @@
           const badgeEl = document.getElementById('cp-modal-badge');
           if (badgeEl) badgeEl.textContent = d.loai_moc === 'THU_THACH_BOSS' ? '👑 BOSS CHƯƠNG' : 'Mốc học hệ thống';
 
+          const totalSteps = d.tong_so_buoc || 4;
+          const headerEl = document.getElementById('cp-modal-steps-header');
+          if (headerEl) headerEl.textContent = `🎯 ${totalSteps} Chặng Luyện tập Ghi nhớ & Làm chủ (Bloom):`;
+
           const stBadge = document.getElementById('cp-modal-status-badge');
           if (stBadge) {
             if (d.trang_thai === 'DA_HOAN_THANH' || d.trang_thai === 'HOAN_THANH') {
               stBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 font-mono';
-              stBadge.textContent = '✓ Đã hoàn thành (4/4 bước)';
+              stBadge.textContent = `✓ Đã hoàn thành (${totalSteps}/${totalSteps} chặng)`;
             } else {
               stBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 font-mono';
-              stBadge.textContent = `▶ Đang học (Bước ${d.buoc_hien_tai}/4)`;
+              stBadge.textContent = `▶ Đang học (Chặng ${Math.min(d.buoc_hien_tai, totalSteps)}/${totalSteps})`;
             }
           }
 
@@ -5294,10 +5298,10 @@
 
           // Steps progress text
           const progText = document.getElementById('cp-modal-steps-progress');
-          const doneCount = d.buoc_hien_tai > 4 ? 4 : Math.max(0, d.buoc_hien_tai - 1);
-          if (progText) progText.textContent = `${doneCount}/4 bước hoàn thành`;
+          const doneCount = d.buoc_hien_tai > totalSteps ? totalSteps : Math.max(0, d.buoc_hien_tai - 1);
+          if (progText) progText.textContent = `${doneCount}/${totalSteps} chặng hoàn thành`;
 
-          // Render 4 Step Cards
+          // Render Step Cards
           const container = document.getElementById('cp-modal-steps-container');
           if (container) {
             const steps = d.thong_tin_cac_buoc || [
@@ -5355,12 +5359,12 @@
           // Primary CTA button
           const primaryBtn = document.getElementById('btn-cp-primary-action');
           if (primaryBtn) {
-            const activeBuoc = Math.min(4, d.buoc_hien_tai || 1);
-            if (d.trang_thai === 'DA_HOAN_THANH' || d.buoc_hien_tai > 4) {
+            const activeBuoc = Math.min(totalSteps, d.buoc_hien_tai || 1);
+            if (d.trang_thai === 'DA_HOAN_THANH' || d.buoc_hien_tai > totalSteps) {
               primaryBtn.innerHTML = '<span>Ôn tập toàn bộ mốc học 🔄</span>';
               primaryBtn.onclick = () => startStepPlay(d.ma_moc, 1, d.tieu_de);
             } else {
-              primaryBtn.innerHTML = `<span>Bắt đầu Luyện tập Bước ${activeBuoc}</span> <span>→</span>`;
+              primaryBtn.innerHTML = `<span>Bắt đầu Luyện tập Chặng ${activeBuoc}</span> <span>→</span>`;
               primaryBtn.onclick = () => startStepPlay(d.ma_moc, activeBuoc, d.tieu_de);
             }
           }
@@ -5390,7 +5394,8 @@
 
     function startActiveStepFromModal() {
       if (!currentCheckpointMoc) return;
-      const activeBuoc = Math.min(4, currentCheckpointMoc.buoc_hien_tai || 1);
+      const totalSteps = currentCheckpointMoc.tong_so_buoc || 4;
+      const activeBuoc = Math.min(totalSteps, currentCheckpointMoc.buoc_hien_tai || 1);
       startStepPlay(currentCheckpointMoc.ma_moc, activeBuoc, currentCheckpointMoc.tieu_de);
     }
 
@@ -5416,6 +5421,7 @@
           currentQuizSession = {
             mocId: mocId,
             step: stepNumber,
+            totalSteps: res.data.tong_so_buoc || (currentCheckpointMoc ? currentCheckpointMoc.tong_so_buoc : 4),
             tieuDe: tieuDe || res.data.tieu_de,
             loaiMoc: res.data.loai_moc,
             noiDungLyThuyet: res.data.noi_dung_ly_thuyet,
@@ -5438,10 +5444,17 @@
       }
     }
 
-    function getBloomRatioText(step) {
-      if (step === 1) return '100% Nhớ · Khắc sâu Định nghĩa';
-      if (step === 2) return '80% Nhớ - 20% Hiểu · Củng cố Nhận thức';
-      if (step === 3) return '50% Nhớ - 40% Hiểu - 10% Vận dụng · Phân tích';
+    function getBloomRatioText(step, totalSteps = 4) {
+      if (totalSteps >= 5) {
+        if (step === 1) return '70% Nhớ - 30% Hiểu · Khởi động';
+        if (step === 2) return '30% Nhớ - 50% Hiểu - 20% Vận dụng · Thấm sâu';
+        if (step === 3) return '10% Nhớ - 40% Hiểu - 50% Vận dụng · Tăng tốc';
+        if (step === 4) return '30% Hiểu - 70% Vận dụng · Bứt phá';
+        return '10% Hiểu - 90% Vận dụng · Đỉnh tháp';
+      }
+      if (step === 1) return '70% Nhớ - 30% Hiểu · Khắc sâu Định nghĩa';
+      if (step === 2) return '40% Nhớ - 40% Hiểu - 20% Vận dụng · Thấu hiểu';
+      if (step === 3) return '20% Nhớ - 30% Hiểu - 50% Vận dụng · Bứt phá';
       return '10% Nhớ - 60% Hiểu - 30% Vận dụng · Làm chủ';
     }
 
@@ -5469,12 +5482,13 @@
       currentQuizSession.currentQuestionLookups = 0;
 
       const q = questions[qIndex];
+      const totalSteps = currentCheckpointMoc?.tong_so_buoc || 4;
 
       const playTitle = document.getElementById('play-title');
       if (playTitle) playTitle.textContent = tieuDe;
 
       const playStepBadge = document.getElementById('play-step-badge');
-      if (playStepBadge) playStepBadge.textContent = `Bước ${step}/4: ${getBloomRatioText(step)}`;
+      if (playStepBadge) playStepBadge.textContent = `Chặng ${step}/${totalSteps}: ${getBloomRatioText(step, totalSteps)}`;
 
       const playProg = document.getElementById('play-progress');
       if (playProg) {
@@ -5488,7 +5502,7 @@
       }
 
       const qCounter = document.getElementById('q-counter');
-      if (qCounter) qCounter.textContent = `Câu ${qIndex + 1}/${questions.length}`;
+      if (qCounter) qCounter.textContent = `Câu ${qIndex + 1}/${questions.length} · Chặng ${step}/${totalSteps}`;
 
       const qPrompt = document.getElementById('q-prompt');
       if (qPrompt) qPrompt.textContent = q.noi_dung;
@@ -6126,14 +6140,15 @@
         const res = await resp.json();
 
         if (res.success && res.data) {
-          const { scorePercentage, correctCount, totalQuestions, isPassed, earnedCoins, earnedExp, moc_hoan_thanh } = res.data;
+          const { scorePercentage, correctCount, totalQuestions, isPassed, earnedCoins, earnedExp, moc_hoan_thanh, tong_so_buoc } = res.data;
+          const totalSteps = tong_so_buoc || (currentQuizSession ? currentQuizSession.totalSteps : 4);
 
           if (isPassed) {
             if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-correct');
-            showToast(`🎉 VƯỢT QUA BƯỚC ${step}/4! ${scorePercentage}% điểm (+${earnedCoins || 5} 🪙, +${earnedExp || 10} ⭐ EXP)`);
+            showToast(`🎉 VƯỢT QUA CHẶNG ${step}/${totalSteps}! ${scorePercentage}% điểm (+${earnedCoins || 5} 🪙, +${earnedExp || 10} ⭐ EXP)`);
             if (moc_hoan_thanh) {
               setTimeout(() => {
-                showToast(`🏆 CHÚC MỪNG BẠN ĐÃ HOÀN THÀNH TOÀN BỘ 4 BƯỚC CỦA MỐC HỌC!`);
+                showToast(`🏆 CHÚC MỪNG BẠN ĐÃ HOÀN THÀNH TOÀN BỘ ${totalSteps} CHẶNG CỦA MỐC HỌC!`);
               }, 1200);
             }
           } else {

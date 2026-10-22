@@ -54,12 +54,36 @@ async function initTelemetrySchema() {
         NULL; 
       END $$;
     `);
+
+    // 4. Add dynamic stepping & bloom configuration columns to moc_bai_hoc (PostgreSQL)
+    await db.execute(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name='moc_bai_hoc' AND column_name='tong_so_buoc'
+        ) THEN 
+          ALTER TABLE moc_bai_hoc ADD COLUMN tong_so_buoc INT NOT NULL DEFAULT 4; 
+          ALTER TABLE moc_bai_hoc ADD COLUMN so_cau_moi_buoc INT NOT NULL DEFAULT 10; 
+          ALTER TABLE moc_bai_hoc ADD COLUMN cau_hinh_bloom TEXT NULL; 
+        END IF; 
+      END $$;
+    `);
   } else {
     // MSSQL
     await db.execute(`
       IF COL_LENGTH('tien_do_moc_bai_hoc', 'du_lieu_tri_nho') IS NULL
       BEGIN
         ALTER TABLE tien_do_moc_bai_hoc ADD du_lieu_tri_nho NVARCHAR(MAX) NULL;
+      END
+    `);
+
+    await db.execute(`
+      IF COL_LENGTH('moc_bai_hoc', 'tong_so_buoc') IS NULL
+      BEGIN
+        ALTER TABLE moc_bai_hoc ADD tong_so_buoc INT NOT NULL DEFAULT 4;
+        ALTER TABLE moc_bai_hoc ADD so_cau_moi_buoc INT NOT NULL DEFAULT 10;
+        ALTER TABLE moc_bai_hoc ADD cau_hinh_bloom NVARCHAR(MAX) NULL;
       END
     `);
 

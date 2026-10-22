@@ -98,16 +98,16 @@ async function deleteChapter(ma_chuong) {
 /**
  * Checkpoint Management
  */
-async function createCheckpoint({ ma_chuong, tieu_de, loai_moc, noi_dung_ly_thuyet, diem_thuong = 15, xu_thuong = 10, thu_tu = 1 }) {
+async function createCheckpoint({ ma_chuong, tieu_de, loai_moc, noi_dung_ly_thuyet, diem_thuong = 15, xu_thuong = 10, thu_tu = 1, tong_so_buoc = 4, so_cau_moi_buoc = 10, cau_hinh_bloom = null }) {
   const ma_moc = `moc_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   await db.execute(`
-    INSERT INTO moc_bai_hoc (ma_moc, ma_chuong, tieu_de, loai_moc, noi_dung_ly_thuyet, diem_thuong, xu_thuong, thu_tu)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-  `, [ma_moc, ma_chuong, tieu_de, loai_moc, noi_dung_ly_thuyet, diem_thuong, xu_thuong, thu_tu]);
+    INSERT INTO moc_bai_hoc (ma_moc, ma_chuong, tieu_de, loai_moc, noi_dung_ly_thuyet, diem_thuong, xu_thuong, thu_tu, tong_so_buoc, so_cau_moi_buoc, cau_hinh_bloom)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+  `, [ma_moc, ma_chuong, tieu_de, loai_moc, noi_dung_ly_thuyet, diem_thuong, xu_thuong, thu_tu, tong_so_buoc, so_cau_moi_buoc, cau_hinh_bloom]);
   return await db.queryOne('SELECT * FROM moc_bai_hoc WHERE ma_moc = $1', [ma_moc]);
 }
 
-async function updateCheckpoint(ma_moc, { tieu_de, loai_moc, noi_dung_ly_thuyet, diem_thuong, xu_thuong, thu_tu }) {
+async function updateCheckpoint(ma_moc, { tieu_de, loai_moc, noi_dung_ly_thuyet, diem_thuong, xu_thuong, thu_tu, tong_so_buoc, so_cau_moi_buoc, cau_hinh_bloom }) {
   await db.execute(`
     UPDATE moc_bai_hoc
     SET tieu_de = COALESCE($1, tieu_de),
@@ -115,9 +115,12 @@ async function updateCheckpoint(ma_moc, { tieu_de, loai_moc, noi_dung_ly_thuyet,
         noi_dung_ly_thuyet = COALESCE($3, noi_dung_ly_thuyet),
         diem_thuong = COALESCE($4, diem_thuong),
         xu_thuong = COALESCE($5, xu_thuong),
-        thu_tu = COALESCE($6, thu_tu)
-    WHERE ma_moc = $7
-  `, [tieu_de, loai_moc, noi_dung_ly_thuyet, diem_thuong, xu_thuong, thu_tu, ma_moc]);
+        thu_tu = COALESCE($6, thu_tu),
+        tong_so_buoc = COALESCE($7, tong_so_buoc),
+        so_cau_moi_buoc = COALESCE($8, so_cau_moi_buoc),
+        cau_hinh_bloom = COALESCE($9, cau_hinh_bloom)
+    WHERE ma_moc = $10
+  `, [tieu_de, loai_moc, noi_dung_ly_thuyet, diem_thuong, xu_thuong, thu_tu, tong_so_buoc, so_cau_moi_buoc, cau_hinh_bloom, ma_moc]);
   return await db.queryOne('SELECT * FROM moc_bai_hoc WHERE ma_moc = $1', [ma_moc]);
 }
 
@@ -129,24 +132,24 @@ async function deleteCheckpoint(ma_moc) {
 /**
  * Question CRUD & Bulk Import
  */
-async function listQuestions({ ma_moc, limit = 50, offset = 0 } = {}) {
+async function listQuestions({ ma_moc, limit = 200, offset = 0 } = {}) {
   if (ma_moc) {
     return await db.query(
-      'SELECT ma_cau_hoi, ma_moc, noi_dung, loai_cau_hoi, dap_an_a, dap_an_b, dap_an_c, dap_an_d, vi_tri_dap_an_dung, giai_thich, do_kho FROM cau_hoi WHERE ma_moc = $1 ORDER BY ma_cau_hoi ASC',
+      'SELECT ma_cau_hoi, ma_moc, noi_dung, loai_cau_hoi, dap_an_a, dap_an_b, dap_an_c, dap_an_d, vi_tri_dap_an_dung, giai_thich, do_kho, muc_bloom, buoc_luyen_tap, du_lieu_cau_hoi FROM cau_hoi WHERE ma_moc = $1 ORDER BY ma_cau_hoi ASC',
       [ma_moc]
     );
   }
   return await db.query(
-    'SELECT TOP ' + parseInt(limit, 10) + ' ma_cau_hoi, ma_moc, noi_dung, loai_cau_hoi, dap_an_a, dap_an_b, dap_an_c, dap_an_d, vi_tri_dap_an_dung, giai_thich, do_kho FROM cau_hoi ORDER BY ma_cau_hoi ASC'
+    'SELECT TOP ' + parseInt(limit, 10) + ' ma_cau_hoi, ma_moc, noi_dung, loai_cau_hoi, dap_an_a, dap_an_b, dap_an_c, dap_an_d, vi_tri_dap_an_dung, giai_thich, do_kho, muc_bloom, buoc_luyen_tap, du_lieu_cau_hoi FROM cau_hoi ORDER BY ma_cau_hoi ASC'
   );
 }
 
-async function createQuestion({ ma_moc, noi_dung, loai_cau_hoi = 'TRAC_NGHIEM_4', dap_an_a, dap_an_b, dap_an_c, dap_an_d, vi_tri_dap_an_dung, giai_thich, do_kho = 1 }) {
+async function createQuestion({ ma_moc, noi_dung, loai_cau_hoi = 'TRAC_NGHIEM_4', dap_an_a, dap_an_b, dap_an_c, dap_an_d, vi_tri_dap_an_dung, giai_thich, do_kho = 1, muc_bloom = 'NHO', buoc_luyen_tap = 1, du_lieu_cau_hoi = null }) {
   const ma_cau_hoi = `q_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   await db.execute(`
-    INSERT INTO cau_hoi (ma_cau_hoi, ma_moc, noi_dung, loai_cau_hoi, dap_an_a, dap_an_b, dap_an_c, dap_an_d, vi_tri_dap_an_dung, giai_thich, do_kho)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-  `, [ma_cau_hoi, ma_moc, noi_dung, loai_cau_hoi, dap_an_a, dap_an_b, dap_an_c, dap_an_d, vi_tri_dap_an_dung, giai_thich, do_kho]);
+    INSERT INTO cau_hoi (ma_cau_hoi, ma_moc, noi_dung, loai_cau_hoi, dap_an_a, dap_an_b, dap_an_c, dap_an_d, vi_tri_dap_an_dung, giai_thich, do_kho, muc_bloom, buoc_luyen_tap, du_lieu_cau_hoi)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+  `, [ma_cau_hoi, ma_moc, noi_dung, loai_cau_hoi, dap_an_a, dap_an_b, dap_an_c, dap_an_d, vi_tri_dap_an_dung, giai_thich, do_kho, muc_bloom, buoc_luyen_tap, du_lieu_cau_hoi]);
   return await db.queryOne('SELECT * FROM cau_hoi WHERE ma_cau_hoi = $1', [ma_cau_hoi]);
 }
 
@@ -161,11 +164,16 @@ async function updateQuestion(ma_cau_hoi, data) {
         vi_tri_dap_an_dung = COALESCE($6, vi_tri_dap_an_dung),
         giai_thich = COALESCE($7, giai_thich),
         do_kho = COALESCE($8, do_kho),
-        ma_moc = COALESCE($9, ma_moc)
-    WHERE ma_cau_hoi = $10
+        ma_moc = COALESCE($9, ma_moc),
+        loai_cau_hoi = COALESCE($10, loai_cau_hoi),
+        muc_bloom = COALESCE($11, muc_bloom),
+        buoc_luyen_tap = COALESCE($12, buoc_luyen_tap),
+        du_lieu_cau_hoi = COALESCE($13, du_lieu_cau_hoi)
+    WHERE ma_cau_hoi = $14
   `, [
     data.noi_dung, data.dap_an_a, data.dap_an_b, data.dap_an_c, data.dap_an_d,
-    data.vi_tri_dap_an_dung, data.giai_thich, data.do_kho, data.ma_moc, ma_cau_hoi
+    data.vi_tri_dap_an_dung, data.giai_thich, data.do_kho, data.ma_moc,
+    data.loai_cau_hoi, data.muc_bloom, data.buoc_luyen_tap, data.du_lieu_cau_hoi, ma_cau_hoi
   ]);
   return await db.queryOne('SELECT * FROM cau_hoi WHERE ma_cau_hoi = $1', [ma_cau_hoi]);
 }
@@ -186,29 +194,31 @@ async function bulkImportQuestions(items, defaultMocId = null) {
   let importedCount = 0;
   for (const item of items) {
     const ma_moc = item.ma_moc || defaultMocId;
-    if (!item.noi_dung || !item.dap_an_a || !item.dap_an_b || item.vi_tri_dap_an_dung === undefined) {
-      continue;
-    }
+    if (!item.noi_dung) continue;
 
     const ma_cau_hoi = item.ma_cau_hoi || `q_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     await db.execute(`
       INSERT INTO cau_hoi (
         ma_cau_hoi, ma_moc, noi_dung, loai_cau_hoi,
         dap_an_a, dap_an_b, dap_an_c, dap_an_d,
-        vi_tri_dap_an_dung, giai_thich, do_kho
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        vi_tri_dap_an_dung, giai_thich, do_kho,
+        muc_bloom, buoc_luyen_tap, du_lieu_cau_hoi
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
     `, [
       ma_cau_hoi,
       ma_moc,
       item.noi_dung,
       item.loai_cau_hoi || 'TRAC_NGHIEM_4',
-      item.dap_an_a,
-      item.dap_an_b,
+      item.dap_an_a || '',
+      item.dap_an_b || '',
       item.dap_an_c || '',
       item.dap_an_d || '',
-      parseInt(item.vi_tri_dap_an_dung, 10),
+      item.vi_tri_dap_an_dung !== undefined ? parseInt(item.vi_tri_dap_an_dung, 10) : null,
       item.giai_thich || '',
-      item.do_kho ? parseInt(item.do_kho, 10) : 1
+      item.do_kho ? parseInt(item.do_kho, 10) : 1,
+      item.muc_bloom || 'NHO',
+      item.buoc_luyen_tap ? parseInt(item.buoc_luyen_tap, 10) : 1,
+      item.du_lieu_cau_hoi ? (typeof item.du_lieu_cau_hoi === 'string' ? item.du_lieu_cau_hoi : JSON.stringify(item.du_lieu_cau_hoi)) : null
     ]);
     importedCount++;
   }

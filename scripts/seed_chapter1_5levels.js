@@ -1231,6 +1231,8 @@ async function runSeed() {
   console.log('[SEED_CH1] Bắt đầu seed 5 mốc học và câu hỏi chuẩn cho Chương 1...');
 
   for (const c of checkpoints) {
+    const totalSteps = c.tong_so_buoc || (c.loai_moc === 'THU_THACH_BOSS' ? 5 : 4);
+    const questionsPerStep = c.so_cau_moi_buoc || 10;
     const existing = await db.queryOne('SELECT ma_moc FROM moc_bai_hoc WHERE ma_moc = $1', [c.ma_moc]);
     if (existing) {
       await db.execute(`
@@ -1240,49 +1242,72 @@ async function runSeed() {
             noi_dung_ly_thuyet = $3,
             diem_thuong = $4,
             xu_thuong = $5,
-            thu_tu = $6
-        WHERE ma_moc = $7
-      `, [c.tieu_de, c.loai_moc, c.noi_dung_ly_thuyet, c.diem_thuong, c.xu_thuong, c.thu_tu, c.ma_moc]);
-      console.log(`[SEED_CH1] Đã cập nhật mốc: ${c.ma_moc} (${c.tieu_de})`);
+            thu_tu = $6,
+            tong_so_buoc = $7,
+            so_cau_moi_buoc = $8
+        WHERE ma_moc = $9
+      `, [c.tieu_de, c.loai_moc, c.noi_dung_ly_thuyet, c.diem_thuong, c.xu_thuong, c.thu_tu, totalSteps, questionsPerStep, c.ma_moc]);
+      console.log(`[SEED_CH1] Đã cập nhật mốc: ${c.ma_moc} (${c.tieu_de}) - ${totalSteps} chặng`);
     } else {
       await db.execute(`
-        INSERT INTO moc_bai_hoc (ma_moc, ma_chuong, tieu_de, loai_moc, noi_dung_ly_thuyet, diem_thuong, xu_thuong, thu_tu)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      `, [c.ma_moc, c.ma_chuong, c.tieu_de, c.loai_moc, c.noi_dung_ly_thuyet, c.diem_thuong, c.xu_thuong, c.thu_tu]);
-      console.log(`[SEED_CH1] Đã thêm mới mốc: ${c.ma_moc} (${c.tieu_de})`);
+        INSERT INTO moc_bai_hoc (ma_moc, ma_chuong, tieu_de, loai_moc, noi_dung_ly_thuyet, diem_thuong, xu_thuong, thu_tu, tong_so_buoc, so_cau_moi_buoc)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `, [c.ma_moc, c.ma_chuong, c.tieu_de, c.loai_moc, c.noi_dung_ly_thuyet, c.diem_thuong, c.xu_thuong, c.thu_tu, totalSteps, questionsPerStep]);
+      console.log(`[SEED_CH1] Đã thêm mới mốc: ${c.ma_moc} (${c.tieu_de}) - ${totalSteps} chặng`);
     }
-  }
-
-  // Delete old questions of these 5 checkpoints to avoid duplicates
-  for (const c of checkpoints) {
-    await db.execute('DELETE FROM cau_hoi WHERE ma_moc = $1', [c.ma_moc]);
   }
 
   let count = 0;
   for (const q of questionsList) {
-    await db.execute(`
-      INSERT INTO cau_hoi (
-        ma_cau_hoi, ma_moc, noi_dung, dap_an_a, dap_an_b, dap_an_c, dap_an_d,
-        vi_tri_dap_an_dung, giai_thich, do_kho, loai_cau_hoi, du_lieu_cau_hoi,
-        muc_bloom, buoc_luyen_tap
-      )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-    `, [
-      q.ma_cau_hoi,
-      q.ma_moc,
-      q.noi_dung,
-      q.dap_an_a || null,
-      q.dap_an_b || null,
-      q.dap_an_c || null,
-      q.dap_an_d || null,
-      q.vi_tri_dap_an_dung !== undefined ? q.vi_tri_dap_an_dung : null,
-      q.giai_thich,
-      q.do_kho || 1,
-      q.loai_cau_hoi,
-      q.du_lieu_cau_hoi || null,
-      q.muc_bloom,
-      q.buoc_luyen_tap
-    ]);
+    const existingQ = await db.queryOne('SELECT ma_cau_hoi FROM cau_hoi WHERE ma_cau_hoi = $1', [q.ma_cau_hoi]);
+    if (existingQ) {
+      await db.execute(`
+        UPDATE cau_hoi
+        SET ma_moc = $1, noi_dung = $2, dap_an_a = $3, dap_an_b = $4, dap_an_c = $5, dap_an_d = $6,
+            vi_tri_dap_an_dung = $7, giai_thich = $8, do_kho = $9, loai_cau_hoi = $10,
+            du_lieu_cau_hoi = $11, muc_bloom = $12, buoc_luyen_tap = $13
+        WHERE ma_cau_hoi = $14
+      `, [
+        q.ma_moc,
+        q.noi_dung,
+        q.dap_an_a || null,
+        q.dap_an_b || null,
+        q.dap_an_c || null,
+        q.dap_an_d || null,
+        q.vi_tri_dap_an_dung !== undefined ? q.vi_tri_dap_an_dung : null,
+        q.giai_thich,
+        q.do_kho || 1,
+        q.loai_cau_hoi,
+        q.du_lieu_cau_hoi || null,
+        q.muc_bloom,
+        q.buoc_luyen_tap,
+        q.ma_cau_hoi
+      ]);
+    } else {
+      await db.execute(`
+        INSERT INTO cau_hoi (
+          ma_cau_hoi, ma_moc, noi_dung, dap_an_a, dap_an_b, dap_an_c, dap_an_d,
+          vi_tri_dap_an_dung, giai_thich, do_kho, loai_cau_hoi, du_lieu_cau_hoi,
+          muc_bloom, buoc_luyen_tap
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      `, [
+        q.ma_cau_hoi,
+        q.ma_moc,
+        q.noi_dung,
+        q.dap_an_a || null,
+        q.dap_an_b || null,
+        q.dap_an_c || null,
+        q.dap_an_d || null,
+        q.vi_tri_dap_an_dung !== undefined ? q.vi_tri_dap_an_dung : null,
+        q.giai_thich,
+        q.do_kho || 1,
+        q.loai_cau_hoi,
+        q.du_lieu_cau_hoi || null,
+        q.muc_bloom,
+        q.buoc_luyen_tap
+      ]);
+    }
     count++;
   }
 

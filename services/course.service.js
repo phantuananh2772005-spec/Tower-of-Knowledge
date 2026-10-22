@@ -85,7 +85,7 @@ async function enrollCourse(slug, ma_nguoi_dung) {
 
   // Ensure first checkpoint is open
   const firstMoc = await db.queryOne(`
-    SELECT m.ma_moc 
+    SELECT m.ma_moc, m.tong_so_buoc 
     FROM moc_bai_hoc m
     JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
     WHERE c.ma_mon = $1
@@ -100,10 +100,11 @@ async function enrollCourse(slug, ma_nguoi_dung) {
 
     if (!progMoc) {
       const ma_tien_do_moc = `pck_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const totalSteps = firstMoc.tong_so_buoc || 4;
       await db.execute(`
         INSERT INTO tien_do_moc_bai_hoc (ma_tien_do_moc, ma_nguoi_dung, ma_moc, trang_thai, diem_dat_duoc, xu_da_nhan, buoc_hien_tai, cac_buoc_hoan_thanh)
-        VALUES ($1, $2, $3, 'DA_MO', 0, 0, 1, '0/4')
-      `, [ma_tien_do_moc, ma_nguoi_dung, firstMoc.ma_moc]);
+        VALUES ($1, $2, $3, 'DA_MO', 0, 0, 1, $4)
+      `, [ma_tien_do_moc, ma_nguoi_dung, firstMoc.ma_moc, `0/${totalSteps}`]);
     }
   }
 
@@ -128,7 +129,7 @@ async function ensureCourseInitialized(ma_nguoi_dung, ma_mon) {
   }
 
   const firstMoc = await db.queryOne(`
-    SELECT m.ma_moc 
+    SELECT m.ma_moc, m.tong_so_buoc 
     FROM moc_bai_hoc m
     JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
     WHERE c.ma_mon = $1
@@ -143,10 +144,11 @@ async function ensureCourseInitialized(ma_nguoi_dung, ma_mon) {
 
     if (!progMoc) {
       const ma_tien_do_moc = `pck_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const totalSteps = firstMoc.tong_so_buoc || 4;
       await db.execute(`
         INSERT INTO tien_do_moc_bai_hoc (ma_tien_do_moc, ma_nguoi_dung, ma_moc, trang_thai, diem_dat_duoc, xu_da_nhan, buoc_hien_tai, cac_buoc_hoan_thanh)
-        VALUES ($1, $2, $3, 'DA_MO', 0, 0, 1, '0/4')
-      `, [ma_tien_do_moc, ma_nguoi_dung, firstMoc.ma_moc]);
+        VALUES ($1, $2, $3, 'DA_MO', 0, 0, 1, $4)
+      `, [ma_tien_do_moc, ma_nguoi_dung, firstMoc.ma_moc, `0/${totalSteps}`]);
     }
   }
 }
@@ -173,17 +175,28 @@ async function getCourseDetails(slug, ma_nguoi_dung) {
 
   for (const ch of chapters) {
     const checkpoints = await db.query(
-      'SELECT ma_moc, ma_chuong, tieu_de, loai_moc, diem_thuong, xu_thuong, thu_tu FROM moc_bai_hoc WHERE ma_chuong = $1 ORDER BY thu_tu ASC',
+      `SELECT m.ma_moc, m.ma_chuong, m.tieu_de, m.loai_moc, m.diem_thuong, m.xu_thuong, m.thu_tu, 
+              m.tong_so_buoc, m.so_cau_moi_buoc, m.cau_hinh_bloom,
+              (CASE 
+                WHEN m.loai_moc = 'THU_THACH_BOSS' THEN 
+                  (SELECT COUNT(*) FROM cau_hoi q JOIN moc_bai_hoc m2 ON q.ma_moc = m2.ma_moc WHERE m2.ma_chuong = m.ma_chuong)
+                ELSE 
+                  (SELECT COUNT(*) FROM cau_hoi q WHERE q.ma_moc = m.ma_moc)
+              END) AS so_luong_cau_hoi
+       FROM moc_bai_hoc m 
+       WHERE m.ma_chuong = $1 
+       ORDER BY m.thu_tu ASC`,
       [ch.ma_chuong]
     );
 
     const enrichedCheckpoints = [];
     for (const m of checkpoints) {
+      const totalSteps = m.tong_so_buoc || 4;
       let status = 'KHOA';
       let diem_dat_duoc = 0;
       let xu_da_nhan = 0;
       let buoc_hien_tai = 1;
-      let cac_buoc_hoan_thanh = '0/4';
+      let cac_buoc_hoan_thanh = `0/${totalSteps}`;
 
       if (isEnrolled && ma_nguoi_dung) {
         const prog = await db.queryOne(
@@ -195,12 +208,15 @@ async function getCourseDetails(slug, ma_nguoi_dung) {
           diem_dat_duoc = prog.diem_dat_duoc || 0;
           xu_da_nhan = prog.xu_da_nhan || 0;
           buoc_hien_tai = prog.buoc_hien_tai || 1;
-          cac_buoc_hoan_thanh = prog.cac_buoc_hoan_thanh || '0/4';
+          cac_buoc_hoan_thanh = prog.cac_buoc_hoan_thanh || `0/${totalSteps}`;
         }
       }
 
       enrichedCheckpoints.push({
         ...m,
+        tong_so_buoc: totalSteps,
+        so_cau_moi_buoc: m.so_cau_moi_buoc || 10,
+        so_luong_cau_hoi: parseInt(m.so_luong_cau_hoi || 0, 10),
         trang_thai: status,
         diem_dat_duoc,
         xu_da_nhan,
@@ -225,6 +241,95 @@ async function getCourseDetails(slug, ma_nguoi_dung) {
   };
 }
 
+const DEFAULT_BLOOM_MATRIX_5 = {
+  1: { NHO: 0.7, HIEU: 0.3, VAN_DUNG: 0.0, tieu_de: 'Khởi động & Nhận diện', ti_le: '70% Nhớ - 30% Hiểu' },
+  2: { NHO: 0.3, HIEU: 0.5, VAN_DUNG: 0.2, tieu_de: 'Thấm sâu khái niệm', ti_le: '30% Nhớ - 50% Hiểu - 20% Vận dụng' },
+  3: { NHO: 0.1, HIEU: 0.4, VAN_DUNG: 0.5, tieu_de: 'Tăng tốc & Thử thách', ti_le: '10% Nhớ - 40% Hiểu - 50% Vận dụng' },
+  4: { NHO: 0.0, HIEU: 0.3, VAN_DUNG: 0.7, tieu_de: 'Bứt phá kỹ năng', ti_le: '30% Hiểu - 70% Vận dụng' },
+  5: { NHO: 0.0, HIEU: 0.1, VAN_DUNG: 0.9, tieu_de: 'Đỉnh tháp & Làm chủ', ti_le: '10% Hiểu - 90% Vận dụng' }
+};
+
+const DEFAULT_BLOOM_MATRIX_4 = {
+  1: { NHO: 0.7, HIEU: 0.3, VAN_DUNG: 0.0, tieu_de: 'Khởi động & Nhận biết', ti_le: '70% Nhớ - 30% Hiểu' },
+  2: { NHO: 0.4, HIEU: 0.4, VAN_DUNG: 0.2, tieu_de: 'Tăng tốc & Thấu hiểu', ti_le: '40% Nhớ - 40% Hiểu - 20% Vận dụng' },
+  3: { NHO: 0.2, HIEU: 0.3, VAN_DUNG: 0.5, tieu_de: 'Bứt phá & Vận dụng', ti_le: '20% Nhớ - 30% Hiểu - 50% Vận dụng' },
+  4: { NHO: 0.1, HIEU: 0.6, VAN_DUNG: 0.3, tieu_de: 'Làm chủ & Sắp xếp', ti_le: '10% Nhớ - 60% Hiểu - 30% Vận dụng' }
+};
+
+const DEFAULT_BLOOM_MATRIX_3 = {
+  1: { NHO: 0.8, HIEU: 0.2, VAN_DUNG: 0.0, tieu_de: 'Khởi động & Ghi nhớ', ti_le: '80% Nhớ - 20% Hiểu' },
+  2: { NHO: 0.3, HIEU: 0.5, VAN_DUNG: 0.2, tieu_de: 'Thấu hiểu Bản chất', ti_le: '30% Nhớ - 50% Hiểu - 20% Vận dụng' },
+  3: { NHO: 0.1, HIEU: 0.3, VAN_DUNG: 0.6, tieu_de: 'Vận dụng Thực tiễn', ti_le: '10% Nhớ - 30% Hiểu - 60% Vận dụng' }
+};
+
+function resolveBloomMatrix(checkpoint) {
+  const totalSteps = checkpoint.tong_so_buoc || 4;
+  if (checkpoint.cau_hinh_bloom) {
+    try {
+      const parsed = typeof checkpoint.cau_hinh_bloom === 'string' ? JSON.parse(checkpoint.cau_hinh_bloom) : checkpoint.cau_hinh_bloom;
+      if (parsed && typeof parsed === 'object') return parsed;
+    } catch (e) {
+      // Fallback
+    }
+  }
+  if (totalSteps >= 5) return DEFAULT_BLOOM_MATRIX_5;
+  if (totalSteps === 3) return DEFAULT_BLOOM_MATRIX_3;
+  return DEFAULT_BLOOM_MATRIX_4;
+}
+
+function poolQuestionsByBloom(allQuestions, targetRatio, targetCount) {
+  if (!allQuestions || allQuestions.length === 0) return [];
+  if (allQuestions.length <= targetCount) {
+    return [...allQuestions].sort(() => Math.random() - 0.5);
+  }
+
+  const buckets = {
+    NHO: allQuestions.filter(q => (q.muc_bloom || 'NHO') === 'NHO'),
+    HIEU: allQuestions.filter(q => (q.muc_bloom || 'NHO') === 'HIEU' || (q.muc_bloom || 'NHO') === 'THONG_HIEU'),
+    VAN_DUNG: allQuestions.filter(q => (q.muc_bloom || 'NHO') === 'VAN_DUNG' || (q.muc_bloom || 'NHO') === 'PHAN_TICH')
+  };
+
+  for (const k of Object.keys(buckets)) {
+    buckets[k].sort(() => Math.random() - 0.5);
+  }
+
+  const needNho = Math.round(targetCount * (targetRatio.NHO !== undefined ? targetRatio.NHO : 0.33));
+  const needHieu = Math.round(targetCount * (targetRatio.HIEU !== undefined ? targetRatio.HIEU : 0.33));
+  const needVanDung = Math.max(0, targetCount - needNho - needHieu);
+
+  const picked = [];
+  const pickedIds = new Set();
+
+  function pickFromBucket(bName, count) {
+    const list = buckets[bName] || [];
+    let taken = 0;
+    for (const item of list) {
+      if (taken >= count) break;
+      if (!pickedIds.has(item.ma_cau_hoi)) {
+        picked.push(item);
+        pickedIds.add(item.ma_cau_hoi);
+        taken++;
+      }
+    }
+    return taken;
+  }
+
+  pickFromBucket('NHO', needNho);
+  pickFromBucket('HIEU', needHieu);
+  pickFromBucket('VAN_DUNG', needVanDung);
+
+  if (picked.length < targetCount) {
+    const remaining = allQuestions.filter(q => !pickedIds.has(q.ma_cau_hoi)).sort(() => Math.random() - 0.5);
+    for (const rem of remaining) {
+      if (picked.length >= targetCount) break;
+      picked.push(rem);
+      pickedIds.add(rem.ma_cau_hoi);
+    }
+  }
+
+  return picked;
+}
+
 /**
  * Get checkpoint content for learning / taking test
  */
@@ -232,9 +337,13 @@ async function getCheckpointContent(ma_moc, ma_nguoi_dung, stepRequested) {
   const checkpoint = await db.queryOne('SELECT * FROM moc_bai_hoc WHERE ma_moc = $1', [ma_moc]);
   if (!checkpoint) throw new Error('Không tìm thấy mốc bài học.');
 
+  const totalSteps = checkpoint.tong_so_buoc || 4;
+  const questionsPerStep = checkpoint.so_cau_moi_buoc || 10;
+  const bloomMatrix = resolveBloomMatrix(checkpoint);
+
   let userStatus = 'KHOA';
   let buoc_hien_tai = 1;
-  let cac_buoc_hoan_thanh = '0/4';
+  let cac_buoc_hoan_thanh = `0/${totalSteps}`;
   let duLieuTriNhoRaw = null;
 
   if (ma_nguoi_dung) {
@@ -245,7 +354,7 @@ async function getCheckpointContent(ma_moc, ma_nguoi_dung, stepRequested) {
     if (prog) {
       userStatus = prog.trang_thai;
       buoc_hien_tai = prog.buoc_hien_tai || 1;
-      cac_buoc_hoan_thanh = prog.cac_buoc_hoan_thanh || '0/4';
+      cac_buoc_hoan_thanh = prog.cac_buoc_hoan_thanh || `0/${totalSteps}`;
       duLieuTriNhoRaw = prog.du_lieu_tri_nho;
     }
   }
@@ -254,26 +363,34 @@ async function getCheckpointContent(ma_moc, ma_nguoi_dung, stepRequested) {
     throw new Error('Mốc bài học này đang bị khóa. Hãy hoàn thành các mốc trước để mở khóa!');
   }
 
-  const activeStep = stepRequested ? Math.max(1, Math.min(4, parseInt(stepRequested, 10))) : Math.min(4, buoc_hien_tai);
+  const activeStep = stepRequested ? Math.max(1, Math.min(totalSteps, parseInt(stepRequested, 10))) : Math.min(totalSteps, buoc_hien_tai);
 
-  // Fetch questions for activeStep
-  let rawQuestions = await db.query(`
-    SELECT ma_cau_hoi, noi_dung, loai_cau_hoi, dap_an_a, dap_an_b, dap_an_c, dap_an_d,
-           du_lieu_cau_hoi, muc_bloom, buoc_luyen_tap, do_kho
-    FROM cau_hoi
-    WHERE ma_moc = $1 AND buoc_luyen_tap = $2
-    ORDER BY ma_cau_hoi ASC
-  `, [ma_moc, activeStep]);
-
-  if (!rawQuestions || rawQuestions.length === 0) {
-    rawQuestions = await db.query(`
+  // Fetch candidate questions from pool:
+  // If Boss Checkpoint, pool across the ENTIRE CHAPTER!
+  // If standard checkpoint, pool within this checkpoint.
+  let allPoolQuestions = [];
+  if (checkpoint.loai_moc === 'THU_THACH_BOSS') {
+    allPoolQuestions = await db.query(`
+      SELECT q.ma_cau_hoi, q.noi_dung, q.loai_cau_hoi, q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d,
+             q.du_lieu_cau_hoi, q.muc_bloom, q.buoc_luyen_tap, q.do_kho, q.vi_tri_dap_an_dung, q.giai_thich
+      FROM cau_hoi q
+      JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
+      WHERE m.ma_chuong = $1
+      ORDER BY q.ma_cau_hoi ASC
+    `, [checkpoint.ma_chuong]);
+  } else {
+    allPoolQuestions = await db.query(`
       SELECT ma_cau_hoi, noi_dung, loai_cau_hoi, dap_an_a, dap_an_b, dap_an_c, dap_an_d,
-             du_lieu_cau_hoi, muc_bloom, buoc_luyen_tap, do_kho
+             du_lieu_cau_hoi, muc_bloom, buoc_luyen_tap, do_kho, vi_tri_dap_an_dung, giai_thich
       FROM cau_hoi
       WHERE ma_moc = $1
       ORDER BY ma_cau_hoi ASC
     `, [ma_moc]);
   }
+
+  // Pool questions according to activeStep's Bloom matrix
+  const targetStepConfig = bloomMatrix[activeStep] || { NHO: 0.33, HIEU: 0.33, VAN_DUNG: 0.34 };
+  let rawQuestions = poolQuestionsByBloom(allPoolQuestions, targetStepConfig, questionsPerStep);
 
   // Adaptive Question Selection based on memory state weights (Spaced Repetition & Weakness Focus)
   let memoryMap = {};
@@ -286,7 +403,7 @@ async function getCheckpointContent(ma_moc, ma_nguoi_dung, stepRequested) {
   }
 
   if (rawQuestions && rawQuestions.length > 0) {
-    rawQuestions = selectAdaptiveQuestions(rawQuestions, memoryMap, 10);
+    rawQuestions = selectAdaptiveQuestions(rawQuestions, memoryMap, questionsPerStep);
   }
 
   // Format questions safely (NEVER expose vi_tri_dap_an_dung to client)
@@ -336,6 +453,17 @@ async function getCheckpointContent(ma_moc, ma_nguoi_dung, stepRequested) {
     };
   });
 
+  const thong_tin_cac_buoc = [];
+  for (let b = 1; b <= totalSteps; b++) {
+    const sc = bloomMatrix[b] || { tieu_de: `Chặng ${b}`, ti_le: 'Hỗn hợp' };
+    thong_tin_cac_buoc.push({
+      buoc: b,
+      tieu_de: sc.tieu_de || `Chặng ${b}`,
+      ti_le: sc.ti_le || 'Hỗn hợp',
+      hoan_thanh: buoc_hien_tai > b
+    });
+  }
+
   return {
     ma_moc: checkpoint.ma_moc,
     tieu_de: checkpoint.tieu_de,
@@ -346,14 +474,10 @@ async function getCheckpointContent(ma_moc, ma_nguoi_dung, stepRequested) {
     trang_thai: userStatus,
     buoc_hien_tai,
     buoc_dang_hoc: activeStep,
-    tong_so_buoc: 4,
+    tong_so_buoc: totalSteps,
+    so_cau_moi_buoc: questionsPerStep,
     cac_buoc_hoan_thanh,
-    thong_tin_cac_buoc: [
-      { buoc: 1, tieu_de: 'Khắc sâu Định nghĩa', ti_le: '100% Nhớ', hoan_thanh: buoc_hien_tai > 1 },
-      { buoc: 2, tieu_de: 'Củng cố Nhận thức', ti_le: '80% Nhớ - 20% Hiểu', hoan_thanh: buoc_hien_tai > 2 },
-      { buoc: 3, tieu_de: 'Kết nối & Phân tích', ti_le: '50% Nhớ - 40% Hiểu - 10% Vận dụng', hoan_thanh: buoc_hien_tai > 3 },
-      { buoc: 4, tieu_de: 'Làm chủ & Sắp xếp', ti_le: '10% Nhớ - 60% Hiểu - 30% Vận dụng', hoan_thanh: buoc_hien_tai > 4 }
-    ],
+    thong_tin_cac_buoc,
     danh_sach_cau_hoi: formattedQuestions
   };
 }
@@ -365,14 +489,19 @@ async function submitStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
   const checkpoint = await db.queryOne('SELECT * FROM moc_bai_hoc WHERE ma_moc = $1', [ma_moc]);
   if (!checkpoint) throw new Error('Không tìm thấy mốc bài học.');
 
-  const step = Math.max(1, Math.min(4, parseInt(buocNumber || 1, 10)));
+  const totalSteps = checkpoint.tong_so_buoc || 4;
+  const questionsPerStep = checkpoint.so_cau_moi_buoc || 10;
+  const step = Math.max(1, Math.min(totalSteps, parseInt(buocNumber || 1, 10)));
 
-  let questions = await db.query(
-    'SELECT * FROM cau_hoi WHERE ma_moc = $1 AND buoc_luyen_tap = $2 ORDER BY ma_cau_hoi ASC',
-    [ma_moc, step]
-  );
-
-  if (!questions || questions.length === 0) {
+  let questions = [];
+  if (checkpoint.loai_moc === 'THU_THACH_BOSS') {
+    questions = await db.query(`
+      SELECT q.* FROM cau_hoi q
+      JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
+      WHERE m.ma_chuong = $1
+      ORDER BY q.ma_cau_hoi ASC
+    `, [checkpoint.ma_chuong]);
+  } else {
     questions = await db.query(
       'SELECT * FROM cau_hoi WHERE ma_moc = $1 ORDER BY ma_cau_hoi ASC',
       [ma_moc]
@@ -383,8 +512,8 @@ async function submitStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
     throw new Error('Mốc bài học chưa có câu hỏi nào.');
   }
 
-  const rewardCoins = Math.max(5, Math.round((checkpoint.xu_thuong || 20) / 4));
-  const rewardExp = Math.max(10, Math.round((checkpoint.diem_thuong || 40) / 4));
+  const rewardCoins = Math.max(5, Math.round((checkpoint.xu_thuong || 20) / totalSteps));
+  const rewardExp = Math.max(10, Math.round((checkpoint.diem_thuong || 40) / totalSteps));
   const evaluation = evaluateQuizSubmission(submissions, questions, 70, rewardCoins, rewardExp);
 
   // Compute session telemetry from submission attempts (with lookups & per-question time)
@@ -442,25 +571,25 @@ async function submitStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
         nextStep = currentStep + 1;
       }
 
-      if (nextStep > 4) {
+      if (nextStep > totalSteps) {
         checkpointCompleted = true;
         await db.execute(`
           UPDATE tien_do_moc_bai_hoc
           SET trang_thai = 'DA_HOAN_THANH',
-              buoc_hien_tai = 5,
-              cac_buoc_hoan_thanh = '4/4',
+              buoc_hien_tai = $1,
+              cac_buoc_hoan_thanh = $2,
               thoi_diem_hoan_thanh = SYSDATETIME(),
-              diem_dat_duoc = diem_dat_duoc + $1,
-              xu_da_nhan = xu_da_nhan + $2,
-              du_lieu_tri_nho = $3
-          WHERE ma_nguoi_dung = $4 AND ma_moc = $5
-        `, [evaluation.earnedExp, evaluation.earnedCoins, updatedMemoryJson, ma_nguoi_dung, ma_moc]);
+              diem_dat_duoc = diem_dat_duoc + $3,
+              xu_da_nhan = xu_da_nhan + $4,
+              du_lieu_tri_nho = $5
+          WHERE ma_nguoi_dung = $6 AND ma_moc = $7
+        `, [totalSteps + 1, `${totalSteps}/${totalSteps}`, evaluation.earnedExp, evaluation.earnedCoins, updatedMemoryJson, ma_nguoi_dung, ma_moc]);
 
         // Unlock next checkpoint
         const courseChapter = await db.queryOne('SELECT ma_mon FROM chuong_hoc WHERE ma_chuong = $1', [checkpoint.ma_chuong]);
         if (courseChapter) {
           const allCourseCheckpoints = await db.query(`
-            SELECT m.ma_moc, m.thu_tu, c.thu_tu as chuong_thu_tu
+            SELECT m.ma_moc, m.thu_tu, m.tong_so_buoc, c.thu_tu as chuong_thu_tu
             FROM moc_bai_hoc m
             JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
             WHERE c.ma_mon = $1
@@ -476,10 +605,11 @@ async function submitStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
             );
             if (!nextProg) {
               const newMocProgId = `pck_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+              const nextTotalSteps = nextUnlock.nextCheckpoint.tong_so_buoc || 4;
               await db.execute(`
                 INSERT INTO tien_do_moc_bai_hoc (ma_tien_do_moc, ma_nguoi_dung, ma_moc, trang_thai, diem_dat_duoc, xu_da_nhan, buoc_hien_tai, cac_buoc_hoan_thanh, du_lieu_tri_nho)
-                VALUES ($1, $2, $3, 'DA_MO', 0, 0, 1, '0/4', $4)
-              `, [newMocProgId, ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc, '{}']);
+                VALUES ($1, $2, $3, 'DA_MO', 0, 0, 1, $4, $5)
+              `, [newMocProgId, ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc, `0/${nextTotalSteps}`, '{}']);
             }
           }
 
@@ -512,7 +642,7 @@ async function submitStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
               xu_da_nhan = xu_da_nhan + $4,
               du_lieu_tri_nho = $5
           WHERE ma_nguoi_dung = $6 AND ma_moc = $7
-        `, [nextStep, `${nextStep - 1}/4`, evaluation.earnedExp, evaluation.earnedCoins, updatedMemoryJson, ma_nguoi_dung, ma_moc]);
+        `, [nextStep, `${step}/${totalSteps}`, evaluation.earnedExp, evaluation.earnedCoins, updatedMemoryJson, ma_nguoi_dung, ma_moc]);
       }
 
       if (evaluation.earnedCoins > 0) {
@@ -535,7 +665,8 @@ async function submitStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
     ...evaluation,
     telemetry,
     buoc_vua_lam: step,
-    buoc_ke_tiep: evaluation.isPassed ? Math.min(5, step + 1) : step,
+    buoc_ke_tiep: evaluation.isPassed ? Math.min(totalSteps + 1, step + 1) : step,
+    tong_so_buoc: totalSteps,
     moc_hoan_thanh: checkpointCompleted,
     moc_ke_tiep_mo_khoa: nextCheckpointUnlocked ? nextCheckpointUnlocked.ma_moc : null
   };
@@ -564,17 +695,18 @@ async function completeTheoreticalCheckpoint(ma_moc, ma_nguoi_dung) {
   // Award full coins and EXP
   const earnedCoins = checkpoint.xu_thuong || 10;
   const earnedExp = checkpoint.diem_thuong || 15;
+  const totalSteps = checkpoint.tong_so_buoc || 4;
 
   await db.execute(`
     UPDATE tien_do_moc_bai_hoc
     SET trang_thai = 'DA_HOAN_THANH',
-        buoc_hien_tai = 5,
-        cac_buoc_hoan_thanh = '4/4',
+        buoc_hien_tai = $1,
+        cac_buoc_hoan_thanh = $2,
         thoi_diem_hoan_thanh = SYSDATETIME(),
-        diem_dat_duoc = $1,
-        xu_da_nhan = $2
-    WHERE ma_nguoi_dung = $3 AND ma_moc = $4
-  `, [earnedExp, earnedCoins, ma_nguoi_dung, ma_moc]);
+        diem_dat_duoc = $3,
+        xu_da_nhan = $4
+    WHERE ma_nguoi_dung = $5 AND ma_moc = $6
+  `, [totalSteps + 1, `${totalSteps}/${totalSteps}`, earnedExp, earnedCoins, ma_nguoi_dung, ma_moc]);
 
   // Unlock next checkpoint
   const courseChapter = await db.queryOne('SELECT ma_mon FROM chuong_hoc WHERE ma_chuong = $1', [checkpoint.ma_chuong]);
@@ -582,7 +714,7 @@ async function completeTheoreticalCheckpoint(ma_moc, ma_nguoi_dung) {
 
   if (courseChapter) {
     const allCourseCheckpoints = await db.query(`
-      SELECT m.ma_moc, m.thu_tu, c.thu_tu as chuong_thu_tu
+      SELECT m.ma_moc, m.thu_tu, m.tong_so_buoc, c.thu_tu as chuong_thu_tu
       FROM moc_bai_hoc m
       JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
       WHERE c.ma_mon = $1
@@ -598,10 +730,11 @@ async function completeTheoreticalCheckpoint(ma_moc, ma_nguoi_dung) {
       );
       if (!nextProg) {
         const newMocProgId = `pck_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        const nextTotalSteps = nextUnlock.nextCheckpoint.tong_so_buoc || 4;
         await db.execute(`
           INSERT INTO tien_do_moc_bai_hoc (ma_tien_do_moc, ma_nguoi_dung, ma_moc, trang_thai, diem_dat_duoc, xu_da_nhan, buoc_hien_tai, cac_buoc_hoan_thanh)
-          VALUES ($1, $2, $3, 'DA_MO', 0, 0, 1, '0/4')
-        `, [newMocProgId, ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc]);
+          VALUES ($1, $2, $3, 'DA_MO', 0, 0, 1, $4)
+        `, [newMocProgId, ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc, `0/${nextTotalSteps}`]);
       }
     }
 
@@ -714,23 +847,24 @@ async function submitQuizCheckpoint(ma_moc, submissions, ma_nguoi_dung) {
       console.warn('⚠️ Telemetry log notice:', errLog.message);
     }
 
+    const totalSteps = checkpoint.tong_so_buoc || 4;
     await db.execute(`
       UPDATE tien_do_moc_bai_hoc
       SET trang_thai = 'DA_HOAN_THANH',
-          buoc_hien_tai = 5,
-          cac_buoc_hoan_thanh = '4/4',
+          buoc_hien_tai = $1,
+          cac_buoc_hoan_thanh = $2,
           thoi_diem_hoan_thanh = SYSDATETIME(),
-          diem_dat_duoc = diem_dat_duoc + $1,
-          xu_da_nhan = xu_da_nhan + $2,
-          du_lieu_tri_nho = $3
-      WHERE ma_nguoi_dung = $4 AND ma_moc = $5
-    `, [evaluation.earnedExp || rewardExp, evaluation.earnedCoins || rewardCoins, updatedMemoryJson, ma_nguoi_dung, ma_moc]);
+          diem_dat_duoc = diem_dat_duoc + $3,
+          xu_da_nhan = xu_da_nhan + $4,
+          du_lieu_tri_nho = $5
+      WHERE ma_nguoi_dung = $6 AND ma_moc = $7
+    `, [totalSteps + 1, `${totalSteps}/${totalSteps}`, evaluation.earnedExp || rewardExp, evaluation.earnedCoins || rewardCoins, updatedMemoryJson, ma_nguoi_dung, ma_moc]);
 
     // Unlock next checkpoint
     const courseChapter = await db.queryOne('SELECT ma_mon FROM chuong_hoc WHERE ma_chuong = $1', [checkpoint.ma_chuong]);
     if (courseChapter) {
       const allCourseCheckpoints = await db.query(`
-        SELECT m.ma_moc, m.thu_tu, c.thu_tu as chuong_thu_tu
+        SELECT m.ma_moc, m.thu_tu, m.tong_so_buoc, c.thu_tu as chuong_thu_tu
         FROM moc_bai_hoc m
         JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
         WHERE c.ma_mon = $1
@@ -746,10 +880,11 @@ async function submitQuizCheckpoint(ma_moc, submissions, ma_nguoi_dung) {
         );
         if (!nextProg) {
           const newMocProgId = `pck_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+          const nextTotalSteps = nextUnlock.nextCheckpoint.tong_so_buoc || 4;
           await db.execute(`
             INSERT INTO tien_do_moc_bai_hoc (ma_tien_do_moc, ma_nguoi_dung, ma_moc, trang_thai, diem_dat_duoc, xu_da_nhan, buoc_hien_tai, cac_buoc_hoan_thanh)
-            VALUES ($1, $2, $3, 'DA_MO', 0, 0, 1, '0/4')
-          `, [newMocProgId, ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc]);
+            VALUES ($1, $2, $3, 'DA_MO', 0, 0, 1, $4)
+          `, [newMocProgId, ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc, `0/${nextTotalSteps}`]);
         }
       }
 

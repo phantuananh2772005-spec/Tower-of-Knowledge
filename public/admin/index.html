@@ -236,8 +236,8 @@
       <section id="panel-questions" class="hidden space-y-6">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <h2 class="text-base font-bold">Ngân Hàng Câu Hỏi Trắc Nghiệm</h2>
-            <p class="text-xs text-[var(--muted)]">Toàn bộ câu hỏi phục vụ các Mốc bài tập và Đấu trường 1v1</p>
+            <h2 class="text-base font-bold">Ngân Hàng Câu Hỏi & Đề Thi</h2>
+            <p class="text-xs text-[var(--muted)]">Quản lý câu hỏi theo phân loại Bloom, dạng bài tập tương tác và phân phối vào các Chặng</p>
           </div>
           <div class="flex items-center gap-2">
             <button onclick="openBulkImportModal()" class="px-3 py-1.5 rounded-xl border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 font-bold text-xs transition cursor-pointer flex items-center gap-1.5">
@@ -249,6 +249,27 @@
           </div>
         </div>
 
+        <!-- Filter Bar -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
+          <input type="text" id="filter-q-search" oninput="applyQuestionFilters()" placeholder="🔍 Tìm kiếm nội dung câu hỏi..." class="p-2 rounded-xl bg-[var(--card)] border border-[var(--border)]">
+          <select id="filter-q-moc" onchange="applyQuestionFilters()" class="p-2 rounded-xl bg-[var(--card)] border border-[var(--border)] font-mono text-[11px]">
+            <option value="">-- Tất cả Mốc bài học --</option>
+          </select>
+          <select id="filter-q-type" onchange="applyQuestionFilters()" class="p-2 rounded-xl bg-[var(--card)] border border-[var(--border)] font-bold text-amber-400">
+            <option value="">-- Tất cả Dạng câu hỏi --</option>
+            <option value="TRAC_NGHIEM_4">Trắc Nghiệm 4 Lựa Chọn</option>
+            <option value="NOI_CAP">Nối Cặp Tương Ứng</option>
+            <option value="DIEN_TU">Điền Từ Vào Chỗ Trống</option>
+            <option value="SAP_XEP_CAU">Sắp Xếp Từ Ghép Câu</option>
+          </select>
+          <select id="filter-q-bloom" onchange="applyQuestionFilters()" class="p-2 rounded-xl bg-[var(--card)] border border-[var(--border)] font-bold text-emerald-400">
+            <option value="">-- Tất cả Mức Bloom --</option>
+            <option value="NHO">🟢 Nhớ (Ghi nhớ / Định nghĩa)</option>
+            <option value="HIEU">🟡 Hiểu (Thông hiểu)</option>
+            <option value="VAN_DUNG">🔴 Vận dụng (Áp dụng / Boss)</option>
+          </select>
+        </div>
+
         <!-- Question List Table -->
         <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-3">
           <div class="overflow-x-auto">
@@ -257,14 +278,16 @@
                 <tr>
                   <th class="py-2.5 px-3">Mã</th>
                   <th class="py-2.5 px-3">Mốc</th>
+                  <th class="py-2.5 px-3">Dạng câu</th>
+                  <th class="py-2.5 px-3">Bloom</th>
                   <th class="py-2.5 px-3 w-1/3">Nội dung câu hỏi</th>
-                  <th class="py-2.5 px-3">Đáp án đúng</th>
+                  <th class="py-2.5 px-3">Đáp án / Dữ liệu</th>
                   <th class="py-2.5 px-3">Độ khó</th>
                   <th class="py-2.5 px-3 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody id="table-questions" class="divide-y divide-[var(--border)]">
-                <tr><td colspan="6" class="py-4 text-center text-[var(--muted)]">Đang tải danh sách câu hỏi...</td></tr>
+                <tr><td colspan="8" class="py-4 text-center text-[var(--muted)]">Đang tải danh sách câu hỏi...</td></tr>
               </tbody>
             </table>
           </div>
@@ -473,13 +496,40 @@
             </select>
           </div>
           <div>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Số chặng luyện tập</label>
+            <select id="cp-steps" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] font-bold">
+              <option value="3">3 Chặng (Cơ bản)</option>
+              <option value="4">4 Chặng (Duolingo chuẩn)</option>
+              <option value="5" selected>5 Chặng (Khuyên dùng - Leo Tháp)</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Số câu / Chặng</label>
+            <select id="cp-questions-per-step" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] font-mono font-bold">
+              <option value="8">8 câu</option>
+              <option value="10" selected>10 câu (Chuẩn)</option>
+              <option value="12">12 câu</option>
+              <option value="15">15 câu</option>
+            </select>
+          </div>
+          <div>
             <label class="block font-semibold mb-1 text-[var(--muted)]">Thưởng Xu</label>
             <input type="number" id="cp-coins" value="15" required class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] font-mono">
           </div>
+          <div>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Thưởng EXP</label>
+            <input type="number" id="cp-exp" value="20" required class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] font-mono">
+          </div>
         </div>
         <div>
-          <label class="block font-semibold mb-1 text-[var(--muted)]">Thưởng Điểm EXP</label>
-          <input type="number" id="cp-exp" value="20" required class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] font-mono">
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Phân bổ Ma trận Bloom theo Chặng</label>
+          <select id="cp-bloom-matrix" class="w-full px-3 py-2 rounded-xl bg-[var(--background)] border border-[var(--border)] font-semibold text-[11px]">
+            <option value="STANDARD_5">Chuẩn 5 Chặng Leo Tháp (70% Nhớ -> 90% Vận dụng)</option>
+            <option value="STANDARD_4">Chuẩn 4 Chặng Duolingo (70% Nhớ -> 30% Vận dụng)</option>
+            <option value="BALANCED">Cân bằng đều (33% Nhớ - 33% Hiểu - 34% Vận dụng)</option>
+          </select>
         </div>
         <div>
           <label class="block font-semibold mb-1 text-[var(--muted)]">Nội dung bài học lý thuyết (nếu có)</label>
@@ -503,57 +553,149 @@
 
       <form id="form-question" onsubmit="handleSaveQuestion(event)" class="space-y-3 text-xs">
         <input type="hidden" id="edit-q-id">
-        <div>
-          <label class="block font-semibold mb-1 text-[var(--muted)]">Gán vào Mốc bài học</label>
-          <select id="edit-q-moc" required class="w-full p-2 rounded-xl bg-[var(--background)] border border-[var(--border)] font-mono text-[11px]"></select>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Gán vào Mốc bài học</label>
+            <select id="edit-q-moc" required class="w-full p-2 rounded-xl bg-[var(--background)] border border-[var(--border)] font-mono text-[11px]"></select>
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Dạng Câu Hỏi</label>
+            <select id="edit-q-type" onchange="toggleQuestionTypeFields(this.value)" class="w-full p-2 rounded-xl bg-[var(--background)] border border-[var(--border)] font-bold text-amber-500">
+              <option value="TRAC_NGHIEM_4">Trắc Nghiệm 4 Lựa Chọn</option>
+              <option value="NOI_CAP">Nối Cặp Tương Ứng (Matching)</option>
+              <option value="DIEN_TU">Điền Từ Vào Chỗ Trống (Chip)</option>
+              <option value="SAP_XEP_CAU">Sắp Xếp Từ Ghép Câu (Arrange)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2">
+          <div>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Mức Bloom</label>
+            <select id="edit-q-bloom" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)] font-bold text-emerald-400">
+              <option value="NHO">🟢 Nhớ (Định nghĩa)</option>
+              <option value="HIEU">🟡 Hiểu (Thông hiểu)</option>
+              <option value="VAN_DUNG">🔴 Vận dụng (Áp dụng)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Chặng Đích (1-5)</label>
+            <select id="edit-q-step" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+              <option value="0">Tự động theo Bloom</option>
+              <option value="1">Chặng 1 (Khởi động)</option>
+              <option value="2">Chặng 2 (Củng cố)</option>
+              <option value="3">Chặng 3 (Tăng tốc)</option>
+              <option value="4">Chặng 4 (Bứt phá)</option>
+              <option value="5">Chặng 5 (Làm chủ / Boss)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Độ khó (1-3)</label>
+            <select id="edit-q-diff" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+              <option value="1">1 - Dễ / Nhận biết</option>
+              <option value="2">2 - Trung bình</option>
+              <option value="3">3 - Khó / Boss</option>
+            </select>
+          </div>
         </div>
 
         <div>
-          <label class="block font-semibold mb-1 text-[var(--muted)]">Nội dung câu hỏi</label>
-          <textarea id="edit-q-content" rows="3" required class="w-full p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]"></textarea>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Nội dung câu hỏi / Tiêu đề yêu cầu</label>
+          <textarea id="edit-q-content" rows="2" required class="w-full p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]" placeholder="Nhập câu hỏi hoặc hướng dẫn làm bài..."></textarea>
         </div>
 
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block font-semibold mb-1 text-[var(--muted)]">Đáp án A</label>
-            <input type="text" id="edit-q-a" required class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+        <!-- SECTION: TRAC_NGHIEM_4 -->
+        <div id="q-fields-trac-nghiem" class="space-y-2">
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block font-semibold mb-1 text-[var(--muted)]">Đáp án A</label>
+              <input type="text" id="edit-q-a" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+            </div>
+            <div>
+              <label class="block font-semibold mb-1 text-[var(--muted)]">Đáp án B</label>
+              <input type="text" id="edit-q-b" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+            </div>
+            <div>
+              <label class="block font-semibold mb-1 text-[var(--muted)]">Đáp án C</label>
+              <input type="text" id="edit-q-c" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+            </div>
+            <div>
+              <label class="block font-semibold mb-1 text-[var(--muted)]">Đáp án D</label>
+              <input type="text" id="edit-q-d" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+            </div>
           </div>
-          <div>
-            <label class="block font-semibold mb-1 text-[var(--muted)]">Đáp án B</label>
-            <input type="text" id="edit-q-b" required class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
-          </div>
-          <div>
-            <label class="block font-semibold mb-1 text-[var(--muted)]">Đáp án C</label>
-            <input type="text" id="edit-q-c" required class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
-          </div>
-          <div>
-            <label class="block font-semibold mb-1 text-[var(--muted)]">Đáp án D</label>
-            <input type="text" id="edit-q-d" required class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="block font-semibold mb-1 text-[var(--muted)]">Vị trí đáp án đúng</label>
-            <select id="edit-q-correct" required class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)] font-bold text-amber-500">
+            <select id="edit-q-correct" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)] font-bold text-amber-500">
               <option value="0">Đáp án A (Vị trí 0)</option>
               <option value="1">Đáp án B (Vị trí 1)</option>
               <option value="2">Đáp án C (Vị trí 2)</option>
               <option value="3">Đáp án D (Vị trí 3)</option>
             </select>
           </div>
+        </div>
+
+        <!-- SECTION: NOI_CAP -->
+        <div id="q-fields-noi-cap" class="hidden space-y-2 p-3 rounded-xl bg-[var(--background)]/70 border border-[var(--border)]">
+          <p class="text-[11px] font-bold text-amber-400">4 Cặp Thẻ Ghép Nối (Khái niệm ↔ Định nghĩa):</p>
+          <div class="space-y-1.5">
+            <div class="grid grid-cols-2 gap-2">
+              <input type="text" id="edit-nc-l1" placeholder="Vế trái 1 (VD: Khóa chính)" class="px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+              <input type="text" id="edit-nc-r1" placeholder="Vế phải 1 (VD: Định danh duy nhất bản ghi)" class="px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="text" id="edit-nc-l2" placeholder="Vế trái 2 (VD: Khóa ngoại)" class="px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+              <input type="text" id="edit-nc-r2" placeholder="Vế phải 2 (VD: Tham chiếu khóa chính bảng khác)" class="px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="text" id="edit-nc-l3" placeholder="Vế trái 3 (VD: NOT NULL)" class="px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+              <input type="text" id="edit-nc-r3" placeholder="Vế phải 3 (VD: Không cho phép để trống)" class="px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <input type="text" id="edit-nc-l4" placeholder="Vế trái 4 (VD: UNIQUE)" class="px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+              <input type="text" id="edit-nc-r4" placeholder="Vế phải 4 (VD: Dữ liệu không được trùng lặp)" class="px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION: DIEN_TU -->
+        <div id="q-fields-dien-tu" class="hidden space-y-2 p-3 rounded-xl bg-[var(--background)]/70 border border-[var(--border)]">
           <div>
-            <label class="block font-semibold mb-1 text-[var(--muted)]">Độ khó (1-3)</label>
-            <select id="edit-q-diff" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--background)] border border-[var(--border)]">
-              <option value="1">1 - Dễ (Nhận biết)</option>
-              <option value="2">2 - Trung bình (Thông hiểu)</option>
-              <option value="3">3 - Khó (Vận dụng / Boss)</option>
-            </select>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Câu mẫu (Đặt <span class="text-amber-400 font-mono font-bold">[___]</span> vào chỗ cần điền)</label>
+            <input type="text" id="edit-dt-sentence" placeholder="Ví dụ: Mô hình quan hệ biểu diễn dữ liệu dưới dạng các [___] hai chiều." class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block font-semibold mb-1 text-[var(--muted)]">Thẻ từ ĐÚNG</label>
+              <input type="text" id="edit-dt-correct" placeholder="Ví dụ: bảng" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] font-bold text-emerald-400">
+            </div>
+            <div>
+              <label class="block font-semibold mb-1 text-[var(--muted)]">Các từ gây nhiễu (Cách bởi dấu phẩy)</label>
+              <input type="text" id="edit-dt-distractors" placeholder="Ví dụ: cột, chỉ mục, view" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION: SAP_XEP_CAU -->
+        <div id="q-fields-sap-xep" class="hidden space-y-2 p-3 rounded-xl bg-[var(--background)]/70 border border-[var(--border)]">
+          <div>
+            <label class="block font-semibold mb-1 text-[var(--muted)]">Câu hoàn chỉnh (Đáp án chuẩn)</label>
+            <input type="text" id="edit-sx-sentence" placeholder="Ví dụ: Khóa chính không được phép mang giá trị NULL" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block font-semibold mb-1 text-[var(--muted)]">Các thẻ từ (Phân cách bởi | hoặc dấu phẩy)</label>
+              <input type="text" id="edit-sx-words" placeholder="Khóa chính | không được | phép | mang | giá trị | NULL" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+            </div>
+            <div>
+              <label class="block font-semibold mb-1 text-[var(--muted)]">Từ gây nhiễu nếu có (Cách dấu phẩy)</label>
+              <input type="text" id="edit-sx-distractors" placeholder="Ví dụ: khóa ngoại, rỗng" class="w-full px-2.5 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)]">
+            </div>
           </div>
         </div>
 
         <div>
-          <label class="block font-semibold mb-1 text-[var(--muted)]">Giải thích chi tiết</label>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Giải thích chi tiết (Hiện khi giải đáp)</label>
           <textarea id="edit-q-explain" rows="2" class="w-full p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]"></textarea>
         </div>
 
@@ -789,18 +931,46 @@
                       </div>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-4 border-l-2 border-emerald-500/30">
-                      ${ch.cac_moc.map(m => `
-                        <div class="p-2.5 rounded-lg bg-[var(--card)] border border-[var(--border)] flex items-center justify-between text-xs group">
-                          <div class="min-w-0 pr-2">
-                            <p class="font-semibold truncate text-[11px]">${m.tieu_de}</p>
-                            <span class="text-[9px] px-1 py-0.2 rounded font-mono ${m.loai_moc === 'THU_THACH_BOSS' ? 'bg-rose-500/20 text-rose-400 font-bold' : m.loai_moc === 'TRAC_NGHIEM' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}">${m.loai_moc}</span>
+                      ${ch.cac_moc.map(m => {
+                        const steps = m.tong_so_buoc || 4;
+                        const qPerStep = m.so_cau_moi_buoc || 10;
+                        const reqCount = steps * qPerStep;
+                        const stock = m.so_luong_cau_hoi || 0;
+                        let stockBadge = '';
+                        if (stock >= reqCount) {
+                          stockBadge = `<span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">✅ Kho: ${stock}/${reqCount} (Đủ đề)</span>`;
+                        } else if (stock >= qPerStep) {
+                          stockBadge = `<span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">⚠️ Kho: ${stock}/${reqCount} (Lặp ${reqCount - stock} câu)</span>`;
+                        } else {
+                          stockBadge = `<span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse">🚨 Kho: ${stock}/${reqCount} (Thiếu ${reqCount - stock} câu!)</span>`;
+                        }
+                        return `
+                          <div class="p-3 rounded-xl bg-[var(--card)] border border-[var(--border)] flex flex-col justify-between text-xs group gap-2">
+                            <div class="flex items-start justify-between gap-2">
+                              <div class="min-w-0 pr-1">
+                                <p class="font-bold truncate text-[11px] text-[var(--foreground)]">${m.tieu_de}</p>
+                                <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                                  <span class="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold ${m.loai_moc === 'THU_THACH_BOSS' ? 'bg-rose-500/20 text-rose-400' : m.loai_moc === 'TRAC_NGHIEM' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}">${m.loai_moc === 'THU_THACH_BOSS' ? '👑 BOSS' : m.loai_moc}</span>
+                                  <span class="text-[9px] px-1.5 py-0.2 rounded font-mono bg-[var(--background)] border border-[var(--border)] text-[var(--muted)]">${steps} Chặng x ${qPerStep} câu</span>
+                                  ${stockBadge}
+                                </div>
+                              </div>
+                              <div class="flex items-center gap-1 shrink-0">
+                                <span class="text-[10px] font-mono text-amber-400 font-bold">+${m.xu_thuong}🪙</span>
+                                <button onclick="deleteCheckpoint('${m.ma_moc}')" title="Xóa mốc" class="text-rose-400 hover:text-rose-300 opacity-60 group-hover:opacity-100 transition p-1 cursor-pointer">✕</button>
+                              </div>
+                            </div>
+                            <div class="flex items-center justify-end gap-1.5 pt-1.5 border-t border-[var(--border)]/50">
+                              <button onclick="openAddQuestionModal('${m.ma_moc}')" class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-[10px] font-bold border border-emerald-500/30 transition cursor-pointer flex items-center gap-1">
+                                <span>+</span> Thêm câu hỏi
+                              </button>
+                              <button onclick="filterQuestionsByMoc('${m.ma_moc}')" class="px-2 py-0.5 rounded bg-[var(--background)] hover:bg-[var(--border)] text-[var(--muted)] text-[10px] font-medium transition cursor-pointer">
+                                Xem đề (${stock})
+                              </button>
+                            </div>
                           </div>
-                          <div class="flex items-center gap-2 shrink-0">
-                            <span class="text-[10px] font-mono text-amber-400 font-bold">+${m.xu_thuong}🪙</span>
-                            <button onclick="deleteCheckpoint('${m.ma_moc}')" class="text-rose-400 hover:text-rose-300 opacity-60 group-hover:opacity-100 transition">✕</button>
-                          </div>
-                        </div>
-                      `).join('')}
+                        `;
+                      }).join('')}
                     </div>
                   </div>
                 `;
@@ -915,6 +1085,8 @@
     async function handleSaveCheckpoint(e) {
       e.preventDefault();
       try {
+        const stepsVal = parseInt(document.getElementById('cp-steps').value, 10) || 5;
+        const qPerStepVal = parseInt(document.getElementById('cp-questions-per-step').value, 10) || 10;
         await apiFetch('/api/admin/checkpoints', {
           method: 'POST',
           body: JSON.stringify({
@@ -923,10 +1095,12 @@
             loai_moc: document.getElementById('cp-type').value,
             xu_thuong: parseInt(document.getElementById('cp-coins').value, 10),
             diem_thuong: parseInt(document.getElementById('cp-exp').value, 10),
-            noi_dung_ly_thuyet: document.getElementById('cp-theory').value.trim()
+            noi_dung_ly_thuyet: document.getElementById('cp-theory').value.trim(),
+            tong_so_buoc: stepsVal,
+            so_cau_moi_buoc: qPerStepVal
           })
         });
-        showToast('Đã tạo mốc bài học thành công!');
+        showToast(`Đã tạo mốc bài học thành công (${stepsVal} chặng x ${qPerStepVal} câu)!`);
         closeAddCheckpointModal();
         loadCurriculumTree();
       } catch (err) {
@@ -934,28 +1108,109 @@
       }
     }
 
+    let allLoadedQuestions = [];
+
     async function loadQuestions() {
       try {
-        const questions = await apiFetch('/api/admin/questions');
-        const tbody = document.getElementById('table-questions');
-        tbody.innerHTML = questions.map(q => {
-          const optLetter = ['A', 'B', 'C', 'D'][q.vi_tri_dap_an_dung] || 'A';
-          return `
-            <tr class="hover:bg-[var(--background)]/40 transition">
-              <td class="py-2.5 px-3 font-mono font-bold text-[11px] text-[var(--muted)]">${q.ma_cau_hoi}</td>
-              <td class="py-2.5 px-3 font-mono text-[10px] text-amber-500">${q.ma_moc || '--'}</td>
-              <td class="py-2.5 px-3 font-medium">${q.noi_dung}</td>
-              <td class="py-2.5 px-3 font-mono font-bold text-emerald-400">Đáp án ${optLetter}</td>
-              <td class="py-2.5 px-3 font-mono">${q.do_kho === 3 ? '🔴 Khó (Boss)' : q.do_kho === 2 ? '🟡 TB' : '🟢 Dễ'}</td>
-              <td class="py-2.5 px-3 text-right space-x-1 shrink-0">
-                <button onclick="deleteQuestion('${q.ma_cau_hoi}')" class="px-2 py-1 rounded bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 text-[10px] font-bold cursor-pointer">Xóa</button>
-              </td>
-            </tr>
-          `;
-        }).join('') || '<tr><td colspan="6" class="py-4 text-center text-[var(--muted)]">Không có câu hỏi</td></tr>';
+        allLoadedQuestions = await apiFetch('/api/admin/questions?limit=200');
+        
+        // Populate filter-q-moc options
+        const filterMoc = document.getElementById('filter-q-moc');
+        if (filterMoc && allMocOptions.length > 0) {
+          const currentVal = filterMoc.value;
+          filterMoc.innerHTML = '<option value="">-- Tất cả Mốc bài học --</option>' + 
+            allMocOptions.map(m => `<option value="${m.id}">${m.title}</option>`).join('');
+          filterMoc.value = currentVal;
+        }
+
+        applyQuestionFilters();
       } catch (err) {
         showToast(err.message, true);
       }
+    }
+
+    function filterQuestionsByMoc(mocId) {
+      showPanel('questions');
+      const filterMoc = document.getElementById('filter-q-moc');
+      if (filterMoc) {
+        filterMoc.value = mocId;
+        applyQuestionFilters();
+      }
+    }
+
+    function applyQuestionFilters() {
+      const searchTxt = (document.getElementById('filter-q-search')?.value || '').toLowerCase().trim();
+      const mocFilter = document.getElementById('filter-q-moc')?.value || '';
+      const typeFilter = document.getElementById('filter-q-type')?.value || '';
+      const bloomFilter = document.getElementById('filter-q-bloom')?.value || '';
+
+      const filtered = allLoadedQuestions.filter(q => {
+        if (mocFilter && q.ma_moc !== mocFilter) return false;
+        if (typeFilter && (q.loai_cau_hoi || 'TRAC_NGHIEM_4') !== typeFilter) return false;
+        if (bloomFilter && (q.muc_bloom || 'NHO') !== bloomFilter) return false;
+        if (searchTxt && !(q.noi_dung || '').toLowerCase().includes(searchTxt)) return false;
+        return true;
+      });
+
+      const tbody = document.getElementById('table-questions');
+      if (!tbody) return;
+
+      tbody.innerHTML = filtered.map(q => {
+        const type = q.loai_cau_hoi || 'TRAC_NGHIEM_4';
+        let typeBadge = '';
+        if (type === 'NOI_CAP') {
+          typeBadge = '<span class="px-1.5 py-0.5 rounded font-mono font-bold bg-purple-500/15 text-purple-400">Nối cặp 🔀</span>';
+        } else if (type === 'DIEN_TU') {
+          typeBadge = '<span class="px-1.5 py-0.5 rounded font-mono font-bold bg-amber-500/15 text-amber-400">Điền từ 🏷️</span>';
+        } else if (type === 'SAP_XEP_CAU') {
+          typeBadge = '<span class="px-1.5 py-0.5 rounded font-mono font-bold bg-emerald-500/15 text-emerald-400">Sắp xếp 🧩</span>';
+        } else {
+          typeBadge = '<span class="px-1.5 py-0.5 rounded font-mono font-bold bg-blue-500/15 text-blue-400">Trắc nghiệm</span>';
+        }
+
+        const bloom = q.muc_bloom || 'NHO';
+        let bloomBadge = '';
+        if (bloom === 'VAN_DUNG') {
+          bloomBadge = '<span class="px-1.5 py-0.5 rounded font-mono font-bold bg-rose-500/10 text-rose-400">🔴 Vận dụng</span>';
+        } else if (bloom === 'HIEU') {
+          bloomBadge = '<span class="px-1.5 py-0.5 rounded font-mono font-bold bg-amber-500/10 text-amber-400">🟡 Hiểu</span>';
+        } else {
+          bloomBadge = '<span class="px-1.5 py-0.5 rounded font-mono font-bold bg-emerald-500/10 text-emerald-400">🟢 Nhớ</span>';
+        }
+
+        let answerPreview = '';
+        if (type === 'NOI_CAP') {
+          answerPreview = '<span class="font-mono text-purple-400">4 Cặp tương ứng</span>';
+        } else if (type === 'DIEN_TU') {
+          let dtWord = '';
+          try {
+            const parsed = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : q.du_lieu_cau_hoi;
+            dtWord = parsed?.tu_dung || '';
+          } catch(e){}
+          answerPreview = `<span class="font-mono text-amber-400 font-bold">[${dtWord || 'Từ đúng'}]</span>`;
+        } else if (type === 'SAP_XEP_CAU') {
+          answerPreview = '<span class="font-mono text-emerald-400">Ghép câu chuẩn</span>';
+        } else {
+          const optLetter = ['A', 'B', 'C', 'D'][q.vi_tri_dap_an_dung] || 'A';
+          answerPreview = `<span class="font-mono font-bold text-emerald-400">Đáp án ${optLetter}</span>`;
+        }
+
+        return `
+          <tr class="hover:bg-[var(--background)]/40 transition">
+            <td class="py-2.5 px-3 font-mono font-bold text-[11px] text-[var(--muted)]">${q.ma_cau_hoi}</td>
+            <td class="py-2.5 px-3 font-mono text-[10px] text-amber-500">${q.ma_moc || '--'}</td>
+            <td class="py-2.5 px-3 whitespace-nowrap">${typeBadge}</td>
+            <td class="py-2.5 px-3 whitespace-nowrap">${bloomBadge}</td>
+            <td class="py-2.5 px-3 font-medium max-w-xs truncate" title="${escapeHtml(q.noi_dung)}">${escapeHtml(q.noi_dung)}</td>
+            <td class="py-2.5 px-3 whitespace-nowrap">${answerPreview}</td>
+            <td class="py-2.5 px-3 font-mono whitespace-nowrap">${q.do_kho === 3 ? '🔴 Khó' : q.do_kho === 2 ? '🟡 TB' : '🟢 Dễ'}</td>
+            <td class="py-2.5 px-3 text-right space-x-1 shrink-0 whitespace-nowrap">
+              <button onclick="editQuestion('${q.ma_cau_hoi}')" class="px-2 py-1 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 text-[10px] font-bold cursor-pointer">Sửa</button>
+              <button onclick="deleteQuestion('${q.ma_cau_hoi}')" class="px-2 py-1 rounded bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 text-[10px] font-bold cursor-pointer">Xóa</button>
+            </td>
+          </tr>
+        `;
+      }).join('') || '<tr><td colspan="8" class="py-4 text-center text-[var(--muted)]">Không tìm thấy câu hỏi phù hợp với bộ lọc</td></tr>';
     }
 
     async function deleteQuestion(id) {
@@ -964,6 +1219,222 @@
         await apiFetch(`/api/admin/questions/${id}`, { method: 'DELETE' });
         showToast(`Đã xóa câu hỏi ${id}`);
         loadQuestions();
+        loadCurriculumTree();
+        loadAnalytics();
+      } catch (err) {
+        showToast(err.message, true);
+      }
+    }
+
+    function toggleQuestionTypeFields(type) {
+      const fTracNghiem = document.getElementById('q-fields-trac-nghiem');
+      const fNoiCap = document.getElementById('q-fields-noi-cap');
+      const fDienTu = document.getElementById('q-fields-dien-tu');
+      const fSapXep = document.getElementById('q-fields-sap-xep');
+
+      if (fTracNghiem) fTracNghiem.classList.add('hidden');
+      if (fNoiCap) fNoiCap.classList.add('hidden');
+      if (fDienTu) fDienTu.classList.add('hidden');
+      if (fSapXep) fSapXep.classList.add('hidden');
+
+      if (type === 'NOI_CAP') {
+        if (fNoiCap) fNoiCap.classList.remove('hidden');
+      } else if (type === 'DIEN_TU') {
+        if (fDienTu) fDienTu.classList.remove('hidden');
+      } else if (type === 'SAP_XEP_CAU') {
+        if (fSapXep) fSapXep.classList.remove('hidden');
+      } else {
+        if (fTracNghiem) fTracNghiem.classList.remove('hidden');
+      }
+    }
+
+    function openAddQuestionModal(defaultMocId = null) {
+      document.getElementById('modal-question-title').innerText = 'Thêm Câu Hỏi Mới Vào Ngân Hàng';
+      document.getElementById('edit-q-id').value = '';
+      document.getElementById('edit-q-content').value = '';
+      document.getElementById('edit-q-type').value = 'TRAC_NGHIEM_4';
+      document.getElementById('edit-q-bloom').value = 'NHO';
+      document.getElementById('edit-q-step').value = '0';
+      document.getElementById('edit-q-diff').value = '1';
+      document.getElementById('edit-q-explain').value = '';
+
+      // Clear Trắc nghiệm
+      document.getElementById('edit-q-a').value = '';
+      document.getElementById('edit-q-b').value = '';
+      document.getElementById('edit-q-c').value = '';
+      document.getElementById('edit-q-d').value = '';
+      document.getElementById('edit-q-correct').value = '0';
+
+      // Clear Nối cặp
+      for (let i = 1; i <= 4; i++) {
+        const elL = document.getElementById(`edit-nc-l${i}`);
+        const elR = document.getElementById(`edit-nc-r${i}`);
+        if (elL) elL.value = '';
+        if (elR) elR.value = '';
+      }
+
+      // Clear Điền từ
+      document.getElementById('edit-dt-sentence').value = '';
+      document.getElementById('edit-dt-correct').value = '';
+      document.getElementById('edit-dt-distractors').value = '';
+
+      // Clear Sắp xếp
+      document.getElementById('edit-sx-sentence').value = '';
+      document.getElementById('edit-sx-words').value = '';
+      document.getElementById('edit-sx-distractors').value = '';
+
+      if (defaultMocId) {
+        document.getElementById('edit-q-moc').value = defaultMocId;
+      }
+
+      toggleQuestionTypeFields('TRAC_NGHIEM_4');
+      document.getElementById('modal-edit-question').classList.remove('hidden');
+    }
+
+    function editQuestion(id) {
+      const q = allLoadedQuestions.find(item => item.ma_cau_hoi === id);
+      if (!q) return;
+
+      document.getElementById('modal-question-title').innerText = `Chỉnh Sửa Câu Hỏi [${q.ma_cau_hoi}]`;
+      document.getElementById('edit-q-id').value = q.ma_cau_hoi;
+      document.getElementById('edit-q-moc').value = q.ma_moc || '';
+      document.getElementById('edit-q-content').value = q.noi_dung || '';
+      
+      const type = q.loai_cau_hoi || 'TRAC_NGHIEM_4';
+      document.getElementById('edit-q-type').value = type;
+      document.getElementById('edit-q-bloom').value = q.muc_bloom || 'NHO';
+      document.getElementById('edit-q-step').value = String(q.buoc_luyen_tap || 0);
+      document.getElementById('edit-q-diff').value = String(q.do_kho || 1);
+      document.getElementById('edit-q-explain').value = q.giai_thich || '';
+
+      let parsedData = null;
+      try {
+        parsedData = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : q.du_lieu_cau_hoi;
+      } catch (e) {}
+
+      if (type === 'NOI_CAP') {
+        const pairs = parsedData?.cap_dung || [];
+        for (let i = 1; i <= 4; i++) {
+          const p = pairs[i - 1] || {};
+          const elL = document.getElementById(`edit-nc-l${i}`);
+          const elR = document.getElementById(`edit-nc-r${i}`);
+          if (elL) elL.value = p.trai || '';
+          if (elR) elR.value = p.phai || '';
+        }
+      } else if (type === 'DIEN_TU') {
+        document.getElementById('edit-dt-sentence').value = parsedData?.cau_goc || '';
+        document.getElementById('edit-dt-correct').value = parsedData?.tu_dung || '';
+        const allOpts = parsedData?.cac_tu_lua_chon || [];
+        const distractors = allOpts.filter(w => w !== parsedData?.tu_dung);
+        document.getElementById('edit-dt-distractors').value = distractors.join(', ');
+      } else if (type === 'SAP_XEP_CAU') {
+        document.getElementById('edit-sx-sentence').value = parsedData?.cau_hoan_chinh || '';
+        document.getElementById('edit-sx-words').value = (parsedData?.cac_tu_dung || []).join(' | ');
+        document.getElementById('edit-sx-distractors').value = (parsedData?.tu_nhieu || []).join(', ');
+      } else {
+        document.getElementById('edit-q-a').value = q.dap_an_a || '';
+        document.getElementById('edit-q-b').value = q.dap_an_b || '';
+        document.getElementById('edit-q-c').value = q.dap_an_c || '';
+        document.getElementById('edit-q-d').value = q.dap_an_d || '';
+        document.getElementById('edit-q-correct').value = String(q.vi_tri_dap_an_dung ?? 0);
+      }
+
+      toggleQuestionTypeFields(type);
+      document.getElementById('modal-edit-question').classList.remove('hidden');
+    }
+
+    function closeQuestionModal() {
+      document.getElementById('modal-edit-question').classList.add('hidden');
+    }
+
+    async function handleSaveQuestion(e) {
+      e.preventDefault();
+      const qId = document.getElementById('edit-q-id').value.trim();
+      const type = document.getElementById('edit-q-type').value;
+      const bloom = document.getElementById('edit-q-bloom').value;
+      const step = parseInt(document.getElementById('edit-q-step').value, 10) || 0;
+      const diff = parseInt(document.getElementById('edit-q-diff').value, 10) || 1;
+      const moc = document.getElementById('edit-q-moc').value;
+      const content = document.getElementById('edit-q-content').value.trim();
+      const explain = document.getElementById('edit-q-explain').value.trim();
+
+      const payload = {
+        ma_moc: moc,
+        noi_dung: content,
+        loai_cau_hoi: type,
+        muc_bloom: bloom,
+        buoc_luyen_tap: step > 0 ? step : 1,
+        do_kho: diff,
+        giai_thich: explain
+      };
+
+      if (type === 'NOI_CAP') {
+        const pairs = [
+          { trai: document.getElementById('edit-nc-l1').value.trim(), phai: document.getElementById('edit-nc-r1').value.trim() },
+          { trai: document.getElementById('edit-nc-l2').value.trim(), phai: document.getElementById('edit-nc-r2').value.trim() },
+          { trai: document.getElementById('edit-nc-l3').value.trim(), phai: document.getElementById('edit-nc-r3').value.trim() },
+          { trai: document.getElementById('edit-nc-l4').value.trim(), phai: document.getElementById('edit-nc-r4').value.trim() }
+        ].filter(p => p.trai && p.phai);
+
+        if (pairs.length < 2) {
+          showToast('Vui lòng nhập tối thiểu 2 cặp ghép nối hợp lệ!', true);
+          return;
+        }
+        payload.du_lieu_cau_hoi = { cap_dung: pairs };
+      } else if (type === 'DIEN_TU') {
+        const sentence = document.getElementById('edit-dt-sentence').value.trim();
+        const correct = document.getElementById('edit-dt-correct').value.trim();
+        const distractors = document.getElementById('edit-dt-distractors').value.split(',').map(s => s.trim()).filter(Boolean);
+
+        if (!sentence || !correct) {
+          showToast('Vui lòng nhập câu mẫu có chứa [___] và từ đúng!', true);
+          return;
+        }
+        payload.du_lieu_cau_hoi = {
+          cau_goc: sentence,
+          tu_dung: correct,
+          cac_tu_lua_chon: [correct, ...distractors]
+        };
+      } else if (type === 'SAP_XEP_CAU') {
+        const sentence = document.getElementById('edit-sx-sentence').value.trim();
+        const words = document.getElementById('edit-sx-words').value.split(/[|,]/).map(s => s.trim()).filter(Boolean);
+        const distractors = document.getElementById('edit-sx-distractors').value.split(',').map(s => s.trim()).filter(Boolean);
+
+        if (!sentence || words.length === 0) {
+          showToast('Vui lòng nhập câu hoàn chỉnh và danh sách các thẻ từ ghép câu!', true);
+          return;
+        }
+        payload.du_lieu_cau_hoi = {
+          cau_hoan_chinh: sentence,
+          cac_tu_dung: words,
+          tu_nhieu: distractors
+        };
+      } else {
+        // TRAC_NGHIEM_4
+        payload.dap_an_a = document.getElementById('edit-q-a').value.trim();
+        payload.dap_an_b = document.getElementById('edit-q-b').value.trim();
+        payload.dap_an_c = document.getElementById('edit-q-c').value.trim();
+        payload.dap_an_d = document.getElementById('edit-q-d').value.trim();
+        payload.vi_tri_dap_an_dung = parseInt(document.getElementById('edit-q-correct').value, 10);
+      }
+
+      try {
+        if (qId) {
+          await apiFetch(`/api/admin/questions/${qId}`, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+          });
+          showToast(`Đã cập nhật câu hỏi [${qId}] thành công!`);
+        } else {
+          await apiFetch('/api/admin/questions', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+          showToast('Đã thêm câu hỏi mới vào CSDL thành công!');
+        }
+        closeQuestionModal();
+        loadQuestions();
+        loadCurriculumTree();
         loadAnalytics();
       } catch (err) {
         showToast(err.message, true);
@@ -992,50 +1463,10 @@
         showToast(`Nhập thành công ${result.tong_so_nhap} câu hỏi vào CSDL!`);
         closeBulkImportModal();
         loadQuestions();
+        loadCurriculumTree();
         loadAnalytics();
       } catch (err) {
         showToast('Dữ liệu JSON không hợp lệ: ' + err.message, true);
-      }
-    }
-
-    function openAddQuestionModal() {
-      document.getElementById('modal-question-title').innerText = 'Thêm Câu Hỏi Mới Vào Ngân Hàng';
-      document.getElementById('edit-q-id').value = '';
-      document.getElementById('edit-q-content').value = '';
-      document.getElementById('edit-q-a').value = '';
-      document.getElementById('edit-q-b').value = '';
-      document.getElementById('edit-q-c').value = '';
-      document.getElementById('edit-q-d').value = '';
-      document.getElementById('edit-q-explain').value = '';
-      document.getElementById('modal-edit-question').classList.remove('hidden');
-    }
-    function closeQuestionModal() {
-      document.getElementById('modal-edit-question').classList.add('hidden');
-    }
-    async function handleSaveQuestion(e) {
-      e.preventDefault();
-      const payload = {
-        ma_moc: document.getElementById('edit-q-moc').value,
-        noi_dung: document.getElementById('edit-q-content').value.trim(),
-        dap_an_a: document.getElementById('edit-q-a').value.trim(),
-        dap_an_b: document.getElementById('edit-q-b').value.trim(),
-        dap_an_c: document.getElementById('edit-q-c').value.trim(),
-        dap_an_d: document.getElementById('edit-q-d').value.trim(),
-        vi_tri_dap_an_dung: parseInt(document.getElementById('edit-q-correct').value, 10),
-        do_kho: parseInt(document.getElementById('edit-q-diff').value, 10),
-        giai_thich: document.getElementById('edit-q-explain').value.trim()
-      };
-      try {
-        await apiFetch('/api/admin/questions', {
-          method: 'POST',
-          body: JSON.stringify(payload)
-        });
-        showToast('Đã thêm câu hỏi vào CSDL!');
-        closeQuestionModal();
-        loadQuestions();
-        loadAnalytics();
-      } catch (err) {
-        showToast(err.message, true);
       }
     }
 

@@ -39,17 +39,19 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(responseFormatter);
 
+// Admin Redirects
+app.get(['/admin', '/admin.html'], (req, res) => {
+  res.redirect('/admin/');
+});
+
 // Serve static assets & frontend applications
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.apiSuccess({
     status: 'HEALTHY',
-    version: 'd901b3a_v5',
+    version: 'd901b3a_v6',
     database: process.env.DATABASE_URL ? 'PostgreSQL' : 'MSSQL'
   });
 });
