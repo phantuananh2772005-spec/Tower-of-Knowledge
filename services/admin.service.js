@@ -297,7 +297,7 @@ async function hydrateQuestionDetails(detailsList) {
   let questionsMap = {};
   if (missingIds.length > 0) {
     try {
-      const qRows = await db.query(`SELECT ma_cau_hoi, noi_dung, loai_cau_hoi, muc_bloom, do_kho, dap_an_a, dap_an_b, dap_an_c, dap_an_d, vi_tri_dap_an_dung, giai_thich FROM cau_hoi WHERE ma_cau_hoi IN (${missingIds.map(id => `'${id}'`).join(',')})`);
+      const qRows = await db.query(`SELECT ma_cau_hoi, noi_dung, loai_cau_hoi, muc_bloom, do_kho, dap_an_a, dap_an_b, dap_an_c, dap_an_d, vi_tri_dap_an_dung, giai_thich, du_lieu_cau_hoi FROM cau_hoi WHERE ma_cau_hoi IN (${missingIds.map(id => `'${id}'`).join(',')})`);
       if (Array.isArray(qRows)) {
         qRows.forEach(row => { questionsMap[row.ma_cau_hoi] = row; });
       }
@@ -310,6 +310,7 @@ async function hydrateQuestionDetails(detailsList) {
     const qInfo = questionsMap[item.ma_cau_hoi];
     const opts = qInfo ? [qInfo.dap_an_a, qInfo.dap_an_b, qInfo.dap_an_c, qInfo.dap_an_d] : [];
     const correctIdx = item.dap_an_dung !== undefined && item.dap_an_dung !== null ? Number(item.dap_an_dung) : (qInfo && qInfo.vi_tri_dap_an_dung !== null ? Number(qInfo.vi_tri_dap_an_dung) : null);
+    const loai = item.loai_cau_hoi || (qInfo ? qInfo.loai_cau_hoi : 'TRAC_NGHIEM_4');
     
     let userChoiceText = item.lua_chon_text || '';
     if (!userChoiceText && item.lua_chon !== undefined && item.lua_chon !== null) {
@@ -321,8 +322,21 @@ async function hydrateQuestionDetails(detailsList) {
     }
 
     let correctText = item.dap_an_dung_text || '';
-    if (!correctText && correctIdx !== null && opts[correctIdx]) {
-      correctText = opts[correctIdx];
+    if (!correctText) {
+      if (correctIdx !== null && opts[correctIdx]) {
+        correctText = opts[correctIdx];
+      } else if (qInfo && qInfo.du_lieu_cau_hoi) {
+        try {
+          const parsed = typeof qInfo.du_lieu_cau_hoi === 'string' ? JSON.parse(qInfo.du_lieu_cau_hoi) : qInfo.du_lieu_cau_hoi;
+          if (loai === 'DIEN_TU' && parsed.blank_answer) {
+            correctText = parsed.blank_answer;
+          } else if (loai === 'SAP_XEP_CAU' && parsed.correct_order) {
+            correctText = parsed.correct_order.join(' ');
+          } else if (loai === 'NOI_CAP' && parsed.pairs) {
+            correctText = parsed.pairs.map(p => `${p.left} ↔ ${p.right}`).join(', ');
+          }
+        } catch (e) {}
+      }
     }
 
     return {
