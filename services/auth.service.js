@@ -65,8 +65,8 @@ async function register({ ten_dang_nhap, email, mat_khau, ten_hien_thi }) {
     throw new Error('Vui lòng điền đầy đủ tên đăng nhập hoặc email và mật khẩu.');
   }
 
-  let finalUsername = String(ten_dang_nhap).trim();
-  let finalEmail = (email || '').trim();
+  let finalUsername = String(ten_dang_nhap).trim().toLowerCase();
+  let finalEmail = (email || '').trim().toLowerCase();
 
   // If user typed an email into username field
   if (finalUsername.includes('@')) {
@@ -78,9 +78,9 @@ async function register({ ten_dang_nhap, email, mat_khau, ten_hien_thi }) {
     finalEmail = `${finalUsername}@hocvien.tok.vn`;
   }
 
-  // Check unique username & email
+  // Check unique username & email (case-insensitive)
   const existing = await db.queryOne(
-    'SELECT ma_nguoi_dung FROM nguoi_dung WHERE ten_dang_nhap = $1 OR email = $2',
+    'SELECT ma_nguoi_dung FROM nguoi_dung WHERE LOWER(ten_dang_nhap) = LOWER($1) OR LOWER(email) = LOWER($2)',
     [finalUsername, finalEmail]
   );
   if (existing) {
@@ -90,7 +90,7 @@ async function register({ ten_dang_nhap, email, mat_khau, ten_hien_thi }) {
   const salt = bcrypt.genSaltSync(10);
   const mat_khau_hash = bcrypt.hashSync(mat_khau, salt);
   const ma_nguoi_dung = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-  const displayName = ten_hien_thi || finalUsername;
+  const displayName = ten_hien_thi ? String(ten_hien_thi).trim() : String(ten_dang_nhap).trim();
 
   // Insert user: 0 EXP, 0 coins, 0 streak
   await db.execute(`
@@ -123,8 +123,8 @@ async function login({ ten_dang_nhap, mat_khau }) {
     throw new Error('Vui lòng nhập tên đăng nhập hoặc email và mật khẩu.');
   }
 
-  const identifier = String(ten_dang_nhap).trim();
-  const user = await db.queryOne('SELECT * FROM nguoi_dung WHERE ten_dang_nhap = $1 OR email = $1', [identifier]);
+  const identifier = String(ten_dang_nhap).trim().toLowerCase();
+  const user = await db.queryOne('SELECT * FROM nguoi_dung WHERE LOWER(ten_dang_nhap) = LOWER($1) OR LOWER(email) = LOWER($1) ORDER BY tong_diem_kinh_nghiem DESC, tao_luc ASC', [identifier]);
   if (!user) {
     throw new Error('Tài khoản hoặc mật khẩu không chính xác.');
   }
