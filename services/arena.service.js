@@ -8,9 +8,29 @@ const { calculateDamage, applyDamage, resolveMatchOutcome } = require('../core/r
 const { mutateCoins, addExperience } = require('./economy.service');
 
 /**
+ * Ensure player record exists in nguoi_dung table to avoid foreign key errors
+ */
+async function ensurePlayerRecord(userId, defaultName = 'Người chơi') {
+  if (!userId) return;
+  const existing = await db.queryOne('SELECT ma_nguoi_dung FROM nguoi_dung WHERE ma_nguoi_dung = $1', [userId]);
+  if (!existing) {
+    const safeName = defaultName || (userId.startsWith('guest_') ? 'Khách ' + userId.slice(-4) : userId);
+    const cleanUsername = `u_${userId.replace(/[^a-zA-Z0-9_]/g, '').slice(-10)}_${Math.random().toString(36).substring(2, 6)}`;
+    const safeEmail = `${cleanUsername}@hocvien.tok.vn`;
+    await db.execute(`
+      INSERT INTO nguoi_dung (ma_nguoi_dung, ten_dang_nhap, email, mat_khau_hash, ten_hien_thi, vai_tro, xu_tri_thuc, tong_diem_kinh_nghiem, chuoi_streak_ngay)
+      VALUES ($1, $2, $3, 'hash_placeholder', $4, 'NGUOI_HOC', 100, 0, 1)
+    `, [userId, cleanUsername, safeEmail, safeName]);
+  }
+}
+
+/**
  * Create a new 1v1 match between 2 players
  */
 async function createMatch(player1Id, player2Id, ma_mon = 'mon_csdl') {
+  await ensurePlayerRecord(player1Id, 'Người chơi 1');
+  await ensurePlayerRecord(player2Id, 'Đối thủ');
+
   const ma_tran = `match_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
   // Create match
@@ -46,21 +66,28 @@ async function createMatch(player1Id, player2Id, ma_mon = 'mon_csdl') {
     VALUES ($1, $2, $3, $4, 100, 100, 'CHUA_KET_THUC')
   `, [p2IdInMatch, ma_tran, player2Id, pet2 ? pet2.ma_thu_cung : null]);
 
-  // Pick 10 questions from course (must be 4-choice multiple choice questions with valid answers)
+  // Pick 10 questions randomly across ALL question types and difficulties from course
   const questions = await db.query(`
     SELECT TOP 10 q.ma_cau_hoi
     FROM cau_hoi q
     JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
     JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
-    WHERE c.ma_mon = $1 AND q.vi_tri_dap_an_dung IS NOT NULL AND q.dap_an_a IS NOT NULL
+    WHERE c.ma_mon = $1
     ORDER BY NEWID()
   `, [ma_mon]);
 
   // If NEWID() returns fewer or not supported, pick all questions and shuffle
   let selectedQuestions = questions;
   if (!selectedQuestions || selectedQuestions.length < 10) {
-    const all = await db.query('SELECT ma_cau_hoi FROM cau_hoi WHERE vi_tri_dap_an_dung IS NOT NULL AND dap_an_a IS NOT NULL');
-    selectedQuestions = (all || []).slice(0, 10);
+    const all = await db.query(`
+      SELECT q.ma_cau_hoi 
+      FROM cau_hoi q
+      JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
+      JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
+      WHERE c.ma_mon = $1
+    `, [ma_mon]);
+    const shuffled = (all || []).sort(() => Math.random() - 0.5);
+    selectedQuestions = shuffled.slice(0, 10);
   }
 
   for (let i = 0; i < selectedQuestions.length; i++) {
@@ -92,8 +119,9 @@ async function getMatchState(ma_tran) {
   `, [ma_tran]);
 
   const questionsInMatch = await db.query(`
-    SELECT qm.ma_cau_trong_tran, qm.thu_tu_cau, q.ma_cau_hoi, q.noi_dung,
-           q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d, q.vi_tri_dap_an_dung
+    SELECT qm.ma_cau_trong_tran, qm.thu_tu_cau, q.ma_cau_hoi, q.noi_dung, q.loai_cau_hoi,
+           q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d, q.vi_tri_dap_an_dung,
+           q.du_lieu_cau_hoi, q.muc_bloom, q.do_kho, q.giai_thich
     FROM cau_hoi_trong_tran qm
     JOIN cau_hoi q ON qm.ma_cau_hoi = q.ma_cau_hoi
     WHERE qm.ma_tran = $1
@@ -132,13 +160,41 @@ async function getMatchState(ma_tran) {
         he_so_sat_thuong: p.he_so_sat_thuong
       } : null
     })),
-    cau_hoi: questionsInMatch.map(q => ({
-      ma_cau_trong_tran: q.ma_cau_trong_tran,
-      thu_tu_cau: q.thu_tu_cau,
-      noi_dung: q.noi_dung,
-      dap_an: [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d],
-      vi_tri_dap_an_dung: q.vi_tri_dap_an_dung !== null && q.vi_tri_dap_an_dung !== undefined ? Number(q.vi_tri_dap_an_dung) : 0
-    })),
+    cau_hoi: questionsInMatch.map(q => {
+      let parsedData = null;
+      if (q.du_lieu_cau_hoi) {
+        try {
+          parsedData = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : q.du_lieu_cau_hoi;
+        } catch (e) {}
+      }
+
+      const type = q.loai_cau_hoi || 'TRAC_NGHIEM_4';
+      let options = [];
+      let correctAnswer = q.vi_tri_dap_an_dung;
+
+      if (type === 'TRAC_NGHIEM_4') {
+        options = [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d].filter(Boolean);
+      } else if (type === 'DIEN_TU') {
+        options = parsedData?.cac_tu_lua_chon || parsedData?.options || [];
+        correctAnswer = parsedData?.tu_dung || parsedData?.blank_answer || '';
+      } else if (type === 'NOI_CAP') {
+        options = parsedData?.cap_dung || parsedData?.pairs || [];
+      } else if (type === 'SAP_XEP_CAU') {
+        options = parsedData?.cac_tu_dung || parsedData?.correct_order || [];
+      }
+
+      return {
+        ma_cau_trong_tran: q.ma_cau_trong_tran,
+        thu_tu_cau: q.thu_tu_cau,
+        noi_dung: q.noi_dung,
+        loai_cau_hoi: type,
+        muc_bloom: q.muc_bloom || 'NHO',
+        do_kho: q.do_kho || 1,
+        dap_an: options,
+        vi_tri_dap_an_dung: correctAnswer,
+        du_lieu_cau_hoi: parsedData
+      };
+    }),
     luot_da_tra_loi: turns
   };
 }
@@ -146,7 +202,7 @@ async function getMatchState(ma_tran) {
 /**
  * Player submits an answer for a specific question in the match
  */
-async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap_an_chon, thoi_gian_giay = 5 }) {
+async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap_an_chon, cau_tra_loi = null, thoi_gian_giay = 5 }) {
   const match = await db.queryOne('SELECT * FROM tran_dau_1v1 WHERE ma_tran = $1', [ma_tran]);
   if (!match || match.trang_thai !== 'DANG_THI_DAU') {
     throw new Error('Trận đấu không tồn tại hoặc đã kết thúc.');
@@ -169,7 +225,7 @@ async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap
 
   // Get question in match with correct answer
   const questionInMatch = await db.queryOne(`
-    SELECT qm.ma_cau_trong_tran, q.vi_tri_dap_an_dung, q.giai_thich
+    SELECT qm.ma_cau_trong_tran, q.loai_cau_hoi, q.vi_tri_dap_an_dung, q.du_lieu_cau_hoi, q.giai_thich
     FROM cau_hoi_trong_tran qm
     JOIN cau_hoi q ON qm.ma_cau_hoi = q.ma_cau_hoi
     WHERE qm.ma_tran = $1 AND qm.thu_tu_cau = $2
@@ -185,8 +241,50 @@ async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap
     throw new Error('Bạn đã trả lời câu hỏi này rồi.');
   }
 
+  // Parse structured data if available
+  let parsed = null;
+  try {
+    parsed = typeof questionInMatch.du_lieu_cau_hoi === 'string'
+      ? JSON.parse(questionInMatch.du_lieu_cau_hoi)
+      : questionInMatch.du_lieu_cau_hoi;
+  } catch (e) {}
+
+  const type = questionInMatch.loai_cau_hoi || 'TRAC_NGHIEM_4';
+  let isCorrect = false;
+
+  if (type === 'NOI_CAP') {
+    if (cau_tra_loi && (cau_tra_loi.da_hoan_thanh || cau_tra_loi === true)) {
+      isCorrect = true;
+    } else if (vi_tri_dap_an_chon === 1 || vi_tri_dap_an_chon === '1' || vi_tri_dap_an_chon === true) {
+      isCorrect = true;
+    }
+  } else if (type === 'DIEN_TU') {
+    const correctWord = (parsed?.tu_dung || parsed?.blank_answer || '').trim().toLowerCase();
+    const chosenWord = (typeof cau_tra_loi === 'string' ? cau_tra_loi : (cau_tra_loi?.tu_chon || '')).trim().toLowerCase();
+    const optionsList = parsed?.cac_tu_lua_chon || parsed?.options || [];
+    if (chosenWord && correctWord && chosenWord === correctWord) {
+      isCorrect = true;
+    } else if (typeof vi_tri_dap_an_chon === 'number' && optionsList[vi_tri_dap_an_chon]) {
+      isCorrect = (optionsList[vi_tri_dap_an_chon]?.trim().toLowerCase() === correctWord);
+    } else if (vi_tri_dap_an_chon === 1 || vi_tri_dap_an_chon === true) {
+      isCorrect = true;
+    }
+  } else if (type === 'SAP_XEP_CAU') {
+    const cleanCorrect = (parsed?.cau_hoan_chinh || (parsed?.correct_order || parsed?.cac_tu_dung || []).join(' ')).trim().toLowerCase().replace(/\s+/g, ' ');
+    const userSentence = (typeof cau_tra_loi === 'string' ? cau_tra_loi : (cau_tra_loi?.cau_ghep || '')).trim().toLowerCase().replace(/\s+/g, ' ');
+    if (userSentence && cleanCorrect && userSentence === cleanCorrect) {
+      isCorrect = true;
+    } else if (cau_tra_loi && (cau_tra_loi.da_hoan_thanh || cau_tra_loi === true)) {
+      isCorrect = true;
+    } else if (vi_tri_dap_an_chon === 1 || vi_tri_dap_an_chon === true) {
+      isCorrect = true;
+    }
+  } else {
+    // TRAC_NGHIEM_4
+    isCorrect = parseInt(vi_tri_dap_an_chon, 10) === parseInt(questionInMatch.vi_tri_dap_an_dung, 10);
+  }
+
   // Calculate damage
-  const isCorrect = parseInt(vi_tri_dap_an_chon, 10) === parseInt(questionInMatch.vi_tri_dap_an_dung, 10);
   const petMultiplier = player.he_so_sat_thuong || 1.0;
   const { damage, isCritical } = calculateDamage({
     isCorrect,
@@ -206,7 +304,7 @@ async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap
     ma_luot_tra_loi,
     questionInMatch.ma_cau_trong_tran,
     player.ma_nguoi_choi_trong_tran,
-    vi_tri_dap_an_chon,
+    typeof vi_tri_dap_an_chon === 'number' ? vi_tri_dap_an_chon : (isCorrect ? 1 : 0),
     isCorrect ? 1 : 0,
     thoi_gian_giay,
     damage
@@ -358,9 +456,35 @@ async function concludeMatchByScore(ma_tran) {
   }
 }
 
+/**
+ * Surrender match voluntarily
+ */
+async function surrenderMatch(ma_tran, surrenderingUserId) {
+  const match = await db.queryOne('SELECT trang_thai FROM tran_dau_1v1 WHERE ma_tran = $1', [ma_tran]);
+  if (!match || match.trang_thai === 'KET_THUC') return await getMatchState(ma_tran);
+
+  // Set surrendering player HP to 0
+  await db.execute(`
+    UPDATE nguoi_choi_trong_tran
+    SET mau_hien_tai = 0
+    WHERE ma_tran = $1 AND ma_nguoi_dung = $2
+  `, [ma_tran, surrenderingUserId]);
+
+  // Find opponent
+  const opponent = await db.queryOne(`
+    SELECT ma_nguoi_dung FROM nguoi_choi_trong_tran
+    WHERE ma_tran = $1 AND ma_nguoi_dung != $2
+  `, [ma_tran, surrenderingUserId]);
+
+  const winnerId = opponent ? opponent.ma_nguoi_dung : null;
+  await concludeMatch(ma_tran, winnerId, 'DAU_HANG');
+  return await getMatchState(ma_tran);
+}
+
 module.exports = {
   createMatch,
   getMatchState,
   submitTurnAnswer,
-  concludeMatch
+  concludeMatch,
+  surrenderMatch
 };

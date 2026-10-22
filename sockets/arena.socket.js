@@ -122,9 +122,9 @@ function initArenaSocket(io) {
         // Add to queue
         const queueEntry = { userId, socket, ma_mon, joinedAt: Date.now() };
         matchmakingQueue.push(queueEntry);
-        socket.emit('queue_waiting', { vi_tri: matchmakingQueue.length, safeTimeoutMs: 5000 });
+        socket.emit('queue_waiting', { vi_tri: matchmakingQueue.length, safeTimeoutMs: 15000 });
 
-        // Auto-match with smart bot after 5.0 seconds if no human joins (Safe Fallback Protection)
+        // Auto-match with smart bot after 15.0 seconds if no human joins (Safe Fallback Protection)
         queueEntry.timer = setTimeout(async () => {
           const idx = matchmakingQueue.indexOf(queueEntry);
           if (idx !== -1) {
@@ -152,7 +152,7 @@ function initArenaSocket(io) {
               socket.emit('error_msg', 'Lỗi ghép trận bot bảo vệ: ' + err.message);
             }
           }
-        }, 5000);
+        }, 15000);
       }
     });
 
@@ -166,6 +166,24 @@ function initArenaSocket(io) {
       }
     });
 
+    // Surrender Match
+    socket.on('surrender', async ({ ma_tran } = {}) => {
+      if (!ma_tran) return;
+      try {
+        const roomName = `room_${ma_tran}`;
+        const finalState = await arenaService.surrenderMatch(ma_tran, userId);
+        clearBotTimer(ma_tran);
+        io.to(roomName).emit('match_ended', {
+          ma_tran,
+          nguoi_thang_cuoc: finalState.nguoi_thang_cuoc,
+          ly_do_ket_thuc: 'DAU_HANG',
+          trang_thai_cuoi: finalState
+        });
+      } catch (err) {
+        socket.emit('error_msg', err.message);
+      }
+    });
+
     // Join Match Room
     socket.on('join_match_room', ({ ma_tran }) => {
       if (ma_tran) {
@@ -175,13 +193,14 @@ function initArenaSocket(io) {
 
     // Submit Turn Answer
     socket.on('submit_answer', async (payload) => {
-      const { ma_tran, thu_tu_cau, vi_tri_dap_an_chon, thoi_gian_giay } = payload;
+      const { ma_tran, thu_tu_cau, vi_tri_dap_an_chon, cau_tra_loi, thoi_gian_giay } = payload;
       try {
         const turnResult = await arenaService.submitTurnAnswer({
           ma_tran,
           ma_nguoi_dung: userId,
           thu_tu_cau,
           vi_tri_dap_an_chon,
+          cau_tra_loi,
           thoi_gian_giay
         });
 
@@ -276,14 +295,29 @@ function setupSmartBotTurns(io, roomName, matchId, humanUserId, botUserId) {
           const freshState = await arenaService.getMatchState(matchId);
           if (freshState.trang_thai === 'KET_THUC') return;
 
-          // Find correct answer
-          const db = require('../database/db');
-          const qDetail = await db.queryOne('SELECT vi_tri_dap_an_dung FROM cau_hoi WHERE noi_dung = $1', [qInMatch.noi_dung]);
+          // Resolve bot choice depending on question type
+          const qType = qInMatch.loai_cau_hoi || 'TRAC_NGHIEM_4';
           let botChoice = 0;
-          if (qDetail) {
-            botChoice = botConfig.willAnswerCorrectly
-              ? qDetail.vi_tri_dap_an_dung
-              : (qDetail.vi_tri_dap_an_dung + 1) % 4;
+          let botPayload = null;
+
+          if (qType === 'NOI_CAP' || qType === 'SAP_XEP_CAU') {
+            botPayload = { da_hoan_thanh: botConfig.willAnswerCorrectly };
+            botChoice = botConfig.willAnswerCorrectly ? 1 : 0;
+          } else if (qType === 'DIEN_TU') {
+            botPayload = {
+              tu_chon: botConfig.willAnswerCorrectly
+                ? qInMatch.vi_tri_dap_an_dung
+                : 'tu_sai_ngau_nhien'
+            };
+            botChoice = botConfig.willAnswerCorrectly ? 1 : 0;
+          } else {
+            const db = require('../database/db');
+            const qDetail = await db.queryOne('SELECT vi_tri_dap_an_dung FROM cau_hoi WHERE noi_dung = $1', [qInMatch.noi_dung]);
+            if (qDetail && qDetail.vi_tri_dap_an_dung !== null) {
+              botChoice = botConfig.willAnswerCorrectly
+                ? qDetail.vi_tri_dap_an_dung
+                : (qDetail.vi_tri_dap_an_dung + 1) % 4;
+            }
           }
 
           const turnResult = await arenaService.submitTurnAnswer({
@@ -291,6 +325,7 @@ function setupSmartBotTurns(io, roomName, matchId, humanUserId, botUserId) {
             ma_nguoi_dung: botUserId,
             thu_tu_cau: currentQuestion,
             vi_tri_dap_an_chon: botChoice,
+            cau_tra_loi: botPayload,
             thoi_gian_giay: botConfig.totalDelaySec
           });
 

@@ -53,17 +53,27 @@ router.get('/:matchId', authenticate, async (req, res) => {
 
 router.post('/:matchId/turn', authenticate, async (req, res) => {
   try {
-    const { thu_tu_cau, vi_tri_dap_an_chon, thoi_gian_giay } = req.body;
+    const { thu_tu_cau, vi_tri_dap_an_chon, cau_tra_loi, thoi_gian_giay } = req.body;
     const result = await arenaService.submitTurnAnswer({
       ma_tran: req.params.matchId,
       ma_nguoi_dung: req.user.ma_nguoi_dung,
       thu_tu_cau: parseInt(thu_tu_cau, 10),
-      vi_tri_dap_an_chon: parseInt(vi_tri_dap_an_chon, 10),
+      vi_tri_dap_an_chon: vi_tri_dap_an_chon !== undefined ? vi_tri_dap_an_chon : null,
+      cau_tra_loi,
       thoi_gian_giay: parseFloat(thoi_gian_giay || 3.0)
     });
     return res.apiSuccess(result);
   } catch (err) {
     return res.apiError(err.message, 'SUBMIT_TURN_FAILED', 400);
+  }
+});
+
+router.post('/:matchId/surrender', authenticate, async (req, res) => {
+  try {
+    const updatedState = await arenaService.surrenderMatch(req.params.matchId, req.user.ma_nguoi_dung);
+    return res.apiSuccess(updatedState);
+  } catch (err) {
+    return res.apiError(err.message, 'SURRENDER_FAILED', 400);
   }
 });
 
