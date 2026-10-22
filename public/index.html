@@ -478,7 +478,6 @@
           <div class="flex flex-wrap items-center justify-center gap-3">
             <select id="lobby-subject" onchange="renderLobby()" class="text-xs font-semibold bg-[var(--background)] border border-[var(--border)] rounded-xl px-3 py-2 cursor-pointer">
               <option value="csdl">Cơ sở dữ liệu</option>
-              <option value="ctdl">CTDL & Giải thuật</option>
             </select>
             <select id="arena-pet-select" onchange="quickSwitchPet(this.value)" class="text-xs font-semibold bg-[var(--background)] border border-[var(--border)] rounded-xl px-3 py-2 text-emerald-600 cursor-pointer" title="Chọn linh vật ra trận">
               <!-- Cập nhật tự động từ danh sách sở hữu -->
@@ -522,7 +521,6 @@
           <select id="rank-subject" onchange="renderRank()" class="text-xs font-semibold bg-[var(--card)] border border-[var(--border)] rounded-xl px-3 py-2">
             <option value="all">🌐 Tất cả môn</option>
             <option value="csdl">Cơ sở dữ liệu</option>
-            <option value="ctdl">CTDL & Giải thuật</option>
           </select>
         </div>
         <div id="rank-list" class="bg-[var(--card)] border border-[var(--border)] rounded-2xl overflow-hidden divide-y divide-[var(--border)]"></div>
@@ -2205,6 +2203,39 @@
     }
     return rows;
   }
+  function syncArenaSubjectSelects() {
+    const courses = (Array.isArray(allSystemCourses) && allSystemCourses.length > 0)
+      ? allSystemCourses
+      : [{ ma_mon: 'mon_csdl', ten_mon: 'Cơ sở dữ liệu', slug: 'co-so-du-lieu' }];
+
+    const lobbySel = document.getElementById('lobby-subject');
+    if (lobbySel) {
+      const curVal = lobbySel.value;
+      lobbySel.innerHTML = courses.map(c => {
+        const code = (c.ma_mon || 'mon_csdl').replace('mon_', '');
+        const shortName = (c.ten_mon || '').split('&')[0].trim();
+        return `<option value="${code}">${shortName}</option>`;
+      }).join('');
+      if (courses.some(c => (c.ma_mon || '').replace('mon_', '') === curVal)) {
+        lobbySel.value = curVal;
+      }
+    }
+
+    const rankSel = document.getElementById('rank-subject');
+    if (rankSel) {
+      const curVal = rankSel.value;
+      let opts = `<option value="all">🌐 Tất cả môn</option>`;
+      opts += courses.map(c => {
+        const code = (c.ma_mon || 'mon_csdl').replace('mon_', '');
+        const shortName = (c.ten_mon || '').split('&')[0].trim();
+        return `<option value="${code}">${shortName}</option>`;
+      }).join('');
+      rankSel.innerHTML = opts;
+      if (curVal === 'all' || courses.some(c => (c.ma_mon || '').replace('mon_', '') === curVal)) {
+        rankSel.value = curVal;
+      }
+    }
+  }
   function renderLobby() {
     const sub = document.getElementById('lobby-subject').value;
     document.getElementById('lobby-sub-tier').textContent = tierOf(RANKS[sub], false);
@@ -2264,6 +2295,7 @@
         const resCatalog = await respCatalog.json();
         if (resCatalog.success && Array.isArray(resCatalog.data)) {
           allSystemCourses = resCatalog.data;
+          syncArenaSubjectSelects();
         }
 
         // 2. Fetch user's active enrolled courses
@@ -2801,7 +2833,7 @@
     }, 1000);
 
     const subCode = document.getElementById('lobby-subject') ? document.getElementById('lobby-subject').value : 'csdl';
-    const maMon = subCode === 'ctdl' ? 'mon_ctdl' : 'mon_csdl';
+    const maMon = subCode.startsWith('mon_') ? subCode : ('mon_' + subCode);
     const token = localStorage.getItem('tok_token');
 
     // 1. Đồng bộ Socket.IO và tham gia hàng chờ
