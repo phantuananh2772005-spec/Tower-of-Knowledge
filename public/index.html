@@ -240,6 +240,17 @@
   <!-- ================= 2. KHU VỰC NỘI DUNG CHÍNH (DESKTOP WORKSPACE) ================= -->
   <div class="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
 
+    <!-- BANNER XEM TRƯỚC DÀNH CHO QUẢN TRỊ VIÊN -->
+    <div id="admin-preview-banner" class="hidden bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 text-xs font-semibold text-amber-500 flex items-center justify-between z-30 shrink-0">
+      <div class="flex items-center gap-2">
+        <span class="text-sm">🛡️</span>
+        <span>Bạn đang xem ứng dụng dưới góc nhìn Học viên với tư cách <b>Quản trị viên</b>.</span>
+      </div>
+      <a href="/admin/" id="btn-banner-return-admin" class="px-3 py-1 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-lg transition shadow-xs text-xs">
+        Quay lại Cổng Quản Trị →
+      </a>
+    </div>
+
     <!-- ================= THANH BỐ CỤC CHUNG TRÊN CÙNG (KHÓA LẠI KHÔNG BỊ CUỘN) ================= -->
     <header id="app-topbar" class="shrink-0 z-20 bg-[var(--background)]/95 backdrop-blur-md border-b border-[var(--border)] px-4 sm:px-8 h-16 flex items-center justify-between">
       <div class="min-w-0 flex-1 pr-4">
@@ -263,6 +274,12 @@
             <div id="topbar-progress-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
           </div>
         </div>
+
+        <!-- Nút Cổng Quản Trị (chỉ hiện khi vai_tro === 'QUAN_TRI_VIEN') -->
+        <a href="/admin/" id="btn-topbar-admin-portal" title="Chuyển sang Cổng Quản Trị" class="hidden px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/30 hover:bg-amber-500/20 text-xs font-bold transition flex items-center gap-1.5 shrink-0">
+          <span>🛡️</span>
+          <span class="hidden sm:inline">Quản Trị</span>
+        </a>
 
         <!-- Nút Bật/Tắt Sáng Tối (2 Icon Mặt Trăng 🌙 / Mặt Trời ☀️) -->
         <button onclick="toggleTheme()" id="btn-theme-toggle" title="Chuyển chế độ Sáng (☀️) / Tối (🌙)" class="h-8 px-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:border-amber-500/50 flex items-center gap-0.5 transition cursor-pointer shadow-2xs shrink-0 select-none">
@@ -5054,8 +5071,18 @@
           });
           const res = await resp.json();
           if (res.success && res.data) {
+            const userObj = res.data.nguoi_dung || res.data;
             localStorage.setItem('tok_token', res.data.token);
-            applyUserData(res.data.nguoi_dung);
+            if (userObj.vai_tro === 'QUAN_TRI_VIEN') {
+              localStorage.setItem('tok_admin_token', res.data.token);
+              showToast('🛡️ Chào mừng Quản trị viên! Đang chuyển thẳng sang Cổng Quản Trị...', 'success');
+              closeAuthModal(true);
+              setTimeout(() => {
+                window.location.href = '/admin/';
+              }, 400);
+              return;
+            }
+            applyUserData(userObj);
             closeAuthModal();
             await reloadAllAccountData();
             showToast('✓ Đăng nhập thành công! Chào mừng ' + currentUserAccount.displayName);
@@ -5096,8 +5123,18 @@
           res = await resp.json();
         }
         if (res.success && res.data) {
+          const userObj = res.data.nguoi_dung || res.data;
           localStorage.setItem('tok_token', res.data.token);
-          applyUserData(res.data.nguoi_dung);
+          if (userObj.vai_tro === 'QUAN_TRI_VIEN') {
+            localStorage.setItem('tok_admin_token', res.data.token);
+            showToast('🛡️ Chào mừng Quản trị viên! Đang chuyển thẳng sang Cổng Quản Trị...', 'success');
+            closeAuthModal(true);
+            setTimeout(() => {
+              window.location.href = '/admin/';
+            }, 400);
+            return;
+          }
+          applyUserData(userObj);
           closeAuthModal(true);
           await reloadAllAccountData();
           showToast('✓ Đã đăng nhập thành công bằng tài khoản Google!');
@@ -5180,6 +5217,8 @@
       if (rankEl) rankEl.textContent = currentUserAccount.rankTitle || '🌱 Khởi nguyên I';
       const adminBtn = document.getElementById('nav-admin');
       if (adminBtn) adminBtn.classList.toggle('hidden', currentUserAccount.vai_tro !== 'QUAN_TRI_VIEN');
+      const topbarAdminBtn = document.getElementById('btn-topbar-admin-portal');
+      if (topbarAdminBtn) topbarAdminBtn.classList.toggle('hidden', currentUserAccount.vai_tro !== 'QUAN_TRI_VIEN');
     }
 
     
@@ -7095,6 +7134,9 @@
     async function initLiveBackend() {
       // 1. Check user authentication
       const token = localStorage.getItem('tok_token');
+      const urlParams = new URLSearchParams(window.location.search);
+      const isPreview = urlParams.get('mode') === 'preview';
+
       if (token) {
         try {
           const resp = await fetch('/api/auth/me', {
@@ -7102,7 +7144,17 @@
           });
           const res = await resp.json();
           if (res.success && res.data) {
-            applyUserData(res.data.nguoi_dung || res.data);
+            const userObj = res.data.nguoi_dung || res.data;
+            if (userObj.vai_tro === 'QUAN_TRI_VIEN') {
+              localStorage.setItem('tok_admin_token', token);
+              if (!isPreview) {
+                window.location.href = '/admin/';
+                return;
+              }
+              const banner = document.getElementById('admin-preview-banner');
+              if (banner) banner.classList.remove('hidden');
+            }
+            applyUserData(userObj);
           } else {
             // Token expired or invalid -> require login
             localStorage.removeItem('tok_token');

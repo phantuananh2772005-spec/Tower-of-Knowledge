@@ -53,7 +53,7 @@
       </form>
 
       <div class="text-center pt-2 border-t border-[var(--border)]">
-        <a href="/" class="text-xs text-[var(--muted)] hover:text-emerald-500 transition">← Xem Ứng Dụng Học Viên</a>
+        <a href="/?mode=preview" class="text-xs text-[var(--muted)] hover:text-emerald-500 transition">← Xem Ứng Dụng Học Viên</a>
       </div>
     </div>
   </div>
@@ -110,7 +110,7 @@
         <p class="text-[10px] text-amber-500 font-mono">QUẢN TRỊ VIÊN</p>
       </div>
       <div class="flex items-center gap-1">
-        <a href="/" target="_blank" title="Xem ứng dụng học viên" class="p-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] transition">🏠</a>
+        <a href="/?mode=preview" title="Xem ứng dụng học viên" class="p-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] transition">🏠</a>
         <button onclick="handleAdminLogout()" title="Đăng xuất" class="p-1.5 rounded-lg border border-[var(--border)] hover:bg-rose-500/20 text-rose-400 transition cursor-pointer">🚪</button>
       </div>
     </div>
@@ -734,7 +734,7 @@
   </div>
 
   <script>
-    let adminToken = localStorage.getItem('tok_admin_token') || '';
+    let adminToken = localStorage.getItem('tok_admin_token') || localStorage.getItem('tok_token') || '';
     let currentAdminUser = null;
     let allMocOptions = [];
 
@@ -771,6 +771,7 @@
         if (currentAdminUser.vai_tro !== 'QUAN_TRI_VIEN') {
           showToast('Tài khoản này không có quyền quản trị viên.', true);
           handleAdminLogout();
+          setTimeout(() => { window.location.href = '/'; }, 1000);
           return;
         }
         document.getElementById('modal-admin-login').classList.add('hidden');
@@ -812,6 +813,7 @@
 
     function handleAdminLogout() {
       localStorage.removeItem('tok_admin_token');
+      localStorage.removeItem('tok_token');
       adminToken = '';
       currentAdminUser = null;
       document.getElementById('modal-admin-login').classList.remove('hidden');
