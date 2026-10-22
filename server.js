@@ -40,13 +40,13 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(responseFormatter);
 
-// Admin Redirects
-app.get(['/admin', '/admin.html'], (req, res) => {
-  res.redirect('/admin/');
-});
-
 // Serve static assets & frontend applications
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Admin Redirects
+app.get('/admin.html', (req, res) => {
+  res.redirect('/admin/');
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
