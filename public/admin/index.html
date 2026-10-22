@@ -281,24 +281,49 @@
         </div>
 
         <!-- Filter Bar -->
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
-          <input type="text" id="filter-q-search" oninput="applyQuestionFilters()" placeholder="🔍 Tìm kiếm nội dung câu hỏi..." class="p-2 rounded-xl bg-[var(--card)] border border-[var(--border)]">
-          <select id="filter-q-moc" onchange="applyQuestionFilters()" class="p-2 rounded-xl bg-[var(--card)] border border-[var(--border)] font-mono text-[11px]">
-            <option value="">-- Tất cả Mốc bài học --</option>
-          </select>
-          <select id="filter-q-type" onchange="applyQuestionFilters()" class="p-2 rounded-xl bg-[var(--card)] border border-[var(--border)] font-bold text-amber-400">
-            <option value="">-- Tất cả Dạng câu hỏi --</option>
-            <option value="TRAC_NGHIEM_4">Trắc Nghiệm 4 Lựa Chọn</option>
-            <option value="NOI_CAP">Nối Cặp Tương Ứng</option>
-            <option value="DIEN_TU">Điền Từ Vào Chỗ Trống</option>
-            <option value="SAP_XEP_CAU">Sắp Xếp Từ Ghép Câu</option>
-          </select>
-          <select id="filter-q-bloom" onchange="applyQuestionFilters()" class="p-2 rounded-xl bg-[var(--card)] border border-[var(--border)] font-bold text-emerald-400">
-            <option value="">-- Tất cả Mức Bloom --</option>
-            <option value="NHO">🟢 Nhớ (Ghi nhớ / Định nghĩa)</option>
-            <option value="HIEU">🟡 Hiểu (Thông hiểu)</option>
-            <option value="VAN_DUNG">🔴 Vận dụng (Áp dụng / Boss)</option>
-          </select>
+        <div class="space-y-2">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 text-xs">
+            <!-- 1. Tìm kiếm từ khóa -->
+            <input type="text" id="filter-q-search" oninput="applyQuestionFilters()" placeholder="🔍 Tìm kiếm nội dung câu hỏi..." class="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] focus:outline-none focus:border-amber-500">
+            
+            <!-- 2. Lọc theo Môn học -->
+            <select id="filter-q-course" onchange="onCourseFilterChange()" class="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] font-bold text-amber-500 focus:outline-none focus:border-amber-500">
+              <option value="">-- Tất cả Môn học --</option>
+            </select>
+
+            <!-- 3. Lọc theo Mốc bài học -->
+            <select id="filter-q-moc" onchange="applyQuestionFilters()" class="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] font-mono text-[11px] focus:outline-none focus:border-amber-500">
+              <option value="">-- Tất cả Mốc bài học --</option>
+            </select>
+
+            <!-- 4. Lọc theo Dạng câu hỏi -->
+            <select id="filter-q-type" onchange="applyQuestionFilters()" class="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] font-semibold text-purple-400 focus:outline-none focus:border-amber-500">
+              <option value="">-- Tất cả Dạng câu hỏi --</option>
+              <option value="TRAC_NGHIEM_4">Trắc Nghiệm 4 Lựa Chọn</option>
+              <option value="NOI_CAP">Nối Cặp Tương Ứng</option>
+              <option value="DIEN_TU">Điền Từ Vào Chỗ Trống</option>
+              <option value="SAP_XEP_CAU">Sắp Xếp Từ Ghép Câu</option>
+            </select>
+
+            <!-- 5. Lọc theo Mức Bloom -->
+            <select id="filter-q-bloom" onchange="applyQuestionFilters()" class="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] font-semibold text-emerald-400 focus:outline-none focus:border-amber-500">
+              <option value="">-- Tất cả Mức Bloom --</option>
+              <option value="NHO">🟢 Nhớ (Ghi nhớ / Định nghĩa)</option>
+              <option value="HIEU">🟡 Hiểu (Thông hiểu)</option>
+              <option value="VAN_DUNG">🔴 Vận dụng (Áp dụng / Boss)</option>
+            </select>
+          </div>
+
+          <!-- Status Bar & Reset Filter -->
+          <div class="flex items-center justify-between text-xs px-1 text-[var(--muted)]">
+            <div class="flex items-center gap-2">
+              <span>Đang hiển thị:</span>
+              <span id="q-filter-count" class="font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">0 câu hỏi</span>
+            </div>
+            <button onclick="resetQuestionFilters()" class="text-xs hover:text-amber-400 underline cursor-pointer transition">
+              Đặt lại tất cả bộ lọc ↺
+            </button>
+          </div>
         </div>
 
         <!-- Question List Table -->
@@ -308,7 +333,7 @@
               <thead class="text-[11px] text-[var(--muted)] border-b border-[var(--border)]">
                 <tr>
                   <th class="py-2.5 px-3">Mã</th>
-                  <th class="py-2.5 px-3">Mốc</th>
+                  <th class="py-2.5 px-3">Môn & Mốc học</th>
                   <th class="py-2.5 px-3">Dạng câu</th>
                   <th class="py-2.5 px-3">Bloom</th>
                   <th class="py-2.5 px-3 w-1/3">Nội dung câu hỏi</th>
@@ -730,9 +755,15 @@
           <textarea id="edit-q-explain" rows="2" class="w-full p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)]"></textarea>
         </div>
 
-        <div class="flex items-center justify-end gap-2 pt-3 border-t border-[var(--border)]">
-          <button type="button" onclick="closeQuestionModal()" class="px-4 py-2 rounded-xl border border-[var(--border)]">Hủy</button>
-          <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow-md cursor-pointer">Lưu Câu Hỏi</button>
+        <div class="flex items-center justify-between pt-3 border-t border-[var(--border)]">
+          <button type="button" id="btn-modal-delete-question" onclick="confirmDeleteFromEditModal()" class="hidden px-3.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 font-bold text-xs transition cursor-pointer flex items-center gap-1.5">
+            <span>🗑️</span>
+            <span>Xóa câu hỏi này</span>
+          </button>
+          <div class="flex items-center gap-2 ml-auto">
+            <button type="button" onclick="closeQuestionModal()" class="px-4 py-2 rounded-xl border border-[var(--border)] text-xs">Hủy</button>
+            <button type="submit" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold shadow-md cursor-pointer text-xs">Lưu Câu Hỏi</button>
+          </div>
         </div>
       </form>
     </div>
@@ -754,6 +785,118 @@
       <div class="flex justify-end gap-2">
         <button onclick="closeBulkImportModal()" class="px-4 py-2 rounded-xl border border-[var(--border)] text-xs">Hủy</button>
         <button onclick="executeBulkImport()" class="px-5 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs">Nhập Dữ Liệu</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIRM DELETE QUESTION (NO BROWSER DIALOG) -->
+  <div id="modal-confirm-delete-question" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-xl text-rose-500 shrink-0">
+          🗑️
+        </div>
+        <div>
+          <h3 class="text-sm sm:text-base font-bold text-rose-400">Xác Nhận Xóa Câu Hỏi</h3>
+          <p class="text-xs text-[var(--muted)]">Hành động này sẽ xóa câu hỏi vĩnh viễn khỏi ngân hàng CSDL.</p>
+        </div>
+      </div>
+      <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs space-y-1">
+        <div class="font-mono text-[10px] text-amber-400 font-bold" id="del-q-id">q_...</div>
+        <div class="text-[var(--foreground)] line-clamp-3 leading-relaxed" id="del-q-content">...</div>
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button onclick="closeConfirmDeleteQuestionModal()" class="px-4 py-2 rounded-xl border border-[var(--border)] text-xs font-semibold hover:bg-[var(--background)] transition cursor-pointer">
+          Hủy Bỏ
+        </button>
+        <button id="btn-execute-delete-question" onclick="executeDeleteQuestion()" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer shadow-md">
+          Đồng Ý Xóa Vĩnh Viễn
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIRM DELETE CURRICULUM ITEM (NO BROWSER DIALOG) -->
+  <div id="modal-confirm-delete-curriculum" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-xl text-rose-500 shrink-0">
+          🗑️
+        </div>
+        <div>
+          <h3 id="del-curr-title" class="text-sm sm:text-base font-bold text-rose-400">Xác Nhận Xóa</h3>
+          <p id="del-curr-sub" class="text-xs text-[var(--muted)]">Hành động này sẽ xóa mục khỏi lộ trình đào tạo.</p>
+        </div>
+      </div>
+      <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs space-y-1">
+        <div class="font-mono text-[10px] text-amber-400 font-bold" id="del-curr-id">ID: ...</div>
+        <div class="text-[var(--foreground)] line-clamp-3 leading-relaxed" id="del-curr-target">...</div>
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button id="btn-cancel-delete-curriculum" onclick="closeConfirmDeleteCurriculumModal()" class="px-4 py-2 rounded-xl border border-[var(--border)] text-xs font-semibold hover:bg-[var(--background)] transition cursor-pointer">
+          Hủy Bỏ
+        </button>
+        <button id="btn-execute-delete-curriculum" onclick="executeDeleteCurriculum()" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer shadow-md">
+          Đồng Ý Xóa Vĩnh Viễn
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADJUST COINS (NO BROWSER DIALOG) -->
+  <div id="modal-adjust-coins" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+        <h3 class="text-sm font-bold text-amber-400">🪙 Điều Chỉnh Xu Học Viên</h3>
+        <button onclick="closeAdjustCoinsModal()" class="text-xs text-[var(--muted)] hover:text-white cursor-pointer">✕</button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <input type="hidden" id="adjust-user-id">
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Học viên:</label>
+          <div id="adjust-user-label" class="font-bold text-amber-300">--</div>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Số lượng Xu (+ thưởng, - phạt):</label>
+          <input type="number" id="adjust-coins-amount" value="50" class="w-full p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] font-bold text-amber-400 focus:outline-none focus:border-amber-500">
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Lý do điều chỉnh:</label>
+          <input type="text" id="adjust-coins-reason" value="Thưởng hoạt động xuất sắc từ Quản trị viên" class="w-full p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] focus:outline-none focus:border-amber-500">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeAdjustCoinsModal()" class="px-4 py-2 rounded-xl border border-[var(--border)] text-xs font-semibold cursor-pointer">Hủy</button>
+          <button type="button" id="btn-submit-adjust-coins" onclick="executeAdjustCoins()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs cursor-pointer shadow-md">Xác Nhận</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EDIT PET (NO BROWSER DIALOG) -->
+  <div id="modal-edit-pet" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+        <h3 class="text-sm font-bold text-amber-400">🐾 Chỉnh Sửa Linh Thú</h3>
+        <button onclick="closeEditPetModal()" class="text-xs text-[var(--muted)] hover:text-white cursor-pointer">✕</button>
+      </div>
+      <div class="space-y-3 text-xs">
+        <input type="hidden" id="edit-pet-id">
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Tên linh thú:</label>
+          <div id="edit-pet-name" class="font-bold text-amber-300">--</div>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Giá Xu trong Shop:</label>
+          <input type="number" id="edit-pet-price" class="w-full p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] font-bold text-emerald-400 focus:outline-none focus:border-amber-500">
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-[var(--muted)]">Hệ số sát thương PvP (ví dụ 1.25):</label>
+          <input type="number" step="0.05" id="edit-pet-buff" class="w-full p-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] font-bold text-purple-400 focus:outline-none focus:border-amber-500">
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeEditPetModal()" class="px-4 py-2 rounded-xl border border-[var(--border)] text-xs font-semibold cursor-pointer">Hủy</button>
+          <button type="button" id="btn-submit-edit-pet" onclick="executeSavePet()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs cursor-pointer shadow-md">Lưu Thay Đổi</button>
+        </div>
       </div>
     </div>
   </div>
@@ -818,6 +961,7 @@
         document.getElementById('modal-admin-login').classList.add('hidden');
         document.getElementById('admin-user-name').innerText = currentAdminUser.ten_hien_thi;
         loadAnalytics();
+        ensureCoursesAndMocsLoaded();
       } catch (err) {
         localStorage.removeItem('tok_admin_token');
         adminToken = '';
@@ -860,7 +1004,7 @@
       document.getElementById('modal-admin-login').classList.remove('hidden');
     }
 
-    function switchTab(tab) {
+    async function switchTab(tab) {
       const tabs = ['analytics', 'curriculum', 'questions', 'users', 'logs', 'transactions', 'pets'];
       tabs.forEach(t => {
         const panel = document.getElementById(`panel-${t}`);
@@ -885,13 +1029,13 @@
       };
       document.getElementById('admin-header-title').innerText = titles[tab] || 'Quản Trị Hệ Thống';
 
-      if (tab === 'analytics') loadAnalytics();
-      if (tab === 'curriculum') loadCurriculumTree();
-      if (tab === 'questions') loadQuestions();
-      if (tab === 'users') loadUsers();
-      if (tab === 'logs') loadActivityLogs();
-      if (tab === 'transactions') loadTransactions();
-      if (tab === 'pets') loadPets();
+      if (tab === 'analytics') await loadAnalytics();
+      if (tab === 'curriculum') await loadCurriculumTree();
+      if (tab === 'questions') await loadQuestions();
+      if (tab === 'users') await loadUsers();
+      if (tab === 'logs') await loadActivityLogs();
+      if (tab === 'transactions') await loadTransactions();
+      if (tab === 'pets') await loadPets();
     }
 
     async function loadAnalytics() {
@@ -939,22 +1083,31 @@
         // Course select for modals
         const courseSelect = document.getElementById('chapter-course-id');
         if (courseSelect) {
-          courseSelect.innerHTML = courses.map(c => `<option value="${c.ma_mon}">${c.ten_mon}</option>`).join('');
+          courseSelect.innerHTML = courses.map(c => `<option value="${c.ma_mon}">${escapeHtml(c.ten_mon)}</option>`).join('');
         }
 
         for (const c of courses) {
           const detail = await apiFetch(`/api/courses/${c.slug}`);
           allCoursesDetails[c.ma_mon] = { ...c, ...detail };
           detail.cac_chuong.forEach(ch => {
-            ch.cac_moc.forEach(m => allMocOptions.push({ id: m.ma_moc, title: m.tieu_de }));
+            ch.cac_moc.forEach(m => allMocOptions.push({
+              id: m.ma_moc,
+              title: m.tieu_de,
+              courseId: c.ma_mon,
+              courseTitle: c.ten_mon,
+              chapterTitle: ch.ten_chuong
+            }));
           });
         }
 
         // Update selects for questions
         const qMocSelect = document.getElementById('edit-q-moc');
         const bulkMocSelect = document.getElementById('bulk-import-moc');
-        if (qMocSelect) qMocSelect.innerHTML = allMocOptions.map(m => `<option value="${m.id}">${m.title}</option>`).join('');
-        if (bulkMocSelect) bulkMocSelect.innerHTML = allMocOptions.map(m => `<option value="${m.id}">${m.title}</option>`).join('');
+        if (qMocSelect) qMocSelect.innerHTML = allMocOptions.map(m => `<option value="${m.id}">[${escapeHtml(m.courseTitle)}] ${escapeHtml(m.title)}</option>`).join('');
+        if (bulkMocSelect) bulkMocSelect.innerHTML = allMocOptions.map(m => `<option value="${m.id}">[${escapeHtml(m.courseTitle)}] ${escapeHtml(m.title)}</option>`).join('');
+
+        populateQuestionCourseFilter();
+        updateMocFilterOptions();
 
         if (selectedCourseId && allCoursesDetails[selectedCourseId]) {
           renderCourseDetail(selectedCourseId);
@@ -1181,37 +1334,71 @@
       }).join('');
     }
 
-    async function deleteCourse(id) {
-      if (!confirm(`Bạn có chắc chắn muốn xóa môn học ${id}?`)) return;
+    let pendingCurriculumDelete = null; // { type: 'course'|'chapter'|'checkpoint', id: string, name: string }
+
+    function deleteCourse(id) {
+      const course = allCoursesDetails[id];
+      pendingCurriculumDelete = { type: 'course', id, name: course?.ten_mon || id };
+      document.getElementById('del-curr-title').innerText = 'Xác Nhận Xóa Môn Học';
+      document.getElementById('del-curr-sub').innerText = 'Toàn bộ chương, mốc và câu hỏi trong môn sẽ bị xóa!';
+      document.getElementById('del-curr-id').innerText = `Mã môn: ${id}`;
+      document.getElementById('del-curr-target').innerText = `Môn: ${pendingCurriculumDelete.name}`;
+      document.getElementById('modal-confirm-delete-curriculum').classList.remove('hidden');
+    }
+
+    function deleteChapter(id) {
+      pendingCurriculumDelete = { type: 'chapter', id, name: id };
+      document.getElementById('del-curr-title').innerText = 'Xác Nhận Xóa Chương Học';
+      document.getElementById('del-curr-sub').innerText = 'Toàn bộ mốc và câu hỏi trong chương sẽ bị xóa!';
+      document.getElementById('del-curr-id').innerText = `Mã chương: ${id}`;
+      document.getElementById('del-curr-target').innerText = `Chương ID: ${id}`;
+      document.getElementById('modal-confirm-delete-curriculum').classList.remove('hidden');
+    }
+
+    function deleteCheckpoint(id) {
+      const moc = allMocOptions.find(m => m.id === id);
+      pendingCurriculumDelete = { type: 'checkpoint', id, name: moc?.title || id };
+      document.getElementById('del-curr-title').innerText = 'Xác Nhận Xóa Mốc Bài Học';
+      document.getElementById('del-curr-sub').innerText = 'Toàn bộ câu hỏi thuộc mốc này sẽ bị xóa!';
+      document.getElementById('del-curr-id').innerText = `Mã mốc: ${id}`;
+      document.getElementById('del-curr-target').innerText = `Mốc: ${pendingCurriculumDelete.name}`;
+      document.getElementById('modal-confirm-delete-curriculum').classList.remove('hidden');
+    }
+
+    function closeConfirmDeleteCurriculumModal() {
+      pendingCurriculumDelete = null;
+      document.getElementById('modal-confirm-delete-curriculum').classList.add('hidden');
+    }
+
+    async function executeDeleteCurriculum() {
+      if (!pendingCurriculumDelete) return;
+      const { type, id } = pendingCurriculumDelete;
+      const btn = document.getElementById('btn-execute-delete-curriculum');
       try {
-        await apiFetch(`/api/admin/courses/${id}`, { method: 'DELETE' });
-        showToast('Đã xóa môn học!');
-        loadCurriculumTree();
+        if (btn) {
+          btn.disabled = true;
+          btn.innerText = 'Đang xóa...';
+        }
+        if (type === 'course') {
+          await apiFetch(`/api/admin/courses/${id}`, { method: 'DELETE' });
+          showToast('🗑️ Đã xóa môn học thành công!');
+        } else if (type === 'chapter') {
+          await apiFetch(`/api/admin/chapters/${id}`, { method: 'DELETE' });
+          showToast('🗑️ Đã xóa chương học thành công!');
+        } else if (type === 'checkpoint') {
+          await apiFetch(`/api/admin/checkpoints/${id}`, { method: 'DELETE' });
+          showToast('🗑️ Đã xóa mốc bài học thành công!');
+        }
+        closeConfirmDeleteCurriculumModal();
+        await loadCurriculumTree();
         loadAnalytics();
       } catch (err) {
         showToast(err.message, true);
-      }
-    }
-
-    async function deleteChapter(id) {
-      if (!confirm(`Bạn có chắc chắn muốn xóa chương ${id}?`)) return;
-      try {
-        await apiFetch(`/api/admin/chapters/${id}`, { method: 'DELETE' });
-        showToast('Đã xóa chương!');
-        loadCurriculumTree();
-      } catch (err) {
-        showToast(err.message, true);
-      }
-    }
-
-    async function deleteCheckpoint(id) {
-      if (!confirm(`Bạn có chắc chắn muốn xóa mốc ${id}?`)) return;
-      try {
-        await apiFetch(`/api/admin/checkpoints/${id}`, { method: 'DELETE' });
-        showToast('Đã xóa mốc bài học!');
-        loadCurriculumTree();
-      } catch (err) {
-        showToast(err.message, true);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = 'Đồng Ý Xóa Vĩnh Viễn';
+        }
       }
     }
 
@@ -1300,20 +1487,100 @@
     }
 
     let allLoadedQuestions = [];
+    let pendingDeleteQuestionId = null;
+
+    function populateQuestionCourseFilter() {
+      const courseFilter = document.getElementById('filter-q-course');
+      if (!courseFilter) return;
+      const currentVal = courseFilter.value;
+      const courses = Object.values(allCoursesDetails);
+      courseFilter.innerHTML = '<option value="">-- Tất cả Môn học --</option>' +
+        courses.map(c => `<option value="${c.ma_mon}">${escapeHtml(c.ten_mon)}</option>`).join('');
+      courseFilter.value = currentVal;
+    }
+
+    function onCourseFilterChange() {
+      updateMocFilterOptions();
+      applyQuestionFilters();
+    }
+
+    function updateMocFilterOptions() {
+      const filterMoc = document.getElementById('filter-q-moc');
+      if (!filterMoc) return;
+      const selectedCourse = document.getElementById('filter-q-course')?.value || '';
+      const currentMoc = filterMoc.value;
+
+      const mocs = selectedCourse
+        ? allMocOptions.filter(m => m.courseId === selectedCourse)
+        : allMocOptions;
+
+      filterMoc.innerHTML = '<option value="">-- ' + (selectedCourse ? 'Tất cả mốc trong môn này' : 'Tất cả Mốc bài học') + ' --</option>' +
+        mocs.map(m => `<option value="${m.id}">${escapeHtml(m.title)}</option>`).join('');
+
+      if (mocs.some(m => m.id === currentMoc)) {
+        filterMoc.value = currentMoc;
+      } else {
+        filterMoc.value = '';
+      }
+    }
+
+    function resetQuestionFilters() {
+      const searchInput = document.getElementById('filter-q-search');
+      const courseSelect = document.getElementById('filter-q-course');
+      const mocSelect = document.getElementById('filter-q-moc');
+      const typeSelect = document.getElementById('filter-q-type');
+      const bloomSelect = document.getElementById('filter-q-bloom');
+
+      if (searchInput) searchInput.value = '';
+      if (courseSelect) courseSelect.value = '';
+      if (typeSelect) typeSelect.value = '';
+      if (bloomSelect) bloomSelect.value = '';
+
+      updateMocFilterOptions();
+      if (mocSelect) mocSelect.value = '';
+
+      applyQuestionFilters();
+      showToast('🔄 Đã đặt lại tất cả bộ lọc câu hỏi!');
+    }
+
+    async function ensureCoursesAndMocsLoaded() {
+      if (Object.keys(allCoursesDetails).length > 0 && allMocOptions.length > 0) return;
+      try {
+        const courses = await apiFetch('/api/courses');
+        for (const c of courses) {
+          const detail = await apiFetch(`/api/courses/${c.slug}`);
+          allCoursesDetails[c.ma_mon] = { ...c, ...detail };
+          detail.cac_chuong.forEach(ch => {
+            ch.cac_moc.forEach(m => {
+              if (!allMocOptions.some(existing => existing.id === m.ma_moc)) {
+                allMocOptions.push({
+                  id: m.ma_moc,
+                  title: m.tieu_de,
+                  courseId: c.ma_mon,
+                  courseTitle: c.ten_mon,
+                  chapterTitle: ch.ten_chuong
+                });
+              }
+            });
+          });
+        }
+
+        const qMocSelect = document.getElementById('edit-q-moc');
+        const bulkMocSelect = document.getElementById('bulk-import-moc');
+        if (qMocSelect) qMocSelect.innerHTML = allMocOptions.map(m => `<option value="${m.id}">[${escapeHtml(m.courseTitle)}] ${escapeHtml(m.title)}</option>`).join('');
+        if (bulkMocSelect) bulkMocSelect.innerHTML = allMocOptions.map(m => `<option value="${m.id}">[${escapeHtml(m.courseTitle)}] ${escapeHtml(m.title)}</option>`).join('');
+      } catch (err) {
+        console.error('ensureCoursesAndMocsLoaded error:', err);
+      }
+    }
 
     async function loadQuestions() {
       try {
-        allLoadedQuestions = await apiFetch('/api/admin/questions?limit=200');
+        await ensureCoursesAndMocsLoaded();
+        allLoadedQuestions = await apiFetch('/api/admin/questions?limit=500');
         
-        // Populate filter-q-moc options
-        const filterMoc = document.getElementById('filter-q-moc');
-        if (filterMoc && allMocOptions.length > 0) {
-          const currentVal = filterMoc.value;
-          filterMoc.innerHTML = '<option value="">-- Tất cả Mốc bài học --</option>' + 
-            allMocOptions.map(m => `<option value="${m.id}">${m.title}</option>`).join('');
-          filterMoc.value = currentVal;
-        }
-
+        populateQuestionCourseFilter();
+        updateMocFilterOptions();
         applyQuestionFilters();
       } catch (err) {
         showToast(err.message, true);
@@ -1322,28 +1589,40 @@
 
     async function filterQuestionsByMoc(mocId) {
       switchTab('questions');
-      await loadQuestions();
+      const mocItem = allMocOptions.find(m => m.id === mocId);
+      const filterCourse = document.getElementById('filter-q-course');
+      if (filterCourse && mocItem && mocItem.courseId) {
+        filterCourse.value = mocItem.courseId;
+        updateMocFilterOptions();
+      }
       const filterMoc = document.getElementById('filter-q-moc');
       if (filterMoc) {
         filterMoc.value = mocId;
-        applyQuestionFilters();
       }
+      await loadQuestions();
       showToast('🔍 Đang xem đề và danh sách câu hỏi của mốc đã chọn!');
     }
 
     function applyQuestionFilters() {
       const searchTxt = (document.getElementById('filter-q-search')?.value || '').toLowerCase().trim();
+      const courseFilter = document.getElementById('filter-q-course')?.value || '';
       const mocFilter = document.getElementById('filter-q-moc')?.value || '';
       const typeFilter = document.getElementById('filter-q-type')?.value || '';
       const bloomFilter = document.getElementById('filter-q-bloom')?.value || '';
 
       const filtered = allLoadedQuestions.filter(q => {
+        if (courseFilter && q.ma_mon !== courseFilter) return false;
         if (mocFilter && q.ma_moc !== mocFilter) return false;
         if (typeFilter && (q.loai_cau_hoi || 'TRAC_NGHIEM_4') !== typeFilter) return false;
         if (bloomFilter && (q.muc_bloom || 'NHO') !== bloomFilter) return false;
-        if (searchTxt && !(q.noi_dung || '').toLowerCase().includes(searchTxt)) return false;
+        if (searchTxt && !(q.noi_dung || '').toLowerCase().includes(searchTxt) && !(q.ma_cau_hoi || '').toLowerCase().includes(searchTxt)) return false;
         return true;
       });
+
+      const countEl = document.getElementById('q-filter-count');
+      if (countEl) {
+        countEl.innerText = `${filtered.length} / ${allLoadedQuestions.length} câu hỏi`;
+      }
 
       const tbody = document.getElementById('table-questions');
       if (!tbody) return;
@@ -1380,7 +1659,7 @@
             const parsed = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : q.du_lieu_cau_hoi;
             dtWord = parsed?.tu_dung || '';
           } catch(e){}
-          answerPreview = `<span class="font-mono text-amber-400 font-bold">[${dtWord || 'Từ đúng'}]</span>`;
+          answerPreview = `<span class="font-mono text-amber-400 font-bold">[${escapeHtml(dtWord || 'Từ đúng')}]</span>`;
         } else if (type === 'SAP_XEP_CAU') {
           answerPreview = '<span class="font-mono text-emerald-400">Ghép câu chuẩn</span>';
         } else {
@@ -1388,35 +1667,89 @@
           answerPreview = `<span class="font-mono font-bold text-emerald-400">Đáp án ${optLetter}</span>`;
         }
 
+        const courseDisplay = q.ten_mon || (allCoursesDetails[q.ma_mon]?.ten_mon) || 'Chưa gán môn';
+        const mocDisplay = q.ten_moc || (allMocOptions.find(m => m.id === q.ma_moc)?.title) || q.ma_moc || '--';
+
         return `
           <tr class="hover:bg-[var(--background)]/40 transition">
             <td class="py-2.5 px-3 font-mono font-bold text-[11px] text-[var(--muted)]">${q.ma_cau_hoi}</td>
-            <td class="py-2.5 px-3 font-mono text-[10px] text-amber-500">${q.ma_moc || '--'}</td>
+            <td class="py-2.5 px-3">
+              <div class="font-bold text-[11px] text-amber-400 truncate max-w-[160px]" title="${escapeHtml(courseDisplay)}">
+                📘 ${escapeHtml(courseDisplay)}
+              </div>
+              <div class="text-[10px] text-[var(--muted)] font-mono truncate max-w-[160px]" title="${escapeHtml(mocDisplay)}">
+                🎯 ${escapeHtml(mocDisplay)}
+              </div>
+            </td>
             <td class="py-2.5 px-3 whitespace-nowrap">${typeBadge}</td>
             <td class="py-2.5 px-3 whitespace-nowrap">${bloomBadge}</td>
             <td class="py-2.5 px-3 font-medium max-w-xs truncate" title="${escapeHtml(q.noi_dung)}">${escapeHtml(q.noi_dung)}</td>
             <td class="py-2.5 px-3 whitespace-nowrap">${answerPreview}</td>
             <td class="py-2.5 px-3 font-mono whitespace-nowrap">${q.do_kho === 3 ? '🔴 Khó' : q.do_kho === 2 ? '🟡 TB' : '🟢 Dễ'}</td>
             <td class="py-2.5 px-3 text-right space-x-1 shrink-0 whitespace-nowrap">
-              <button onclick="editQuestion('${q.ma_cau_hoi}')" class="px-2 py-1 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 text-[10px] font-bold cursor-pointer">Sửa</button>
-              <button onclick="deleteQuestion('${q.ma_cau_hoi}')" class="px-2 py-1 rounded bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 text-[10px] font-bold cursor-pointer">Xóa</button>
+              <button id="btn-edit-q-${q.ma_cau_hoi}" onclick="editQuestion('${q.ma_cau_hoi}')" class="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 text-[10px] font-bold cursor-pointer transition inline-flex items-center gap-1">
+                <span>✏️</span> Sửa
+              </button>
+              <button id="btn-del-q-${q.ma_cau_hoi}" onclick="promptDeleteQuestion('${q.ma_cau_hoi}')" class="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 text-[10px] font-bold cursor-pointer transition inline-flex items-center gap-1">
+                <span>🗑️</span> Xóa
+              </button>
             </td>
           </tr>
         `;
       }).join('') || '<tr><td colspan="8" class="py-4 text-center text-[var(--muted)]">Không tìm thấy câu hỏi phù hợp với bộ lọc</td></tr>';
     }
 
-    async function deleteQuestion(id) {
-      if (!confirm(`Bạn có chắc muốn xóa câu hỏi ${id} khỏi ngân hàng CSDL?`)) return;
+    function promptDeleteQuestion(id) {
+      const q = allLoadedQuestions.find(item => item.ma_cau_hoi === id) || { ma_cau_hoi: id, noi_dung: '' };
+      pendingDeleteQuestionId = id;
+      const elId = document.getElementById('del-q-id');
+      const elContent = document.getElementById('del-q-content');
+      if (elId) elId.innerText = `Mã: ${q.ma_cau_hoi}`;
+      if (elContent) elContent.innerText = q.noi_dung ? `"${q.noi_dung}"` : 'Câu hỏi từ ngân hàng CSDL';
+      document.getElementById('modal-confirm-delete-question').classList.remove('hidden');
+    }
+
+    function closeConfirmDeleteQuestionModal() {
+      pendingDeleteQuestionId = null;
+      document.getElementById('modal-confirm-delete-question').classList.add('hidden');
+    }
+
+    async function executeDeleteQuestion() {
+      if (!pendingDeleteQuestionId) return;
+      const id = pendingDeleteQuestionId;
+      const btn = document.getElementById('btn-execute-delete-question');
       try {
+        if (btn) {
+          btn.disabled = true;
+          btn.innerText = 'Đang xóa...';
+        }
         await apiFetch(`/api/admin/questions/${id}`, { method: 'DELETE' });
-        showToast(`Đã xóa câu hỏi ${id}`);
-        loadQuestions();
+        showToast(`🗑️ Đã xóa vĩnh viễn câu hỏi ${id} khỏi ngân hàng CSDL!`);
+        closeConfirmDeleteQuestionModal();
+        closeQuestionModal();
+        await loadQuestions();
         loadCurriculumTree();
         loadAnalytics();
       } catch (err) {
         showToast(err.message, true);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = 'Đồng Ý Xóa Vĩnh Viễn';
+        }
       }
+    }
+
+    function confirmDeleteFromEditModal() {
+      const qId = document.getElementById('edit-q-id')?.value.trim();
+      if (qId) {
+        promptDeleteQuestion(qId);
+      }
+    }
+
+    // Keep deleteQuestion as alias to promptDeleteQuestion
+    function deleteQuestion(id) {
+      promptDeleteQuestion(id);
     }
 
     function toggleQuestionTypeFields(type) {
@@ -1480,6 +1813,7 @@
         document.getElementById('edit-q-moc').value = defaultMocId;
       }
 
+      document.getElementById('btn-modal-delete-question')?.classList.add('hidden');
       toggleQuestionTypeFields('TRAC_NGHIEM_4');
       document.getElementById('modal-edit-question').classList.remove('hidden');
     }
@@ -1533,6 +1867,7 @@
       }
 
       toggleQuestionTypeFields(type);
+      document.getElementById('btn-modal-delete-question')?.classList.remove('hidden');
       document.getElementById('modal-edit-question').classList.remove('hidden');
     }
 
@@ -1682,7 +2017,7 @@
             <td class="py-2.5 px-3 font-mono text-blue-400 font-bold">${u.tong_diem_kinh_nghiem}</td>
             <td class="py-2.5 px-3 font-mono text-rose-400">🔥 ${u.chuoi_streak_ngay}</td>
             <td class="py-2.5 px-3 text-right">
-              <button onclick="promptAdjustCoins('${u.ma_nguoi_dung}', '${u.ten_dang_nhap}')" class="px-2.5 py-1 rounded-lg border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 text-[11px] font-bold cursor-pointer">Cộng Xu</button>
+              <button id="btn-adjust-coins-${u.ma_nguoi_dung}" onclick="promptAdjustCoins('${u.ma_nguoi_dung}', '${u.ten_dang_nhap}')" class="px-2.5 py-1 rounded-lg border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 text-[11px] font-bold cursor-pointer">Cộng Xu</button>
             </td>
           </tr>
         `).join('') || '<tr><td colspan="8" class="py-4 text-center text-[var(--muted)]">Không có người dùng</td></tr>';
@@ -1704,18 +2039,33 @@
       }
     }
 
-    async function promptAdjustCoins(userId, username) {
-      const amountStr = prompt(`Nhập số lượng xu muốn thưởng hoặc trừ cho [${username}] (Ví dụ: 100 hoặc -50):`, "50");
-      if (!amountStr) return;
-      const amount = parseInt(amountStr, 10);
-      if (isNaN(amount) || amount === 0) return;
-      const reason = prompt(`Nhập lý do điều chỉnh:`, "Thưởng hoạt động xuất sắc từ Quản trị viên");
+    function promptAdjustCoins(userId, username) {
+      document.getElementById('adjust-user-id').value = userId;
+      document.getElementById('adjust-user-label').innerText = `@${username} (${userId})`;
+      document.getElementById('adjust-coins-amount').value = '50';
+      document.getElementById('adjust-coins-reason').value = 'Thưởng hoạt động xuất sắc từ Quản trị viên';
+      document.getElementById('modal-adjust-coins').classList.remove('hidden');
+    }
+
+    function closeAdjustCoinsModal() {
+      document.getElementById('modal-adjust-coins').classList.add('hidden');
+    }
+
+    async function executeAdjustCoins() {
+      const userId = document.getElementById('adjust-user-id').value;
+      const amount = parseInt(document.getElementById('adjust-coins-amount').value, 10);
+      const reason = document.getElementById('adjust-coins-reason').value.trim() || 'Điều chỉnh từ Admin';
+      if (isNaN(amount) || amount === 0) {
+        showToast('Vui lòng nhập số lượng xu hợp lệ khác 0', true);
+        return;
+      }
       try {
         await apiFetch(`/api/admin/users/${userId}/coins`, {
           method: 'POST',
           body: JSON.stringify({ amount, reason })
         });
-        showToast(`Đã điều chỉnh ${amount} xu cho người dùng!`);
+        showToast(`🪙 Đã điều chỉnh ${amount > 0 ? '+' + amount : amount} xu cho học viên!`);
+        closeAdjustCoinsModal();
         loadUsers();
       } catch (err) {
         showToast(err.message, true);
@@ -1779,7 +2129,7 @@
             <td class="py-2.5 px-3 font-mono font-bold text-emerald-400">${p.gia_xu} 🪙</td>
             <td class="py-2.5 px-3 font-mono font-bold text-purple-400">x${p.he_so_sat_thuong}</td>
             <td class="py-2.5 px-3 text-right">
-              <button onclick="promptEditPet('${p.ma_thu_cung}', '${p.ten_thu_cung}', ${p.gia_xu}, ${p.he_so_sat_thuong})" class="px-2 py-1 rounded bg-amber-500/20 text-amber-400 text-xs font-bold">Sửa</button>
+              <button id="btn-edit-pet-${p.ma_thu_cung}" onclick="promptEditPet('${p.ma_thu_cung}', '${p.ten_thu_cung}', ${p.gia_xu}, ${p.he_so_sat_thuong})" class="px-2 py-1 rounded bg-amber-500/20 text-amber-400 text-xs font-bold cursor-pointer">Sửa</button>
             </td>
           </tr>
         `).join('') || '<tr><td colspan="6" class="py-4 text-center text-[var(--muted)]">Chưa có linh thú nào</td></tr>';
@@ -1788,19 +2138,33 @@
       }
     }
 
-    async function promptEditPet(id, name, currentPrice, currentBuff) {
-      const newPriceStr = prompt(`Cập nhật giá Xu cho linh thú [${name}]:`, currentPrice);
-      if (newPriceStr === null) return;
-      const newPrice = parseInt(newPriceStr, 10);
-      const newBuffStr = prompt(`Cập nhật hệ số sát thương PvP (ví dụ: 1.25):`, currentBuff);
-      if (newBuffStr === null) return;
-      const newBuff = parseFloat(newBuffStr);
+    function promptEditPet(id, name, currentPrice, currentBuff) {
+      document.getElementById('edit-pet-id').value = id;
+      document.getElementById('edit-pet-name').innerText = name;
+      document.getElementById('edit-pet-price').value = currentPrice;
+      document.getElementById('edit-pet-buff').value = currentBuff;
+      document.getElementById('modal-edit-pet').classList.remove('hidden');
+    }
+
+    function closeEditPetModal() {
+      document.getElementById('modal-edit-pet').classList.add('hidden');
+    }
+
+    async function executeSavePet() {
+      const id = document.getElementById('edit-pet-id').value;
+      const newPrice = parseInt(document.getElementById('edit-pet-price').value, 10);
+      const newBuff = parseFloat(document.getElementById('edit-pet-buff').value);
+      if (isNaN(newPrice) || isNaN(newBuff)) {
+        showToast('Vui lòng nhập giá xu và hệ số hợp lệ!', true);
+        return;
+      }
       try {
         await apiFetch(`/api/admin/pets/${id}`, {
           method: 'PUT',
           body: JSON.stringify({ gia_xu: newPrice, he_so_sat_thuong: newBuff })
         });
-        showToast('Đã cập nhật linh thú thành công!');
+        showToast('🐾 Đã cập nhật thông tin linh thú thành công!');
+        closeEditPetModal();
         loadPets();
       } catch (err) {
         showToast(err.message, true);

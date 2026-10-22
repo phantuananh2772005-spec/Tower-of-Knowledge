@@ -132,16 +132,44 @@ async function deleteCheckpoint(ma_moc) {
 /**
  * Question CRUD & Bulk Import
  */
-async function listQuestions({ ma_moc, limit = 200, offset = 0 } = {}) {
+async function listQuestions({ ma_moc, ma_mon, ma_chuong, limit = 500, offset = 0 } = {}) {
+  const whereClauses = [];
+  const params = [];
+
   if (ma_moc) {
-    return await db.query(
-      'SELECT ma_cau_hoi, ma_moc, noi_dung, loai_cau_hoi, dap_an_a, dap_an_b, dap_an_c, dap_an_d, vi_tri_dap_an_dung, giai_thich, do_kho, muc_bloom, buoc_luyen_tap, du_lieu_cau_hoi FROM cau_hoi WHERE ma_moc = $1 ORDER BY ma_cau_hoi ASC',
-      [ma_moc]
-    );
+    params.push(ma_moc);
+    whereClauses.push(`q.ma_moc = $${params.length}`);
   }
-  return await db.query(
-    'SELECT TOP ' + parseInt(limit, 10) + ' ma_cau_hoi, ma_moc, noi_dung, loai_cau_hoi, dap_an_a, dap_an_b, dap_an_c, dap_an_d, vi_tri_dap_an_dung, giai_thich, do_kho, muc_bloom, buoc_luyen_tap, du_lieu_cau_hoi FROM cau_hoi ORDER BY ma_cau_hoi ASC'
-  );
+  if (ma_chuong) {
+    params.push(ma_chuong);
+    whereClauses.push(`ch.ma_chuong = $${params.length}`);
+  }
+  if (ma_mon) {
+    params.push(ma_mon);
+    whereClauses.push(`mon.ma_mon = $${params.length}`);
+  }
+
+  const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+  const topLimit = parseInt(limit, 10) || 500;
+
+  const sql = `
+    SELECT TOP ${topLimit}
+      q.ma_cau_hoi, q.ma_moc, q.noi_dung, q.loai_cau_hoi, 
+      q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d, 
+      q.vi_tri_dap_an_dung, q.giai_thich, q.do_kho, q.muc_bloom, 
+      q.buoc_luyen_tap, q.du_lieu_cau_hoi,
+      m.tieu_de as ten_moc,
+      ch.ma_chuong, ch.tieu_de as ten_chuong,
+      mon.ma_mon, mon.ten_mon
+    FROM cau_hoi q
+    LEFT JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
+    LEFT JOIN chuong_hoc ch ON m.ma_chuong = ch.ma_chuong
+    LEFT JOIN mon_hoc mon ON ch.ma_mon = mon.ma_mon
+    ${whereSql}
+    ORDER BY q.ma_cau_hoi ASC
+  `;
+
+  return await db.query(sql, params);
 }
 
 async function createQuestion({ ma_moc, noi_dung, loai_cau_hoi = 'TRAC_NGHIEM_4', dap_an_a, dap_an_b, dap_an_c, dap_an_d, vi_tri_dap_an_dung, giai_thich, do_kho = 1, muc_bloom = 'NHO', buoc_luyen_tap = 1, du_lieu_cau_hoi = null }) {
