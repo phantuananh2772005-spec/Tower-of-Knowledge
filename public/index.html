@@ -4706,13 +4706,90 @@
       showToast('✓ Đã cập nhật email liên kết thành công!');
     }
 
+    function clearUserDataAndUI() {
+      currentUserAccount = {
+        displayName: 'Học viên',
+        username: 'guest',
+        email: '',
+        googleEmail: '',
+        hasGoogleLinked: false,
+        hasPassword: true,
+        userId: null,
+        exp: 0,
+        rankTitle: '🌱 Khởi nguyên I'
+      };
+      userCoins = 0;
+      userStreak = 0;
+      if (typeof RANKS !== 'undefined') {
+        RANKS.csdl = 0;
+        RANKS.ctdl = 0;
+      }
+      allPets.forEach(p => { ownedPets[p.id] = (p.id === 'dragon'); });
+      currentEquippedPet = allPets.find(p => p.id === 'dragon') || { id: 'dragon', name: 'Rồng Nhỏ Sparky', icon: '🐉', buff: 'Tăng 10% kinh nghiệm', image: SPARKY_ANIM_GIF };
+      myEnrolledCourses = [];
+      liveCourseData = null;
+
+      // Xóa các mốc và tiến độ của tài khoản cũ trên giao diện
+      syncUserDataToUI();
+      syncAllPetDisplays();
+      renderOwnedPets();
+      updateShopPetButtons();
+      renderLobby();
+      updateHubWelcomeBanner();
+      renderHubCourses();
+      renderEnrolledCourses();
+
+      const roadmapTrack = document.getElementById('saga-roadmap-track');
+      if (roadmapTrack) {
+        roadmapTrack.innerHTML = '<div class="text-center py-12 text-xs text-[var(--muted-foreground)]">Đang tải lộ trình học...</div>';
+      }
+
+      const progText = document.getElementById('topbar-progress-text');
+      if (progText) progText.textContent = 'Đã qua 0/0 mốc';
+      const progBar = document.getElementById('topbar-progress-bar');
+      if (progBar) progBar.style.width = '0%';
+
+      const badgeEl = document.getElementById('sidebar-enrolled-count');
+      if (badgeEl) badgeEl.style.display = 'none';
+
+      if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected) {
+        liveSocket.disconnect();
+      }
+    }
+
+    async function reloadAllAccountData() {
+      // 1. Kết nối lại Socket thời gian thực với token của tài khoản mới
+      if (typeof liveSocket !== 'undefined' && liveSocket) {
+        liveSocket.auth = { token: localStorage.getItem('tok_token') };
+        if (liveSocket.connected) {
+          liveSocket.disconnect().connect();
+        } else {
+          liveSocket.connect();
+        }
+      }
+
+      // 2. Nạp mới toàn bộ dữ liệu từ máy chủ ứng với tài khoản mới
+      await Promise.all([
+        typeof loadAllCourses === 'function' ? loadAllCourses() : Promise.resolve(),
+        typeof loadCourseRoadmap === 'function' ? loadCourseRoadmap() : Promise.resolve(),
+        typeof loadRealPets === 'function' ? loadRealPets() : Promise.resolve(),
+        typeof loadRealLeaderboard === 'function' ? loadRealLeaderboard() : Promise.resolve()
+      ]);
+
+      // 3. Đồng bộ lại toàn bộ UI
+      syncUserDataToUI();
+      syncAllPetDisplays();
+      renderLobby();
+    }
+
     function logoutAndOpenAuth() {
       closeSettingsModal();
       localStorage.removeItem('tok_token');
+      clearUserDataAndUI();
       showToast('✓ Đã đăng xuất khỏi tài khoản.');
       setTimeout(() => {
         openAuthModal('login');
-      }, 300);
+      }, 200);
     }
 
     let currentAvatar = {
@@ -4943,6 +5020,7 @@
             localStorage.setItem('tok_token', res.data.token);
             applyUserData(res.data.nguoi_dung);
             closeAuthModal();
+            await reloadAllAccountData();
             showToast('🎉 Đăng ký thành công! Chào mừng ' + currentUserAccount.displayName);
           } else {
             showToast(res.error?.message || 'Không thể tạo tài khoản!', 'error');
@@ -4969,6 +5047,7 @@
             localStorage.setItem('tok_token', res.data.token);
             applyUserData(res.data.nguoi_dung);
             closeAuthModal();
+            await reloadAllAccountData();
             showToast('✓ Đăng nhập thành công! Chào mừng ' + currentUserAccount.displayName);
           } else {
             showToast(res.error?.message || 'Sai tên đăng nhập hoặc mật khẩu!', 'error');
@@ -5010,6 +5089,7 @@
           localStorage.setItem('tok_token', res.data.token);
           applyUserData(res.data.nguoi_dung);
           closeAuthModal(true);
+          await reloadAllAccountData();
           showToast('✓ Đã đăng nhập thành công bằng tài khoản Google!');
         } else {
           showToast(res.error?.message || 'Không thể xác thực Google!', 'error');
@@ -5027,6 +5107,7 @@
       currentUserAccount.userId = user.ma_nguoi_dung;
       currentUserAccount.vai_tro = user.vai_tro || 'NGUOI_HOC';
       currentUserAccount.exp = user.tong_diem_kinh_nghiem || 0;
+      currentUserAccount.rankTitle = typeof tierOf === 'function' ? tierOf(currentUserAccount.exp, true) : '🌱 Khởi nguyên I';
       userCoins = typeof user.xu_tri_thuc === 'number' ? user.xu_tri_thuc : 0;
       userStreak = typeof user.chuoi_streak_ngay === 'number' ? user.chuoi_streak_ngay : 0;
 
@@ -5048,6 +5129,8 @@
         const petId = (pet.ma_thu_cung && pet.ma_thu_cung.includes('fox')) ? 'fox' : 'dragon';
         const petImg = petId === 'fox' ? KITSUNE_ANIM_GIF : SPARKY_ANIM_GIF;
         equipPet(petId, pet.ten_thu_cung || 'Rồng Nhỏ Sparky', petId === 'fox' ? '🦊' : '🐉', pet.mo_ta || 'Đồng hành cùng bạn', petImg);
+      } else {
+        equipPet('dragon', 'Rồng Nhỏ Sparky', '🐉', 'Tăng 10% kinh nghiệm', SPARKY_ANIM_GIF);
       }
 
       if (typeof RANKS !== 'undefined') {
@@ -5086,7 +5169,7 @@
       const rankEl = document.getElementById('sidebar-user-rank');
       if (rankEl) rankEl.textContent = currentUserAccount.rankTitle || '🌱 Khởi nguyên I';
       const adminBtn = document.getElementById('nav-admin');
-      if (adminBtn) adminBtn.classList.remove('hidden');
+      if (adminBtn) adminBtn.classList.toggle('hidden', currentUserAccount.vai_tro !== 'QUAN_TRI_VIEN');
     }
 
     
@@ -6994,7 +7077,7 @@
         const res = await resp.json();
         if (res.success && res.data) {
           applyUserData(res.data.nguoi_dung || res.data);
-          loadRealLeaderboard();
+          await reloadAllAccountData();
         }
       } catch (err) {}
     }
@@ -7013,13 +7096,16 @@
           } else {
             // Token expired or invalid -> require login
             localStorage.removeItem('tok_token');
+            clearUserDataAndUI();
             openAuthModal('login');
           }
         } catch (e) {
+          clearUserDataAndUI();
           openAuthModal('login');
         }
       } else {
         // No session -> open login modal immediately
+        clearUserDataAndUI();
         openAuthModal('login');
       }
 
@@ -7045,12 +7131,7 @@
         }
       }
       // Load real system dynamic data
-      await Promise.all([
-        loadCourseRoadmap(),
-        loadAllCourses(),
-        loadRealPets(),
-        loadRealLeaderboard()
-      ]);
+      await reloadAllAccountData();
     }
 
     // Auto-init on page load
