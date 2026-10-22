@@ -28,8 +28,8 @@ async function ensurePlayerRecord(userId, defaultName = 'Người chơi') {
  * Create a new 1v1 match between 2 players
  */
 async function createMatch(player1Id, player2Id, ma_mon = 'mon_csdl') {
-  await ensurePlayerRecord(player1Id, 'Người chơi 1');
-  await ensurePlayerRecord(player2Id, 'Đối thủ');
+  await ensurePlayerRecord(player1Id, 'Học viên ' + player1Id.slice(-4));
+  await ensurePlayerRecord(player2Id, 'Học viên ' + player2Id.slice(-4));
 
   const ma_tran = `match_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 

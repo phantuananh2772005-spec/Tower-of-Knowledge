@@ -29,7 +29,9 @@ router.get('/leaderboard', async (req, res) => {
       FROM nguoi_dung u
       LEFT JOIN thu_cung_so_huu tcsh ON u.ma_nguoi_dung = tcsh.ma_nguoi_dung AND tcsh.dang_kich_hoat = $1
       LEFT JOIN thu_cung p ON tcsh.ma_thu_cung = p.ma_thu_cung
-      WHERE u.vai_tro != 'QUAN_TRI_VIEN'
+      WHERE u.vai_tro NOT IN ('QUAN_TRI_VIEN', 'HE_THONG')
+        AND u.ten_hien_thi NOT LIKE N'%Đối thủ%'
+        AND u.ten_hien_thi NOT LIKE N'%Người chơi%'
       ORDER BY u.tong_diem_kinh_nghiem DESC
     `, [true]);
     const enriched = users.map(u => ({

@@ -2103,7 +2103,7 @@
   // ===== Đấu trường Tiers & Ranks =====
   const SUBJ = { csdl: 'Cơ Sở Dữ Liệu', ctdl: 'Cấu Trúc Dữ Liệu', mon_csdl: 'Cơ Sở Dữ Liệu', mon_ctdl: 'Cấu Trúc Dữ Liệu' };
   const RANKS = { csdl: 0, ctdl: 0, mon_csdl: 0, mon_ctdl: 0 };
-  const overallPts = () => Math.round(((RANKS.csdl || 0) + (RANKS.ctdl || 0)) / 2);
+  const overallPts = () => Math.max(0, (RANKS.csdl || 0) + (RANKS.ctdl || 0));
   const THI_THRESH = [0, 500, 1000, 1500, 2000];
   const THI_NAMES = ['🌱 Khởi nguyên', '🔥 Bứt phá', '⚡ Tinh thông', '🌟 Xuất chúng', '👑 Đỉnh cao'];
 
@@ -2158,14 +2158,26 @@
     const s = RANK_DATA[sub] ? sub : 'all';
     if (!RANK_DATA[s] || !RANK_DATA[s][type]) return [];
     let rows = RANK_DATA[s][type].map(r => r.slice());
-    if (type === 'hang') {
-      rows.forEach(r => {
-        if (r[0] === ME || r[0] === currentUserAccount.displayName) {
-          r[0] = ME;
-          r[3] = String(currentUserAccount.exp || 0);
+
+    const myDisplayName = (currentUserAccount?.displayName || '').trim().toLowerCase();
+    const myUsername = (currentUserAccount?.username || '').trim().toLowerCase();
+
+    rows.forEach(r => {
+      const name = (r[0] || '').trim().toLowerCase();
+      const isMe = (r[0] === ME || (myDisplayName && name === myDisplayName) || (myUsername && name === myUsername));
+      if (isMe) {
+        r[0] = ME;
+        if (type === 'hang') {
+          const myPts = (typeof overallPts === 'function' ? overallPts() : (currentUserAccount?.exp || 0));
+          r[3] = String(myPts);
         }
+      }
+      if (type === 'hang') {
         r[2] = tierOf(+r[3], s === 'all');
-      });
+      }
+    });
+
+    if (type === 'hang') {
       rows.sort((a, b) => parseFloat(b[3]) - parseFloat(a[3]));
     }
     return rows;
