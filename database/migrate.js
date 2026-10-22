@@ -42,23 +42,65 @@ async function runPostgresFile(filePath) {
   await pool.end();
 }
 
-async function main() {
-  const shouldSeed = process.argv.includes('--seed') || true;
-
+async function checkTableExists(tableName) {
   if (isPostgres) {
-    console.log('==> Running PostgreSQL migrations...');
-    await runPostgresFile(path.join(__dirname, 'migrations', '001_postgres_initial_schema.sql'));
-    if (shouldSeed) {
-      console.log('==> Running PostgreSQL seed...');
-      await runPostgresFile(path.join(__dirname, 'seed_postgres.sql'));
+    const { Pool } = require('pg');
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+    });
+    try {
+      const res = await pool.query(
+        "SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1",
+        [tableName]
+      );
+      return res.rows.length > 0;
+    } catch (e) {
+      return false;
+    } finally {
+      await pool.end();
     }
   } else {
-    console.log('==> Running Microsoft SQL Server migrations...');
-    await runMssqlFile(path.join(__dirname, 'migrations', '001_mssql_initial_schema.sql'));
-    if (shouldSeed) {
-      console.log('==> Running Microsoft SQL Server seed...');
-      await runMssqlFile(path.join(__dirname, 'seed_mssql.sql'));
+    try {
+      const { stdout } = await execFileAsync('sqlcmd', [
+        '-S', process.env.MSSQL_SERVER || 'localhost',
+        '-E',
+        '-d', process.env.MSSQL_DATABASE || 'TowerOfKnowledge',
+        '-Q', `SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '${tableName}';`
+      ], { encoding: 'utf8' });
+      return stdout && stdout.includes('(1 rows affected)');
+    } catch (e) {
+      return false;
     }
+  }
+}
+
+async function main() {
+  const shouldSeed = process.argv.includes('--seed') || true;
+  const forceFresh = process.argv.includes('--fresh');
+
+  const tableExists = await checkTableExists('nguoi_dung');
+  const isFreshDb = !tableExists;
+
+  if (isFreshDb || forceFresh) {
+    console.log(`==> Fresh database detected. Creating initial schema and seed...`);
+    if (isPostgres) {
+      console.log('==> Running PostgreSQL migrations...');
+      await runPostgresFile(path.join(__dirname, 'migrations', '001_postgres_initial_schema.sql'));
+      if (shouldSeed) {
+        console.log('==> Running PostgreSQL seed...');
+        await runPostgresFile(path.join(__dirname, 'seed_postgres.sql'));
+      }
+    } else {
+      console.log('==> Running Microsoft SQL Server migrations...');
+      await runMssqlFile(path.join(__dirname, 'migrations', '001_mssql_initial_schema.sql'));
+      if (shouldSeed) {
+        console.log('==> Running Microsoft SQL Server seed...');
+        await runMssqlFile(path.join(__dirname, 'seed_mssql.sql'));
+      }
+    }
+  } else {
+    console.log('==> Existing database detected. Preserving existing users and learning progress (non-destructive mode).');
   }
 
   console.log('==> Seeding Chapter 1 (5 checkpoints & 63 questions)...');

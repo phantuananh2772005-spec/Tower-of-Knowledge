@@ -5,23 +5,8 @@
 -- He quan tri: PostgreSQL 14+ (Ho tro Render / Cloud)
 -- =======================================================================
 
-DROP TABLE IF EXISTS luot_tra_loi CASCADE;
-DROP TABLE IF EXISTS cau_hoi_trong_tran CASCADE;
-DROP TABLE IF EXISTS nguoi_choi_trong_tran CASCADE;
-DROP TABLE IF EXISTS tran_dau_1v1 CASCADE;
-DROP TABLE IF EXISTS tien_do_moc_bai_hoc CASCADE;
-DROP TABLE IF EXISTS tien_do_mon_hoc CASCADE;
-DROP TABLE IF EXISTS cau_hoi CASCADE;
-DROP TABLE IF EXISTS moc_bai_hoc CASCADE;
-DROP TABLE IF EXISTS chuong_hoc CASCADE;
-DROP TABLE IF EXISTS mon_hoc CASCADE;
-DROP TABLE IF EXISTS giao_dich_xu CASCADE;
-DROP TABLE IF EXISTS thu_cung_so_huu CASCADE;
-DROP TABLE IF EXISTS thu_cung CASCADE;
-DROP TABLE IF EXISTS nguoi_dung CASCADE;
-
 -- 1. NGUOI_DUNG
-CREATE TABLE nguoi_dung (
+CREATE TABLE IF NOT EXISTS nguoi_dung (
     ma_nguoi_dung VARCHAR(50) PRIMARY KEY,
     ten_dang_nhap VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(100) NOT NULL UNIQUE,
