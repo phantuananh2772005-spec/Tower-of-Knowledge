@@ -1259,10 +1259,10 @@
 
     <!-- ================= MODAL ĐĂNG KÝ / ĐĂNG NHẬP SONG SONG (DUAL AUTH) ================= -->
     <div id="modal-auth" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs transition-opacity duration-200" onclick="if(event.target===this)closeAuthModal()">
-      <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl space-y-4 overflow-hidden relative animate-in fade-in zoom-in-95">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl max-w-md w-full h-[535px] max-h-[90vh] p-6 sm:p-7 shadow-2xl flex flex-col justify-between overflow-hidden relative animate-in fade-in zoom-in-95">
         
         <!-- Header -->
-        <div class="flex items-center justify-between pb-2 border-b border-[var(--border)]">
+        <div class="flex items-center justify-between pb-2 border-b border-[var(--border)] shrink-0">
           <div class="flex items-center gap-2.5">
             <span class="text-2xl select-none">🎓</span>
             <div>
@@ -1275,7 +1275,7 @@
         </div>
 
         <!-- Mode Tab Switcher: Đăng ký vs Đăng nhập -->
-        <div class="flex items-center p-1 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs font-semibold">
+        <div class="flex items-center p-1 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs font-semibold shrink-0">
           <button id="tab-auth-register" onclick="authTab('register')" class="flex-1 py-1.5 rounded-lg bg-[var(--foreground)] text-[var(--background)] font-semibold transition cursor-pointer text-center">
             Tạo tài khoản mới
           </button>
@@ -1285,7 +1285,7 @@
         </div>
 
         <!-- CÁCH 1: TIẾP TỤC VỚI GOOGLE (1 CHẠM) -->
-        <div class="space-y-2 pt-1">
+        <div class="space-y-2 shrink-0">
           <button id="btn_auth_google_login" onclick="loginWithGoogle()" class="w-full py-2.5 px-4 rounded-2xl border border-[var(--border)] bg-[var(--background)] hover:bg-[var(--card)] hover:border-emerald-500/40 text-xs font-semibold flex items-center justify-center gap-3 transition cursor-pointer shadow-2xs group">
             <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/>
@@ -1298,7 +1298,7 @@
         </div>
 
         <!-- PHÂN CÁCH HOẶC -->
-        <div class="relative flex items-center justify-center my-1">
+        <div class="relative flex items-center justify-center shrink-0">
           <div class="border-t border-[var(--border)] w-full"></div>
           <span class="bg-[var(--card)] px-3 text-[10px] font-bold text-[var(--muted-foreground)] uppercase tracking-wider relative shrink-0">
             HOẶC
@@ -1306,32 +1306,46 @@
         </div>
 
         <!-- CÁCH 2: USERNAME + PASSWORD (KHÔNG CẦN GMAIL) -->
-        <form onsubmit="handleAuthSubmit(event)" class="space-y-3">
-          <div class="space-y-1">
-            <label class="text-[11px] font-bold text-[var(--muted-foreground)]">Tên đăng nhập hoặc Email</label>
-            <input type="text" id="auth-username" required placeholder="Nhập tên đăng nhập hoặc email..." class="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs font-mono focus:outline-none focus:border-emerald-500">
+        <form onsubmit="handleAuthSubmit(event)" class="space-y-3 flex-1 flex flex-col justify-between">
+          <div class="space-y-2.5">
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold text-[var(--muted-foreground)]">Tên đăng nhập hoặc Email</label>
+              <input type="text" id="auth-username" required placeholder="Nhập tên đăng nhập hoặc email..." class="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs font-mono focus:outline-none focus:border-emerald-500">
+            </div>
+
+            <div class="space-y-1">
+              <label class="text-[11px] font-bold text-[var(--muted-foreground)]">Mật khẩu</label>
+              <input type="password" id="auth-password" required placeholder="Nhập mật khẩu..." class="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs focus:outline-none focus:border-emerald-500">
+            </div>
+
+            <!-- Trường Nhập lại mật khẩu (Tạo tài khoản mới) -->
+            <div id="auth-confirm-box" class="space-y-1">
+              <label class="text-[11px] font-bold text-[var(--muted-foreground)]">Nhập lại mật khẩu</label>
+              <input type="password" id="auth-password-confirm" placeholder="Nhập lại mật khẩu..." class="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs focus:outline-none focus:border-emerald-500">
+            </div>
+
+            <!-- Khối tiện ích Đăng nhập (thay thế chỗ trống khi Đăng nhập, giúp chiều cao cố định không bị nhảy) -->
+            <div id="auth-login-helper" class="hidden space-y-1 pt-0.5">
+              <div class="flex items-center justify-between text-[11px] text-[var(--muted-foreground)]">
+                <label class="flex items-center gap-1.5 cursor-pointer select-none hover:text-[var(--foreground)] transition">
+                  <input type="checkbox" id="auth-remember-me" checked class="rounded accent-emerald-600 cursor-pointer">
+                  <span>Ghi nhớ đăng nhập</span>
+                </label>
+                <button type="button" id="btn_auth_forgot_pass" onclick="showToast('Vui lòng liên hệ Quản trị viên để đặt lại mật khẩu!', 'info')" class="text-emerald-500 hover:text-emerald-400 hover:underline cursor-pointer">
+                  Quên mật khẩu?
+                </button>
+              </div>
+              <div class="text-[10px] text-[var(--muted-foreground)] flex items-center gap-1.5 bg-[var(--background)]/80 p-2 rounded-xl border border-[var(--border)]">
+                <span class="text-xs">🔒</span>
+                <span>Tiến độ học tập và Đấu trường đồng bộ thời gian thực.</span>
+              </div>
+            </div>
           </div>
 
-          <div class="space-y-1">
-            <label class="text-[11px] font-bold text-[var(--muted-foreground)]">Mật khẩu</label>
-            <input type="password" id="auth-password" required placeholder="Nhập mật khẩu..." class="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs focus:outline-none focus:border-emerald-500">
-          </div>
-
-          <div id="auth-confirm-box" class="space-y-1">
-            <label class="text-[11px] font-bold text-[var(--muted-foreground)]">Nhập lại mật khẩu</label>
-            <input type="password" id="auth-password-confirm" placeholder="Nhập lại mật khẩu..." class="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs focus:outline-none focus:border-emerald-500">
-          </div>
-
-          <button type="submit" id="auth-submit-btn" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition cursor-pointer shadow-xs">
+          <button type="submit" id="auth-submit-btn" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition cursor-pointer shadow-xs shrink-0">
             Tạo tài khoản
           </button>
         </form>
-
-        <div class="pt-1 text-center">
-          <button id="auth-toggle-btn" onclick="toggleAuthMode()" class="text-xs text-[var(--muted-foreground)] hover:text-emerald-600 transition cursor-pointer">
-            Đã có tài khoản? <span class="font-bold underline">Đăng nhập</span>
-          </button>
-        </div>
 
       </div>
     </div>
@@ -4956,8 +4970,8 @@
       const btnLog = document.getElementById('tab-auth-login');
       const title = document.getElementById('auth-modal-title');
       const confirmBox = document.getElementById('auth-confirm-box');
+      const loginHelper = document.getElementById('auth-login-helper');
       const submitBtn = document.getElementById('auth-submit-btn');
-      const toggleBtn = document.getElementById('auth-toggle-btn');
       const activeClass = "flex-1 py-1.5 rounded-lg bg-[var(--foreground)] text-[var(--background)] font-semibold transition cursor-pointer text-center";
       const inactiveClass = "flex-1 py-1.5 rounded-lg text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium transition cursor-pointer text-center";
 
@@ -4966,20 +4980,16 @@
         if (btnLog) btnLog.className = activeClass;
         if (title) title.textContent = 'Đăng nhập';
         if (confirmBox) confirmBox.classList.add('hidden');
+        if (loginHelper) loginHelper.classList.remove('hidden');
         if (submitBtn) submitBtn.innerHTML = 'Đăng nhập';
-        if (toggleBtn) toggleBtn.innerHTML = 'Chưa có tài khoản? <span class="font-bold underline">Tạo tài khoản</span>';
       } else {
         if (btnReg) btnReg.className = activeClass;
         if (btnLog) btnLog.className = inactiveClass;
         if (title) title.textContent = 'Tạo tài khoản';
         if (confirmBox) confirmBox.classList.remove('hidden');
+        if (loginHelper) loginHelper.classList.add('hidden');
         if (submitBtn) submitBtn.innerHTML = 'Tạo tài khoản';
-        if (toggleBtn) toggleBtn.innerHTML = 'Đã có tài khoản? <span class="font-bold underline">Đăng nhập</span>';
       }
-    }
-
-    function toggleAuthMode() {
-      authTab(authMode === 'login' ? 'register' : 'login');
     }
 
     async function handleAuthSubmit(event) {
