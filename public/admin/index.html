@@ -22,6 +22,49 @@
       --border: #1e293b;
       --muted: #94a3b8;
     }
+
+    /* COLLAPSIBLE SIDEBAR STYLES */
+    #admin-sidebar {
+      transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #admin-sidebar.collapsed {
+      width: 4.5rem !important; /* 72px */
+    }
+    #admin-sidebar.collapsed .sidebar-text,
+    #admin-sidebar.collapsed .sidebar-label,
+    #admin-sidebar.collapsed #admin-footer-text,
+    #admin-sidebar.collapsed .sidebar-full-only {
+      display: none !important;
+    }
+    #admin-sidebar.collapsed nav button {
+      justify-content: center !important;
+      padding-left: 0.5rem !important;
+      padding-right: 0.5rem !important;
+    }
+    #admin-sidebar.collapsed #admin-sidebar-header {
+      justify-content: center !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+    #admin-sidebar.collapsed #admin-footer-profile {
+      justify-content: center !important;
+      flex-direction: column !important;
+      gap: 0.5rem !important;
+      padding-left: 0.5rem !important;
+      padding-right: 0.5rem !important;
+    }
+
+    /* TABLE LAYOUT NO-SCROLL STANDARD */
+    .table-fixed-layout {
+      table-layout: fixed;
+      width: 100%;
+    }
+    .table-fixed-layout td,
+    .table-fixed-layout th {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   </style>
 </head>
 <body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen flex font-sans">
@@ -59,57 +102,62 @@
   </div>
 
   <!-- ADMIN SIDEBAR -->
-  <aside class="w-64 border-r border-[var(--border)] bg-[var(--card)] flex flex-col justify-between shrink-0 h-screen sticky top-0 z-20">
-    <div class="p-4 space-y-6">
-      <div class="flex items-center gap-3 px-1">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center text-lg shadow-md shrink-0">
-          🛡️
+  <aside id="admin-sidebar" class="w-64 border-r border-[var(--border)] bg-[var(--card)] flex flex-col justify-between shrink-0 h-screen sticky top-0 z-20">
+    <div class="p-3.5 space-y-5">
+      <div id="admin-sidebar-header" class="flex items-center justify-between px-1">
+        <div class="flex items-center gap-3 min-w-0">
+          <div onclick="toggleSidebar()" class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center text-lg shadow-md shrink-0 cursor-pointer hover:scale-105 transition" title="Nhấn để Thu gọn / Mở rộng Sidebar (Ctrl+B)">
+            🛡️
+          </div>
+          <div class="sidebar-text min-w-0">
+            <span class="font-bold text-sm tracking-tight block truncate text-amber-500">ADMIN CONTROL</span>
+            <span class="text-[10px] text-[var(--muted)] font-mono block truncate">Tháp Tri Thức</span>
+          </div>
         </div>
-        <div class="min-w-0">
-          <span class="font-bold text-sm tracking-tight block truncate text-amber-500">ADMIN CONTROL</span>
-          <span class="text-[10px] text-[var(--muted)] font-mono block truncate">Tháp Tri Thức</span>
-        </div>
+        <button id="btn-toggle-sidebar" onclick="toggleSidebar()" class="sidebar-text p-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] text-[var(--muted)] hover:text-amber-500 transition cursor-pointer text-xs shrink-0" title="Thu gọn Sidebar (Ctrl+B)">
+          ◀
+        </button>
       </div>
 
       <nav class="space-y-1 text-xs font-medium">
-        <button onclick="switchTab('analytics')" id="nav-tab-analytics" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 bg-[var(--background)] text-amber-500 font-semibold border border-[var(--border)] shadow-xs transition">
-          <span class="text-base">📊</span>
-          <span>Báo Cáo & KPI</span>
+        <button onclick="switchTab('analytics')" id="nav-tab-analytics" title="Báo Cáo & KPI" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 bg-[var(--background)] text-amber-500 font-semibold border border-[var(--border)] shadow-xs transition">
+          <span class="text-base shrink-0">📊</span>
+          <span class="sidebar-label truncate">Báo Cáo & KPI</span>
         </button>
-        <button onclick="switchTab('curriculum')" id="nav-tab-curriculum" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
-          <span class="text-base">📚</span>
-          <span>Lộ Trình & Môn Học</span>
+        <button onclick="switchTab('curriculum')" id="nav-tab-curriculum" title="Lộ Trình & Môn Học" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
+          <span class="text-base shrink-0">📚</span>
+          <span class="sidebar-label truncate">Lộ Trình & Môn Học</span>
         </button>
-        <button onclick="switchTab('questions')" id="nav-tab-questions" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
-          <span class="text-base">❓</span>
-          <span>Ngân Hàng Câu Hỏi</span>
+        <button onclick="switchTab('questions')" id="nav-tab-questions" title="Ngân Hàng Câu Hỏi" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
+          <span class="text-base shrink-0">❓</span>
+          <span class="sidebar-label truncate">Ngân Hàng Câu Hỏi</span>
         </button>
-        <button onclick="switchTab('users')" id="nav-tab-users" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
-          <span class="text-base">👥</span>
-          <span>Quản Lý Học Viên</span>
+        <button onclick="switchTab('users')" id="nav-tab-users" title="Quản Lý Học Viên" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
+          <span class="text-base shrink-0">👥</span>
+          <span class="sidebar-label truncate">Quản Lý Học Viên</span>
         </button>
-        <button onclick="switchTab('logs')" id="nav-tab-logs" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
-          <span class="text-base">📈</span>
-          <span>Lịch Sử Học Tập</span>
+        <button onclick="switchTab('logs')" id="nav-tab-logs" title="Lịch Sử Học Tập" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
+          <span class="text-base shrink-0">📈</span>
+          <span class="sidebar-label truncate">Lịch Sử Học Tập</span>
         </button>
-        <button onclick="switchTab('transactions')" id="nav-tab-transactions" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
-          <span class="text-base">🪙</span>
-          <span>Lịch Sử Giao Dịch Xu</span>
+        <button onclick="switchTab('transactions')" id="nav-tab-transactions" title="Lịch Sử Giao Dịch Xu" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
+          <span class="text-base shrink-0">🪙</span>
+          <span class="sidebar-label truncate">Lịch Sử Giao Dịch Xu</span>
         </button>
-        <button onclick="switchTab('pets')" id="nav-tab-pets" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
-          <span class="text-base">🐾</span>
-          <span>Quản Lý Linh Thú</span>
+        <button onclick="switchTab('pets')" id="nav-tab-pets" title="Quản Lý Linh Thú" class="w-full text-left px-3 py-2.5 rounded-xl flex items-center gap-3 text-[var(--muted)] hover:bg-[var(--background)] hover:text-[var(--foreground)] transition">
+          <span class="text-base shrink-0">🐾</span>
+          <span class="sidebar-label truncate">Quản Lý Linh Thú</span>
         </button>
       </nav>
     </div>
 
     <!-- Admin Footer -->
-    <div class="p-3 border-t border-[var(--border)] flex items-center justify-between text-xs">
-      <div class="min-w-0">
+    <div id="admin-footer-profile" class="p-3 border-t border-[var(--border)] flex items-center justify-between text-xs">
+      <div id="admin-footer-text" class="min-w-0">
         <p id="admin-user-name" class="font-semibold text-[11px] truncate">Admin</p>
         <p class="text-[10px] text-amber-500 font-mono">QUẢN TRỊ VIÊN</p>
       </div>
-      <div class="flex items-center gap-1">
+      <div class="flex items-center gap-1 shrink-0">
         <a href="/?mode=preview" title="Xem ứng dụng học viên" class="p-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] transition">🏠</a>
         <button onclick="handleAdminLogout()" title="Đăng xuất" class="p-1.5 rounded-lg border border-[var(--border)] hover:bg-rose-500/20 text-rose-400 transition cursor-pointer">🚪</button>
       </div>
@@ -118,20 +166,25 @@
 
   <!-- MAIN ADMIN CONTENT -->
   <main class="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
-    <header class="shrink-0 h-16 border-b border-[var(--border)] bg-[var(--background)]/90 backdrop-blur-md px-6 flex items-center justify-between">
-      <h1 id="admin-header-title" class="text-lg font-bold tracking-tight">Báo Cáo Tổng Quan & Thống Kê KPI</h1>
-      <div class="flex items-center gap-3 text-xs">
-        <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 font-mono text-[11px] border border-emerald-500/20">
+    <header class="shrink-0 h-16 border-b border-[var(--border)] bg-[var(--background)]/90 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between">
+      <div class="flex items-center gap-3 min-w-0">
+        <button id="btn-toggle-sidebar-top" onclick="toggleSidebar()" class="p-2 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--background)] text-[var(--muted)] hover:text-amber-500 transition cursor-pointer flex items-center justify-center shrink-0" title="Thu gọn / Mở rộng Sidebar (Ctrl+B)">
+          <span id="sidebar-toggle-icon">☰</span>
+        </button>
+        <h1 id="admin-header-title" class="text-base sm:text-lg font-bold tracking-tight truncate">Báo Cáo Tổng Quan & Thống Kê KPI</h1>
+      </div>
+      <div class="flex items-center gap-2 sm:gap-3 text-xs shrink-0">
+        <span class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 font-mono text-[11px] border border-emerald-500/20">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           CSDL: SQL Server / PostgreSQL (Live)
         </span>
-        <button onclick="document.documentElement.classList.toggle('dark')" class="p-2 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--background)] transition cursor-pointer">
+        <button onclick="document.documentElement.classList.toggle('dark')" class="p-2 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--background)] transition cursor-pointer" title="Chuyển chế độ Sáng / Tối">
           🌓
         </button>
       </div>
     </header>
 
-    <div class="flex-1 overflow-y-auto p-6 space-y-6">
+    <div class="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-5 space-y-5">
 
       <!-- TAB 1: ANALYTICS / KPI -->
       <section id="panel-analytics" class="space-y-6">
@@ -282,22 +335,22 @@
 
         <!-- Filter Bar -->
         <div class="space-y-2">
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 text-xs">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 text-xs">
             <!-- 1. Tìm kiếm từ khóa -->
-            <input type="text" id="filter-q-search" oninput="applyQuestionFilters()" placeholder="🔍 Tìm kiếm nội dung câu hỏi..." class="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] focus:outline-none focus:border-amber-500">
+            <input type="text" id="filter-q-search" oninput="applyQuestionFilters()" placeholder="🔍 Tìm kiếm câu hỏi..." class="w-full min-w-0 p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] focus:outline-none focus:border-amber-500 text-xs truncate">
             
             <!-- 2. Lọc theo Môn học -->
-            <select id="filter-q-course" onchange="onCourseFilterChange()" class="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] font-bold text-amber-500 focus:outline-none focus:border-amber-500">
+            <select id="filter-q-course" onchange="onCourseFilterChange()" class="w-full min-w-0 p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] font-bold text-amber-500 focus:outline-none focus:border-amber-500 text-xs truncate">
               <option value="">-- Tất cả Môn học --</option>
             </select>
 
             <!-- 3. Lọc theo Mốc bài học -->
-            <select id="filter-q-moc" onchange="applyQuestionFilters()" class="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] font-mono text-[11px] focus:outline-none focus:border-amber-500">
+            <select id="filter-q-moc" onchange="applyQuestionFilters()" class="w-full min-w-0 p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] font-mono text-[11px] focus:outline-none focus:border-amber-500 truncate">
               <option value="">-- Tất cả Mốc bài học --</option>
             </select>
 
             <!-- 4. Lọc theo Dạng câu hỏi -->
-            <select id="filter-q-type" onchange="applyQuestionFilters()" class="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] font-semibold text-purple-400 focus:outline-none focus:border-amber-500">
+            <select id="filter-q-type" onchange="applyQuestionFilters()" class="w-full min-w-0 p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] font-semibold text-purple-400 focus:outline-none focus:border-amber-500 text-xs truncate">
               <option value="">-- Tất cả Dạng câu hỏi --</option>
               <option value="TRAC_NGHIEM_4">Trắc Nghiệm 4 Lựa Chọn</option>
               <option value="NOI_CAP">Nối Cặp Tương Ứng</option>
@@ -306,9 +359,9 @@
             </select>
 
             <!-- 5. Lọc theo Mức Bloom -->
-            <select id="filter-q-bloom" onchange="applyQuestionFilters()" class="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] font-semibold text-emerald-400 focus:outline-none focus:border-amber-500">
+            <select id="filter-q-bloom" onchange="applyQuestionFilters()" class="w-full min-w-0 p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)] font-semibold text-emerald-400 focus:outline-none focus:border-amber-500 text-xs truncate">
               <option value="">-- Tất cả Mức Bloom --</option>
-              <option value="NHO">🟢 Nhớ (Ghi nhớ / Định nghĩa)</option>
+              <option value="NHO">🟢 Nhớ (Định nghĩa)</option>
               <option value="HIEU">🟡 Hiểu (Thông hiểu)</option>
               <option value="VAN_DUNG">🔴 Vận dụng (Áp dụng / Boss)</option>
             </select>
@@ -326,20 +379,30 @@
           </div>
         </div>
 
-        <!-- Question List Table -->
-        <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-3">
-          <div class="overflow-x-auto">
-            <table class="w-full text-xs text-left">
+        <!-- Question List Table (Strict Fixed Table - No Horizontal Scroll) -->
+        <div class="p-3 sm:p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-3">
+          <div class="w-full overflow-hidden">
+            <table class="w-full table-fixed text-xs text-left">
+              <colgroup>
+                <col style="width: 9%;">  <!-- Mã -->
+                <col style="width: 16%;"> <!-- Môn & Mốc -->
+                <col style="width: 10%;"> <!-- Dạng câu -->
+                <col style="width: 8%;">  <!-- Bloom -->
+                <col style="width: 32%;"> <!-- Nội dung câu hỏi -->
+                <col style="width: 10%;"> <!-- Đáp án / Dữ liệu -->
+                <col style="width: 6%;">  <!-- Độ khó -->
+                <col style="width: 9%;">  <!-- Thao tác -->
+              </colgroup>
               <thead class="text-[11px] text-[var(--muted)] border-b border-[var(--border)]">
                 <tr>
-                  <th class="py-2.5 px-3">Mã</th>
-                  <th class="py-2.5 px-3">Môn & Mốc học</th>
-                  <th class="py-2.5 px-3">Dạng câu</th>
-                  <th class="py-2.5 px-3">Bloom</th>
-                  <th class="py-2.5 px-3 w-1/3">Nội dung câu hỏi</th>
-                  <th class="py-2.5 px-3">Đáp án / Dữ liệu</th>
-                  <th class="py-2.5 px-3">Độ khó</th>
-                  <th class="py-2.5 px-3 text-right">Thao tác</th>
+                  <th class="py-2.5 px-2">Mã</th>
+                  <th class="py-2.5 px-2">Môn & Mốc</th>
+                  <th class="py-2.5 px-2 text-center">Dạng câu</th>
+                  <th class="py-2.5 px-1.5 text-center">Bloom</th>
+                  <th class="py-2.5 px-2">Nội dung câu hỏi</th>
+                  <th class="py-2.5 px-2">Đáp án</th>
+                  <th class="py-2.5 px-1 text-center">Độ khó</th>
+                  <th class="py-2.5 px-2 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody id="table-questions" class="divide-y divide-[var(--border)]">
@@ -911,6 +974,45 @@
     let adminToken = localStorage.getItem('tok_admin_token') || localStorage.getItem('tok_token') || '';
     let currentAdminUser = null;
     let allMocOptions = [];
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('admin-sidebar');
+      if (!sidebar) return;
+      const isCurrentlyCollapsed = sidebar.classList.contains('collapsed');
+      if (isCurrentlyCollapsed) {
+        sidebar.classList.remove('collapsed');
+        localStorage.setItem('tok_admin_sidebar_collapsed', '0');
+        const toggleBtn = document.getElementById('btn-toggle-sidebar');
+        if (toggleBtn) toggleBtn.innerText = '◀';
+        const topIcon = document.getElementById('sidebar-toggle-icon');
+        if (topIcon) topIcon.innerText = '☰';
+      } else {
+        sidebar.classList.add('collapsed');
+        localStorage.setItem('tok_admin_sidebar_collapsed', '1');
+        const toggleBtn = document.getElementById('btn-toggle-sidebar');
+        if (toggleBtn) toggleBtn.innerText = '▶';
+        const topIcon = document.getElementById('sidebar-toggle-icon');
+        if (topIcon) topIcon.innerText = '▶';
+      }
+    }
+
+    function initSidebarState() {
+      if (localStorage.getItem('tok_admin_sidebar_collapsed') === '1') {
+        const sidebar = document.getElementById('admin-sidebar');
+        if (sidebar) sidebar.classList.add('collapsed');
+        const toggleBtn = document.getElementById('btn-toggle-sidebar');
+        if (toggleBtn) toggleBtn.innerText = '▶';
+        const topIcon = document.getElementById('sidebar-toggle-icon');
+        if (topIcon) topIcon.innerText = '▶';
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        toggleSidebar();
+      }
+    });
 
     function escapeHtml(text) {
       if (!text) return '';
@@ -1631,28 +1733,30 @@
         const type = q.loai_cau_hoi || 'TRAC_NGHIEM_4';
         let typeBadge = '';
         if (type === 'NOI_CAP') {
-          typeBadge = '<span class="px-1.5 py-0.5 rounded font-mono font-bold bg-purple-500/15 text-purple-400">Nối cặp 🔀</span>';
+          typeBadge = '<span class="px-1.5 py-0.5 rounded font-bold text-[10px] bg-purple-500/15 text-purple-400 whitespace-nowrap">Nối cặp</span>';
         } else if (type === 'DIEN_TU') {
-          typeBadge = '<span class="px-1.5 py-0.5 rounded font-mono font-bold bg-amber-500/15 text-amber-400">Điền từ 🏷️</span>';
+          typeBadge = '<span class="px-1.5 py-0.5 rounded font-bold text-[10px] bg-amber-500/15 text-amber-400 whitespace-nowrap">Điền từ</span>';
         } else if (type === 'SAP_XEP_CAU') {
-          typeBadge = '<span class="px-1.5 py-0.5 rounded font-mono font-bold bg-emerald-500/15 text-emerald-400">Sắp xếp 🧩</span>';
+          typeBadge = '<span class="px-1.5 py-0.5 rounded font-bold text-[10px] bg-emerald-500/15 text-emerald-400 whitespace-nowrap">Sắp xếp</span>';
         } else {
-          typeBadge = '<span class="px-1.5 py-0.5 rounded font-mono font-bold bg-blue-500/15 text-blue-400">Trắc nghiệm</span>';
+          typeBadge = '<span class="px-1.5 py-0.5 rounded font-bold text-[10px] bg-blue-500/15 text-blue-400 whitespace-nowrap">Trắc nghiệm</span>';
         }
 
         const bloom = q.muc_bloom || 'NHO';
         let bloomBadge = '';
         if (bloom === 'VAN_DUNG') {
-          bloomBadge = '<span class="px-1.5 py-0.5 rounded font-mono font-bold bg-rose-500/10 text-rose-400">🔴 Vận dụng</span>';
+          bloomBadge = '<span class="px-1 py-0.5 rounded font-bold text-[10px] bg-rose-500/10 text-rose-400 whitespace-nowrap">🔴 V.Dụng</span>';
         } else if (bloom === 'HIEU') {
-          bloomBadge = '<span class="px-1.5 py-0.5 rounded font-mono font-bold bg-amber-500/10 text-amber-400">🟡 Hiểu</span>';
+          bloomBadge = '<span class="px-1 py-0.5 rounded font-bold text-[10px] bg-amber-500/10 text-amber-400 whitespace-nowrap">🟡 Hiểu</span>';
         } else {
-          bloomBadge = '<span class="px-1.5 py-0.5 rounded font-mono font-bold bg-emerald-500/10 text-emerald-400">🟢 Nhớ</span>';
+          bloomBadge = '<span class="px-1 py-0.5 rounded font-bold text-[10px] bg-emerald-500/10 text-emerald-400 whitespace-nowrap">🟢 Nhớ</span>';
         }
 
         let answerPreview = '';
+        let answerTooltip = '';
         if (type === 'NOI_CAP') {
-          answerPreview = '<span class="font-mono text-purple-400">4 Cặp tương ứng</span>';
+          answerPreview = '<span class="font-mono text-purple-400">4 Cặp thẻ</span>';
+          answerTooltip = '4 Cặp tương ứng';
         } else if (type === 'DIEN_TU') {
           let dtWord = '';
           try {
@@ -1660,39 +1764,53 @@
             dtWord = parsed?.tu_dung || '';
           } catch(e){}
           answerPreview = `<span class="font-mono text-amber-400 font-bold">[${escapeHtml(dtWord || 'Từ đúng')}]</span>`;
+          answerTooltip = 'Từ đúng: ' + (dtWord || '');
         } else if (type === 'SAP_XEP_CAU') {
-          answerPreview = '<span class="font-mono text-emerald-400">Ghép câu chuẩn</span>';
+          answerPreview = '<span class="font-mono text-emerald-400">Ghép câu</span>';
+          answerTooltip = 'Sắp xếp câu chuẩn';
         } else {
           const optLetter = ['A', 'B', 'C', 'D'][q.vi_tri_dap_an_dung] || 'A';
           answerPreview = `<span class="font-mono font-bold text-emerald-400">Đáp án ${optLetter}</span>`;
+          answerTooltip = `Đáp án ${optLetter}`;
         }
 
         const courseDisplay = q.ten_mon || (allCoursesDetails[q.ma_mon]?.ten_mon) || 'Chưa gán môn';
         const mocDisplay = q.ten_moc || (allMocOptions.find(m => m.id === q.ma_moc)?.title) || q.ma_moc || '--';
+        const shortQId = q.ma_cau_hoi && q.ma_cau_hoi.length > 13 ? (q.ma_cau_hoi.substring(0, 10) + '…') : q.ma_cau_hoi;
 
         return `
           <tr class="hover:bg-[var(--background)]/40 transition">
-            <td class="py-2.5 px-3 font-mono font-bold text-[11px] text-[var(--muted)]">${q.ma_cau_hoi}</td>
-            <td class="py-2.5 px-3">
-              <div class="font-bold text-[11px] text-amber-400 truncate max-w-[160px]" title="${escapeHtml(courseDisplay)}">
+            <td class="py-2.5 px-2">
+              <span class="font-mono font-bold text-[10.5px] text-[var(--muted)] truncate block" title="${escapeHtml(q.ma_cau_hoi)}">${escapeHtml(shortQId)}</span>
+            </td>
+            <td class="py-2.5 px-2">
+              <div class="font-bold text-[10.5px] text-amber-400 truncate" title="${escapeHtml(courseDisplay)}">
                 📘 ${escapeHtml(courseDisplay)}
               </div>
-              <div class="text-[10px] text-[var(--muted)] font-mono truncate max-w-[160px]" title="${escapeHtml(mocDisplay)}">
+              <div class="text-[9.5px] text-[var(--muted)] font-mono truncate" title="${escapeHtml(mocDisplay)}">
                 🎯 ${escapeHtml(mocDisplay)}
               </div>
             </td>
-            <td class="py-2.5 px-3 whitespace-nowrap">${typeBadge}</td>
-            <td class="py-2.5 px-3 whitespace-nowrap">${bloomBadge}</td>
-            <td class="py-2.5 px-3 font-medium max-w-xs truncate" title="${escapeHtml(q.noi_dung)}">${escapeHtml(q.noi_dung)}</td>
-            <td class="py-2.5 px-3 whitespace-nowrap">${answerPreview}</td>
-            <td class="py-2.5 px-3 font-mono whitespace-nowrap">${q.do_kho === 3 ? '🔴 Khó' : q.do_kho === 2 ? '🟡 TB' : '🟢 Dễ'}</td>
-            <td class="py-2.5 px-3 text-right space-x-1 shrink-0 whitespace-nowrap">
-              <button id="btn-edit-q-${q.ma_cau_hoi}" onclick="editQuestion('${q.ma_cau_hoi}')" class="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 text-[10px] font-bold cursor-pointer transition inline-flex items-center gap-1">
-                <span>✏️</span> Sửa
-              </button>
-              <button id="btn-del-q-${q.ma_cau_hoi}" onclick="promptDeleteQuestion('${q.ma_cau_hoi}')" class="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 text-[10px] font-bold cursor-pointer transition inline-flex items-center gap-1">
-                <span>🗑️</span> Xóa
-              </button>
+            <td class="py-2.5 px-2 text-center">${typeBadge}</td>
+            <td class="py-2.5 px-1.5 text-center">${bloomBadge}</td>
+            <td class="py-2.5 px-2 font-medium text-xs truncate" title="${escapeHtml(q.noi_dung)}">
+              ${escapeHtml(q.noi_dung)}
+            </td>
+            <td class="py-2.5 px-2 truncate text-[10.5px]" title="${escapeHtml(answerTooltip)}">
+              ${answerPreview}
+            </td>
+            <td class="py-2.5 px-1 text-center font-mono text-[10px] whitespace-nowrap">
+              ${q.do_kho === 3 ? '🔴 Khó' : q.do_kho === 2 ? '🟡 TB' : '🟢 Dễ'}
+            </td>
+            <td class="py-2.5 px-2 text-right">
+              <div class="flex items-center justify-end gap-1 whitespace-nowrap">
+                <button id="btn-edit-q-${q.ma_cau_hoi}" onclick="editQuestion('${q.ma_cau_hoi}')" title="Sửa câu hỏi" class="px-2 py-1 rounded-md bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 text-[10px] font-bold cursor-pointer transition flex items-center gap-0.5">
+                  <span>✏️</span><span class="hidden 2xl:inline ml-0.5">Sửa</span>
+                </button>
+                <button id="btn-del-q-${q.ma_cau_hoi}" onclick="promptDeleteQuestion('${q.ma_cau_hoi}')" title="Xóa câu hỏi" class="px-2 py-1 rounded-md bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 text-[10px] font-bold cursor-pointer transition flex items-center gap-0.5">
+                  <span>🗑️</span><span class="hidden 2xl:inline ml-0.5">Xóa</span>
+                </button>
+              </div>
             </td>
           </tr>
         `;
@@ -2172,6 +2290,7 @@
     }
 
     // Auto-check on load
+    initSidebarState();
     checkAdminAuth();
   </script>
 </body>
