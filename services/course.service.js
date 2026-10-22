@@ -558,7 +558,7 @@ async function submitStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
       `, [
         ma_phien, ma_nguoi_dung, ma_moc, 'DUOLINGO_STEP', step,
         telemetry.thoi_gian_tong_giay, telemetry.ti_le_dung, telemetry.toc_do_trung_binh_giay, telemetry.tong_so_lan_tra_cuu,
-        JSON.stringify(attempts)
+        JSON.stringify(evaluation.details || attempts)
       ]);
     } catch (errLog) {
       console.warn('⚠️ Telemetry log notice:', errLog.message);
@@ -841,7 +841,7 @@ async function submitQuizCheckpoint(ma_moc, submissions, ma_nguoi_dung) {
       `, [
         ma_phien, ma_nguoi_dung, ma_moc, 'MOC_PLAY', 4,
         telemetry.thoi_gian_tong_giay, telemetry.ti_le_dung, telemetry.toc_do_trung_binh_giay, telemetry.tong_so_lan_tra_cuu,
-        JSON.stringify(attempts)
+        JSON.stringify(evaluation.details || attempts)
       ]);
     } catch (errLog) {
       console.warn('⚠️ Telemetry log notice:', errLog.message);

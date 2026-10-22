@@ -445,32 +445,121 @@
         </div>
       </section>
 
-      <!-- TAB 5: LEARNING ACTIVITY LOGS -->
+      <!-- TAB 5: LEARNING ACTIVITY LOGS & LEARNER TELEMETRY -->
       <section id="panel-logs" class="hidden space-y-6">
+        <!-- Top Title & Action -->
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-base font-bold">Lịch Sử Hoạt Động & Tiến Độ Học Tập</h2>
-            <p class="text-xs text-[var(--muted)]">Nhật ký chi tiết các lượt học bài, nộp trắc nghiệm và điểm số đạt được</p>
+            <h2 class="text-base font-bold">Lịch Sử Hoạt Động & Hồ Sơ Dữ Liệu Học Viên</h2>
+            <p class="text-xs text-[var(--muted)]">Nhật ký các lượt làm bài, truy xuất theo tên người dùng, thời gian làm thật, đáp án chọn & dữ liệu cải thiện AI</p>
           </div>
-          <button onclick="loadActivityLogs()" class="px-3 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card)] text-xs font-semibold">🔄 Làm mới</button>
+          <button id="btn-refresh-activity-logs" onclick="loadActivityLogs()" class="px-3 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card)] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+            <span>🔄</span> Làm mới
+          </button>
         </div>
 
+        <!-- System-wide Telemetry KPI Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
+            <span class="text-xs text-[var(--muted)] font-medium">⚡ Tổng Lượt Làm Bài</span>
+            <div id="log-stat-sessions" class="text-2xl font-bold font-mono text-emerald-400 mt-1">--</div>
+            <span class="text-[10px] text-[var(--muted)] block mt-0.5">Tất cả phiên học & quiz</span>
+          </div>
+          <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
+            <span class="text-xs text-[var(--muted)] font-medium">🎯 Tỷ Lệ Đúng Trung Bình</span>
+            <div id="log-stat-accuracy" class="text-2xl font-bold font-mono text-amber-400 mt-1">--%</div>
+            <span class="text-[10px] text-[var(--muted)] block mt-0.5">Điểm chuẩn toàn hệ thống</span>
+          </div>
+          <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
+            <span class="text-xs text-[var(--muted)] font-medium">⏱️ Thời Gian Học Tích Lũy</span>
+            <div id="log-stat-time" class="text-2xl font-bold font-mono text-blue-400 mt-1">--</div>
+            <span class="text-[10px] text-[var(--muted)] block mt-0.5">Thời gian thực tế làm bài</span>
+          </div>
+          <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
+            <span class="text-xs text-[var(--muted)] font-medium">📖 Lượt Xem Giải Thích</span>
+            <div id="log-stat-lookups" class="text-2xl font-bold font-mono text-purple-400 mt-1">--</div>
+            <span class="text-[10px] text-[var(--muted)] block mt-0.5">Tra cứu khi gặp câu khó</span>
+          </div>
+        </div>
+
+        <!-- SECTION 1: 10 RECENT ACTIVITIES (LIVE STREAM) -->
         <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-3">
-          <div class="overflow-x-auto">
-            <table class="w-full text-xs text-left">
-              <thead class="text-[11px] text-[var(--muted)] border-b border-[var(--border)]">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <h3 class="text-sm font-bold text-amber-400">Hoạt Động Gần Nhất (10 lượt học mới nhất)</h3>
+            </div>
+            <span class="text-[11px] text-[var(--muted)]">Nhấp vào học viên để mở hồ sơ làm bài chi tiết</span>
+          </div>
+
+          <div class="w-full overflow-hidden border border-[var(--border)] rounded-xl">
+            <table class="table-fixed w-full text-xs text-left">
+              <colgroup>
+                <col style="width: 22%;">
+                <col style="width: 24%;">
+                <col style="width: 12%;">
+                <col style="width: 12%;">
+                <col style="width: 10%;">
+                <col style="width: 8%;">
+                <col style="width: 12%;">
+              </colgroup>
+              <thead class="text-[11px] text-[var(--muted)] bg-[var(--background)]/60 border-b border-[var(--border)]">
                 <tr>
                   <th class="py-2.5 px-3">Học viên</th>
-                  <th class="py-2.5 px-3">Chương / Môn</th>
-                  <th class="py-2.5 px-3">Mốc bài học</th>
-                  <th class="py-2.5 px-3">Trạng thái</th>
-                  <th class="py-2.5 px-3">Điểm EXP</th>
-                  <th class="py-2.5 px-3">Xu nhận</th>
-                  <th class="py-2.5 px-3">Thời điểm</th>
+                  <th class="py-2.5 px-2">Môn & Mốc bài học</th>
+                  <th class="py-2.5 px-2 text-center">Dạng phiên</th>
+                  <th class="py-2.5 px-2 text-center">Độ chính xác</th>
+                  <th class="py-2.5 px-2 text-center">Thời gian</th>
+                  <th class="py-2.5 px-2 text-center">Giải thích</th>
+                  <th class="py-2.5 px-3 text-right">Thời điểm thật</th>
                 </tr>
               </thead>
-              <tbody id="table-learning-logs" class="divide-y divide-[var(--border)] font-mono">
-                <tr><td colspan="7" class="py-4 text-center text-[var(--muted)]">Đang tải nhật ký...</td></tr>
+              <tbody id="table-recent-activities" class="divide-y divide-[var(--border)]">
+                <tr><td colspan="7" class="py-4 text-center text-[var(--muted)]">Đang tải hoạt động trực tiếp...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SECTION 2: LEARNER DIRECTORY & TELEMETRY INDEX -->
+        <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 class="text-sm font-bold text-emerald-400">Danh Sách Học Viên & Hồ Sơ Dữ Liệu</h3>
+              <p class="text-[11px] text-[var(--muted)]">Truy xuất toàn bộ lịch sử câu hỏi, tốc độ suy nghĩ và số lần xem giải thích của từng học viên</p>
+            </div>
+            <!-- Search input -->
+            <div class="w-full sm:w-72 relative">
+              <input id="search-learner-input" type="text" oninput="filterLearnersTable()" placeholder="🔍 Tìm tên, username, email..." class="w-full px-3 py-1.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs text-[var(--foreground)] placeholder-[var(--muted)] focus:outline-none focus:border-amber-500 transition">
+            </div>
+          </div>
+
+          <div class="w-full overflow-hidden border border-[var(--border)] rounded-xl">
+            <table class="table-fixed w-full text-xs text-left">
+              <colgroup>
+                <col style="width: 25%;">
+                <col style="width: 10%;">
+                <col style="width: 10%;">
+                <col style="width: 14%;">
+                <col style="width: 12%;">
+                <col style="width: 10%;">
+                <col style="width: 10%;">
+                <col style="width: 9%;">
+              </colgroup>
+              <thead class="text-[11px] text-[var(--muted)] bg-[var(--background)]/60 border-b border-[var(--border)]">
+                <tr>
+                  <th class="py-2.5 px-3">Học viên</th>
+                  <th class="py-2.5 px-2 text-center">Số phiên</th>
+                  <th class="py-2.5 px-2 text-center">Mốc qua</th>
+                  <th class="py-2.5 px-2 text-center">Tỷ lệ đúng</th>
+                  <th class="py-2.5 px-2 text-center">Thời gian học</th>
+                  <th class="py-2.5 px-2 text-center">Xem GT</th>
+                  <th class="py-2.5 px-2 text-center">Lần cuối</th>
+                  <th class="py-2.5 px-3 text-right">Chi tiết</th>
+                </tr>
+              </thead>
+              <tbody id="table-learners-directory" class="divide-y divide-[var(--border)]">
+                <tr><td colspan="8" class="py-4 text-center text-[var(--muted)]">Đang tải danh sách học viên...</td></tr>
               </tbody>
             </table>
           </div>
@@ -961,6 +1050,115 @@
           <button type="button" id="btn-submit-edit-pet" onclick="executeSavePet()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs cursor-pointer shadow-md">Lưu Thay Đổi</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- MODAL: DEEP LEARNER TELEMETRY & FULL EXAM HISTORY -->
+  <div id="modal-learner-telemetry" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl w-full max-w-5xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      
+      <!-- Modal Header: User Profile Summary -->
+      <div class="p-4 sm:p-5 border-b border-[var(--border)] bg-[var(--background)]/60 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3.5 min-w-0">
+          <div id="telemetry-user-avatar" class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-600 flex items-center justify-center text-2xl shadow-md shrink-0">
+            🧙
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 id="telemetry-user-name" class="text-base font-bold text-[var(--foreground)] truncate">Học viên</h3>
+              <span id="telemetry-user-username" class="text-xs text-[var(--muted)] font-mono truncate">@username</span>
+              <span id="telemetry-user-rank" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">TÂN THỦ</span>
+            </div>
+            <div class="flex items-center gap-3 text-[11px] text-[var(--muted)] mt-0.5 flex-wrap">
+              <span id="telemetry-user-email">email@hocvien.tok.vn</span>
+              <span>•</span>
+              <span>Xu: <strong id="telemetry-user-coins" class="text-amber-400 font-mono">0</strong> 🪙</span>
+              <span>•</span>
+              <span>EXP: <strong id="telemetry-user-exp" class="text-blue-400 font-mono">0</strong></span>
+              <span>•</span>
+              <span>Tham gia: <span id="telemetry-user-joined">--</span></span>
+            </div>
+          </div>
+        </div>
+        <button id="btn-close-learner-modal" onclick="closeLearnerTelemetryModal()" class="p-2 rounded-xl hover:bg-[var(--background)] text-[var(--muted)] hover:text-[var(--foreground)] transition cursor-pointer text-sm shrink-0">
+          ✕
+        </button>
+      </div>
+
+      <!-- Quick KPI Strip -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 p-4 border-b border-[var(--border)] bg-[var(--background)]/30 shrink-0">
+        <div class="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)]">
+          <span class="text-[10px] text-[var(--muted)] block">🎯 Độ Chính Xác</span>
+          <div id="modal-kpi-accuracy" class="text-lg font-bold font-mono text-emerald-400 mt-0.5">--%</div>
+          <span id="modal-kpi-counts" class="text-[9.5px] text-[var(--muted)] block">0/0 câu đúng</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)]">
+          <span class="text-[10px] text-[var(--muted)] block">⏱️ Thời Gian Học Thật</span>
+          <div id="modal-kpi-time" class="text-lg font-bold font-mono text-blue-400 mt-0.5">--</div>
+          <span class="text-[9.5px] text-[var(--muted)] block">Tổng thời gian làm</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)]">
+          <span class="text-[10px] text-[var(--muted)] block">⚡ Tốc Độ Trung Bình</span>
+          <div id="modal-kpi-speed" class="text-lg font-bold font-mono text-amber-400 mt-0.5">--s</div>
+          <span class="text-[9.5px] text-[var(--muted)] block">Giây / mỗi câu hỏi</span>
+        </div>
+        <div class="p-2.5 rounded-xl bg-[var(--card)] border border-[var(--border)]">
+          <span class="text-[10px] text-[var(--muted)] block">📖 Lượt Xem Giải Thích</span>
+          <div id="modal-kpi-lookups" class="text-lg font-bold font-mono text-purple-400 mt-0.5">--</div>
+          <span class="text-[9.5px] text-[var(--muted)] block">Tra cứu lý thuyết</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs inside Modal -->
+      <div class="px-4 pt-3 border-b border-[var(--border)] flex items-center gap-2 shrink-0 bg-[var(--card)]">
+        <button id="modal-tab-btn-sessions" onclick="switchLearnerModalTab('sessions')" class="px-3.5 py-2 border-b-2 border-amber-500 text-amber-400 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer">
+          <span>📝</span> Lịch Sử Các Phiên & Từng Câu (<span id="modal-badge-session-count">0</span>)
+        </button>
+        <button id="modal-tab-btn-weaknesses" onclick="switchLearnerModalTab('weaknesses')" class="px-3.5 py-2 border-b-2 border-transparent text-[var(--muted)] hover:text-[var(--foreground)] font-bold text-xs flex items-center gap-1.5 transition cursor-pointer">
+          <span>🧠</span> Bản Đồ Ghi Nhớ & Câu Hỏi Hay Sai (<span id="modal-badge-weak-count">0</span>)
+        </button>
+        <button id="modal-tab-btn-checkpoints" onclick="switchLearnerModalTab('checkpoints')" class="px-3.5 py-2 border-b-2 border-transparent text-[var(--muted)] hover:text-[var(--foreground)] font-bold text-xs flex items-center gap-1.5 transition cursor-pointer">
+          <span>🗺️</span> Tiến Độ Mốc Bài Học (<span id="modal-badge-checkpoint-count">0</span>)
+        </button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-4 sm:p-5 overflow-y-auto flex-1 space-y-4">
+        
+        <!-- SUB-TAB 1: SESSIONS & GRANULAR QUESTIONS -->
+        <div id="modal-pane-sessions" class="space-y-4">
+          <div id="modal-sessions-container" class="space-y-3">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- SUB-TAB 2: WEAKNESSES & MEMORY MAP -->
+        <div id="modal-pane-weaknesses" class="hidden space-y-3">
+          <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300">
+            💡 <strong>Bản đồ ghi nhớ Spaced Repetition</strong>: Phân tích các câu hỏi học viên gặp khó khăn nhất (tỷ lệ làm sai cao, đã xem giải thích nhiều lần hoặc chuỗi đúng thấp). Dữ liệu này dùng để tối ưu lộ trình thích ứng và nâng cao chất lượng câu hỏi.
+          </div>
+          <div id="modal-weaknesses-container" class="space-y-2.5">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- SUB-TAB 3: CHECKPOINTS ROADMAP PROGRESS -->
+        <div id="modal-pane-checkpoints" class="hidden space-y-3">
+          <div id="modal-checkpoints-container" class="space-y-2.5">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-3.5 border-t border-[var(--border)] bg-[var(--background)]/60 flex items-center justify-between text-xs text-[var(--muted)] shrink-0">
+        <span>Toàn bộ telemetry được ghi nhận thời gian thực để huấn luyện AI & tối ưu trải nghiệm</span>
+        <button id="btn-close-learner-modal-footer" onclick="closeLearnerTelemetryModal()" class="px-4 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card)] font-semibold text-xs transition cursor-pointer">
+          Đóng Cửa Sổ
+        </button>
+      </div>
+
     </div>
   </div>
 
@@ -2134,8 +2332,9 @@
             <td class="py-2.5 px-3 font-mono text-amber-400 font-bold">${u.xu_tri_thuc} 🪙</td>
             <td class="py-2.5 px-3 font-mono text-blue-400 font-bold">${u.tong_diem_kinh_nghiem}</td>
             <td class="py-2.5 px-3 font-mono text-rose-400">🔥 ${u.chuoi_streak_ngay}</td>
-            <td class="py-2.5 px-3 text-right">
-              <button id="btn-adjust-coins-${u.ma_nguoi_dung}" onclick="promptAdjustCoins('${u.ma_nguoi_dung}', '${u.ten_dang_nhap}')" class="px-2.5 py-1 rounded-lg border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 text-[11px] font-bold cursor-pointer">Cộng Xu</button>
+            <td class="py-2.5 px-3 text-right whitespace-nowrap">
+              <button id="btn-user-telemetry-${u.ma_nguoi_dung}" onclick="openLearnerTelemetryModal('${u.ma_nguoi_dung}')" class="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 text-[11px] font-bold cursor-pointer transition mr-1" title="Xem toàn bộ hồ sơ làm bài">Lịch Sử</button>
+              <button id="btn-adjust-coins-${u.ma_nguoi_dung}" onclick="promptAdjustCoins('${u.ma_nguoi_dung}', '${u.ten_dang_nhap}')" class="px-2.5 py-1 rounded-lg border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 text-[11px] font-bold cursor-pointer transition">Cộng Xu</button>
             </td>
           </tr>
         `).join('') || '<tr><td colspan="8" class="py-4 text-center text-[var(--muted)]">Không có người dùng</td></tr>';
@@ -2190,24 +2389,469 @@
       }
     }
 
+    let allLoadedLearners = [];
+    let currentActiveLearnerTelemetry = null;
+    let activeModalLearnerSubTab = 'sessions';
+
     async function loadActivityLogs() {
       try {
-        const logs = await apiFetch('/api/admin/logs');
-        const tbody = document.getElementById('table-learning-logs');
-        tbody.innerHTML = logs.map(l => `
-          <tr class="hover:bg-[var(--background)]/40 transition">
-            <td class="py-2.5 px-3 font-semibold text-[var(--foreground)]">${l.ten_hien_thi} <span class="text-[10px] text-[var(--muted)] font-mono">(@${l.ten_dang_nhap})</span></td>
-            <td class="py-2.5 px-3 text-[11px] text-[var(--muted)] truncate max-w-[120px]">${l.ten_chuong}</td>
-            <td class="py-2.5 px-3 font-semibold text-emerald-400 truncate max-w-[180px]">${l.ten_moc}</td>
-            <td class="py-2.5 px-3"><span class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500/10 text-emerald-400 font-bold">${l.trang_thai}</span></td>
-            <td class="py-2.5 px-3 text-blue-400 font-bold">+${l.diem_dat_duoc} EXP</td>
-            <td class="py-2.5 px-3 text-amber-400 font-bold">+${l.xu_da_nhan} 🪙</td>
-            <td class="py-2.5 px-3 text-[10px] text-[var(--muted)]">${l.thoi_diem_hoan_thanh ? new Date(l.thoi_diem_hoan_thanh).toLocaleString('vi-VN') : '--'}</td>
-          </tr>
-        `).join('') || '<tr><td colspan="7" class="py-4 text-center text-[var(--muted)]">Chưa có nhật ký học tập nào</td></tr>';
+        // 1. Fetch live activity feed & summary
+        const feed = await apiFetch('/api/admin/learning-activity');
+        
+        // Populate system telemetry KPIs
+        const elSessions = document.getElementById('log-stat-sessions');
+        const elAccuracy = document.getElementById('log-stat-accuracy');
+        const elTime = document.getElementById('log-stat-time');
+        const elLookups = document.getElementById('log-stat-lookups');
+        if (elSessions) elSessions.innerText = feed.summary ? feed.summary.total_sessions : 0;
+        if (elAccuracy) elAccuracy.innerText = feed.summary ? (feed.summary.avg_accuracy + '%') : '0%';
+        if (elTime) elTime.innerText = feed.summary ? (feed.summary.formatted_total_time || '0s') : '0s';
+        if (elLookups) elLookups.innerText = feed.summary ? feed.summary.total_lookups : 0;
+
+        // Render recent live activity table (10 items)
+        const recentTbody = document.getElementById('table-recent-activities');
+        if (recentTbody) {
+          recentTbody.innerHTML = (feed.recent_activities || []).map(a => {
+            const accClass = a.ti_le_dung >= 80 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : a.ti_le_dung >= 50 ? 'text-amber-400 bg-amber-500/10 border-amber-500/30' : 'text-rose-400 bg-rose-500/10 border-rose-500/30';
+            const sessionBadge = a.loai_phien === 'DUOLINGO_STEP' ? '📘 Chặng Học' : a.loai_phien === 'THU_THACH_BOSS' ? '⚔️ Boss' : '🎯 Mốc Học';
+            const dateStr = a.tao_luc ? new Date(a.tao_luc).toLocaleString('vi-VN') : '--';
+
+            return `
+              <tr class="hover:bg-[var(--background)]/50 transition">
+                <td class="py-2.5 px-3">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-base shrink-0">🧙</span>
+                    <button onclick="openLearnerTelemetryModal('${a.ma_nguoi_dung}')" class="font-bold text-[var(--foreground)] hover:text-amber-400 transition text-left cursor-pointer truncate max-w-[170px] block" title="Xem toàn bộ hồ sơ của ${escapeHtml(a.ten_hien_thi)}">
+                      ${escapeHtml(a.ten_hien_thi)}
+                      <span class="text-[10px] text-[var(--muted)] font-mono block">@${escapeHtml(a.ten_dang_nhap)}</span>
+                    </button>
+                  </div>
+                </td>
+                <td class="py-2.5 px-2">
+                  <div class="font-bold text-[11px] text-amber-400 truncate" title="${escapeHtml(a.ten_mon || 'CSDL')}">
+                    📘 ${escapeHtml(a.ten_mon || 'CSDL')}
+                  </div>
+                  <div class="text-[10px] text-[var(--muted)] font-mono truncate" title="${escapeHtml(a.ten_moc)}">
+                    🎯 ${escapeHtml(a.ten_moc)} (Chặng ${a.buoc_so || 1})
+                  </div>
+                </td>
+                <td class="py-2.5 px-2 text-center whitespace-nowrap">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-[var(--muted)] border border-[var(--border)]">
+                    ${sessionBadge}
+                  </span>
+                </td>
+                <td class="py-2.5 px-2 text-center whitespace-nowrap">
+                  <span class="px-2 py-0.5 rounded-full text-[10.5px] font-mono font-bold border ${accClass}">
+                    ${a.ti_le_dung}% (${a.so_cau_dung}/${a.tong_so_cau})
+                  </span>
+                </td>
+                <td class="py-2.5 px-2 text-center font-mono text-[10.5px] text-[var(--muted)] whitespace-nowrap">
+                  ⏱️ ${escapeHtml(a.thoi_gian_dinh_dang)}
+                </td>
+                <td class="py-2.5 px-2 text-center font-mono text-[10.5px] whitespace-nowrap">
+                  ${a.tong_so_lan_tra_cuu > 0 ? `<span class="text-purple-400 font-bold">📖 ${a.tong_so_lan_tra_cuu}</span>` : '<span class="text-[var(--muted)]">0</span>'}
+                </td>
+                <td class="py-2.5 px-3 text-right font-mono text-[10px] text-[var(--muted)] whitespace-nowrap">
+                  ${dateStr}
+                </td>
+              </tr>
+            `;
+          }).join('') || '<tr><td colspan="7" class="py-4 text-center text-[var(--muted)]">Chưa có nhật ký học tập nào</td></tr>';
+        }
+
+        // 2. Fetch and render learner directory
+        await loadLearnersDirectory();
       } catch (err) {
         showToast(err.message, true);
       }
+    }
+
+    async function loadLearnersDirectory() {
+      try {
+        const learners = await apiFetch('/api/admin/learners');
+        allLoadedLearners = learners || [];
+        filterLearnersTable();
+      } catch (err) {
+        console.warn('Could not load learners directory:', err.message);
+      }
+    }
+
+    function filterLearnersTable() {
+      const q = (document.getElementById('search-learner-input')?.value || '').toLowerCase().trim();
+      const filtered = allLoadedLearners.filter(l => {
+        if (!q) return true;
+        const name = (l.ten_hien_thi || '').toLowerCase();
+        const uname = (l.ten_dang_nhap || '').toLowerCase();
+        const email = (l.email || '').toLowerCase();
+        return name.includes(q) || uname.includes(q) || email.includes(q);
+      });
+      renderLearnersTable(filtered);
+    }
+
+    function renderLearnersTable(learners) {
+      const tbody = document.getElementById('table-learners-directory');
+      if (!tbody) return;
+
+      tbody.innerHTML = learners.map(l => {
+        const accColor = l.ti_le_dung_tb >= 80 ? 'text-emerald-400' : l.ti_le_dung_tb >= 50 ? 'text-amber-400' : 'text-rose-400';
+        const lastActiveStr = l.hoat_dong_cuoi ? new Date(l.hoat_dong_cuoi).toLocaleString('vi-VN') : '--';
+
+        return `
+          <tr class="hover:bg-[var(--background)]/50 transition">
+            <td class="py-2.5 px-3">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="text-base shrink-0">🧙</span>
+                <div class="min-w-0">
+                  <div class="font-bold text-xs text-[var(--foreground)] truncate" title="${escapeHtml(l.ten_hien_thi)}">
+                    ${escapeHtml(l.ten_hien_thi)}
+                  </div>
+                  <div class="flex items-center gap-1.5 text-[10px] text-[var(--muted)] font-mono">
+                    <span class="text-amber-500">@${escapeHtml(l.ten_dang_nhap)}</span>
+                    <span>•</span>
+                    <span class="text-purple-400 font-bold">${escapeHtml(l.rank_title || 'TÂN THỦ')}</span>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td class="py-2.5 px-2 text-center font-mono font-bold text-xs text-blue-400">
+              ${l.tong_so_phien}
+            </td>
+            <td class="py-2.5 px-2 text-center font-mono font-bold text-xs text-emerald-400">
+              ${l.so_moc_hoan_thanh}
+            </td>
+            <td class="py-2.5 px-2 text-center">
+              <div class="flex items-center justify-center gap-1.5">
+                <div class="w-12 h-1.5 rounded-full bg-slate-800 overflow-hidden shrink-0">
+                  <div class="h-full bg-emerald-400" style="width: ${Math.min(100, Math.max(0, l.ti_le_dung_tb))}%"></div>
+                </div>
+                <span class="font-mono text-xs font-bold ${accColor}">${l.ti_le_dung_tb}%</span>
+              </div>
+            </td>
+            <td class="py-2.5 px-2 text-center font-mono text-[10.5px] text-[var(--muted)] whitespace-nowrap">
+              ⏱️ ${escapeHtml(l.thoi_gian_dinh_dang || '0s')}
+            </td>
+            <td class="py-2.5 px-2 text-center font-mono text-[10.5px] whitespace-nowrap">
+              ${l.tong_so_lan_tra_cuu > 0 ? `<span class="text-purple-400 font-bold">📖 ${l.tong_so_lan_tra_cuu}</span>` : '<span class="text-[var(--muted)]">0</span>'}
+            </td>
+            <td class="py-2.5 px-2 text-center font-mono text-[10px] text-[var(--muted)] whitespace-nowrap">
+              ${lastActiveStr}
+            </td>
+            <td class="py-2.5 px-3 text-right whitespace-nowrap">
+              <button id="btn-view-learner-${l.ma_nguoi_dung}" onclick="openLearnerTelemetryModal('${l.ma_nguoi_dung}')" class="px-2 py-1 rounded-lg bg-amber-500/15 text-amber-400 hover:bg-amber-500/25 text-[10px] font-bold cursor-pointer transition inline-flex items-center gap-1" title="Truy xuất toàn bộ hồ sơ">
+                <span>🔍</span> Xem
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('') || '<tr><td colspan="8" class="py-4 text-center text-[var(--muted)]">Không tìm thấy học viên phù hợp</td></tr>';
+    }
+
+    async function openLearnerTelemetryModal(userId) {
+      const modal = document.getElementById('modal-learner-telemetry');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+
+      // Loading state
+      document.getElementById('telemetry-user-name').innerText = 'Đang tải dữ liệu học viên...';
+      document.getElementById('telemetry-user-username').innerText = `@${userId}`;
+      document.getElementById('modal-sessions-container').innerHTML = '<div class="p-8 text-center text-xs text-[var(--muted)]">Đang tải toàn bộ lịch sử làm bài và telemetry...</div>';
+
+      try {
+        const data = await apiFetch(`/api/admin/learners/${userId}/telemetry`);
+        currentActiveLearnerTelemetry = data;
+
+        // Populate User Info
+        document.getElementById('telemetry-user-name').innerText = data.user.ten_hien_thi;
+        document.getElementById('telemetry-user-username').innerText = `@${data.user.ten_dang_nhap}`;
+        document.getElementById('telemetry-user-rank').innerText = data.user.rank_title || 'TÂN THỦ';
+        document.getElementById('telemetry-user-email').innerText = data.user.email || 'Chưa liên kết email';
+        document.getElementById('telemetry-user-coins').innerText = data.user.xu_tri_thuc;
+        document.getElementById('telemetry-user-exp').innerText = data.user.tong_diem_kinh_nghiem;
+        document.getElementById('telemetry-user-joined').innerText = data.user.tao_luc ? new Date(data.user.tao_luc).toLocaleDateString('vi-VN') : '--';
+
+        // Populate KPIs
+        document.getElementById('modal-kpi-accuracy').innerText = `${data.kpi.accuracy_percentage}%`;
+        document.getElementById('modal-kpi-counts').innerText = `${data.kpi.total_correct}/${data.kpi.total_questions} câu đúng`;
+        document.getElementById('modal-kpi-time').innerText = data.kpi.formatted_total_time;
+        document.getElementById('modal-kpi-speed').innerText = `${data.kpi.avg_time_per_question}s`;
+        document.getElementById('modal-kpi-lookups').innerText = `${data.kpi.total_lookups} lần`;
+
+        // Badges
+        document.getElementById('modal-badge-session-count').innerText = data.sessions.length;
+        document.getElementById('modal-badge-weak-count').innerText = data.weaknesses.length;
+        document.getElementById('modal-badge-checkpoint-count').innerText = data.checkpoints_progress.length;
+
+        // Render panes
+        renderLearnerModalPanes();
+        switchLearnerModalTab('sessions');
+      } catch (err) {
+        showToast('Lỗi khi tải telemetry: ' + err.message, true);
+        closeLearnerTelemetryModal();
+      }
+    }
+
+    function switchLearnerModalTab(tabName) {
+      activeModalLearnerSubTab = tabName;
+      ['sessions', 'weaknesses', 'checkpoints'].forEach(t => {
+        const btn = document.getElementById(`modal-tab-btn-${t}`);
+        const pane = document.getElementById(`modal-pane-${t}`);
+        if (t === tabName) {
+          if (btn) {
+            btn.classList.add('border-amber-500', 'text-amber-400');
+            btn.classList.remove('border-transparent', 'text-[var(--muted)]');
+          }
+          if (pane) pane.classList.remove('hidden');
+        } else {
+          if (btn) {
+            btn.classList.remove('border-amber-500', 'text-amber-400');
+            btn.classList.add('border-transparent', 'text-[var(--muted)]');
+          }
+          if (pane) pane.classList.add('hidden');
+        }
+      });
+    }
+
+    function renderLearnerModalPanes() {
+      if (!currentActiveLearnerTelemetry) return;
+      const { sessions, weaknesses, checkpoints_progress } = currentActiveLearnerTelemetry;
+
+      // 1. Sessions Pane
+      const sessContainer = document.getElementById('modal-sessions-container');
+      if (sessContainer) {
+        if (!sessions || sessions.length === 0) {
+          sessContainer.innerHTML = '<div class="p-6 text-center text-xs text-[var(--muted)]">Học viên chưa thực hiện phiên làm bài trắc nghiệm nào.</div>';
+        } else {
+          sessContainer.innerHTML = sessions.map((s, sIdx) => {
+            const accClass = s.ti_le_dung >= 80 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : s.ti_le_dung >= 50 ? 'text-amber-400 bg-amber-500/10 border-amber-500/30' : 'text-rose-400 bg-rose-500/10 border-rose-500/30';
+            const sessionDate = s.tao_luc ? new Date(s.tao_luc).toLocaleString('vi-VN') : '--';
+            const questions = s.chi_tiet_cau_hoi || [];
+
+            return `
+              <div class="border border-[var(--border)] rounded-2xl bg-[var(--background)]/40 overflow-hidden space-y-0">
+                <!-- Session Header Accordion -->
+                <div class="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--card)] border-b border-[var(--border)]">
+                  <div class="flex items-center gap-3 min-w-0">
+                    <span class="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-400 font-mono font-bold text-xs flex items-center justify-center shrink-0">
+                      #${sessions.length - sIdx}
+                    </span>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="font-bold text-xs text-[var(--foreground)] truncate">
+                          Chặng ${s.buoc_so || 1} • ${escapeHtml(s.ten_moc)}
+                        </span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${accClass}">
+                          ${s.ti_le_dung}% (${s.so_cau_dung}/${s.tong_so_cau} đúng)
+                        </span>
+                      </div>
+                      <div class="text-[10px] text-[var(--muted)] font-mono flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span>📘 ${escapeHtml(s.ten_mon)}</span>
+                        <span>•</span>
+                        <span>⏱️ ${escapeHtml(s.thoi_gian_dinh_dang)}</span>
+                        <span>•</span>
+                        <span>📖 ${s.tong_so_lan_tra_cuu} lần xem giải thích</span>
+                        <span>•</span>
+                        <span>🕒 ${sessionDate}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button onclick="toggleSessionDetails('${s.ma_phien}')" class="px-2.5 py-1 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs text-[var(--muted)] hover:text-[var(--foreground)] font-semibold transition cursor-pointer shrink-0 self-end sm:self-auto flex items-center gap-1">
+                    <span id="btn-toggle-icon-${s.ma_phien}">${sIdx === 0 ? '▲ Thu gọn' : '▼ Chi tiết câu hỏi'}</span>
+                  </button>
+                </div>
+
+                <!-- Session Questions Table -->
+                <div id="session-questions-${s.ma_phien}" class="${sIdx === 0 ? '' : 'hidden'} p-3 space-y-2 bg-[var(--background)]/20">
+                  <div class="w-full overflow-hidden border border-[var(--border)] rounded-xl">
+                    <table class="table-fixed w-full text-xs text-left">
+                      <colgroup>
+                        <col style="width: 14%;">
+                        <col style="width: 38%;">
+                        <col style="width: 18%;">
+                        <col style="width: 18%;">
+                        <col style="width: 12%;">
+                      </colgroup>
+                      <thead class="text-[10.5px] text-[var(--muted)] bg-[var(--background)]/60 border-b border-[var(--border)]">
+                        <tr>
+                          <th class="py-2 px-2.5">Mã & Cấp độ</th>
+                          <th class="py-2 px-2">Nội dung câu hỏi</th>
+                          <th class="py-2 px-2">Lựa chọn của học viên</th>
+                          <th class="py-2 px-2">Đáp án chuẩn & Giải thích</th>
+                          <th class="py-2 px-2.5 text-right">Kết quả & Thời gian</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-[var(--border)] font-mono">
+                        ${questions.map(q => {
+                          const bloomBadge = q.muc_bloom === 'VAN_DUNG' ? '<span class="text-[9px] px-1 py-0.2 rounded bg-purple-500/20 text-purple-300">Vận dụng</span>' : q.muc_bloom === 'HIEU' ? '<span class="text-[9px] px-1 py-0.2 rounded bg-blue-500/20 text-blue-300">Hiểu</span>' : '<span class="text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300">Nhớ</span>';
+                          const diffBadge = q.do_kho === 3 ? '🔴 Khó' : q.do_kho === 2 ? '🟡 TB' : '🟢 Dễ';
+                          const shortQId = q.ma_cau_hoi && q.ma_cau_hoi.length > 13 ? (q.ma_cau_hoi.substring(0, 10) + '…') : q.ma_cau_hoi;
+
+                          return `
+                            <tr class="hover:bg-[var(--card)]/40 transition">
+                              <td class="py-2 px-2.5 align-top">
+                                <span class="font-bold text-[10px] text-amber-500 truncate block" title="${escapeHtml(q.ma_cau_hoi)}">${escapeHtml(shortQId)}</span>
+                                <div class="flex items-center gap-1 mt-1">
+                                  ${bloomBadge}
+                                  <span class="text-[9px] text-[var(--muted)]">${diffBadge}</span>
+                                </div>
+                              </td>
+                              <td class="py-2 px-2 font-sans text-xs align-top">
+                                <div class="font-medium text-[var(--foreground)] line-clamp-2" title="${escapeHtml(q.noi_dung)}">
+                                  ${escapeHtml(q.noi_dung)}
+                                </div>
+                              </td>
+                              <td class="py-2 px-2 font-sans text-[11px] align-top">
+                                <div class="p-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-[var(--foreground)] truncate" title="${escapeHtml(q.lua_chon_text || '--')}">
+                                  ${escapeHtml(q.lua_chon_text || '--')}
+                                </div>
+                              </td>
+                              <td class="py-2 px-2 font-sans text-[11px] align-top">
+                                <div class="font-bold text-emerald-400 truncate" title="${escapeHtml(q.dap_an_dung_text || '--')}">
+                                  ✓ ${escapeHtml(q.dap_an_dung_text || '--')}
+                                </div>
+                                ${q.giai_thich ? `<div class="text-[10px] text-[var(--muted)] italic mt-1 line-clamp-2" title="${escapeHtml(q.giai_thich)}">💡 ${escapeHtml(q.giai_thich)}</div>` : ''}
+                              </td>
+                              <td class="py-2 px-2.5 text-right align-top whitespace-nowrap">
+                                <div>
+                                  ${q.la_dung ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">✅ ĐÚNG</span>' : '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">❌ SAI</span>'}
+                                </div>
+                                <div class="text-[10px] text-[var(--muted)] mt-1 font-mono">
+                                  ⏱️ ${q.thoi_gian_giay || 5}s
+                                </div>
+                                ${q.so_lan_tra_cuu > 0 ? `<div class="text-[9.5px] text-purple-400 mt-0.5">📖 ${q.so_lan_tra_cuu} xem GT</div>` : ''}
+                              </td>
+                            </tr>
+                          `;
+                        }).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      // 2. Weaknesses Pane
+      const weakContainer = document.getElementById('modal-weaknesses-container');
+      if (weakContainer) {
+        if (!weaknesses || weaknesses.length === 0) {
+          weakContainer.innerHTML = '<div class="p-6 text-center text-xs text-emerald-400">✨ Tuyệt vời! Học viên chưa có câu hỏi nào bị hổng kiến thức hoặc làm sai nhiều lần.</div>';
+        } else {
+          weakContainer.innerHTML = weaknesses.map(w => {
+            const shortQId = w.ma_cau_hoi && w.ma_cau_hoi.length > 13 ? (w.ma_cau_hoi.substring(0, 10) + '…') : w.ma_cau_hoi;
+            return `
+              <div class="p-3.5 rounded-2xl bg-[var(--card)] border border-rose-500/30 space-y-2">
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                  <div class="flex items-center gap-2">
+                    <span class="font-mono font-bold text-xs text-amber-400">${escapeHtml(shortQId)}</span>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                      Tỷ lệ sai: ${w.ti_le_sai}% (${w.so_lan_sai}/${w.so_lan_lam} lần)
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-3 text-[10.5px] text-[var(--muted)] font-mono">
+                    <span>⏱️ Tốc độ tb: ${w.thoi_gian_tb}s</span>
+                    <span>•</span>
+                    <span>📖 Tra cứu: ${w.tong_so_lan_tra_cuu} lần</span>
+                    <span>•</span>
+                    <span>⚡ Trọng số lặp lại: ${w.trong_so}</span>
+                  </div>
+                </div>
+                <div class="text-xs font-semibold text-[var(--foreground)]">
+                  ${escapeHtml(w.noi_dung)}
+                </div>
+                <div class="text-[11px] text-emerald-400 font-medium">
+                  ✓ Đáp án đúng: ${escapeHtml(w.dap_an_dung_text || '--')}
+                </div>
+                ${w.giai_thich ? `<div class="p-2 rounded-xl bg-[var(--background)]/60 border border-[var(--border)] text-[10.5px] text-[var(--muted)] italic">💡 ${escapeHtml(w.giai_thich)}</div>` : ''}
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      // 3. Checkpoints Pane
+      const cpContainer = document.getElementById('modal-checkpoints-container');
+      if (cpContainer) {
+        if (!checkpoints_progress || checkpoints_progress.length === 0) {
+          cpContainer.innerHTML = '<div class="p-6 text-center text-xs text-[var(--muted)]">Học viên chưa mở mốc bài học nào.</div>';
+        } else {
+          cpContainer.innerHTML = `
+            <div class="w-full overflow-hidden border border-[var(--border)] rounded-xl">
+              <table class="table-fixed w-full text-xs text-left">
+                <colgroup>
+                  <col style="width: 25%;">
+                  <col style="width: 25%;">
+                  <col style="width: 14%;">
+                  <col style="width: 12%;">
+                  <col style="width: 12%;">
+                  <col style="width: 12%;">
+                </colgroup>
+                <thead class="text-[11px] text-[var(--muted)] bg-[var(--background)]/60 border-b border-[var(--border)]">
+                  <tr>
+                    <th class="py-2.5 px-3">Môn & Chương</th>
+                    <th class="py-2.5 px-2">Mốc bài học</th>
+                    <th class="py-2.5 px-2 text-center">Trạng thái</th>
+                    <th class="py-2.5 px-2 text-center">Chặng</th>
+                    <th class="py-2.5 px-2 text-center">Thưởng đạt</th>
+                    <th class="py-2.5 px-3 text-right">Hoàn thành</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-[var(--border)] font-mono">
+                  ${checkpoints_progress.map(cp => {
+                    const isDone = cp.trang_thai === 'DA_HOAN_THANH';
+                    const dateStr = cp.thoi_diem_hoan_thanh ? new Date(cp.thoi_diem_hoan_thanh).toLocaleDateString('vi-VN') : '--';
+                    return `
+                      <tr class="hover:bg-[var(--card)]/40 transition">
+                        <td class="py-2.5 px-3 font-sans truncate" title="${escapeHtml(cp.ten_mon || 'CSDL')} - ${escapeHtml(cp.ten_chuong)}">
+                          <span class="font-bold text-amber-400">📘 ${escapeHtml(cp.ten_mon || 'CSDL')}</span>
+                          <span class="text-[10px] text-[var(--muted)] block truncate">${escapeHtml(cp.ten_chuong)}</span>
+                        </td>
+                        <td class="py-2.5 px-2 font-sans font-bold text-emerald-400 truncate" title="${escapeHtml(cp.ten_moc)}">
+                          🎯 ${escapeHtml(cp.ten_moc)}
+                        </td>
+                        <td class="py-2.5 px-2 text-center">
+                          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isDone ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-[var(--muted)]'}">
+                            ${isDone ? 'ĐÃ HOÀN THÀNH' : 'ĐANG HỌC'}
+                          </span>
+                        </td>
+                        <td class="py-2.5 px-2 text-center font-bold text-blue-400">
+                          ${cp.cac_buoc_hoan_thanh || (cp.buoc_hien_tai ? `${cp.buoc_hien_tai}/4` : '--')}
+                        </td>
+                        <td class="py-2.5 px-2 text-center text-[10.5px]">
+                          <span class="text-blue-400 font-bold">+${cp.diem_dat_duoc} EXP</span>
+                          <span class="text-amber-400 font-bold ml-1">+${cp.xu_da_nhan} 🪙</span>
+                        </td>
+                        <td class="py-2.5 px-3 text-right text-[10px] text-[var(--muted)]">
+                          ${dateStr}
+                        </td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          `;
+        }
+      }
+    }
+
+    function toggleSessionDetails(sessionId) {
+      const el = document.getElementById(`session-questions-${sessionId}`);
+      const btnIcon = document.getElementById(`btn-toggle-icon-${sessionId}`);
+      if (!el) return;
+      if (el.classList.contains('hidden')) {
+        el.classList.remove('hidden');
+        if (btnIcon) btnIcon.innerText = '▲ Thu gọn';
+      } else {
+        el.classList.add('hidden');
+        if (btnIcon) btnIcon.innerText = '▼ Chi tiết câu hỏi';
+      }
+    }
+
+    function closeLearnerTelemetryModal() {
+      const modal = document.getElementById('modal-learner-telemetry');
+      if (modal) modal.classList.add('hidden');
     }
 
     async function loadTransactions() {

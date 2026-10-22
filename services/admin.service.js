@@ -6,6 +6,7 @@
 
 const db = require('../database/db');
 const { mutateCoins, addExperience } = require('./economy.service');
+const { deriveRankTitle } = require('../core/rules/economy.rules');
 
 /**
  * Get comprehensive system statistics
@@ -279,6 +280,415 @@ async function adjustUserCoins(ma_nguoi_dung, amount, reason) {
   return await mutateCoins(ma_nguoi_dung, amount, 'THUONG_STREAK', reason || 'Điều chỉnh bởi Quản trị viên');
 }
 
+function formatDuration(sec) {
+  const s = Math.round(Number(sec) || 0);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const remS = s % 60;
+  if (m < 60) return `${m}p ${remS}s`;
+  const h = Math.floor(m / 60);
+  const remM = m % 60;
+  return `${h}g ${remM}p ${remS}s`;
+}
+
+async function hydrateQuestionDetails(detailsList) {
+  if (!detailsList || !Array.isArray(detailsList) || detailsList.length === 0) return [];
+  const missingIds = [...new Set(detailsList.filter(d => (!d.noi_dung || !d.giai_thich) && d.ma_cau_hoi).map(d => d.ma_cau_hoi))];
+  let questionsMap = {};
+  if (missingIds.length > 0) {
+    try {
+      const qRows = await db.query(`SELECT ma_cau_hoi, noi_dung, loai_cau_hoi, muc_bloom, do_kho, dap_an_a, dap_an_b, dap_an_c, dap_an_d, vi_tri_dap_an_dung, giai_thich FROM cau_hoi WHERE ma_cau_hoi IN (${missingIds.map(id => `'${id}'`).join(',')})`);
+      if (Array.isArray(qRows)) {
+        qRows.forEach(row => { questionsMap[row.ma_cau_hoi] = row; });
+      }
+    } catch (e) {
+      console.warn('⚠️ Hydration query notice:', e.message);
+    }
+  }
+
+  return detailsList.map(item => {
+    const qInfo = questionsMap[item.ma_cau_hoi];
+    const opts = qInfo ? [qInfo.dap_an_a, qInfo.dap_an_b, qInfo.dap_an_c, qInfo.dap_an_d] : [];
+    const correctIdx = item.dap_an_dung !== undefined && item.dap_an_dung !== null ? Number(item.dap_an_dung) : (qInfo && qInfo.vi_tri_dap_an_dung !== null ? Number(qInfo.vi_tri_dap_an_dung) : null);
+    
+    let userChoiceText = item.lua_chon_text || '';
+    if (!userChoiceText && item.lua_chon !== undefined && item.lua_chon !== null) {
+      if (typeof item.lua_chon === 'number' && opts[item.lua_chon]) {
+        userChoiceText = opts[item.lua_chon];
+      } else {
+        userChoiceText = String(item.lua_chon);
+      }
+    }
+
+    let correctText = item.dap_an_dung_text || '';
+    if (!correctText && correctIdx !== null && opts[correctIdx]) {
+      correctText = opts[correctIdx];
+    }
+
+    return {
+      ma_cau_hoi: item.ma_cau_hoi,
+      noi_dung: item.noi_dung || (qInfo ? qInfo.noi_dung : 'Câu hỏi ' + item.ma_cau_hoi),
+      loai_cau_hoi: item.loai_cau_hoi || (qInfo ? qInfo.loai_cau_hoi : 'TRAC_NGHIEM_4'),
+      muc_bloom: item.muc_bloom || (qInfo ? qInfo.muc_bloom : 'THONG_HIEU'),
+      do_kho: item.do_kho || (qInfo ? qInfo.do_kho : 1),
+      la_dung: item.la_dung !== undefined ? Boolean(item.la_dung) : (correctIdx !== null && item.lua_chon === correctIdx),
+      lua_chon: item.lua_chon !== undefined ? item.lua_chon : item.chi_muc_chon,
+      lua_chon_text: userChoiceText || (item.chi_muc_chon !== undefined ? `Đáp án ${['A','B','C','D'][item.chi_muc_chon]}` : '--'),
+      dap_an_dung: correctIdx,
+      dap_an_dung_text: correctText || (correctIdx !== null ? `Đáp án ${['A','B','C','D'][correctIdx]}` : '--'),
+      thoi_gian_giay: item.thoi_gian_giay !== undefined ? Number(item.thoi_gian_giay) : 5,
+      so_lan_tra_cuu: item.so_lan_tra_cuu !== undefined ? Number(item.so_lan_tra_cuu) : 0,
+      giai_thich: item.giai_thich || (qInfo ? qInfo.giai_thich : '')
+    };
+  });
+}
+
+/**
+ * Access & Learning Activity Feed (Recent Sessions + System Summary)
+ */
+async function getLearningActivityFeed() {
+  // 1. Recent 10 live sessions across the system
+  let recentSessions = [];
+  try {
+    recentSessions = await db.query(`
+      SELECT TOP 10 p.ma_phien, p.ma_nguoi_dung, p.ma_moc, p.loai_phien, p.buoc_so,
+             p.thoi_gian_tong_giay, p.ti_le_dung, p.toc_do_trung_binh_giay, p.tong_so_lan_tra_cuu,
+             p.chi_tiet_cau_hoi, p.tao_luc,
+             u.ten_hien_thi, u.ten_dang_nhap, u.khung_avatar, u.tong_diem_kinh_nghiem,
+             m.tieu_de as ten_moc, c.tieu_de as ten_chuong, mn.ten_mon
+      FROM lich_su_phien_hoc p
+      JOIN nguoi_dung u ON p.ma_nguoi_dung = u.ma_nguoi_dung
+      JOIN moc_bai_hoc m ON p.ma_moc = m.ma_moc
+      JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
+      JOIN mon_hoc mn ON c.ma_mon = mn.ma_mon
+      ORDER BY p.tao_luc DESC
+    `);
+  } catch (err) {
+    console.warn('⚠️ Error querying recent sessions:', err.message);
+  }
+
+  // Parse questions & hydrate for recent sessions
+  const enrichedRecent = [];
+  for (const s of (recentSessions || [])) {
+    let parsedQ = [];
+    try {
+      parsedQ = typeof s.chi_tiet_cau_hoi === 'string' ? JSON.parse(s.chi_tiet_cau_hoi) : (s.chi_tiet_cau_hoi || []);
+    } catch (e) { parsedQ = []; }
+    const hydratedQ = await hydrateQuestionDetails(parsedQ);
+    const correctCount = hydratedQ.filter(q => q.la_dung).length;
+
+    enrichedRecent.push({
+      ma_phien: s.ma_phien,
+      ma_nguoi_dung: s.ma_nguoi_dung,
+      ten_hien_thi: s.ten_hien_thi,
+      ten_dang_nhap: s.ten_dang_nhap,
+      khung_avatar: s.khung_avatar,
+      rank_title: deriveRankTitle(s.tong_diem_kinh_nghiem || 0),
+      ten_mon: s.ten_mon,
+      ten_chuong: s.ten_chuong,
+      ten_moc: s.ten_moc,
+      loai_phien: s.loai_phien,
+      buoc_so: s.buoc_so,
+      ti_le_dung: Math.round(Number(s.ti_le_dung) || 0),
+      so_cau_dung: correctCount,
+      tong_so_cau: hydratedQ.length,
+      thoi_gian_tong_giay: Number(s.thoi_gian_tong_giay) || 0,
+      thoi_gian_dinh_dang: formatDuration(s.thoi_gian_tong_giay),
+      tong_so_lan_tra_cuu: Number(s.tong_so_lan_tra_cuu) || 0,
+      tao_luc: s.tao_luc,
+      chi_tiet_cau_hoi: hydratedQ
+    });
+  }
+
+  // 2. Aggregate telemetry summary
+  let summary = {
+    total_sessions: 0,
+    total_learners_active: 0,
+    avg_accuracy: 0,
+    total_study_time_seconds: 0,
+    formatted_total_time: '0s',
+    total_lookups: 0
+  };
+
+  try {
+    const agg = await db.queryOne(`
+      SELECT COUNT(ma_phien) as total_sessions,
+             COUNT(DISTINCT ma_nguoi_dung) as active_learners,
+             AVG(ti_le_dung) as avg_accuracy,
+             SUM(thoi_gian_tong_giay) as total_time,
+             SUM(tong_so_lan_tra_cuu) as total_lookups
+      FROM lich_su_phien_hoc
+    `);
+    if (agg) {
+      summary.total_sessions = agg.total_sessions || 0;
+      summary.total_learners_active = agg.active_learners || 0;
+      summary.avg_accuracy = Math.round(Number(agg.avg_accuracy) || 0);
+      summary.total_study_time_seconds = Math.round(Number(agg.total_time) || 0);
+      summary.formatted_total_time = formatDuration(agg.total_time);
+      summary.total_lookups = agg.total_lookups || 0;
+    }
+  } catch (errAgg) {
+    console.warn('⚠️ Error aggregating telemetry summary:', errAgg.message);
+  }
+
+  // 3. Legacy checkpoint logs for backward compatibility
+  const legacyLogs = await getActivityLogs();
+
+  return {
+    recent_activities: enrichedRecent,
+    summary,
+    legacy_logs: legacyLogs
+  };
+}
+
+/**
+ * Get all registered learners with comprehensive aggregated telemetry
+ */
+async function getLearnersTelemetryList() {
+  const users = await db.query(`
+    SELECT u.ma_nguoi_dung, u.ten_dang_nhap, u.ten_hien_thi, u.email, u.khung_avatar,
+           u.vai_tro, u.tong_diem_kinh_nghiem, u.xu_tri_thuc, u.chuoi_streak_ngay,
+           u.tao_luc, u.ngay_hoat_dong_cuoi,
+           COUNT(p.ma_phien) as tong_so_phien,
+           AVG(p.ti_le_dung) as ti_le_dung_tb,
+           SUM(p.thoi_gian_tong_giay) as tong_thoi_gian_giay,
+           SUM(p.tong_so_lan_tra_cuu) as tong_so_lan_tra_cuu,
+           MAX(p.tao_luc) as hoat_dong_cuoi
+    FROM nguoi_dung u
+    LEFT JOIN lich_su_phien_hoc p ON u.ma_nguoi_dung = p.ma_nguoi_dung
+    GROUP BY u.ma_nguoi_dung, u.ten_dang_nhap, u.ten_hien_thi, u.email, u.khung_avatar,
+             u.vai_tro, u.tong_diem_kinh_nghiem, u.xu_tri_thuc, u.chuoi_streak_ngay,
+             u.tao_luc, u.ngay_hoat_dong_cuoi
+    ORDER BY MAX(p.tao_luc) DESC, u.tao_luc DESC
+  `);
+
+  // Count completed checkpoints per user
+  let completedMap = {};
+  try {
+    const completedCounts = await db.query(`
+      SELECT ma_nguoi_dung, COUNT(*) as completed_count
+      FROM tien_do_moc_bai_hoc
+      WHERE trang_thai = 'DA_HOAN_THANH'
+      GROUP BY ma_nguoi_dung
+    `);
+    if (Array.isArray(completedCounts)) {
+      completedCounts.forEach(c => { completedMap[c.ma_nguoi_dung] = c.completed_count; });
+    }
+  } catch (errCount) {
+    console.warn('⚠️ Error counting completed checkpoints:', errCount.message);
+  }
+
+  return (users || []).map(u => ({
+    ma_nguoi_dung: u.ma_nguoi_dung,
+    ten_dang_nhap: u.ten_dang_nhap,
+    ten_hien_thi: u.ten_hien_thi,
+    email: u.email,
+    khung_avatar: u.khung_avatar || 'khung_khoi_dau',
+    vai_tro: u.vai_tro,
+    tong_diem_kinh_nghiem: u.tong_diem_kinh_nghiem || 0,
+    xu_tri_thuc: u.xu_tri_thuc || 0,
+    chuoi_streak_ngay: u.chuoi_streak_ngay || 0,
+    rank_title: deriveRankTitle(u.tong_diem_kinh_nghiem || 0),
+    tong_so_phien: Number(u.tong_so_phien) || 0,
+    ti_le_dung_tb: Math.round(Number(u.ti_le_dung_tb) || 0),
+    tong_thoi_gian_giay: Number(u.tong_thoi_gian_giay) || 0,
+    thoi_gian_dinh_dang: formatDuration(u.tong_thoi_gian_giay),
+    tong_so_lan_tra_cuu: Number(u.tong_so_lan_tra_cuu) || 0,
+    so_moc_hoan_thanh: completedMap[u.ma_nguoi_dung] || 0,
+    hoat_dong_cuoi: u.hoat_dong_cuoi || u.ngay_hoat_dong_cuoi || u.tao_luc,
+    tao_luc: u.tao_luc
+  }));
+}
+
+/**
+ * Deep-dive learner profile: All test history, granular question breakdown,
+ * memory weaknesses, and checkpoint progress.
+ */
+async function getLearnerDeepTelemetry(userId) {
+  const user = await db.queryOne(`
+    SELECT ma_nguoi_dung, ten_dang_nhap, ten_hien_thi, email, khung_avatar,
+           vai_tro, tong_diem_kinh_nghiem, xu_tri_thuc, chuoi_streak_ngay,
+           ngay_hoat_dong_cuoi, tao_luc
+    FROM nguoi_dung
+    WHERE ma_nguoi_dung = $1
+  `, [userId]);
+
+  if (!user) {
+    throw new Error('Không tìm thấy học viên với mã: ' + userId);
+  }
+
+  // 1. All sessions of this user
+  let sessions = [];
+  try {
+    sessions = await db.query(`
+      SELECT p.ma_phien, p.ma_moc, p.loai_phien, p.buoc_so,
+             p.thoi_gian_tong_giay, p.ti_le_dung, p.toc_do_trung_binh_giay, p.tong_so_lan_tra_cuu,
+             p.chi_tiet_cau_hoi, p.tao_luc,
+             m.tieu_de as ten_moc, c.tieu_de as ten_chuong, mn.ten_mon
+      FROM lich_su_phien_hoc p
+      JOIN moc_bai_hoc m ON p.ma_moc = m.ma_moc
+      JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
+      JOIN mon_hoc mn ON c.ma_mon = mn.ma_mon
+      WHERE p.ma_nguoi_dung = $1
+      ORDER BY p.tao_luc DESC
+    `, [userId]);
+  } catch (errSess) {
+    console.warn('⚠️ Error querying user sessions:', errSess.message);
+  }
+
+  let totalQuestionsCount = 0;
+  let totalCorrectCount = 0;
+  let totalLookupsCount = 0;
+  let totalTimeSeconds = 0;
+
+  const enrichedSessions = [];
+  for (const s of (sessions || [])) {
+    let parsedQ = [];
+    try {
+      parsedQ = typeof s.chi_tiet_cau_hoi === 'string' ? JSON.parse(s.chi_tiet_cau_hoi) : (s.chi_tiet_cau_hoi || []);
+    } catch (e) { parsedQ = []; }
+    const hydratedQ = await hydrateQuestionDetails(parsedQ);
+    const correctCount = hydratedQ.filter(q => q.la_dung).length;
+
+    totalQuestionsCount += hydratedQ.length;
+    totalCorrectCount += correctCount;
+    totalLookupsCount += (Number(s.tong_so_lan_tra_cuu) || 0);
+    totalTimeSeconds += (Number(s.thoi_gian_tong_giay) || 0);
+
+    enrichedSessions.push({
+      ma_phien: s.ma_phien,
+      ma_moc: s.ma_moc,
+      ten_mon: s.ten_mon,
+      ten_chuong: s.ten_chuong,
+      ten_moc: s.ten_moc,
+      loai_phien: s.loai_phien,
+      buoc_so: s.buoc_so,
+      ti_le_dung: Math.round(Number(s.ti_le_dung) || 0),
+      so_cau_dung: correctCount,
+      tong_so_cau: hydratedQ.length,
+      thoi_gian_tong_giay: Number(s.thoi_gian_tong_giay) || 0,
+      thoi_gian_dinh_dang: formatDuration(s.thoi_gian_tong_giay),
+      toc_do_trung_binh_giay: Number(s.toc_do_trung_binh_giay) || 0,
+      tong_so_lan_tra_cuu: Number(s.tong_so_lan_tra_cuu) || 0,
+      tao_luc: s.tao_luc,
+      chi_tiet_cau_hoi: hydratedQ
+    });
+  }
+
+  // 2. Checkpoints progress
+  let checkpoints = [];
+  try {
+    checkpoints = await db.query(`
+      SELECT t.ma_tien_do_moc, t.ma_moc, m.tieu_de as ten_moc, c.tieu_de as ten_chuong, mn.ten_mon,
+             t.trang_thai, t.diem_dat_duoc, t.xu_da_nhan, t.buoc_hien_tai, t.cac_buoc_hoan_thanh,
+             t.du_lieu_tri_nho, t.thoi_diem_hoan_thanh
+      FROM tien_do_moc_bai_hoc t
+      JOIN moc_bai_hoc m ON t.ma_moc = m.ma_moc
+      JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
+      JOIN mon_hoc mn ON c.ma_mon = mn.ma_mon
+      WHERE t.ma_nguoi_dung = $1
+      ORDER BY t.thoi_diem_hoan_thanh DESC
+    `, [userId]);
+  } catch (errCp) {
+    console.warn('⚠️ Error querying checkpoints progress:', errCp.message);
+  }
+
+  // 3. Extract Memory Map & Weaknesses from du_lieu_tri_nho
+  const aggregatedMemoryMap = {};
+  for (const cp of (checkpoints || [])) {
+    if (cp.du_lieu_tri_nho) {
+      try {
+        const mem = typeof cp.du_lieu_tri_nho === 'string' ? JSON.parse(cp.du_lieu_tri_nho) : cp.du_lieu_tri_nho;
+        if (mem && typeof mem === 'object') {
+          for (const [qid, data] of Object.entries(mem)) {
+            if (!aggregatedMemoryMap[qid]) {
+              aggregatedMemoryMap[qid] = { ...data, ma_cau_hoi: qid };
+            } else {
+              aggregatedMemoryMap[qid].so_lan_lam += (data.so_lan_lam || 0);
+              aggregatedMemoryMap[qid].so_lan_dung += (data.so_lan_dung || 0);
+              aggregatedMemoryMap[qid].so_lan_sai += (data.so_lan_sai || 0);
+              aggregatedMemoryMap[qid].tong_so_lan_tra_cuu += (data.tong_so_lan_tra_cuu || 0);
+              aggregatedMemoryMap[qid].trong_so = Math.max(aggregatedMemoryMap[qid].trong_so, data.trong_so || 1.0);
+            }
+          }
+        }
+      } catch (e) {}
+    }
+  }
+
+  const weaknessQIds = Object.keys(aggregatedMemoryMap);
+  let weaknessQuestions = [];
+  if (weaknessQIds.length > 0) {
+    const hydratedWeak = await hydrateQuestionDetails(weaknessQIds.map(qid => ({ ma_cau_hoi: qid })));
+    weaknessQuestions = hydratedWeak.map(q => {
+      const mem = aggregatedMemoryMap[q.ma_cau_hoi] || {};
+      const attempts = mem.so_lan_lam || 1;
+      const wrong = mem.so_lan_sai || 0;
+      const errorRate = Math.round((wrong / attempts) * 100);
+      return {
+        ...q,
+        so_lan_lam: attempts,
+        so_lan_dung: mem.so_lan_dung || 0,
+        so_lan_sai: wrong,
+        ti_le_sai: errorRate,
+        thoi_gian_tb: mem.thoi_gian_tb || 0,
+        tong_so_lan_tra_cuu: mem.tong_so_lan_tra_cuu || 0,
+        trong_so: mem.trong_so || 1.0,
+        streak: mem.streak || 0,
+        lan_lam_cuoi: mem.lan_lam_cuoi
+      };
+    }).sort((a, b) => (b.ti_le_sai - a.ti_le_sai) || (b.trong_so - a.trong_so));
+  }
+
+  // 4. Compiled KPI
+  const accuracyPct = totalQuestionsCount > 0 ? Math.round((totalCorrectCount / totalQuestionsCount) * 100) : 0;
+  const avgTimePerQuestion = totalQuestionsCount > 0 ? Math.round((totalTimeSeconds / totalQuestionsCount) * 10) / 10 : 0;
+
+  return {
+    user: {
+      ma_nguoi_dung: user.ma_nguoi_dung,
+      ten_dang_nhap: user.ten_dang_nhap,
+      ten_hien_thi: user.ten_hien_thi,
+      email: user.email,
+      khung_avatar: user.khung_avatar || 'khung_khoi_dau',
+      vai_tro: user.vai_tro,
+      tong_diem_kinh_nghiem: user.tong_diem_kinh_nghiem || 0,
+      xu_tri_thuc: user.xu_tri_thuc || 0,
+      chuoi_streak_ngay: user.chuoi_streak_ngay || 0,
+      rank_title: deriveRankTitle(user.tong_diem_kinh_nghiem || 0),
+      ngay_hoat_dong_cuoi: user.ngay_hoat_dong_cuoi,
+      tao_luc: user.tao_luc
+    },
+    kpi: {
+      total_sessions: enrichedSessions.length,
+      total_questions: totalQuestionsCount,
+      total_correct: totalCorrectCount,
+      total_wrong: totalQuestionsCount - totalCorrectCount,
+      accuracy_percentage: accuracyPct,
+      total_time_seconds: totalTimeSeconds,
+      formatted_total_time: formatDuration(totalTimeSeconds),
+      avg_time_per_question: avgTimePerQuestion,
+      total_lookups: totalLookupsCount,
+      completed_checkpoints: (checkpoints || []).filter(c => c.trang_thai === 'DA_HOAN_THANH').length
+    },
+    sessions: enrichedSessions,
+    weaknesses: weaknessQuestions,
+    checkpoints_progress: (checkpoints || []).map(c => ({
+      ma_tien_do_moc: c.ma_tien_do_moc,
+      ma_moc: c.ma_moc,
+      ten_mon: c.ten_mon,
+      ten_chuong: c.ten_chuong,
+      ten_moc: c.ten_moc,
+      trang_thai: c.trang_thai,
+      diem_dat_duoc: c.diem_dat_duoc,
+      xu_da_nhan: c.xu_da_nhan,
+      buoc_hien_tai: c.buoc_hien_tai,
+      cac_buoc_hoan_thanh: c.cac_buoc_hoan_thanh,
+      thoi_diem_hoan_thanh: c.thoi_diem_hoan_thanh
+    }))
+  };
+}
+
 /**
  * Access & Learning Activity Logs
  */
@@ -358,6 +768,9 @@ module.exports = {
   updateUserRole,
   adjustUserCoins,
   getActivityLogs,
+  getLearningActivityFeed,
+  getLearnersTelemetryList,
+  getLearnerDeepTelemetry,
   getAllTransactions,
   listPets,
   createPet,

@@ -36,10 +36,16 @@ function evaluateQuizSubmission(submittedAnswers, officialQuestions, passScore =
     const userSubmission = answerMap.get(String(q.ma_cau_hoi));
     let isCorrect = false;
     let userDisplayChoice = null;
+    let userChoiceText = '';
+    let correctText = '';
     const loai = q.loai_cau_hoi || 'TRAC_NGHIEM_4';
 
     if (!userSubmission) {
       isCorrect = false;
+      userChoiceText = 'Chưa làm';
+      const opts = [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d];
+      const correctIdx = q.vi_tri_dap_an_dung !== undefined && q.vi_tri_dap_an_dung !== null ? Number(q.vi_tri_dap_an_dung) : null;
+      correctText = (correctIdx !== null && opts[correctIdx]) ? opts[correctIdx] : '';
     } else if (loai === 'NOI_CAP') {
       let parsed = {};
       try {
@@ -53,6 +59,8 @@ function evaluateQuizSubmission(submittedAnswers, officialQuestions, passScore =
         );
       }
       userDisplayChoice = `${userPairs.length}/${expectedPairs.length} cặp`;
+      userChoiceText = userPairs.map(p => `${p.left} ↔ ${p.right}`).join(', ') || userDisplayChoice;
+      correctText = expectedPairs.map(p => `${p.left} ↔ ${p.right}`).join(', ');
     } else if (loai === 'DIEN_TU') {
       let parsed = {};
       try {
@@ -62,6 +70,8 @@ function evaluateQuizSubmission(submittedAnswers, officialQuestions, passScore =
       const actual = String(userSubmission.selected_word || userSubmission.tu_dien || userSubmission.lua_chon || '').trim().toLowerCase();
       isCorrect = Boolean(expected && actual === expected);
       userDisplayChoice = actual;
+      userChoiceText = actual || 'Chưa điền';
+      correctText = expected || '';
     } else if (loai === 'SAP_XEP_CAU') {
       let parsed = {};
       try {
@@ -73,12 +83,18 @@ function evaluateQuizSubmission(submittedAnswers, officialQuestions, passScore =
         isCorrect = expectedOrder.every((word, idx) => String(word).trim() === String(userOrder[idx]).trim());
       }
       userDisplayChoice = userOrder.join(' ');
+      userChoiceText = userDisplayChoice || 'Chưa sắp xếp';
+      correctText = expectedOrder.join(' ');
     } else {
       // Default: TRAC_NGHIEM_4
       const val = userSubmission.lua_chon !== undefined ? userSubmission.lua_chon : userSubmission.chi_muc_chon;
       const userChoice = val !== undefined ? Number(val) : -1;
-      isCorrect = userChoice === Number(q.vi_tri_dap_an_dung);
+      const correctIdx = q.vi_tri_dap_an_dung !== undefined && q.vi_tri_dap_an_dung !== null ? Number(q.vi_tri_dap_an_dung) : null;
+      isCorrect = correctIdx !== null && userChoice === correctIdx;
       userDisplayChoice = userChoice;
+      const opts = [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d];
+      userChoiceText = (userChoice >= 0 && userChoice < opts.length && opts[userChoice]) ? opts[userChoice] : (userChoice >= 0 ? `Đáp án ${['A','B','C','D'][userChoice]}` : 'Chưa chọn');
+      correctText = (correctIdx !== null && correctIdx >= 0 && opts[correctIdx]) ? opts[correctIdx] : (correctIdx !== null ? `Đáp án ${['A','B','C','D'][correctIdx]}` : '');
     }
 
     if (isCorrect) {
@@ -87,12 +103,17 @@ function evaluateQuizSubmission(submittedAnswers, officialQuestions, passScore =
 
     details.push({
       ma_cau_hoi: q.ma_cau_hoi,
+      noi_dung: q.noi_dung || '',
       loai_cau_hoi: loai,
+      muc_bloom: q.muc_bloom || 'THONG_HIEU',
+      do_kho: q.do_kho || 1,
       la_dung: isCorrect,
       lua_chon: userDisplayChoice,
+      lua_chon_text: userChoiceText,
+      dap_an_dung: q.vi_tri_dap_an_dung !== undefined && q.vi_tri_dap_an_dung !== null ? Number(q.vi_tri_dap_an_dung) : null,
+      dap_an_dung_text: correctText,
       thoi_gian_giay: userSubmission && userSubmission.thoi_gian_giay !== undefined ? Number(userSubmission.thoi_gian_giay) : 5,
       so_lan_tra_cuu: userSubmission && userSubmission.so_lan_tra_cuu !== undefined ? Number(userSubmission.so_lan_tra_cuu) : 0,
-      dap_an_dung: q.vi_tri_dap_an_dung !== undefined && q.vi_tri_dap_an_dung !== null ? Number(q.vi_tri_dap_an_dung) : null,
       giai_thich: q.giai_thich || ''
     });
   }

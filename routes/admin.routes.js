@@ -187,6 +187,36 @@ router.get('/logs', async (req, res) => {
   }
 });
 
+// Comprehensive Learning Activity Feed (Recent Sessions + System Summary)
+router.get('/learning-activity', async (req, res) => {
+  try {
+    const data = await adminService.getLearningActivityFeed();
+    return res.apiSuccess(data);
+  } catch (err) {
+    return res.apiError(err.message, 'FETCH_LEARNING_ACTIVITY_FAILED', 500);
+  }
+});
+
+// Learners Telemetry Directory (All registered users with aggregated telemetry)
+router.get('/learners', async (req, res) => {
+  try {
+    const data = await adminService.getLearnersTelemetryList();
+    return res.apiSuccess(data);
+  } catch (err) {
+    return res.apiError(err.message, 'FETCH_LEARNERS_FAILED', 500);
+  }
+});
+
+// Learner Deep Telemetry (Full test history, per-question analytics, memory map)
+router.get('/learners/:id/telemetry', async (req, res) => {
+  try {
+    const data = await adminService.getLearnerDeepTelemetry(req.params.id);
+    return res.apiSuccess(data);
+  } catch (err) {
+    return res.apiError(err.message, 'FETCH_LEARNER_TELEMETRY_FAILED', 500);
+  }
+});
+
 // All System Coin Transactions
 router.get('/transactions', async (req, res) => {
   try {
