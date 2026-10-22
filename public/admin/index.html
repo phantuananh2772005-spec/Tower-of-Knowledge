@@ -210,26 +210,57 @@
         </div>
       </section>
 
-      <!-- TAB 2: CURRICULUM MANAGEMENT -->
+      <!-- TAB 2: CURRICULUM MANAGEMENT (2-LEVEL VIEW: COURSES CARDS -> COURSE DETAIL) -->
       <section id="panel-curriculum" class="hidden space-y-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-base font-bold">Cây Cấu Trúc Khóa Học & Lộ Trình</h2>
-            <p class="text-xs text-[var(--muted)]">Quản lý Môn học → Chương học → Mốc bài học (Lý thuyết / Trắc nghiệm / Boss)</p>
+
+        <!-- LỚP 1: DANH SÁCH THẺ MÔN HỌC (COURSE CARDS OVERVIEW) -->
+        <div id="curriculum-courses-view" class="space-y-6">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 class="text-base font-bold">Danh Sách Môn Học & Lộ Trình</h2>
+              <p class="text-xs text-[var(--muted)]">Chọn một môn học để xem chi tiết lộ trình, quản lý chương và mốc bài học</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="openAddCourseModal()" class="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5">
+                <span>+</span> Thêm Môn Học Mới
+              </button>
+            </div>
           </div>
-          <div class="flex items-center gap-2">
-            <button onclick="openAddCourseModal()" class="px-3 py-1.5 rounded-xl border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 font-bold text-xs transition cursor-pointer flex items-center gap-1.5">
-              <span>+</span> Thêm Môn Học
-            </button>
-            <button onclick="openAddChapterModal()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5">
-              <span>+</span> Thêm Chương Mới
-            </button>
+
+          <div id="curriculum-courses-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <!-- Dynamic Course Cards rendered here -->
           </div>
         </div>
 
-        <div id="curriculum-tree-container" class="space-y-4">
-          <!-- Dynamic Curriculum Tree rendered here -->
+        <!-- LỚP 2: CHI TIẾT LỘ TRÌNH CỦA MÔN HỌC ĐƯỢC CHỌN (COURSE DETAIL TREE) -->
+        <div id="curriculum-detail-view" class="hidden space-y-6">
+          <!-- Thanh điều hướng quay lại & Breadcrumb -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--border)] pb-4">
+            <div class="flex items-center gap-2 text-xs">
+              <button onclick="backToCourseList()" class="px-3 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--background)] font-bold text-amber-500 transition cursor-pointer flex items-center gap-1.5">
+                <span>←</span> Danh Sách Môn Học
+              </button>
+              <span class="text-[var(--muted)]">/</span>
+              <span id="curriculum-detail-breadcrumb" class="font-bold text-emerald-400 truncate max-w-xs">Chi tiết môn học</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="btn-detail-add-chapter" onclick="openAddChapterModalForCurrent()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5">
+                <span>+</span> Thêm Chương Mới
+              </button>
+            </div>
+          </div>
+
+          <!-- Header tóm tắt môn học -->
+          <div id="curriculum-detail-header" class="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-3">
+            <!-- Dynamic Course Banner -->
+          </div>
+
+          <!-- Cây Chương và Mốc học của môn này -->
+          <div id="curriculum-detail-chapters" class="space-y-4">
+            <!-- Dynamic Chapters & Checkpoints -->
+          </div>
         </div>
+
       </section>
 
       <!-- TAB 3: QUESTION BANK -->
@@ -738,6 +769,16 @@
     let currentAdminUser = null;
     let allMocOptions = [];
 
+    function escapeHtml(text) {
+      if (!text) return '';
+      return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
     function showToast(msg, isError = false) {
       const toast = document.getElementById('admin-toast');
       const msgEl = document.getElementById('toast-msg');
@@ -886,12 +927,14 @@
       }
     }
 
+    let allCoursesDetails = {};
+    let selectedCourseId = null;
+
     async function loadCurriculumTree() {
       try {
         const courses = await apiFetch('/api/courses');
-        const container = document.getElementById('curriculum-tree-container');
-        container.innerHTML = '';
         allMocOptions = [];
+        allCoursesDetails = {};
 
         // Course select for modals
         const courseSelect = document.getElementById('chapter-course-id');
@@ -901,85 +944,10 @@
 
         for (const c of courses) {
           const detail = await apiFetch(`/api/courses/${c.slug}`);
-          const courseCard = document.createElement('div');
-          courseCard.className = 'p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] space-y-4';
-
-          courseCard.innerHTML = `
-            <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
-              <div>
-                <span class="text-[10px] font-mono font-bold text-amber-500 uppercase tracking-wider">MÔN HỌC</span>
-                <h3 class="text-base font-bold text-emerald-400">${detail.mon_hoc.ten_mon}</h3>
-                <p class="text-xs text-[var(--muted)]">${detail.mon_hoc.mo_ta || ''}</p>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded-lg border border-emerald-500/20">${detail.cac_chuong.length} Chương</span>
-                <button onclick="deleteCourse('${c.ma_mon}')" class="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 text-xs font-bold transition">Xóa Môn</button>
-              </div>
-            </div>
-
-            <div class="space-y-3">
-              ${detail.cac_chuong.map(ch => {
-                ch.cac_moc.forEach(m => allMocOptions.push({ id: m.ma_moc, title: m.tieu_de }));
-                return `
-                  <div class="p-3.5 rounded-xl bg-[var(--background)] border border-[var(--border)] space-y-2">
-                    <div class="flex items-center justify-between">
-                      <span class="font-bold text-xs flex items-center gap-2">
-                        <span class="text-amber-500">📖</span> ${ch.tieu_de}
-                      </span>
-                      <div class="flex items-center gap-2">
-                        <span class="text-[10px] font-mono text-[var(--muted)]">${ch.cac_moc.length} Mốc</span>
-                        <button onclick="openAddCheckpointModal('${ch.ma_chuong}')" class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">+ Mốc</button>
-                        <button onclick="deleteChapter('${ch.ma_chuong}')" class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 text-[10px] font-bold">Xóa Chương</button>
-                      </div>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-4 border-l-2 border-emerald-500/30">
-                      ${ch.cac_moc.map(m => {
-                        const steps = m.tong_so_buoc || 4;
-                        const qPerStep = m.so_cau_moi_buoc || 10;
-                        const reqCount = steps * qPerStep;
-                        const stock = m.so_luong_cau_hoi || 0;
-                        let stockBadge = '';
-                        if (stock >= reqCount) {
-                          stockBadge = `<span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">✅ Kho: ${stock}/${reqCount} (Đủ đề)</span>`;
-                        } else if (stock >= qPerStep) {
-                          stockBadge = `<span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">⚠️ Kho: ${stock}/${reqCount} (Lặp ${reqCount - stock} câu)</span>`;
-                        } else {
-                          stockBadge = `<span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse">🚨 Kho: ${stock}/${reqCount} (Thiếu ${reqCount - stock} câu!)</span>`;
-                        }
-                        return `
-                          <div class="p-3 rounded-xl bg-[var(--card)] border border-[var(--border)] flex flex-col justify-between text-xs group gap-2">
-                            <div class="flex items-start justify-between gap-2">
-                              <div class="min-w-0 pr-1">
-                                <p class="font-bold truncate text-[11px] text-[var(--foreground)]">${m.tieu_de}</p>
-                                <div class="flex items-center gap-1.5 mt-1 flex-wrap">
-                                  <span class="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold ${m.loai_moc === 'THU_THACH_BOSS' ? 'bg-rose-500/20 text-rose-400' : m.loai_moc === 'TRAC_NGHIEM' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}">${m.loai_moc === 'THU_THACH_BOSS' ? '👑 BOSS' : m.loai_moc}</span>
-                                  <span class="text-[9px] px-1.5 py-0.2 rounded font-mono bg-[var(--background)] border border-[var(--border)] text-[var(--muted)]">${steps} Chặng x ${qPerStep} câu</span>
-                                  ${stockBadge}
-                                </div>
-                              </div>
-                              <div class="flex items-center gap-1 shrink-0">
-                                <span class="text-[10px] font-mono text-amber-400 font-bold">+${m.xu_thuong}🪙</span>
-                                <button onclick="deleteCheckpoint('${m.ma_moc}')" title="Xóa mốc" class="text-rose-400 hover:text-rose-300 opacity-60 group-hover:opacity-100 transition p-1 cursor-pointer">✕</button>
-                              </div>
-                            </div>
-                            <div class="flex items-center justify-end gap-1.5 pt-1.5 border-t border-[var(--border)]/50">
-                              <button onclick="openAddQuestionModal('${m.ma_moc}')" class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-[10px] font-bold border border-emerald-500/30 transition cursor-pointer flex items-center gap-1">
-                                <span>+</span> Thêm câu hỏi
-                              </button>
-                              <button onclick="filterQuestionsByMoc('${m.ma_moc}')" class="px-2 py-0.5 rounded bg-[var(--background)] hover:bg-[var(--border)] text-[var(--muted)] text-[10px] font-medium transition cursor-pointer">
-                                Xem đề (${stock})
-                              </button>
-                            </div>
-                          </div>
-                        `;
-                      }).join('')}
-                    </div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          `;
-          container.appendChild(courseCard);
+          allCoursesDetails[c.ma_mon] = { ...c, ...detail };
+          detail.cac_chuong.forEach(ch => {
+            ch.cac_moc.forEach(m => allMocOptions.push({ id: m.ma_moc, title: m.tieu_de }));
+          });
         }
 
         // Update selects for questions
@@ -987,9 +955,230 @@
         const bulkMocSelect = document.getElementById('bulk-import-moc');
         if (qMocSelect) qMocSelect.innerHTML = allMocOptions.map(m => `<option value="${m.id}">${m.title}</option>`).join('');
         if (bulkMocSelect) bulkMocSelect.innerHTML = allMocOptions.map(m => `<option value="${m.id}">${m.title}</option>`).join('');
+
+        if (selectedCourseId && allCoursesDetails[selectedCourseId]) {
+          renderCourseDetail(selectedCourseId);
+        } else {
+          renderCourseCardsList();
+        }
       } catch (err) {
+        console.error('loadCurriculumTree error:', err);
         showToast(err.message, true);
       }
+    }
+
+    function renderCourseCardsList() {
+      selectedCourseId = null;
+      const vCards = document.getElementById('curriculum-courses-view');
+      const vDetail = document.getElementById('curriculum-detail-view');
+      if (vCards) vCards.classList.remove('hidden');
+      if (vDetail) vDetail.classList.add('hidden');
+
+      const grid = document.getElementById('curriculum-courses-grid');
+      if (!grid) return;
+      const coursesList = Object.values(allCoursesDetails);
+
+      if (coursesList.length === 0) {
+        grid.innerHTML = '<div class="col-span-full py-12 text-center text-xs text-[var(--muted)]">Chưa có môn học nào trong hệ thống. Hãy bấm "+ Thêm Môn Học Mới" để bắt đầu!</div>';
+        return;
+      }
+
+      grid.innerHTML = coursesList.map(c => {
+        const detail = c;
+        const chapters = detail.cac_chuong || [];
+        let totalMoc = 0;
+        let totalQuestions = 0;
+        chapters.forEach(ch => {
+          totalMoc += (ch.cac_moc || []).length;
+          (ch.cac_moc || []).forEach(m => {
+            totalQuestions += (m.so_luong_cau_hoi || 0);
+          });
+        });
+
+        return `
+          <div class="p-5 rounded-2xl bg-[var(--card)] border border-[var(--border)] hover:border-amber-500/50 flex flex-col justify-between transition-all duration-200 shadow-sm group hover:shadow-md cursor-pointer" onclick="openCourseDetail('${c.ma_mon}')">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-xl shadow-inner">
+                  📚
+                </div>
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20">
+                  ĐANG DẠY & ĐẤU
+                </span>
+              </div>
+
+              <div>
+                <h3 class="font-bold text-sm text-[var(--foreground)] group-hover:text-amber-500 transition line-clamp-2">
+                  ${detail.mon_hoc.ten_mon}
+                </h3>
+                <p class="text-xs text-[var(--muted)] line-clamp-2 mt-1 leading-relaxed">
+                  ${detail.mon_hoc.mo_ta || 'Giáo trình chuẩn đại học tích hợp đấu trường và vượt ải tri thức.'}
+                </p>
+              </div>
+
+              <div class="flex items-center gap-2 pt-2 border-t border-[var(--border)]/60 text-[11px] font-mono flex-wrap">
+                <span class="px-2 py-0.5 rounded-lg bg-[var(--background)] border border-[var(--border)] text-amber-400 font-bold">
+                  📖 ${chapters.length} Chương
+                </span>
+                <span class="px-2 py-0.5 rounded-lg bg-[var(--background)] border border-[var(--border)] text-emerald-400 font-bold">
+                  🎯 ${totalMoc} Mốc
+                </span>
+                <span class="px-2 py-0.5 rounded-lg bg-[var(--background)] border border-[var(--border)] text-purple-400 font-bold">
+                  📝 ${totalQuestions} Câu hỏi
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-4 mt-3 border-t border-[var(--border)]/60" onclick="event.stopPropagation()">
+              <button onclick="openCourseDetail('${c.ma_mon}')" class="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-slate-950 font-bold text-xs transition cursor-pointer flex items-center gap-1.5">
+                <span>Chi tiết lộ trình</span>
+                <span>→</span>
+              </button>
+              <button onclick="deleteCourse('${c.ma_mon}')" title="Xóa môn học này" class="px-2.5 py-1.5 rounded-xl border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 text-xs font-bold transition cursor-pointer">
+                Xóa Môn
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function openCourseDetail(courseId) {
+      selectedCourseId = courseId;
+      renderCourseDetail(courseId);
+    }
+
+    function backToCourseList() {
+      selectedCourseId = null;
+      renderCourseCardsList();
+    }
+
+    function openAddChapterModalForCurrent() {
+      if (selectedCourseId) {
+        const select = document.getElementById('chapter-course-id');
+        if (select) select.value = selectedCourseId;
+      }
+      openAddChapterModal();
+    }
+
+    function renderCourseDetail(courseId) {
+      const detail = allCoursesDetails[courseId];
+      if (!detail) {
+        renderCourseCardsList();
+        return;
+      }
+
+      const vCards = document.getElementById('curriculum-courses-view');
+      const vDetail = document.getElementById('curriculum-detail-view');
+      if (vCards) vCards.classList.add('hidden');
+      if (vDetail) vDetail.classList.remove('hidden');
+
+      // Breadcrumb
+      const bc = document.getElementById('curriculum-detail-breadcrumb');
+      if (bc) bc.innerText = detail.mon_hoc.ten_mon;
+
+      // Header summary
+      const chapters = detail.cac_chuong || [];
+      let totalMoc = 0;
+      let totalQuestions = 0;
+      chapters.forEach(ch => {
+        totalMoc += (ch.cac_moc || []).length;
+        (ch.cac_moc || []).forEach(m => {
+          totalQuestions += (m.so_luong_cau_hoi || 0);
+        });
+      });
+
+      const header = document.getElementById('curriculum-detail-header');
+      if (header) {
+        header.innerHTML = `
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <span class="text-[10px] font-mono font-bold text-amber-500 uppercase tracking-wider">CHI TIẾT LỘ TRÌNH MÔN HỌC</span>
+              <h3 class="text-lg font-bold text-emerald-400">${detail.mon_hoc.ten_mon}</h3>
+              <p class="text-xs text-[var(--muted)] mt-1">${detail.mon_hoc.mo_ta || ''}</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs font-mono font-bold bg-amber-500/10 text-amber-400 px-2.5 py-1 rounded-lg border border-amber-500/20">${chapters.length} Chương</span>
+              <span class="text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 px-2.5 py-1 rounded-lg border border-emerald-500/20">${totalMoc} Mốc học</span>
+              <span class="text-xs font-mono font-bold bg-purple-500/10 text-purple-400 px-2.5 py-1 rounded-lg border border-purple-500/20">${totalQuestions} Câu hỏi</span>
+              <button onclick="deleteCourse('${detail.mon_hoc.ma_mon}')" class="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 text-xs font-bold transition">Xóa Môn</button>
+            </div>
+          </div>
+        `;
+      }
+
+      // Chapters container
+      const container = document.getElementById('curriculum-detail-chapters');
+      if (!container) return;
+
+      if (chapters.length === 0) {
+        container.innerHTML = '<div class="p-8 text-center text-xs text-[var(--muted)] bg-[var(--card)] rounded-2xl border border-[var(--border)]">Môn học này chưa có chương nào. Hãy bấm "+ Thêm Chương Mới" ở trên để bắt đầu tạo giáo trình!</div>';
+        return;
+      }
+
+      container.innerHTML = chapters.map(ch => {
+        return `
+          <div class="p-4 rounded-xl bg-[var(--card)] border border-[var(--border)] space-y-3 shadow-xs">
+            <div class="flex items-center justify-between border-b border-[var(--border)]/60 pb-2.5">
+              <span class="font-bold text-xs sm:text-sm flex items-center gap-2 text-[var(--foreground)]">
+                <span class="text-amber-500 text-base">📖</span> ${ch.tieu_de}
+              </span>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-mono text-[var(--muted)]">${ch.cac_moc.length} Mốc</span>
+                <button onclick="openAddCheckpointModal('${ch.ma_chuong}')" class="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 text-[10px] font-bold transition cursor-pointer flex items-center gap-1">
+                  <span>+</span> Thêm Mốc
+                </button>
+                <button onclick="deleteChapter('${ch.ma_chuong}')" class="px-2 py-1 rounded-lg bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 text-[10px] font-bold transition cursor-pointer">
+                  Xóa Chương
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pl-3 border-l-2 border-emerald-500/30">
+              ${ch.cac_moc.map(m => {
+                const steps = m.tong_so_buoc || 4;
+                const qPerStep = m.so_cau_moi_buoc || 10;
+                const reqCount = steps * qPerStep;
+                const stock = m.so_luong_cau_hoi || 0;
+                let stockBadge = '';
+                if (stock >= reqCount) {
+                  stockBadge = `<span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">✅ Kho: ${stock}/${reqCount} (Đủ đề)</span>`;
+                } else if (stock >= qPerStep) {
+                  stockBadge = `<span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">⚠️ Kho: ${stock}/${reqCount} (Lặp ${reqCount - stock} câu)</span>`;
+                } else {
+                  stockBadge = `<span class="text-[9px] px-1.5 py-0.5 rounded font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse">🚨 Kho: ${stock}/${reqCount} (Thiếu ${reqCount - stock} câu!)</span>`;
+                }
+                return `
+                  <div class="p-3 rounded-xl bg-[var(--background)] border border-[var(--border)] flex flex-col justify-between text-xs group gap-2 hover:border-amber-500/40 transition">
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="min-w-0 pr-1">
+                        <p class="font-bold truncate text-[11px] text-[var(--foreground)]">${m.tieu_de}</p>
+                        <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <span class="text-[9px] px-1.5 py-0.2 rounded font-mono font-bold ${m.loai_moc === 'THU_THACH_BOSS' ? 'bg-rose-500/20 text-rose-400' : m.loai_moc === 'TRAC_NGHIEM' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}">${m.loai_moc === 'THU_THACH_BOSS' ? '👑 BOSS' : m.loai_moc}</span>
+                          <span class="text-[9px] px-1.5 py-0.2 rounded font-mono bg-[var(--card)] border border-[var(--border)] text-[var(--muted)]">${steps} Chặng x ${qPerStep} câu</span>
+                          ${stockBadge}
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-1 shrink-0">
+                        <span class="text-[10px] font-mono text-amber-400 font-bold">+${m.xu_thuong}🪙</span>
+                        <button onclick="deleteCheckpoint('${m.ma_moc}')" title="Xóa mốc" class="text-rose-400 hover:text-rose-300 opacity-60 group-hover:opacity-100 transition p-1 cursor-pointer">✕</button>
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-end gap-1.5 pt-1.5 border-t border-[var(--border)]/50">
+                      <button onclick="openAddQuestionModal('${m.ma_moc}')" class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-[10px] font-bold border border-emerald-500/30 transition cursor-pointer flex items-center gap-1">
+                        <span>+</span> Thêm câu hỏi
+                      </button>
+                      <button onclick="filterQuestionsByMoc('${m.ma_moc}')" class="px-2 py-0.5 rounded bg-[var(--card)] hover:bg-amber-500/20 hover:text-amber-400 text-[var(--muted)] text-[10px] font-medium border border-[var(--border)] transition cursor-pointer">
+                        Xem đề (${stock})
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
     async function deleteCourse(id) {
@@ -1131,13 +1320,15 @@
       }
     }
 
-    function filterQuestionsByMoc(mocId) {
-      showPanel('questions');
+    async function filterQuestionsByMoc(mocId) {
+      switchTab('questions');
+      await loadQuestions();
       const filterMoc = document.getElementById('filter-q-moc');
       if (filterMoc) {
         filterMoc.value = mocId;
         applyQuestionFilters();
       }
+      showToast('🔍 Đang xem đề và danh sách câu hỏi của mốc đã chọn!');
     }
 
     function applyQuestionFilters() {
