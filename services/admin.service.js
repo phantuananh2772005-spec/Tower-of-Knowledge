@@ -338,6 +338,7 @@ async function hydrateQuestionDetails(detailsList) {
       dap_an_dung_text: correctText || (correctIdx !== null ? `Đáp án ${['A','B','C','D'][correctIdx]}` : '--'),
       thoi_gian_giay: item.thoi_gian_giay !== undefined ? Number(item.thoi_gian_giay) : 5,
       so_lan_tra_cuu: item.so_lan_tra_cuu !== undefined ? Number(item.so_lan_tra_cuu) : 0,
+      nhat_ky_tra_cuu: item.nhat_ky_tra_cuu || [],
       giai_thich: item.giai_thich || (qInfo ? qInfo.giai_thich : '')
     };
   });
@@ -633,6 +634,8 @@ async function getLearnerDeepTelemetry(userId) {
         ti_le_sai: errorRate,
         thoi_gian_tb: mem.thoi_gian_tb || 0,
         tong_so_lan_tra_cuu: mem.tong_so_lan_tra_cuu || 0,
+        lan_tra_cuu_cuoi: mem.lan_tra_cuu_cuoi || null,
+        lich_su_tra_cuu: mem.lich_su_tra_cuu || [],
         trong_so: mem.trong_so || 1.0,
         streak: mem.streak || 0,
         lan_lam_cuoi: mem.lan_lam_cuoi

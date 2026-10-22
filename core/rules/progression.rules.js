@@ -114,6 +114,7 @@ function evaluateQuizSubmission(submittedAnswers, officialQuestions, passScore =
       dap_an_dung_text: correctText,
       thoi_gian_giay: userSubmission && userSubmission.thoi_gian_giay !== undefined ? Number(userSubmission.thoi_gian_giay) : 5,
       so_lan_tra_cuu: userSubmission && userSubmission.so_lan_tra_cuu !== undefined ? Number(userSubmission.so_lan_tra_cuu) : 0,
+      nhat_ky_tra_cuu: (userSubmission && Array.isArray(userSubmission.nhat_ky_tra_cuu)) ? userSubmission.nhat_ky_tra_cuu : [],
       giai_thich: q.giai_thich || ''
     });
   }

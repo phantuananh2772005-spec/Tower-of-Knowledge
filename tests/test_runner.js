@@ -178,17 +178,19 @@ async function main() {
   // ================= 4. COMBAT RULES =================
   console.log('\n--- 4. Arena 1v1 Combat Rules ---');
   runTest('combat: calculates damage with speed-critical bonus', () => {
-    // Fast response under 5s triggers critical bonus (+5 = 30)
+    // Fast response under 5s triggers critical bonus (12 + 3 = 15)
     const fastHitDamage = combatRules.calculateDamage(true, 2.0, 10);
-    assert.strictEqual(fastHitDamage, 30);
+    assert.strictEqual(fastHitDamage.damage, 15);
+    assert.strictEqual(fastHitDamage.isCritical, true);
 
-    // Normal response (> 5s) does 25 damage
+    // Normal response (> 5s) does 12 damage
     const normalHitDamage = combatRules.calculateDamage(true, 7.0, 10);
-    assert.strictEqual(normalHitDamage, 25);
+    assert.strictEqual(normalHitDamage.damage, 12);
+    assert.strictEqual(normalHitDamage.isCritical, false);
 
     // Wrong answer always does 0 damage
     const missDamage = combatRules.calculateDamage(false, 1.5, 10);
-    assert.strictEqual(missDamage, 0);
+    assert.strictEqual(missDamage.damage, 0);
   });
 
   runTest('combat: applies damage and clamps HP to 0', () => {

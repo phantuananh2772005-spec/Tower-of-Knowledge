@@ -692,7 +692,8 @@ async function saveAbandonedStep(ma_moc, buocNumber, submissions, ma_nguoi_dung)
     cau_tra_loi: s.cau_tra_loi !== undefined ? s.cau_tra_loi : s.tra_loi,
     la_dung: Boolean(s.isCorrect !== undefined ? s.isCorrect : s.la_dung),
     thoi_gian_giay: Math.max(0.5, Number(s.thoi_gian_giay) || 5.0),
-    so_lan_tra_cuu: Math.max(0, parseInt(s.so_lan_tra_cuu, 10) || 0)
+    so_lan_tra_cuu: Math.max(0, parseInt(s.so_lan_tra_cuu, 10) || 0),
+    nhat_ky_tra_cuu: Array.isArray(s.nhat_ky_tra_cuu) ? s.nhat_ky_tra_cuu : []
   }));
 
   const telemetry = aggregateSessionTelemetry(attempts);

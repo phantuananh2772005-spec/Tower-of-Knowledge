@@ -30,6 +30,17 @@ function calculateQuestionWeight(currentMemory, attempt) {
   mem.tong_so_lan_tra_cuu += lookups;
   mem.lan_lam_cuoi = new Date().toISOString();
 
+  // Lưu chi tiết các mốc thời gian tra cứu lý thuyết gắn với câu hỏi này
+  if (attempt.nhat_ky_tra_cuu && Array.isArray(attempt.nhat_ky_tra_cuu) && attempt.nhat_ky_tra_cuu.length > 0) {
+    mem.lich_su_tra_cuu = mem.lich_su_tra_cuu || [];
+    mem.lich_su_tra_cuu.push(...attempt.nhat_ky_tra_cuu);
+    if (mem.lich_su_tra_cuu.length > 10) {
+      mem.lich_su_tra_cuu = mem.lich_su_tra_cuu.slice(-10);
+    }
+    const lastLookup = attempt.nhat_ky_tra_cuu[attempt.nhat_ky_tra_cuu.length - 1];
+    mem.lan_tra_cuu_cuoi = lastLookup.thoi_diem;
+  }
+
   // Moving average response time
   mem.thoi_gian_tb = Math.round(((mem.thoi_gian_tb * (mem.so_lan_lam - 1) + timeSec) / mem.so_lan_lam) * 10) / 10;
 

@@ -5765,6 +5765,7 @@
       // Chỉ tính tra cứu bài giảng khi người học bấm nút tra cứu từ câu hỏi
       currentMocSession.currentQuestionLookups = (currentMocSession.currentQuestionLookups || 0) + 1;
       currentMocSession.isReturningFromTheoryHint = true;
+      currentMocSession.theoryLookupStartTime = Date.now();
       currentMocSession.phase = 'THEORY_CARDS';
       currentMocSession.cardIndex = 0;
       renderMocLearningScreen();
@@ -5786,10 +5787,23 @@
       if (!s.submissions) s.submissions = [];
 
       // Đo thời gian và số lần tra cứu theo từng câu hỏi:
-      // Nếu vừa xem lại lý thuyết quay lại, giữ nguyên số lần tra cứu của câu này
       if (!s.isReturningFromTheoryHint) {
         s.currentQuestionStartTime = Date.now();
         s.currentQuestionLookups = 0;
+        s.currentQuestionLookupEvents = [];
+      } else {
+        // Vừa xem lại thẻ lý thuyết quay về: ghi nhận sự kiện tra cứu
+        const lookupStart = s.theoryLookupStartTime || Date.now();
+        const durationSec = Math.max(1, Math.round((Date.now() - lookupStart) / 1000));
+        const event = {
+          ma_cau_hoi: q.ma_cau_hoi,
+          thoi_diem: new Date(lookupStart).toISOString(),
+          thoi_luong_giay: durationSec,
+          ngu_canh: 'TRUOC_KHI_CHON',
+          moc_giay_trong_cau: Math.max(0, Math.round((lookupStart - (s.currentQuestionStartTime || lookupStart)) / 1000))
+        };
+        s.currentQuestionLookupEvents = s.currentQuestionLookupEvents || [];
+        s.currentQuestionLookupEvents.push(event);
       }
       s.isReturningFromTheoryHint = false;
 
@@ -5885,7 +5899,8 @@
             lua_chon: s.dienTuChosen,
             la_dung: isCorrect,
             thoi_gian_giay: timeSpentSec,
-            so_lan_tra_cuu: lookupsCount
+            so_lan_tra_cuu: lookupsCount,
+            nhat_ky_tra_cuu: [...(s.currentQuestionLookupEvents || [])]
           };
           if (!s.submissions) s.submissions = [];
           s.submissions.push(s.currentAnswer);
@@ -5950,7 +5965,8 @@
             lua_chon: userOrder.join(' '),
             la_dung: isCorrect,
             thoi_gian_giay: timeSpentSec,
-            so_lan_tra_cuu: lookupsCount
+            so_lan_tra_cuu: lookupsCount,
+            nhat_ky_tra_cuu: [...(s.currentQuestionLookupEvents || [])]
           };
           if (!s.submissions) s.submissions = [];
           s.submissions.push(s.currentAnswer);
@@ -6351,6 +6367,7 @@
       currentQuizSession.arrangedTokens = [];
       currentQuizSession.currentQuestionStartTime = Date.now();
       currentQuizSession.currentQuestionLookups = 0;
+      currentQuizSession.currentQuestionLookupEvents = [];
 
       const q = questions[qIndex];
       const totalSteps = currentCheckpointMoc?.tong_so_buoc || 4;
@@ -6461,7 +6478,8 @@
         lua_chon: idx,
         la_dung: isCorrect,
         thoi_gian_giay: timeSpentSec,
-        so_lan_tra_cuu: lookupsCount
+        so_lan_tra_cuu: lookupsCount,
+        nhat_ky_tra_cuu: [...(s.currentQuestionLookupEvents || [])]
       };
       if (s.submissions) {
         s.submissions.push(s.currentAnswer);
@@ -6722,7 +6740,8 @@
                 lua_chon: `${ms.matchedPairs.length} cặp`,
                 la_dung: true,
                 thoi_gian_giay: timeSpentSec,
-                so_lan_tra_cuu: lookupsCount
+                so_lan_tra_cuu: lookupsCount,
+                nhat_ky_tra_cuu: [...(s.currentQuestionLookupEvents || [])]
               };
 
               if (s.failedQuestionsSet && !s.failedQuestionsSet.has(q.ma_cau_hoi)) {
@@ -7043,10 +7062,14 @@
       closePlay();
     }
 
+    let currentTheoryLookupOpenedAt = null;
+
     function viewCurrentTheoryFromQuiz() {
-      if (!currentQuizSession) return;
-      currentQuizSession.currentQuestionLookups = (currentQuizSession.currentQuestionLookups || 0) + 1;
-      openTheoryModal(currentQuizSession.mocId);
+      const s = currentQuizSession || currentMocSession;
+      if (!s) return;
+      s.currentQuestionLookups = (s.currentQuestionLookups || 0) + 1;
+      currentTheoryLookupOpenedAt = Date.now();
+      openTheoryModal(s.mocId || (currentCheckpointMoc ? currentCheckpointMoc.ma_moc : ''));
     }
 
     // --- 3. Theory Modal Controller ---
@@ -7109,6 +7132,37 @@
     function closeTheoryModal() {
       const modal = document.getElementById('modal-theory');
       if (modal) modal.classList.add('hidden');
+
+      if (currentTheoryLookupOpenedAt) {
+        const s = currentQuizSession || currentMocSession;
+        if (s) {
+          const currentQ = (s.questionsQueue && s.questionsQueue[0]) || (s.questions && s.questions[s.qIndex || 0]);
+          if (currentQ) {
+            const durationSec = Math.max(1, Math.round((Date.now() - currentTheoryLookupOpenedAt) / 1000));
+            const isChecked = Boolean(s.isAnswerChecked || s.isCurrentQuestionChecked);
+            const event = {
+              ma_cau_hoi: currentQ.ma_cau_hoi,
+              thoi_diem: new Date(currentTheoryLookupOpenedAt).toISOString(),
+              thoi_luong_giay: durationSec,
+              ngu_canh: isChecked ? 'SAU_KHI_TRA_LOI' : 'TRUOC_KHI_CHON',
+              moc_giay_trong_cau: Math.max(0, Math.round((currentTheoryLookupOpenedAt - (s.currentQuestionStartTime || currentTheoryLookupOpenedAt)) / 1000))
+            };
+            s.currentQuestionLookupEvents = s.currentQuestionLookupEvents || [];
+            s.currentQuestionLookupEvents.push(event);
+
+            // Nếu câu này đã được submit vào mảng submissions rồi (người học xem sau khi trả lời):
+            if (s.submissions && s.submissions.length > 0) {
+              const lastSub = s.submissions[s.submissions.length - 1];
+              if (lastSub && lastSub.ma_cau_hoi === currentQ.ma_cau_hoi) {
+                lastSub.nhat_ky_tra_cuu = lastSub.nhat_ky_tra_cuu || [];
+                lastSub.nhat_ky_tra_cuu.push(event);
+                lastSub.so_lan_tra_cuu = (lastSub.so_lan_tra_cuu || 0) + 1;
+              }
+            }
+          }
+        }
+        currentTheoryLookupOpenedAt = null;
+      }
       currentTheoryMoc = null;
     }
 
