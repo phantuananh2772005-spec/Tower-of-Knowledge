@@ -673,6 +673,86 @@ async function submitStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
 }
 
 /**
+ * Save partial step session when learner quits learning midway.
+ * Persists answered questions, lookup telemetry, real-time seconds, and updates adaptive spaced memory.
+ */
+async function saveAbandonedStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
+  if (!submissions || !Array.isArray(submissions) || submissions.length === 0) {
+    return { saved: false, message: 'Không có câu hỏi nào để lưu.' };
+  }
+
+  const checkpoint = await db.queryOne('SELECT * FROM moc_bai_hoc WHERE ma_moc = $1', [ma_moc]);
+  if (!checkpoint) throw new Error('Không tìm thấy mốc bài học.');
+
+  const step = Math.max(1, parseInt(buocNumber || 1, 10));
+
+  // Sanitize attempts
+  const attempts = submissions.map(s => ({
+    ma_cau_hoi: s.ma_cau_hoi,
+    cau_tra_loi: s.cau_tra_loi !== undefined ? s.cau_tra_loi : s.tra_loi,
+    la_dung: Boolean(s.isCorrect !== undefined ? s.isCorrect : s.la_dung),
+    thoi_gian_giay: Math.max(0.5, Number(s.thoi_gian_giay) || 5.0),
+    so_lan_tra_cuu: Math.max(0, parseInt(s.so_lan_tra_cuu, 10) || 0)
+  }));
+
+  const telemetry = aggregateSessionTelemetry(attempts);
+
+  if (ma_nguoi_dung) {
+    // 1. Update memory weights in user's checkpoint progress
+    const userProg = await db.queryOne(
+      'SELECT du_lieu_tri_nho FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2',
+      [ma_nguoi_dung, ma_moc]
+    );
+
+    let memoryMap = {};
+    if (userProg && userProg.du_lieu_tri_nho) {
+      try {
+        memoryMap = typeof userProg.du_lieu_tri_nho === 'string' ? JSON.parse(userProg.du_lieu_tri_nho) : userProg.du_lieu_tri_nho;
+      } catch (e) {
+        memoryMap = {};
+      }
+    }
+
+    for (const att of attempts) {
+      if (att && att.ma_cau_hoi) {
+        memoryMap[att.ma_cau_hoi] = calculateQuestionWeight(memoryMap[att.ma_cau_hoi], att);
+      }
+    }
+    const updatedMemoryJson = JSON.stringify(memoryMap);
+
+    await db.execute(`
+      UPDATE tien_do_moc_bai_hoc
+      SET du_lieu_tri_nho = $1
+      WHERE ma_nguoi_dung = $2 AND ma_moc = $3
+    `, [updatedMemoryJson, ma_nguoi_dung, ma_moc]);
+
+    // 2. Save record into lich_su_phien_hoc with loai_phien = 'DUOLINGO_STEP_PARTIAL'
+    const ma_phien = `sess_part_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    try {
+      await db.execute(`
+        INSERT INTO lich_su_phien_hoc (
+          ma_phien, ma_nguoi_dung, ma_moc, loai_phien, buoc_so,
+          thoi_gian_tong_giay, ti_le_dung, toc_do_trung_binh_giay, tong_so_lan_tra_cuu,
+          chi_tiet_cau_hoi
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `, [
+        ma_phien, ma_nguoi_dung, ma_moc, 'DUOLINGO_STEP_PARTIAL', step,
+        telemetry.thoi_gian_tong_giay, telemetry.ti_le_dung, telemetry.toc_do_trung_binh_giay, telemetry.tong_so_lan_tra_cuu,
+        JSON.stringify(attempts)
+      ]);
+    } catch (errLog) {
+      console.warn('⚠️ Partial telemetry log error:', errLog.message);
+    }
+  }
+
+  return {
+    saved: true,
+    savedQuestionsCount: attempts.length,
+    telemetry
+  };
+}
+
+/**
  * Complete a theoretical checkpoint
  */
 async function completeTheoreticalCheckpoint(ma_moc, ma_nguoi_dung) {
@@ -940,6 +1020,7 @@ module.exports = {
   completeTheoreticalCheckpoint,
   submitQuizCheckpoint,
   submitStep,
+  saveAbandonedStep,
   checkSingleQuestion,
   ensureCourseInitialized
 };

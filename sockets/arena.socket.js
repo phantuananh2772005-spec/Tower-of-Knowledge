@@ -13,6 +13,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'tower_of_knowledge_ultra_secure_jw
 const matchmakingQueue = [];
 // Active bot timers mapped by matchId
 const botTimers = new Map();
+// Active ongoing matches mapped by userId and socketId for disconnect protection
+const userActiveMatchMap = new Map();
+const socketActiveMatchMap = new Map();
 
 /**
  * Dynamic Adaptive Bot Formula
@@ -105,6 +108,11 @@ function initArenaSocket(io) {
           const matchState = await arenaService.createMatch(userId, opponent.userId, ma_mon);
           const roomName = `room_${matchState.ma_tran}`;
 
+          userActiveMatchMap.set(userId, matchState.ma_tran);
+          socketActiveMatchMap.set(socket.id, matchState.ma_tran);
+          userActiveMatchMap.set(opponent.userId, matchState.ma_tran);
+          if (opponent.socket) socketActiveMatchMap.set(opponent.socket.id, matchState.ma_tran);
+
           socket.join(roomName);
           opponent.socket.join(roomName);
 
@@ -146,6 +154,8 @@ function initArenaSocket(io) {
 
               const matchState = await arenaService.createMatch(userId, chosenBotId, ma_mon);
               const roomName = `room_${matchState.ma_tran}`;
+              userActiveMatchMap.set(userId, matchState.ma_tran);
+              socketActiveMatchMap.set(socket.id, matchState.ma_tran);
               socket.join(roomName);
 
               socket.emit('match_found', {
@@ -182,6 +192,8 @@ function initArenaSocket(io) {
       if (!ma_tran) return;
       try {
         const roomName = `room_${ma_tran}`;
+        userActiveMatchMap.delete(userId);
+        socketActiveMatchMap.delete(socket.id);
         const finalState = await arenaService.surrenderMatch(ma_tran, userId);
         clearBotTimer(ma_tran);
         io.to(roomName).emit('match_ended', {
@@ -200,6 +212,8 @@ function initArenaSocket(io) {
     socket.on('join_match_room', ({ ma_tran }) => {
       if (ma_tran) {
         const roomName = `room_${ma_tran}`;
+        userActiveMatchMap.set(userId, ma_tran);
+        socketActiveMatchMap.set(socket.id, ma_tran);
         socket.join(roomName);
         console.log(`[SOCKET] User ${userId} (socket ${socket.id}) joined ${roomName}. Rooms of this socket:`, Array.from(socket.rooms));
       }
@@ -242,6 +256,8 @@ function initArenaSocket(io) {
 
         if (turnResult.tran_ket_thuc) {
           clearBotTimer(ma_tran);
+          userActiveMatchMap.delete(userId);
+          socketActiveMatchMap.delete(socket.id);
           io.to(roomName).emit('match_ended', {
             ma_tran,
             nguoi_thang_cuoc: turnResult.trang_thai_tran.nguoi_thang_cuoc,
@@ -255,12 +271,38 @@ function initArenaSocket(io) {
       }
     });
 
-    socket.on('disconnect', (reason) => {
+    socket.on('disconnect', async (reason) => {
       console.log(`[SOCKET] Disconnect: socket ${socket.id}, user ${userId}, reason: ${reason}`);
       const idx = matchmakingQueue.findIndex(q => q.userId === userId);
       if (idx !== -1) {
         if (matchmakingQueue[idx].timer) clearTimeout(matchmakingQueue[idx].timer);
         matchmakingQueue.splice(idx, 1);
+      }
+
+      // Check if user was in an ongoing 1v1 match
+      const activeMatchId = socketActiveMatchMap.get(socket.id) || userActiveMatchMap.get(userId);
+      if (activeMatchId) {
+        socketActiveMatchMap.delete(socket.id);
+        userActiveMatchMap.delete(userId);
+        try {
+          const match = await arenaService.getMatchState(activeMatchId);
+          if (match && match.trang_thai === 'DANG_DIEN_RA') {
+            console.log(`[SOCKET] User ${userId} disconnected mid-battle ${activeMatchId}. Auto-forfeiting match!`);
+            const finalState = await arenaService.surrenderMatch(activeMatchId, userId);
+            clearBotTimer(activeMatchId);
+            const roomName = `room_${activeMatchId}`;
+            io.to(roomName).emit('match_ended', {
+              ma_tran: activeMatchId,
+              nguoi_thang_cuoc: finalState.nguoi_thang_cuoc,
+              ly_do_ket_thuc: 'DAU_HANG',
+              mo_ta: 'Đối thủ đã ngắt kết nối hoặc rời trận đấu. Bạn được xử THẮNG!',
+              trang_thai_cuoi: finalState
+            });
+            io.emit('leaderboard_updated', { timestamp: Date.now(), ma_tran: activeMatchId });
+          }
+        } catch (disErr) {
+          console.warn('[SOCKET] Auto-surrender on disconnect error:', disErr.message);
+        }
       }
     });
   });

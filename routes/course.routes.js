@@ -80,6 +80,20 @@ router.post('/checkpoints/:id/submit-step', authenticate, async (req, res) => {
   }
 });
 
+// 7b. Save partial/abandoned step session when learner quits midway
+router.post('/checkpoints/:id/abandon-step', authenticate, async (req, res) => {
+  try {
+    const { buoc, cau_tra_loi } = req.body;
+    if (!cau_tra_loi || !Array.isArray(cau_tra_loi) || cau_tra_loi.length === 0) {
+      return res.apiError('Danh sách câu trả lời trống.', 'INVALID_SUBMISSION', 400);
+    }
+    const result = await courseService.saveAbandonedStep(req.params.id, buoc, cau_tra_loi, req.user.ma_nguoi_dung);
+    return res.apiSuccess(result);
+  } catch (err) {
+    return res.apiError(err.message, 'ABANDON_STEP_FAILED', 400);
+  }
+});
+
 // 8. Submit checkpoint (completes checkpoint, unlocks next node, awards EXP and coins)
 router.post('/checkpoints/:id/submit', authenticate, async (req, res) => {
   try {

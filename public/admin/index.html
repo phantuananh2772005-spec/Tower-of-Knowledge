@@ -2427,7 +2427,7 @@
         if (recentTbody) {
           recentTbody.innerHTML = (feed.recent_activities || []).map(a => {
             const accClass = a.ti_le_dung >= 80 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : a.ti_le_dung >= 50 ? 'text-amber-400 bg-amber-500/10 border-amber-500/30' : 'text-rose-400 bg-rose-500/10 border-rose-500/30';
-            const sessionBadge = a.loai_phien === 'DUOLINGO_STEP' ? '📘 Chặng Học' : a.loai_phien === 'THU_THACH_BOSS' ? '⚔️ Boss' : '🎯 Mốc Học';
+            const sessionBadge = a.loai_phien === 'DUOLINGO_STEP' ? '📘 Chặng Học' : a.loai_phien === 'DUOLINGO_STEP_PARTIAL' ? '⏸️ Tạm Dừng (Lưu Dở)' : a.loai_phien === 'THU_THACH_BOSS' ? '⚔️ Boss' : '🎯 Mốc Học';
             const dateStr = a.tao_luc ? new Date(a.tao_luc).toLocaleString('vi-VN') : '--';
 
             return `
@@ -2704,6 +2704,7 @@
                         <span class="font-bold text-xs text-[var(--foreground)] truncate">
                           Chặng ${s.buoc_so || 1} • ${escapeHtml(s.ten_moc)}
                         </span>
+                        ${s.loai_phien === 'DUOLINGO_STEP_PARTIAL' ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40 font-mono">⏸️ Tạm Dừng (Lưu Dở)</span>' : ''}
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${accClass}">
                           ${s.ti_le_dung}% (${s.so_cau_dung}/${s.tong_so_cau} đúng)
                         </span>
