@@ -108,11 +108,21 @@ function initArenaSocket(io) {
           socket.join(roomName);
           opponent.socket.join(roomName);
 
-          io.to(roomName).emit('match_found', {
+          socket.emit('match_found', {
             ma_tran: matchState.ma_tran,
             nguoi_choi: matchState.nguoi_choi,
             thoi_gian_bat_dau_sau_giay: 2.2,
             doi_thu_la_bot: false,
+            my_user_id: userId,
+            matchState
+          });
+
+          opponent.socket.emit('match_found', {
+            ma_tran: matchState.ma_tran,
+            nguoi_choi: matchState.nguoi_choi,
+            thoi_gian_bat_dau_sau_giay: 2.2,
+            doi_thu_la_bot: false,
+            my_user_id: opponent.userId,
             matchState
           });
         } catch (err) {
@@ -143,6 +153,7 @@ function initArenaSocket(io) {
                 nguoi_choi: matchState.nguoi_choi,
                 thoi_gian_bat_dau_sau_giay: 2.2,
                 doi_thu_la_bot: true,
+                my_user_id: userId,
                 matchState
               });
 
@@ -179,6 +190,7 @@ function initArenaSocket(io) {
           ly_do_ket_thuc: 'DAU_HANG',
           trang_thai_cuoi: finalState
         });
+        io.emit('leaderboard_updated', { timestamp: Date.now(), ma_tran });
       } catch (err) {
         socket.emit('error_msg', err.message);
       }
@@ -187,13 +199,17 @@ function initArenaSocket(io) {
     // Join Match Room
     socket.on('join_match_room', ({ ma_tran }) => {
       if (ma_tran) {
-        socket.join(`room_${ma_tran}`);
+        const roomName = `room_${ma_tran}`;
+        socket.join(roomName);
+        console.log(`[SOCKET] User ${userId} (socket ${socket.id}) joined ${roomName}. Rooms of this socket:`, Array.from(socket.rooms));
       }
     });
 
     // Submit Turn Answer
     socket.on('submit_answer', async (payload) => {
       const { ma_tran, thu_tu_cau, vi_tri_dap_an_chon, cau_tra_loi, thoi_gian_giay } = payload;
+      console.log(`[SOCKET] submit_answer from ${userId} (socket ${socket.id}) in match ${ma_tran}, round ${thu_tu_cau}`);
+      console.log(`[SOCKET] Socket current rooms:`, Array.from(socket.rooms));
       try {
         const turnResult = await arenaService.submitTurnAnswer({
           ma_tran,
@@ -205,6 +221,9 @@ function initArenaSocket(io) {
         });
 
         const roomName = `room_${ma_tran}`;
+        const roomClients = await io.in(roomName).allSockets();
+        console.log(`[SOCKET] Turn success! Damage: ${turnResult.sat_thuong_gay_ra}. Broadcasting turn_resolved to ${roomName} (allSockets in room:`, Array.from(roomClients), `)`);
+
         // Broadcast turn outcome and HP updates to room
         io.to(roomName).emit('turn_resolved', {
           nguoi_tra_loi: userId,
@@ -229,13 +248,15 @@ function initArenaSocket(io) {
             ly_do_ket_thuc: turnResult.trang_thai_tran.ly_do_ket_thuc,
             trang_thai_cuoi: turnResult.trang_thai_tran
           });
+          io.emit('leaderboard_updated', { timestamp: Date.now(), ma_tran });
         }
       } catch (err) {
         socket.emit('error_msg', err.message);
       }
     });
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', (reason) => {
+      console.log(`[SOCKET] Disconnect: socket ${socket.id}, user ${userId}, reason: ${reason}`);
       const idx = matchmakingQueue.findIndex(q => q.userId === userId);
       if (idx !== -1) {
         if (matchmakingQueue[idx].timer) clearTimeout(matchmakingQueue[idx].timer);
@@ -346,6 +367,7 @@ function setupSmartBotTurns(io, roomName, matchId, humanUserId, botUserId) {
               ly_do_ket_thuc: turnResult.trang_thai_tran.ly_do_ket_thuc,
               trang_thai_cuoi: turnResult.trang_thai_tran
             });
+            io.emit('leaderboard_updated', { timestamp: Date.now(), ma_tran: matchId });
           } else {
             currentQuestion++;
             scheduleNextBotTurn();

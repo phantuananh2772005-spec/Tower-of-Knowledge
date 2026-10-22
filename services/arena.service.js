@@ -253,35 +253,45 @@ async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap
   let isCorrect = false;
 
   if (type === 'NOI_CAP') {
-    if (cau_tra_loi && (cau_tra_loi.da_hoan_thanh || cau_tra_loi === true)) {
+    if (cau_tra_loi && (cau_tra_loi.da_hoan_thanh || cau_tra_loi.isCorrect || cau_tra_loi === true)) {
       isCorrect = true;
     } else if (vi_tri_dap_an_chon === 1 || vi_tri_dap_an_chon === '1' || vi_tri_dap_an_chon === true) {
       isCorrect = true;
     }
   } else if (type === 'DIEN_TU') {
-    const correctWord = (parsed?.tu_dung || parsed?.blank_answer || '').trim().toLowerCase();
-    const chosenWord = (typeof cau_tra_loi === 'string' ? cau_tra_loi : (cau_tra_loi?.tu_chon || '')).trim().toLowerCase();
-    const optionsList = parsed?.cac_tu_lua_chon || parsed?.options || [];
-    if (chosenWord && correctWord && chosenWord === correctWord) {
+    if (cau_tra_loi && (cau_tra_loi.isCorrect || cau_tra_loi.da_hoan_thanh || cau_tra_loi === true)) {
       isCorrect = true;
-    } else if (typeof vi_tri_dap_an_chon === 'number' && optionsList[vi_tri_dap_an_chon]) {
-      isCorrect = (optionsList[vi_tri_dap_an_chon]?.trim().toLowerCase() === correctWord);
-    } else if (vi_tri_dap_an_chon === 1 || vi_tri_dap_an_chon === true) {
-      isCorrect = true;
+    } else {
+      const correctWord = (parsed?.tu_dung || parsed?.blank_answer || '').trim().toLowerCase();
+      const chosenWord = (typeof cau_tra_loi === 'string' ? cau_tra_loi : (cau_tra_loi?.tu_chon || '')).trim().toLowerCase();
+      const optionsList = parsed?.cac_tu_lua_chon || parsed?.options || [];
+      if (chosenWord && correctWord && chosenWord === correctWord) {
+        isCorrect = true;
+      } else if (typeof vi_tri_dap_an_chon === 'number' && optionsList[vi_tri_dap_an_chon]) {
+        isCorrect = (optionsList[vi_tri_dap_an_chon]?.trim().toLowerCase() === correctWord);
+      } else if (vi_tri_dap_an_chon === 1 || vi_tri_dap_an_chon === true) {
+        isCorrect = true;
+      }
     }
   } else if (type === 'SAP_XEP_CAU') {
-    const cleanCorrect = (parsed?.cau_hoan_chinh || (parsed?.correct_order || parsed?.cac_tu_dung || []).join(' ')).trim().toLowerCase().replace(/\s+/g, ' ');
-    const userSentence = (typeof cau_tra_loi === 'string' ? cau_tra_loi : (cau_tra_loi?.cau_ghep || '')).trim().toLowerCase().replace(/\s+/g, ' ');
-    if (userSentence && cleanCorrect && userSentence === cleanCorrect) {
+    if (cau_tra_loi && (cau_tra_loi.da_hoan_thanh || cau_tra_loi.isCorrect || cau_tra_loi === true)) {
       isCorrect = true;
-    } else if (cau_tra_loi && (cau_tra_loi.da_hoan_thanh || cau_tra_loi === true)) {
-      isCorrect = true;
-    } else if (vi_tri_dap_an_chon === 1 || vi_tri_dap_an_chon === true) {
-      isCorrect = true;
+    } else {
+      const cleanCorrect = (parsed?.cau_hoan_chinh || (parsed?.correct_order || parsed?.cac_tu_dung || []).join(' ')).trim().toLowerCase().replace(/\s+/g, ' ');
+      const userSentence = (typeof cau_tra_loi === 'string' ? cau_tra_loi : (cau_tra_loi?.cau_ghep || '')).trim().toLowerCase().replace(/\s+/g, ' ');
+      if (userSentence && cleanCorrect && userSentence === cleanCorrect) {
+        isCorrect = true;
+      } else if (vi_tri_dap_an_chon === 1 || vi_tri_dap_an_chon === true) {
+        isCorrect = true;
+      }
     }
   } else {
     // TRAC_NGHIEM_4
-    isCorrect = parseInt(vi_tri_dap_an_chon, 10) === parseInt(questionInMatch.vi_tri_dap_an_dung, 10);
+    if (cau_tra_loi && cau_tra_loi.isCorrect === true) {
+      isCorrect = true;
+    } else {
+      isCorrect = parseInt(vi_tri_dap_an_chon, 10) === parseInt(questionInMatch.vi_tri_dap_an_dung, 10);
+    }
   }
 
   // Calculate damage

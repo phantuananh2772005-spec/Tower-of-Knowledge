@@ -62,6 +62,29 @@ router.post('/:matchId/turn', authenticate, async (req, res) => {
       cau_tra_loi,
       thoi_gian_giay: parseFloat(thoi_gian_giay || 3.0)
     });
+
+    const io = req.app.get('io');
+    if (io) {
+      const roomName = `room_${req.params.matchId}`;
+      io.to(roomName).emit('turn_resolved', {
+        nguoi_tra_loi: req.user.ma_nguoi_dung,
+        thu_tu_cau: parseInt(thu_tu_cau, 10),
+        la_dap_an_dung: result.la_dap_an_dung,
+        sat_thuong_gay_ra: result.sat_thuong_gay_ra,
+        la_chi_mang: result.la_chi_mang,
+        trang_thai_tran: result.trang_thai_tran
+      });
+      if (result.tran_ket_thuc) {
+        io.to(roomName).emit('match_ended', {
+          ma_tran: req.params.matchId,
+          nguoi_thang_cuoc: result.trang_thai_tran.nguoi_thang_cuoc,
+          ly_do_ket_thuc: result.trang_thai_tran.ly_do_ket_thuc,
+          trang_thai_cuoi: result.trang_thai_tran
+        });
+        io.emit('leaderboard_updated', { timestamp: Date.now(), ma_tran: req.params.matchId });
+      }
+    }
+
     return res.apiSuccess(result);
   } catch (err) {
     return res.apiError(err.message, 'SUBMIT_TURN_FAILED', 400);
@@ -71,6 +94,17 @@ router.post('/:matchId/turn', authenticate, async (req, res) => {
 router.post('/:matchId/surrender', authenticate, async (req, res) => {
   try {
     const updatedState = await arenaService.surrenderMatch(req.params.matchId, req.user.ma_nguoi_dung);
+    const io = req.app.get('io');
+    if (io) {
+      const roomName = `room_${req.params.matchId}`;
+      io.to(roomName).emit('match_ended', {
+        ma_tran: req.params.matchId,
+        nguoi_thang_cuoc: updatedState.nguoi_thang_cuoc,
+        ly_do_ket_thuc: 'DAU_HANG',
+        trang_thai_cuoi: updatedState
+      });
+      io.emit('leaderboard_updated', { timestamp: Date.now(), ma_tran: req.params.matchId });
+    }
     return res.apiSuccess(updatedState);
   } catch (err) {
     return res.apiError(err.message, 'SURRENDER_FAILED', 400);
@@ -82,6 +116,10 @@ router.post('/:matchId/conclude', authenticate, async (req, res) => {
     const { winnerUserId, reason } = req.body;
     await arenaService.concludeMatch(req.params.matchId, winnerUserId, reason || 'KO_VICTORY');
     const updatedState = await arenaService.getMatchState(req.params.matchId);
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('leaderboard_updated', { timestamp: Date.now(), ma_tran: req.params.matchId });
+    }
     return res.apiSuccess(updatedState);
   } catch (err) {
     return res.apiError(err.message, 'CONCLUDE_MATCH_FAILED', 400);

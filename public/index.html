@@ -2138,7 +2138,13 @@
   function arenaTab(t) {
     document.getElementById('arena-fight').classList.toggle('hidden', t !== 'fight');
     document.getElementById('arena-rank').classList.toggle('hidden', t !== 'rank');
-    if (t === 'rank') renderRank(); else { renderLobby(); syncAllPetDisplays(); }
+    if (t === 'rank') {
+      renderRank();
+      if (typeof loadRealLeaderboard === 'function') loadRealLeaderboard();
+    } else {
+      renderLobby();
+      syncAllPetDisplays();
+    }
   }
 
   // ===== BXH =====
@@ -2791,18 +2797,32 @@
         if (statusEl) statusEl.textContent = '🎯 Đã tìm thấy đối thủ trực tuyến!';
         if (audioSettings && audioSettings.battle) playAdvancedSound('click');
 
-        const myId = currentUserAccount?.userId;
+        if (data.my_user_id) {
+          B.myUserId = data.my_user_id;
+          if (!currentUserAccount.userId) {
+            currentUserAccount.userId = data.my_user_id;
+          }
+        }
+        B.isBot = Boolean(data.doi_thu_la_bot);
+
+        const myId = B.myUserId || currentUserAccount?.userId;
         const opUser = (data.nguoi_choi || []).find(p => p.ma_nguoi_dung !== myId) || (data.nguoi_choi || [])[1] || (data.nguoi_choi || [])[0] || {};
         matchedOpponent = {
+          id: opUser.ma_nguoi_dung,
           name: opUser.ten_hien_thi || (data.doi_thu_la_bot ? 'Đấu Sĩ Tập Sự' : 'Chiến Binh Lữ Khách'),
           petIcon: opUser.thu_cung?.ten_thu_cung?.includes('Hồ Ly') ? '🦊' : (opUser.thu_cung?.ten_thu_cung?.includes('Thạch') ? '🗿' : '🦉'),
           petName: opUser.thu_cung?.ten_thu_cung || 'Linh Thú Đối Thủ',
-          tier: opUser.danh_hieu || '🌱 Khởi nguyên I'
+          tier: opUser.danh_hieu || '🌱 Khởi nguyên I',
+          isBot: Boolean(data.doi_thu_la_bot)
         };
+
+        const mData = data.matchState || data;
+        mData.my_user_id = B.myUserId;
+        mData.doi_thu_la_bot = Boolean(data.doi_thu_la_bot);
 
         setTimeout(() => {
           if (mmModal) mmModal.classList.add('hidden');
-          showVersusScreen(matchedOpponent, data.matchState || data);
+          showVersusScreen(matchedOpponent, mData);
         }, 400);
       });
     }
@@ -2909,6 +2929,12 @@
     B.subject = document.getElementById('lobby-subject') ? document.getElementById('lobby-subject').value : 'csdl';
     Object.assign(B, { my: 100, op: 100, combo: 0, qi: 0, shield: false, shieldUsed: false, over: false });
 
+    // Xác định vai trò đối thủ (Bot hay Người chơi thực PvP) & Định danh người dùng
+    B.isBot = (typeof opponent?.isBot === 'boolean')
+      ? opponent.isBot
+      : Boolean(matchData?.doi_thu_la_bot ?? (opponent?.id && opponent.id.startsWith('usr_bot_')));
+    B.myUserId = matchData?.my_user_id || B.myUserId || currentUserAccount?.userId;
+
     // Trích xuất ngân hàng câu hỏi đầy đủ 4 dạng từ Backend CSDL thật
     if (matchData && matchData.cau_hoi && Array.isArray(matchData.cau_hoi) && matchData.cau_hoi.length > 0) {
       currentLiveMatch = matchData;
@@ -2933,33 +2959,87 @@
       liveSocket.off('match_ended');
 
       liveSocket.on('turn_resolved', (data) => {
-        if (data.nguoi_tra_loi !== currentUserAccount.userId) {
-          const d = data.sat_thuong_gay_ra || 0;
+        console.log('[CLIENT] turn_resolved received! nguoi_tra_loi:', data.nguoi_tra_loi, 'myUserId:', B.myUserId, 'dmg:', data.sat_thuong_gay_ra);
+        const isMe = (data.nguoi_tra_loi === B.myUserId);
+        const d = data.sat_thuong_gay_ra || 0;
+        const botStatus = document.getElementById('b-bot-status');
+
+        if (isMe) {
+          // --- BẢN THÂN VỪA TẤN CÔNG (Attacker) ---
+          B.pDone = true;
+          if (data.la_dap_an_dung) {
+            anim('my-pet', 'do-lunge');
+            if (audioSettings && audioSettings.battle) playAdvancedSound('sfx-slash');
+            setTimeout(() => {
+              anim('op-pet', 'do-shake');
+              popFloat('op-float', '-' + d);
+              // Đồng bộ máu đối thủ chính xác từ máy chủ
+              const opPlayer = (data.trang_thai_tran?.nguoi_choi || []).find(p => p.ma_nguoi_dung !== B.myUserId);
+              if (opPlayer && typeof opPlayer.mau_hien_tai === 'number') {
+                B.op = opPlayer.mau_hien_tai;
+              } else {
+                B.op = Math.max(0, B.op - d);
+              }
+              updHp();
+              checkEnd();
+            }, 200);
+            if (botStatus) {
+              botStatus.textContent = `⚔️ Bạn đã đánh trúng và gây ${d} sát thương!`;
+              botStatus.className = 'text-[11px] font-semibold text-emerald-400';
+            }
+          } else {
+            if (botStatus) {
+              botStatus.textContent = '❌ Bạn đã chọn sai đáp án!';
+              botStatus.className = 'text-[11px] font-medium text-rose-400';
+            }
+          }
+          roundCheck();
+        } else {
+          // --- ĐỐI THỦ TẤN CÔNG (Defender) ---
+          B.bDone = true;
           if (data.la_dap_an_dung) {
             if (B.shield) {
               B.shield = false;
               const shieldEl = document.getElementById('my-shield');
               if (shieldEl) shieldEl.classList.add('hidden');
               popFloat('my-float', '🛡️ Chặn!');
+              if (botStatus) {
+                botStatus.textContent = '🛡️ Khiên Hộ Thể đã triệt tiêu đòn đánh!';
+                botStatus.className = 'text-[11px] font-medium text-cyan-400';
+              }
             } else {
-              B.my = Math.max(0, B.my - d);
               anim('op-pet', 'do-lungeL');
               setTimeout(() => {
                 anim('my-pet', 'do-shake');
                 popFloat('my-float', '-' + d);
+                // Đồng bộ máu của mình chính xác từ máy chủ
+                const myPlayer = (data.trang_thai_tran?.nguoi_choi || []).find(p => p.ma_nguoi_dung === B.myUserId);
+                if (myPlayer && typeof myPlayer.mau_hien_tai === 'number') {
+                  B.my = myPlayer.mau_hien_tai;
+                } else {
+                  B.my = Math.max(0, B.my - d);
+                }
                 updHp();
                 checkEnd();
               }, 200);
+              if (botStatus) {
+                botStatus.textContent = `⚡ Đối thủ tấn công trúng bạn (-${d} HP)!`;
+                botStatus.className = 'text-[11px] font-medium text-amber-400 animate-pulse';
+              }
+            }
+          } else {
+            if (botStatus) {
+              botStatus.textContent = '🛡️ Đối thủ đã chọn sai đáp án!';
+              botStatus.className = 'text-[11px] font-medium text-slate-400';
             }
           }
-          B.bDone = true;
           roundCheck();
         }
       });
 
       liveSocket.on('match_ended', (data) => {
+        const didIWin = data.nguoi_thang_cuoc === B.myUserId || data.nguoi_thang_cuoc === currentUserAccount?.userId;
         if (data.ly_do_ket_thuc === 'DAU_HANG') {
-          const didIWin = data.nguoi_thang_cuoc === currentUserAccount.userId;
           if (didIWin) {
             B.op = 0;
             checkEnd('OP_SURRENDER');
@@ -2968,6 +3048,11 @@
             checkEnd('DAU_HANG');
           }
         } else if (!B.over) {
+          if (didIWin) {
+            B.op = 0;
+          } else {
+            B.my = 0;
+          }
           checkEnd();
         }
       });
@@ -3292,38 +3377,47 @@
       }
     }, 100);
 
-    // Tính toán thông số Bot thích ứng động theo diễn biến trận đấu
-    const botParams = calculateClientBotTurnParams({
-      questionContent: q.q,
-      myHp: B.my,
-      botHp: B.op,
-      userCombo: B.combo
-    });
-
+    clearTimeout(B.botT);
     const botStatus = document.getElementById('b-bot-status');
-    if (botStatus) {
-      if (botParams.isAggressive) {
-        botStatus.textContent = '⚡ Đối thủ đang phản xạ dồn dập!';
-        botStatus.className = 'text-[11px] font-bold text-amber-500 animate-pulse';
-      } else if (B.my <= 35) {
-        botStatus.textContent = '🤔 Đối thủ đang do dự cân nhắc...';
-        botStatus.className = 'text-[11px] font-medium text-emerald-400';
-      } else {
-        botStatus.textContent = '💭 Đối thủ đang suy nghĩ...';
+
+    if (B.isBot) {
+      // Tính toán thông số Bot thích ứng động theo diễn biến trận đấu
+      const botParams = calculateClientBotTurnParams({
+        questionContent: q.q,
+        myHp: B.my,
+        botHp: B.op,
+        userCombo: B.combo
+      });
+
+      if (botStatus) {
+        if (botParams.isAggressive) {
+          botStatus.textContent = '⚡ Đối thủ đang phản xạ dồn dập!';
+          botStatus.className = 'text-[11px] font-bold text-amber-500 animate-pulse';
+        } else if (B.my <= 35) {
+          botStatus.textContent = '🤔 Đối thủ đang do dự cân nhắc...';
+          botStatus.className = 'text-[11px] font-medium text-emerald-400';
+        } else {
+          botStatus.textContent = '💭 Đối thủ đang suy nghĩ...';
+          botStatus.className = 'text-[11px] font-medium text-[var(--muted-foreground)]';
+        }
+      }
+
+      // Điều chỉnh độ trễ của Bot tương xứng độ khó của dạng câu
+      const botDelay = q.loai === 'TRAC_NGHIEM_4' ? botParams.delayMs : Math.min(roundDurationMs - 1500, botParams.delayMs + 2000);
+      B.botT = setTimeout(() => {
+        if (botStatus) {
+          botStatus.textContent = '🎯 Đối thủ đã chốt đáp án!';
+          botStatus.className = 'text-[11px] font-semibold text-cyan-400';
+        }
+        botAnswer(botParams.willAnswerCorrectly, botDelay);
+      }, botDelay);
+    } else {
+      // Đối thủ là NGƯỜI CHƠI THỰC (PvP): hoàn toàn đợi sự kiện Socket từ đối phương
+      if (botStatus) {
+        botStatus.textContent = '⚔️ Đối thủ đang đọc và chọn đáp án...';
         botStatus.className = 'text-[11px] font-medium text-[var(--muted-foreground)]';
       }
     }
-
-    clearTimeout(B.botT);
-    // Điều chỉnh độ trễ của Bot tương xứng độ khó của dạng câu
-    const botDelay = q.loai === 'TRAC_NGHIEM_4' ? botParams.delayMs : Math.min(roundDurationMs - 1500, botParams.delayMs + 2000);
-    B.botT = setTimeout(() => {
-      if (botStatus) {
-        botStatus.textContent = '🎯 Đối thủ đã chốt đáp án!';
-        botStatus.className = 'text-[11px] font-semibold text-cyan-400';
-      }
-      botAnswer(botParams.willAnswerCorrectly, botDelay);
-    }, botDelay);
   }
 
   function dmgFor(ms) {
@@ -3358,7 +3452,7 @@
     if (payload && typeof payload.isCorrect === 'boolean') {
       ok = payload.isCorrect;
     } else {
-      ok = (i === q.a);
+      ok = (Number(i) === Number(q.a));
     }
 
     if (q.loai === 'TRAC_NGHIEM_4') {
@@ -3410,28 +3504,29 @@
           cau_tra_loi: ansPayload,
           thoi_gian_giay: sec
         });
+      } else {
+        // Fallback REST chỉ kích hoạt khi mất kết nối Socket, tránh xung đột race condition
+        fetch(`/api/arena/${currentLiveMatch.ma_tran}/turn`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+          },
+          body: JSON.stringify({
+            thu_tu_cau: B.qi,
+            vi_tri_dap_an_chon: (typeof i === 'number') ? i : (ok ? 1 : 0),
+            cau_tra_loi: ansPayload,
+            thoi_gian_giay: sec
+          })
+        }).catch(() => {});
       }
-
-      fetch(`/api/arena/${currentLiveMatch.ma_tran}/turn`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': 'Bearer ' + token } : {})
-        },
-        body: JSON.stringify({
-          thu_tu_cau: B.qi,
-          vi_tri_dap_an_chon: (typeof i === 'number') ? i : (ok ? 1 : 0),
-          cau_tra_loi: ansPayload,
-          thoi_gian_giay: sec
-        })
-      }).catch(() => {});
     }
 
     roundCheck();
   }
 
   function botAnswer(ok, ms) {
-    if (B.over) return;
+    if (B.over || !B.isBot) return;
     B.bDone = true;
 
     if (ok) {
@@ -3499,6 +3594,9 @@
 
     if (typeof refreshUserData === 'function') {
       setTimeout(refreshUserData, 400);
+    }
+    if (typeof loadRealLeaderboard === 'function') {
+      setTimeout(loadRealLeaderboard, 600);
     }
 
     setTimeout(() => {
@@ -6825,6 +6923,7 @@
         const res = await resp.json();
         if (res.success && res.data) {
           applyUserData(res.data.nguoi_dung || res.data);
+          loadRealLeaderboard();
         }
       } catch (err) {}
     }
@@ -6865,6 +6964,10 @@
           });
           liveSocket.on('error_msg', (msg) => {
             console.warn('Socket error message:', msg);
+          });
+          liveSocket.on('leaderboard_updated', () => {
+            console.log('⚡ Nhận sự kiện bảng xếp hạng cập nhật thời gian thực');
+            loadRealLeaderboard();
           });
         } catch (e) {
           console.warn('Socket.IO offline fallback:', e);
