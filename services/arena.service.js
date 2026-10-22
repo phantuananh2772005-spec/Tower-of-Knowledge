@@ -185,6 +185,7 @@ async function getMatchState(ma_tran) {
 
       return {
         ma_cau_trong_tran: q.ma_cau_trong_tran,
+        ma_cau_hoi: q.ma_cau_hoi,
         thu_tu_cau: q.thu_tu_cau,
         noi_dung: q.noi_dung,
         loai_cau_hoi: type,
@@ -252,46 +253,53 @@ async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap
   const type = questionInMatch.loai_cau_hoi || 'TRAC_NGHIEM_4';
   let isCorrect = false;
 
+  // LOGIC-005 Fix: Server-authoritative answer validation against official database content
+  // Client flags (isCorrect / da_hoan_thanh) are strictly ignored
   if (type === 'NOI_CAP') {
-    if (cau_tra_loi && (cau_tra_loi.da_hoan_thanh || cau_tra_loi.isCorrect || cau_tra_loi === true)) {
-      isCorrect = true;
-    } else if (vi_tri_dap_an_chon === 1 || vi_tri_dap_an_chon === '1' || vi_tri_dap_an_chon === true) {
-      isCorrect = true;
+    const expectedPairs = parsed?.pairs || [];
+    const userPairs = cau_tra_loi?.matched_pairs || cau_tra_loi?.cap_ghep || (Array.isArray(cau_tra_loi) ? cau_tra_loi : []);
+    if (expectedPairs.length > 0 && Array.isArray(userPairs) && userPairs.length === expectedPairs.length) {
+      isCorrect = expectedPairs.every(ep =>
+        userPairs.some(up =>
+          up &&
+          String(up.left ?? '').trim().toLowerCase() === String(ep.left ?? '').trim().toLowerCase() &&
+          String(up.right ?? '').trim().toLowerCase() === String(ep.right ?? '').trim().toLowerCase()
+        )
+      );
     }
   } else if (type === 'DIEN_TU') {
-    if (cau_tra_loi && (cau_tra_loi.isCorrect || cau_tra_loi.da_hoan_thanh || cau_tra_loi === true)) {
-      isCorrect = true;
-    } else {
-      const correctWord = (parsed?.tu_dung || parsed?.blank_answer || '').trim().toLowerCase();
-      const chosenWord = (typeof cau_tra_loi === 'string' ? cau_tra_loi : (cau_tra_loi?.tu_chon || '')).trim().toLowerCase();
-      const optionsList = parsed?.cac_tu_lua_chon || parsed?.options || [];
-      if (chosenWord && correctWord && chosenWord === correctWord) {
-        isCorrect = true;
-      } else if (typeof vi_tri_dap_an_chon === 'number' && optionsList[vi_tri_dap_an_chon]) {
-        isCorrect = (optionsList[vi_tri_dap_an_chon]?.trim().toLowerCase() === correctWord);
-      } else if (vi_tri_dap_an_chon === 1 || vi_tri_dap_an_chon === true) {
-        isCorrect = true;
-      }
+    const correctWord = String(parsed?.tu_dung || parsed?.blank_answer || '').trim().toLowerCase();
+    const chosenWord = String(
+      typeof cau_tra_loi === 'string'
+        ? cau_tra_loi
+        : (cau_tra_loi?.tu_chon || cau_tra_loi?.selected_word || cau_tra_loi?.lua_chon || '')
+    ).trim().toLowerCase();
+    const optionsList = parsed?.cac_tu_lua_chon || parsed?.options || [];
+    if (chosenWord && correctWord) {
+      isCorrect = (chosenWord === correctWord);
+    } else if (typeof vi_tri_dap_an_chon === 'number' && optionsList[vi_tri_dap_an_chon] !== undefined && !cau_tra_loi) {
+      isCorrect = (String(optionsList[vi_tri_dap_an_chon]).trim().toLowerCase() === correctWord);
     }
   } else if (type === 'SAP_XEP_CAU') {
-    if (cau_tra_loi && (cau_tra_loi.da_hoan_thanh || cau_tra_loi.isCorrect || cau_tra_loi === true)) {
+    const cleanCorrect = String(
+      parsed?.cau_hoan_chinh || (parsed?.correct_order || parsed?.cac_tu_dung || []).join(' ')
+    ).trim().toLowerCase().replace(/\s+/g, ' ');
+    const userWords = Array.isArray(cau_tra_loi?.ordered_words) ? cau_tra_loi.ordered_words.join(' ') : '';
+    const userSentence = String(
+      typeof cau_tra_loi === 'string'
+        ? cau_tra_loi
+        : (cau_tra_loi?.cau_ghep || userWords || '')
+    ).trim().toLowerCase().replace(/\s+/g, ' ');
+    if (userSentence && cleanCorrect && userSentence === cleanCorrect) {
       isCorrect = true;
-    } else {
-      const cleanCorrect = (parsed?.cau_hoan_chinh || (parsed?.correct_order || parsed?.cac_tu_dung || []).join(' ')).trim().toLowerCase().replace(/\s+/g, ' ');
-      const userSentence = (typeof cau_tra_loi === 'string' ? cau_tra_loi : (cau_tra_loi?.cau_ghep || '')).trim().toLowerCase().replace(/\s+/g, ' ');
-      if (userSentence && cleanCorrect && userSentence === cleanCorrect) {
-        isCorrect = true;
-      } else if (vi_tri_dap_an_chon === 1 || vi_tri_dap_an_chon === true) {
-        isCorrect = true;
-      }
     }
   } else {
     // TRAC_NGHIEM_4
-    if (cau_tra_loi && cau_tra_loi.isCorrect === true) {
-      isCorrect = true;
-    } else {
-      isCorrect = parseInt(vi_tri_dap_an_chon, 10) === parseInt(questionInMatch.vi_tri_dap_an_dung, 10);
-    }
+    const chosenIdx = vi_tri_dap_an_chon !== undefined && vi_tri_dap_an_chon !== null
+      ? parseInt(vi_tri_dap_an_chon, 10)
+      : parseInt(cau_tra_loi?.vi_tri_chon, 10);
+    const officialIdx = parseInt(questionInMatch.vi_tri_dap_an_dung, 10);
+    isCorrect = !isNaN(chosenIdx) && !isNaN(officialIdx) && chosenIdx === officialIdx;
   }
 
   // Calculate damage
@@ -421,15 +429,35 @@ async function concludeMatchByScore(ma_tran) {
   const p1 = players[0];
   const p2 = players[1];
 
+  // Fetch correct answer counts per player from luot_tra_loi
+  const turns = await db.query(`
+    SELECT l.ma_nguoi_choi_trong_tran, l.la_dap_an_dung
+    FROM luot_tra_loi l
+    JOIN cau_hoi_trong_tran qm ON l.ma_cau_trong_tran = qm.ma_cau_trong_tran
+    WHERE qm.ma_tran = $1
+  `, [ma_tran]);
+
+  const p1Score = (turns || []).filter(t => t.ma_nguoi_choi_trong_tran === p1.ma_nguoi_choi_trong_tran && Boolean(t.la_dap_an_dung)).length;
+  const p2Score = (turns || []).filter(t => t.ma_nguoi_choi_trong_tran === p2.ma_nguoi_choi_trong_tran && Boolean(t.la_dap_an_dung)).length;
+
+  const outcome = resolveMatchOutcome({
+    p1HP: Number(p1.mau_hien_tai) || 0,
+    p2HP: Number(p2.mau_hien_tai) || 0,
+    p1Score,
+    p2Score,
+    p1Damage: Number(p1.tong_sat_thuong_gay_ra) || 0,
+    p2Damage: Number(p2.tong_sat_thuong_gay_ra) || 0,
+    hasAnyAnswer: (turns && turns.length > 0)
+  });
+
   let winnerId = null;
   let reason = 'TIMEOUT_SCORE';
 
-  if (p1.mau_hien_tai > p2.mau_hien_tai) {
+  if (outcome.p1Result === 'THANG') {
     winnerId = p1.ma_nguoi_dung;
-  } else if (p2.mau_hien_tai > p1.mau_hien_tai) {
+  } else if (outcome.p2Result === 'THANG') {
     winnerId = p2.ma_nguoi_dung;
   } else {
-    // Tie
     reason = 'DRAW';
   }
 

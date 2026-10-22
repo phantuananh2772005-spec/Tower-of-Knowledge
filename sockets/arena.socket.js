@@ -286,7 +286,7 @@ function initArenaSocket(io) {
         userActiveMatchMap.delete(userId);
         try {
           const match = await arenaService.getMatchState(activeMatchId);
-          if (match && match.trang_thai === 'DANG_DIEN_RA') {
+          if (match && match.trang_thai === 'DANG_THI_DAU') {
             console.log(`[SOCKET] User ${userId} disconnected mid-battle ${activeMatchId}. Auto-forfeiting match!`);
             const finalState = await arenaService.surrenderMatch(activeMatchId, userId);
             clearBotTimer(activeMatchId);
@@ -362,20 +362,35 @@ function setupSmartBotTurns(io, roomName, matchId, humanUserId, botUserId) {
           const qType = qInMatch.loai_cau_hoi || 'TRAC_NGHIEM_4';
           let botChoice = 0;
           let botPayload = null;
+          const db = require('../database/db');
+          const qDetail = await db.queryOne('SELECT vi_tri_dap_an_dung, du_lieu_cau_hoi FROM cau_hoi WHERE ma_cau_hoi = $1', [qInMatch.ma_cau_hoi]);
+          let parsedQ = null;
+          if (qDetail && qDetail.du_lieu_cau_hoi) {
+            try {
+              parsedQ = typeof qDetail.du_lieu_cau_hoi === 'string' ? JSON.parse(qDetail.du_lieu_cau_hoi) : qDetail.du_lieu_cau_hoi;
+            } catch (e) {}
+          }
 
-          if (qType === 'NOI_CAP' || qType === 'SAP_XEP_CAU') {
-            botPayload = { da_hoan_thanh: botConfig.willAnswerCorrectly };
+          if (qType === 'NOI_CAP') {
+            botPayload = {
+              matched_pairs: botConfig.willAnswerCorrectly ? (parsedQ?.pairs || []) : [],
+              cap_ghep: botConfig.willAnswerCorrectly ? (parsedQ?.pairs || []) : []
+            };
+            botChoice = botConfig.willAnswerCorrectly ? 1 : 0;
+          } else if (qType === 'SAP_XEP_CAU') {
+            const correctOrder = parsedQ?.correct_order || parsedQ?.cac_tu_dung || [];
+            botPayload = {
+              ordered_words: botConfig.willAnswerCorrectly ? correctOrder : [],
+              cau_ghep: botConfig.willAnswerCorrectly ? correctOrder.join(' ') : 'sai_thu_tu'
+            };
             botChoice = botConfig.willAnswerCorrectly ? 1 : 0;
           } else if (qType === 'DIEN_TU') {
+            const correctWord = parsedQ?.blank_answer || parsedQ?.tu_dung || '';
             botPayload = {
-              tu_chon: botConfig.willAnswerCorrectly
-                ? qInMatch.vi_tri_dap_an_dung
-                : 'tu_sai_ngau_nhien'
+              tu_chon: botConfig.willAnswerCorrectly ? correctWord : 'tu_sai_ngau_nhien'
             };
             botChoice = botConfig.willAnswerCorrectly ? 1 : 0;
           } else {
-            const db = require('../database/db');
-            const qDetail = await db.queryOne('SELECT vi_tri_dap_an_dung FROM cau_hoi WHERE noi_dung = $1', [qInMatch.noi_dung]);
             if (qDetail && qDetail.vi_tri_dap_an_dung !== null) {
               botChoice = botConfig.willAnswerCorrectly
                 ? qDetail.vi_tri_dap_an_dung

@@ -208,6 +208,15 @@ async function updateQuestion(ma_cau_hoi, data) {
 }
 
 async function deleteQuestion(ma_cau_hoi) {
+  // LOGIC-008 Fix (Decision 5 - Option A): Protect historical 1v1 match integrity before deletion
+  const matchRef = await db.queryOne(
+    'SELECT TOP 1 ma_cau_trong_tran FROM cau_hoi_trong_tran WHERE ma_cau_hoi = $1',
+    [ma_cau_hoi]
+  );
+  if (matchRef) {
+    throw new Error('Câu hỏi này đã có dữ liệu thi đấu trong lịch sử nên không thể xóa để bảo toàn dữ liệu. Bạn có thể chỉnh sửa nội dung hoặc chuyển mốc bài học.');
+  }
+
   await db.execute('DELETE FROM cau_hoi WHERE ma_cau_hoi = $1', [ma_cau_hoi]);
   return { thanh_cong: true, ma_cau_hoi };
 }

@@ -34,54 +34,108 @@ function getDayDifference(dateStr1, dateStr2) {
   return Math.round(diffMs / (1000 * 60 * 60 * 24));
 }
 
+function normalizeDateStr(input, useVietnamTz = false) {
+  if (!input) return null;
+  if (input instanceof Date) {
+    return useVietnamTz ? toVietnamDateString(input) : input.toISOString().slice(0, 10);
+  }
+  if (typeof input === 'string') {
+    const trimmed = input.trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+      return trimmed.slice(0, 10);
+    }
+    const parsed = new Date(trimmed);
+    if (!isNaN(parsed.getTime())) {
+      return useVietnamTz ? toVietnamDateString(parsed) : parsed.toISOString().slice(0, 10);
+    }
+  }
+  return null;
+}
+
 /**
  * Tính toán trạng thái chuỗi Streak mới khi có hoạt động học tập / đấu trường.
- * @param {string|null} lastActiveDate - Chuỗi ngày hoạt động cuối 'YYYY-MM-DD' (hoặc null nếu chưa từng học)
- * @param {string} todayDate - Chuỗi ngày hôm nay theo giờ VN 'YYYY-MM-DD'
- * @param {number} currentStreak - Chuỗi streak hiện tại
- * @returns {{ newStreak: number, hasChanged: boolean, reason: string }}
+ * Hỗ trợ cả 2 dạng gọi:
+ *   1) Tham số vị trí: evaluateStreak(lastActiveDate, todayDate, currentStreak)
+ *   2) Đối tượng: evaluateStreak({ lastActivityDate, currentStreak, currentDate })
+ * @returns {{
+ *   newStreak: number,
+ *   hasChanged: boolean,
+ *   reason: string,
+ *   shouldUpdateDate: boolean,
+ *   streakIncremented: boolean,
+ *   todayStr: string
+ * }}
  */
-function evaluateStreak(lastActiveDate, todayDate, currentStreak) {
-  // Lần đầu tiên học tập
-  if (!lastActiveDate) {
+function evaluateStreak(lastActiveDateOrObj, todayDate, currentStreak) {
+  let rawLast = lastActiveDateOrObj;
+  let rawToday = todayDate;
+  let rawStreak = currentStreak;
+
+  if (typeof lastActiveDateOrObj === 'object' && lastActiveDateOrObj !== null && !(lastActiveDateOrObj instanceof Date)) {
+    rawLast = lastActiveDateOrObj.lastActivityDate ?? lastActiveDateOrObj.lastActiveDate ?? null;
+    rawToday = lastActiveDateOrObj.currentDate ?? lastActiveDateOrObj.todayDate ?? new Date();
+    rawStreak = lastActiveDateOrObj.currentStreak ?? 0;
+  }
+
+  const normLast = normalizeDateStr(rawLast, false);
+  const normToday = normalizeDateStr(rawToday || new Date(), true);
+  const normStreak = Math.max(0, Number(rawStreak) || 0);
+
+  // Lần đầu tiên học tập hoặc tài khoản chưa từng kích hoạt streak (streak = 0)
+  if (!normLast || normStreak <= 0) {
     return {
       newStreak: 1,
       hasChanged: true,
-      reason: 'FIRST_ACTIVITY'
+      reason: 'FIRST_ACTIVITY',
+      shouldUpdateDate: true,
+      streakIncremented: true,
+      todayStr: normToday
     };
   }
 
   // Đã có hoạt động hôm nay rồi: Bỏ qua, không cộng 2 lần trong ngày
-  if (lastActiveDate === todayDate) {
+  if (normLast === normToday) {
     return {
-      newStreak: currentStreak,
+      newStreak: normStreak,
       hasChanged: false,
-      reason: 'ALREADY_ACTIVE_TODAY'
+      reason: 'ALREADY_ACTIVE_TODAY',
+      shouldUpdateDate: false,
+      streakIncremented: false,
+      todayStr: normToday
     };
   }
 
-  const diffDays = getDayDifference(lastActiveDate, todayDate);
+  const diffDays = getDayDifference(normLast, normToday);
 
   if (diffDays === 1) {
     // Học ngày liền kề: Tăng chuỗi +1
     return {
-      newStreak: currentStreak + 1,
+      newStreak: normStreak + 1,
       hasChanged: true,
-      reason: 'CONSECUTIVE_DAY_STREAK_INCREASE'
+      reason: 'CONSECUTIVE_DAY_STREAK_INCREASE',
+      shouldUpdateDate: true,
+      streakIncremented: true,
+      todayStr: normToday
     };
   } else if (diffDays > 1) {
     // Bị gián đoạn quá 1 ngày: Reset về 1 (hoạt động của ngày hôm nay bắt đầu chuỗi mới)
     return {
       newStreak: 1,
       hasChanged: true,
-      reason: 'STREAK_BROKEN_RESET_TO_ONE'
+      reason: 'STREAK_BROKEN_RESET_TO_ONE',
+      shouldUpdateDate: true,
+      streakIncremented: false,
+      todayStr: normToday
     };
   } else {
     // Trường hợp ngày không hợp lệ (hệ thống lệch giờ): Giữ nguyên
     return {
-      newStreak: currentStreak,
+      newStreak: normStreak,
       hasChanged: false,
-      reason: 'INVALID_DATE_SEQUENCE'
+      reason: 'INVALID_DATE_SEQUENCE',
+      shouldUpdateDate: false,
+      streakIncremented: false,
+      todayStr: normToday
     };
   }
 }

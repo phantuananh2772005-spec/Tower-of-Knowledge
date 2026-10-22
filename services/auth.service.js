@@ -6,8 +6,8 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../database/db');
-const { evaluateStreak } = require('../core/rules/streak.rules');
-const { deriveRankTitle } = require('../core/rules/economy.rules');
+const { evaluateStreak, toVietnamDateString } = require('../core/rules/streak.rules');
+const { deriveRankTitle, deriveUserLevel } = require('../core/rules/economy.rules');
 const { mutateCoins } = require('./economy.service');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'tower_of_knowledge_ultra_secure_jwt_secret_2026';
@@ -48,6 +48,7 @@ async function formatUserResponse(user) {
     vai_tro: user.vai_tro,
     tong_diem_kinh_nghiem: user.tong_diem_kinh_nghiem,
     danh_hieu: deriveRankTitle(user.tong_diem_kinh_nghiem),
+    cap_do: deriveUserLevel(user.tong_diem_kinh_nghiem),
     xu_tri_thuc: user.xu_tri_thuc,
     chuoi_streak_ngay: user.chuoi_streak_ngay,
     ngay_hoat_dong_cuoi: user.ngay_hoat_dong_cuoi,
@@ -92,13 +93,13 @@ async function register({ ten_dang_nhap, email, mat_khau, ten_hien_thi }) {
   const ma_nguoi_dung = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const displayName = ten_hien_thi ? String(ten_hien_thi).trim() : String(ten_dang_nhap).trim();
 
-  // Insert user: 0 EXP, 0 coins, 0 streak
+  // Insert user: 0 EXP, 0 coins, 0 streak, NULL last active date until first login/activity
   await db.execute(`
     INSERT INTO nguoi_dung (
       ma_nguoi_dung, ten_dang_nhap, email, mat_khau_hash, ten_hien_thi,
       khung_avatar, vai_tro, tong_diem_kinh_nghiem, xu_tri_thuc, chuoi_streak_ngay,
       ngay_hoat_dong_cuoi, che_do_giao_dien, bat_am_thanh
-    ) VALUES ($1, $2, $3, $4, $5, 'khung_khoi_dau', 'NGUOI_HOC', 0, 0, 0, CAST(SYSDATETIME() AS DATE), 'TOI', $6)
+    ) VALUES ($1, $2, $3, $4, $5, 'khung_khoi_dau', 'NGUOI_HOC', 0, 0, 0, NULL, 'TOI', $6)
   `, [ma_nguoi_dung, finalUsername, finalEmail, mat_khau_hash, displayName, true]);
 
   // Grant starting pet Sparky
@@ -118,7 +119,7 @@ async function register({ ten_dang_nhap, email, mat_khau, ten_hien_thi }) {
 /**
  * Login user and lazily evaluate streak
  */
-async function login({ ten_dang_nhap, mat_khau }) {
+async function login({ ten_dang_nhap, mat_khau, currentDate }) {
   if (!ten_dang_nhap || !mat_khau) {
     throw new Error('Vui lòng nhập tên đăng nhập hoặc email và mật khẩu.');
   }
@@ -134,29 +135,26 @@ async function login({ ten_dang_nhap, mat_khau }) {
     throw new Error('Tài khoản hoặc mật khẩu không chính xác.');
   }
 
-  // Lazy streak evaluation
-  const now = new Date();
-  const streakResult = evaluateStreak({
-    lastActivityDate: user.ngay_hoat_dong_cuoi,
-    currentStreak: user.chuoi_streak_ngay,
-    currentDate: now
-  });
+  // Lazy streak evaluation (Vietnam UTC+7 normalized date string)
+  const evalDate = currentDate ? new Date(currentDate) : new Date();
+  const todayStr = toVietnamDateString(evalDate);
+  const streakResult = evaluateStreak(user.ngay_hoat_dong_cuoi, todayStr, user.chuoi_streak_ngay);
 
   if (streakResult.shouldUpdateDate) {
     await db.execute(`
       UPDATE nguoi_dung 
-      SET chuoi_streak_ngay = $1, ngay_hoat_dong_cuoi = CAST(SYSDATETIME() AS DATE), cap_nhat_luc = SYSDATETIME()
-      WHERE ma_nguoi_dung = $2
-    `, [streakResult.newStreak, user.ma_nguoi_dung]);
+      SET chuoi_streak_ngay = $1, ngay_hoat_dong_cuoi = $2, cap_nhat_luc = SYSDATETIME()
+      WHERE ma_nguoi_dung = $3
+    `, [streakResult.newStreak, streakResult.todayStr, user.ma_nguoi_dung]);
 
     user.chuoi_streak_ngay = streakResult.newStreak;
     user.ngay_hoat_dong_cuoi = streakResult.todayStr;
 
-    // Daily streak reward
+    // Daily streak reward when streak initializes or increments consecutively
     if (streakResult.streakIncremented) {
       const rewardCoin = 5 * streakResult.newStreak;
-      await mutateCoins(user.ma_nguoi_dung, rewardCoin, 'THUONG_STREAK', `Thưởng chuỗi học ${streakResult.newStreak} ngày liên tiếp`);
-      user.xu_tri_thuc += rewardCoin;
+      const coinRes = await mutateCoins(user.ma_nguoi_dung, rewardCoin, 'THUONG_STREAK', `Thưởng chuỗi học ${streakResult.newStreak} ngày liên tiếp`);
+      user.xu_tri_thuc = coinRes.newBalance;
     }
   }
 

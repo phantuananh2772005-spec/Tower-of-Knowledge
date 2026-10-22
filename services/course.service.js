@@ -512,9 +512,27 @@ async function submitStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
     throw new Error('Mốc bài học chưa có câu hỏi nào.');
   }
 
+  // LOGIC-002 Fix: Evaluate against the specific step's submitted questions
+  // while enforcing minimum question count for the step so partial submissions cannot bypass grading
+  const expectedStepQuestionCount = Math.min(questionsPerStep, questions.length);
+  const submittedIds = new Set(
+    (submissions || [])
+      .filter(s => s && s.ma_cau_hoi)
+      .map(s => String(s.ma_cau_hoi))
+  );
+  let stepQuestions = questions.filter(q => submittedIds.has(String(q.ma_cau_hoi)));
+  if (stepQuestions.length < expectedStepQuestionCount) {
+    for (const q of questions) {
+      if (stepQuestions.length >= expectedStepQuestionCount) break;
+      if (!submittedIds.has(String(q.ma_cau_hoi))) {
+        stepQuestions.push(q);
+      }
+    }
+  }
+
   const rewardCoins = Math.max(5, Math.round((checkpoint.xu_thuong || 20) / totalSteps));
   const rewardExp = Math.max(10, Math.round((checkpoint.diem_thuong || 40) / totalSteps));
-  const evaluation = evaluateQuizSubmission(submissions, questions, 70, rewardCoins, rewardExp);
+  const evaluation = evaluateQuizSubmission(submissions, stepQuestions, 70, rewardCoins, rewardExp);
 
   // Compute session telemetry from submission attempts (with lookups & per-question time)
   const attempts = (submissions && submissions.length > 0) ? submissions : evaluation.details;
@@ -522,10 +540,12 @@ async function submitStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
 
   let checkpointCompleted = false;
   let nextCheckpointUnlocked = null;
+  let actualEarnedCoins = evaluation.earnedCoins;
+  let actualEarnedExp = evaluation.earnedExp;
 
   if (ma_nguoi_dung) {
     const userProg = await db.queryOne(
-      'SELECT buoc_hien_tai, du_lieu_tri_nho FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2',
+      'SELECT trang_thai, buoc_hien_tai, cac_buoc_hoan_thanh, du_lieu_tri_nho FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2',
       [ma_nguoi_dung, ma_moc]
     );
 
@@ -566,90 +586,106 @@ async function submitStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
 
     if (evaluation.isPassed) {
       const currentStep = userProg ? (userProg.buoc_hien_tai || 1) : 1;
-      let nextStep = currentStep;
-      if (step >= currentStep) {
-        nextStep = currentStep + 1;
-      }
+      const isAlreadyCompletedMoc = userProg && userProg.trang_thai === 'DA_HOAN_THANH';
+      const isFirstTimeStepPass = !isAlreadyCompletedMoc && step >= currentStep;
 
-      if (nextStep > totalSteps) {
-        checkpointCompleted = true;
-        await db.execute(`
-          UPDATE tien_do_moc_bai_hoc
-          SET trang_thai = 'DA_HOAN_THANH',
-              buoc_hien_tai = $1,
-              cac_buoc_hoan_thanh = $2,
-              thoi_diem_hoan_thanh = SYSDATETIME(),
-              diem_dat_duoc = diem_dat_duoc + $3,
-              xu_da_nhan = xu_da_nhan + $4,
-              du_lieu_tri_nho = $5
-          WHERE ma_nguoi_dung = $6 AND ma_moc = $7
-        `, [totalSteps + 1, `${totalSteps}/${totalSteps}`, evaluation.earnedExp, evaluation.earnedCoins, updatedMemoryJson, ma_nguoi_dung, ma_moc]);
-
-        // Unlock next checkpoint
-        const courseChapter = await db.queryOne('SELECT ma_mon FROM chuong_hoc WHERE ma_chuong = $1', [checkpoint.ma_chuong]);
-        if (courseChapter) {
-          const allCourseCheckpoints = await db.query(`
-            SELECT m.ma_moc, m.thu_tu, m.tong_so_buoc, c.thu_tu as chuong_thu_tu
-            FROM moc_bai_hoc m
-            JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
-            WHERE c.ma_mon = $1
-            ORDER BY c.thu_tu ASC, m.thu_tu ASC
-          `, [courseChapter.ma_mon]);
-
-          const nextUnlock = findNextCheckpointToUnlock(allCourseCheckpoints, ma_moc);
-          if (nextUnlock && nextUnlock.nextCheckpoint) {
-            nextCheckpointUnlocked = nextUnlock.nextCheckpoint;
-            const nextProg = await db.queryOne(
-              'SELECT ma_tien_do_moc FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2',
-              [ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc]
-            );
-            if (!nextProg) {
-              const newMocProgId = `pck_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-              const nextTotalSteps = nextUnlock.nextCheckpoint.tong_so_buoc || 4;
-              await db.execute(`
-                INSERT INTO tien_do_moc_bai_hoc (ma_tien_do_moc, ma_nguoi_dung, ma_moc, trang_thai, diem_dat_duoc, xu_da_nhan, buoc_hien_tai, cac_buoc_hoan_thanh, du_lieu_tri_nho)
-                VALUES ($1, $2, $3, 'DA_MO', 0, 0, 1, $4, $5)
-              `, [newMocProgId, ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc, `0/${nextTotalSteps}`, '{}']);
-            }
-          }
-
-          // Recalculate course percentage
-          const completedCountResult = await db.queryOne(`
-            SELECT COUNT(*) as count
-            FROM tien_do_moc_bai_hoc p
-            JOIN moc_bai_hoc m ON p.ma_moc = m.ma_moc
-            JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
-            WHERE p.ma_nguoi_dung = $1 AND c.ma_mon = $2 AND p.trang_thai = 'DA_HOAN_THANH'
-          `, [ma_nguoi_dung, courseChapter.ma_mon]);
-
-          const totalCount = allCourseCheckpoints.length;
-          const compPct = calculateCompletionPercentage(totalCount, completedCountResult ? completedCountResult.count : 0);
-          const isCompletedCourse = compPct >= 100;
-
-          await db.execute(`
-            UPDATE tien_do_mon_hoc
-            SET phan_tram_hoan_thanh = $1,
-                ngay_hoan_thanh = ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'}
-            WHERE ma_nguoi_dung = $2 AND ma_mon = $3
-          `, [compPct, ma_nguoi_dung, courseChapter.ma_mon]);
-        }
-      } else {
+      // LOGIC-003 Fix: Prevent infinite coin/EXP farming and progress string regression on step replay
+      if (!isFirstTimeStepPass) {
+        actualEarnedCoins = 0;
+        actualEarnedExp = 0;
+        const preservedStepsStr = isAlreadyCompletedMoc
+          ? `${totalSteps}/${totalSteps}`
+          : (userProg?.cac_buoc_hoan_thanh || `${Math.min(totalSteps, Math.max(0, currentStep - 1))}/${totalSteps}`);
         await db.execute(`
           UPDATE tien_do_moc_bai_hoc
           SET buoc_hien_tai = $1,
               cac_buoc_hoan_thanh = $2,
-              diem_dat_duoc = diem_dat_duoc + $3,
-              xu_da_nhan = xu_da_nhan + $4,
-              du_lieu_tri_nho = $5
-          WHERE ma_nguoi_dung = $6 AND ma_moc = $7
-        `, [nextStep, `${step}/${totalSteps}`, evaluation.earnedExp, evaluation.earnedCoins, updatedMemoryJson, ma_nguoi_dung, ma_moc]);
-      }
+              du_lieu_tri_nho = $3
+          WHERE ma_nguoi_dung = $4 AND ma_moc = $5
+        `, [currentStep, preservedStepsStr, updatedMemoryJson, ma_nguoi_dung, ma_moc]);
+      } else {
+        const nextStep = currentStep + 1;
 
-      if (evaluation.earnedCoins > 0) {
-        await mutateCoins(ma_nguoi_dung, evaluation.earnedCoins, 'HOAN_THANH_MOC', `Hoàn thành Bước ${step} mốc ${checkpoint.tieu_de}`);
-      }
-      if (evaluation.earnedExp > 0) {
-        await addExperience(ma_nguoi_dung, evaluation.earnedExp);
+        if (nextStep > totalSteps) {
+          checkpointCompleted = true;
+          await db.execute(`
+            UPDATE tien_do_moc_bai_hoc
+            SET trang_thai = 'DA_HOAN_THANH',
+                buoc_hien_tai = $1,
+                cac_buoc_hoan_thanh = $2,
+                thoi_diem_hoan_thanh = SYSDATETIME(),
+                diem_dat_duoc = diem_dat_duoc + $3,
+                xu_da_nhan = xu_da_nhan + $4,
+                du_lieu_tri_nho = $5
+            WHERE ma_nguoi_dung = $6 AND ma_moc = $7
+          `, [totalSteps + 1, `${totalSteps}/${totalSteps}`, actualEarnedExp, actualEarnedCoins, updatedMemoryJson, ma_nguoi_dung, ma_moc]);
+
+          // Unlock next checkpoint
+          const courseChapter = await db.queryOne('SELECT ma_mon FROM chuong_hoc WHERE ma_chuong = $1', [checkpoint.ma_chuong]);
+          if (courseChapter) {
+            const allCourseCheckpoints = await db.query(`
+              SELECT m.ma_moc, m.thu_tu, m.tong_so_buoc, c.thu_tu as chuong_thu_tu
+              FROM moc_bai_hoc m
+              JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
+              WHERE c.ma_mon = $1
+              ORDER BY c.thu_tu ASC, m.thu_tu ASC
+            `, [courseChapter.ma_mon]);
+
+            const nextUnlock = findNextCheckpointToUnlock(allCourseCheckpoints, ma_moc);
+            if (nextUnlock && nextUnlock.nextCheckpoint) {
+              nextCheckpointUnlocked = nextUnlock.nextCheckpoint;
+              const nextProg = await db.queryOne(
+                'SELECT ma_tien_do_moc FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2',
+                [ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc]
+              );
+              if (!nextProg) {
+                const newMocProgId = `pck_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+                const nextTotalSteps = nextUnlock.nextCheckpoint.tong_so_buoc || 4;
+                await db.execute(`
+                  INSERT INTO tien_do_moc_bai_hoc (ma_tien_do_moc, ma_nguoi_dung, ma_moc, trang_thai, diem_dat_duoc, xu_da_nhan, buoc_hien_tai, cac_buoc_hoan_thanh, du_lieu_tri_nho)
+                  VALUES ($1, $2, $3, 'DA_MO', 0, 0, 1, $4, $5)
+                `, [newMocProgId, ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc, `0/${nextTotalSteps}`, '{}']);
+              }
+            }
+
+            // Recalculate course percentage
+            const completedCountResult = await db.queryOne(`
+              SELECT COUNT(*) as count
+              FROM tien_do_moc_bai_hoc p
+              JOIN moc_bai_hoc m ON p.ma_moc = m.ma_moc
+              JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
+              WHERE p.ma_nguoi_dung = $1 AND c.ma_mon = $2 AND p.trang_thai = 'DA_HOAN_THANH'
+            `, [ma_nguoi_dung, courseChapter.ma_mon]);
+
+            const totalCount = allCourseCheckpoints.length;
+            const compPct = calculateCompletionPercentage(totalCount, completedCountResult ? completedCountResult.count : 0);
+            const isCompletedCourse = compPct >= 100;
+
+            await db.execute(`
+              UPDATE tien_do_mon_hoc
+              SET phan_tram_hoan_thanh = $1,
+                  ngay_hoan_thanh = ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'}
+              WHERE ma_nguoi_dung = $2 AND ma_mon = $3
+            `, [compPct, ma_nguoi_dung, courseChapter.ma_mon]);
+          }
+        } else {
+          await db.execute(`
+            UPDATE tien_do_moc_bai_hoc
+            SET buoc_hien_tai = $1,
+                cac_buoc_hoan_thanh = $2,
+                diem_dat_duoc = diem_dat_duoc + $3,
+                xu_da_nhan = xu_da_nhan + $4,
+                du_lieu_tri_nho = $5
+            WHERE ma_nguoi_dung = $6 AND ma_moc = $7
+          `, [nextStep, `${step}/${totalSteps}`, actualEarnedExp, actualEarnedCoins, updatedMemoryJson, ma_nguoi_dung, ma_moc]);
+        }
+
+        if (actualEarnedCoins > 0) {
+          await mutateCoins(ma_nguoi_dung, actualEarnedCoins, 'HOAN_THANH_MOC', `Hoàn thành Bước ${step} mốc ${checkpoint.tieu_de}`);
+        }
+        if (actualEarnedExp > 0) {
+          await addExperience(ma_nguoi_dung, actualEarnedExp);
+        }
       }
     } else {
       // Step not passed yet: persist memory weights so weak questions get prioritized on retry
@@ -663,6 +699,8 @@ async function submitStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
 
   return {
     ...evaluation,
+    earnedCoins: actualEarnedCoins,
+    earnedExp: actualEarnedExp,
     telemetry,
     buoc_vua_lam: step,
     buoc_ke_tiep: evaluation.isPassed ? Math.min(totalSteps + 1, step + 1) : step,
@@ -881,16 +919,38 @@ async function submitQuizCheckpoint(ma_moc, submissions, ma_nguoi_dung) {
 
   const rewardCoins = checkpoint.xu_thuong || 15;
   const rewardExp = checkpoint.diem_thuong || 25;
-  const evaluation = evaluateQuizSubmission(submissions, questions, 60, rewardCoins, rewardExp);
+  const passScore = checkpoint.diem_dat || 70;
+
+  // Evaluate against the session's submitted questions, enforcing minimum question count
+  const minSessionQuestions = Math.min(checkpoint.so_cau_moi_buoc || 10, questions.length);
+  const submittedIds = new Set(
+    (submissions || [])
+      .filter(s => s && s.ma_cau_hoi)
+      .map(s => String(s.ma_cau_hoi))
+  );
+  let targetQuestions = questions.filter(q => submittedIds.has(String(q.ma_cau_hoi)));
+  if (targetQuestions.length < minSessionQuestions) {
+    for (const q of questions) {
+      if (targetQuestions.length >= minSessionQuestions) break;
+      if (!submittedIds.has(String(q.ma_cau_hoi))) {
+        targetQuestions.push(q);
+      }
+    }
+  }
+
+  const evaluation = evaluateQuizSubmission(submissions, targetQuestions, passScore, rewardCoins, rewardExp);
 
   // Compute session telemetry
   const attempts = (submissions && submissions.length > 0) ? submissions : evaluation.details;
   const telemetry = aggregateSessionTelemetry(attempts);
 
   let nextCheckpointUnlocked = null;
+  let actualEarnedCoins = 0;
+  let actualEarnedExp = 0;
+
   if (ma_nguoi_dung) {
     const userProg = await db.queryOne(
-      'SELECT du_lieu_tri_nho FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2',
+      'SELECT trang_thai, du_lieu_tri_nho FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2',
       [ma_nguoi_dung, ma_moc]
     );
 
@@ -928,86 +988,99 @@ async function submitQuizCheckpoint(ma_moc, submissions, ma_nguoi_dung) {
       console.warn('⚠️ Telemetry log notice:', errLog.message);
     }
 
-    const totalSteps = checkpoint.tong_so_buoc || 4;
-    await db.execute(`
-      UPDATE tien_do_moc_bai_hoc
-      SET trang_thai = 'DA_HOAN_THANH',
-          buoc_hien_tai = $1,
-          cac_buoc_hoan_thanh = $2,
-          thoi_diem_hoan_thanh = SYSDATETIME(),
-          diem_dat_duoc = diem_dat_duoc + $3,
-          xu_da_nhan = xu_da_nhan + $4,
-          du_lieu_tri_nho = $5
-      WHERE ma_nguoi_dung = $6 AND ma_moc = $7
-    `, [totalSteps + 1, `${totalSteps}/${totalSteps}`, evaluation.earnedExp || rewardExp, evaluation.earnedCoins || rewardCoins, updatedMemoryJson, ma_nguoi_dung, ma_moc]);
+    // LOGIC-004 Fix: Only mark DA_HOAN_THANH, award coins/EXP, and unlock next checkpoint if evaluation.isPassed is true
+    if (evaluation.isPassed) {
+      const isAlreadyCompleted = userProg && userProg.trang_thai === 'DA_HOAN_THANH';
+      actualEarnedCoins = isAlreadyCompleted ? 0 : evaluation.earnedCoins;
+      actualEarnedExp = isAlreadyCompleted ? 0 : evaluation.earnedExp;
 
-    // Unlock next checkpoint
-    const courseChapter = await db.queryOne('SELECT ma_mon FROM chuong_hoc WHERE ma_chuong = $1', [checkpoint.ma_chuong]);
-    if (courseChapter) {
-      const allCourseCheckpoints = await db.query(`
-        SELECT m.ma_moc, m.thu_tu, m.tong_so_buoc, c.thu_tu as chuong_thu_tu
-        FROM moc_bai_hoc m
-        JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
-        WHERE c.ma_mon = $1
-        ORDER BY c.thu_tu ASC, m.thu_tu ASC
-      `, [courseChapter.ma_mon]);
+      const totalSteps = checkpoint.tong_so_buoc || 4;
+      await db.execute(`
+        UPDATE tien_do_moc_bai_hoc
+        SET trang_thai = 'DA_HOAN_THANH',
+            buoc_hien_tai = $1,
+            cac_buoc_hoan_thanh = $2,
+            thoi_diem_hoan_thanh = SYSDATETIME(),
+            diem_dat_duoc = diem_dat_duoc + $3,
+            xu_da_nhan = xu_da_nhan + $4,
+            du_lieu_tri_nho = $5
+        WHERE ma_nguoi_dung = $6 AND ma_moc = $7
+      `, [totalSteps + 1, `${totalSteps}/${totalSteps}`, actualEarnedExp, actualEarnedCoins, updatedMemoryJson, ma_nguoi_dung, ma_moc]);
 
-      const nextUnlock = findNextCheckpointToUnlock(allCourseCheckpoints, ma_moc);
-      if (nextUnlock && nextUnlock.nextCheckpoint) {
-        nextCheckpointUnlocked = nextUnlock.nextCheckpoint;
-        const nextProg = await db.queryOne(
-          'SELECT ma_tien_do_moc FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2',
-          [ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc]
-        );
-        if (!nextProg) {
-          const newMocProgId = `pck_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-          const nextTotalSteps = nextUnlock.nextCheckpoint.tong_so_buoc || 4;
-          await db.execute(`
-            INSERT INTO tien_do_moc_bai_hoc (ma_tien_do_moc, ma_nguoi_dung, ma_moc, trang_thai, diem_dat_duoc, xu_da_nhan, buoc_hien_tai, cac_buoc_hoan_thanh)
-            VALUES ($1, $2, $3, 'DA_MO', 0, 0, 1, $4)
-          `, [newMocProgId, ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc, `0/${nextTotalSteps}`]);
+      // Unlock next checkpoint
+      const courseChapter = await db.queryOne('SELECT ma_mon FROM chuong_hoc WHERE ma_chuong = $1', [checkpoint.ma_chuong]);
+      if (courseChapter) {
+        const allCourseCheckpoints = await db.query(`
+          SELECT m.ma_moc, m.thu_tu, m.tong_so_buoc, c.thu_tu as chuong_thu_tu
+          FROM moc_bai_hoc m
+          JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
+          WHERE c.ma_mon = $1
+          ORDER BY c.thu_tu ASC, m.thu_tu ASC
+        `, [courseChapter.ma_mon]);
+
+        const nextUnlock = findNextCheckpointToUnlock(allCourseCheckpoints, ma_moc);
+        if (nextUnlock && nextUnlock.nextCheckpoint) {
+          nextCheckpointUnlocked = nextUnlock.nextCheckpoint;
+          const nextProg = await db.queryOne(
+            'SELECT ma_tien_do_moc FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2',
+            [ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc]
+          );
+          if (!nextProg) {
+            const newMocProgId = `pck_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+            const nextTotalSteps = nextUnlock.nextCheckpoint.tong_so_buoc || 4;
+            await db.execute(`
+              INSERT INTO tien_do_moc_bai_hoc (ma_tien_do_moc, ma_nguoi_dung, ma_moc, trang_thai, diem_dat_duoc, xu_da_nhan, buoc_hien_tai, cac_buoc_hoan_thanh)
+              VALUES ($1, $2, $3, 'DA_MO', 0, 0, 1, $4)
+            `, [newMocProgId, ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc, `0/${nextTotalSteps}`]);
+          }
         }
+
+        // Recalculate course completion percentage
+        const completedCountResult = await db.queryOne(`
+          SELECT COUNT(*) as count
+          FROM tien_do_moc_bai_hoc p
+          JOIN moc_bai_hoc m ON p.ma_moc = m.ma_moc
+          JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
+          WHERE p.ma_nguoi_dung = $1 AND c.ma_mon = $2 AND p.trang_thai = 'DA_HOAN_THANH'
+        `, [ma_nguoi_dung, courseChapter.ma_mon]);
+
+        const compPct = calculateCompletionPercentage(allCourseCheckpoints.length, completedCountResult ? completedCountResult.count : 0);
+        const isCompletedCourse = compPct >= 100;
+
+        await db.execute(`
+          UPDATE tien_do_mon_hoc
+          SET phan_tram_hoan_thanh = $1,
+              ngay_hoan_thanh = ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'}
+          WHERE ma_nguoi_dung = $2 AND ma_mon = $3
+        `, [compPct, ma_nguoi_dung, courseChapter.ma_mon]);
       }
 
-      // Recalculate course completion percentage
-      const completedCountResult = await db.queryOne(`
-        SELECT COUNT(*) as count
-        FROM tien_do_moc_bai_hoc p
-        JOIN moc_bai_hoc m ON p.ma_moc = m.ma_moc
-        JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
-        WHERE p.ma_nguoi_dung = $1 AND c.ma_mon = $2 AND p.trang_thai = 'DA_HOAN_THANH'
-      `, [ma_nguoi_dung, courseChapter.ma_mon]);
-
-      const compPct = calculateCompletionPercentage(allCourseCheckpoints.length, completedCountResult ? completedCountResult.count : 0);
-      const isCompletedCourse = compPct >= 100;
-
+      if (actualEarnedCoins > 0) {
+        await mutateCoins(ma_nguoi_dung, actualEarnedCoins, 'HOAN_THANH_MOC', `Hoàn thành mốc ${checkpoint.tieu_de}`);
+      }
+      if (actualEarnedExp > 0) {
+        await addExperience(ma_nguoi_dung, actualEarnedExp);
+      }
+    } else {
+      // Failed to pass threshold: persist updated memory weights without unlocking or completing
       await db.execute(`
-        UPDATE tien_do_mon_hoc
-        SET phan_tram_hoan_thanh = $1,
-            ngay_hoan_thanh = ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'}
-        WHERE ma_nguoi_dung = $2 AND ma_mon = $3
-      `, [compPct, ma_nguoi_dung, courseChapter.ma_mon]);
-    }
-
-    const coinsToAward = evaluation.earnedCoins || rewardCoins;
-    const expToAward = evaluation.earnedExp || rewardExp;
-    if (coinsToAward > 0) {
-      await mutateCoins(ma_nguoi_dung, coinsToAward, 'HOAN_THANH_MOC', `Hoàn thành mốc ${checkpoint.tieu_de}`);
-    }
-    if (expToAward > 0) {
-      await addExperience(ma_nguoi_dung, expToAward);
+        UPDATE tien_do_moc_bai_hoc
+        SET du_lieu_tri_nho = $1
+        WHERE ma_nguoi_dung = $2 AND ma_moc = $3
+      `, [updatedMemoryJson, ma_nguoi_dung, ma_moc]);
     }
   }
 
   return {
     success: true,
-    da_hoan_thanh: true,
+    isPassed: evaluation.isPassed,
+    da_hoan_thanh: evaluation.isPassed,
     telemetry,
     scorePercentage: evaluation.scorePercentage,
     correctCount: evaluation.correctCount,
     totalQuestions: evaluation.totalQuestions,
-    earnedCoins: evaluation.earnedCoins || rewardCoins,
-    earnedExp: evaluation.earnedExp || rewardExp,
+    earnedCoins: actualEarnedCoins,
+    earnedExp: actualEarnedExp,
     moc_ke_tiep_mo_khoa: nextCheckpointUnlocked ? nextCheckpointUnlocked.ma_moc : null
   };
 }

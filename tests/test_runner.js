@@ -305,8 +305,32 @@ async function main() {
     assert.strictEqual(checkRes.la_dung, false);
     assert.ok(checkRes.giai_thich.length > 0);
 
-    // Complete checkpoint via submit (Queue completion)
-    const submitRes = await courseService.submitQuizCheckpoint(moc1.ma_moc, [], userId);
+    // Empty submission must NOT pass or unlock next checkpoint (LOGIC-004)
+    const emptySubmitRes = await courseService.submitQuizCheckpoint(moc1.ma_moc, [], userId);
+    assert.strictEqual(emptySubmitRes.success, true);
+    assert.strictEqual(emptySubmitRes.da_hoan_thanh, false);
+    assert.strictEqual(emptySubmitRes.moc_ke_tiep_mo_khoa, null);
+
+    // Build valid correct answers for moc1
+    const db = require('../database/db');
+    const moc1Questions = await db.query('SELECT * FROM cau_hoi WHERE ma_moc = $1 ORDER BY ma_cau_hoi ASC', [moc1.ma_moc]);
+    const validAnswers = moc1Questions.map(q => {
+      if (q.loai_cau_hoi === 'NOI_CAP') {
+        const parsed = JSON.parse(q.du_lieu_cau_hoi || '{}');
+        return { ma_cau_hoi: q.ma_cau_hoi, matched_pairs: parsed.pairs || [] };
+      } else if (q.loai_cau_hoi === 'DIEN_TU') {
+        const parsed = JSON.parse(q.du_lieu_cau_hoi || '{}');
+        return { ma_cau_hoi: q.ma_cau_hoi, selected_word: parsed.blank_answer };
+      } else if (q.loai_cau_hoi === 'SAP_XEP_CAU') {
+        const parsed = JSON.parse(q.du_lieu_cau_hoi || '{}');
+        return { ma_cau_hoi: q.ma_cau_hoi, ordered_words: parsed.correct_order || [] };
+      } else {
+        return { ma_cau_hoi: q.ma_cau_hoi, chi_muc_chon: q.vi_tri_dap_an_dung };
+      }
+    });
+
+    // Complete checkpoint via valid submit
+    const submitRes = await courseService.submitQuizCheckpoint(moc1.ma_moc, validAnswers, userId);
     assert.strictEqual(submitRes.success, true);
     assert.strictEqual(submitRes.da_hoan_thanh, true);
     assert.ok(submitRes.moc_ke_tiep_mo_khoa);
@@ -316,7 +340,6 @@ async function main() {
     assert.strictEqual(updatedDetails.cac_chuong[0].cac_moc[0].trang_thai, 'DA_HOAN_THANH');
 
     // Cleanup
-    const db = require('../database/db');
     await db.execute('DELETE FROM nguoi_dung WHERE ma_nguoi_dung = $1', [userId]);
   });
 
@@ -347,6 +370,264 @@ async function main() {
     );
     assert(log, 'Session log should exist in lich_su_phien_hoc');
     assert(log.chi_tiet_cau_hoi, 'Should contain JSON details');
+  });
+
+  // --- 8. Logic Audit Regression Suite (LOGIC-001 through LOGIC-010) ---
+  console.log('\n--- 8. Logic Audit Regression Suite (LOGIC-001 to LOGIC-010) ---');
+
+  await runAsyncTest('TC-001a/b/c/d (LOGIC-001): login streak progression, same-day idempotency, and broken streak reset', async () => {
+    const db = require('../database/db');
+    const uname = `streak_reg_${Date.now()}`;
+    const reg = await authService.register({
+      ten_dang_nhap: uname,
+      mat_khau: 'Streak123@',
+      ten_hien_thi: 'Streak Tester'
+    });
+    const uid = reg.nguoi_dung.ma_nguoi_dung;
+
+    try {
+      // TC-001a: First login on Day 1 -> streak = 1, +5 coins
+      const login1 = await authService.login({
+        ten_dang_nhap: uname,
+        mat_khau: 'Streak123@',
+        currentDate: '2026-10-20T09:00:00Z'
+      });
+      assert.strictEqual(login1.nguoi_dung.chuoi_streak_ngay, 1);
+      assert.strictEqual(login1.nguoi_dung.xu_tri_thuc, 5);
+
+      // TC-001c: Second login on same Day 1 -> streak remains 1, no duplicate coins
+      const login1b = await authService.login({
+        ten_dang_nhap: uname,
+        mat_khau: 'Streak123@',
+        currentDate: '2026-10-20T14:00:00Z'
+      });
+      assert.strictEqual(login1b.nguoi_dung.chuoi_streak_ngay, 1);
+      assert.strictEqual(login1b.nguoi_dung.xu_tri_thuc, 5);
+
+      // TC-001b: Consecutive Day 2 login -> streak = 2, +10 coins (total 15)
+      const login2 = await authService.login({
+        ten_dang_nhap: uname,
+        mat_khau: 'Streak123@',
+        currentDate: '2026-10-21T09:00:00Z'
+      });
+      assert.strictEqual(login2.nguoi_dung.chuoi_streak_ngay, 2);
+      assert.strictEqual(login2.nguoi_dung.xu_tri_thuc, 15);
+
+      // TC-001d: Missed 2 days (login on Oct 24) -> streak resets to 1, no streak increment reward
+      const loginBroken = await authService.login({
+        ten_dang_nhap: uname,
+        mat_khau: 'Streak123@',
+        currentDate: '2026-10-24T09:00:00Z'
+      });
+      assert.strictEqual(loginBroken.nguoi_dung.chuoi_streak_ngay, 1);
+      assert.strictEqual(loginBroken.nguoi_dung.xu_tri_thuc, 15);
+    } finally {
+      await db.execute('DELETE FROM nguoi_dung WHERE ma_nguoi_dung = $1', [uid]);
+    }
+  });
+
+  await runAsyncTest('TC-002a/b & TC-003a (LOGIC-002 & LOGIC-003): Boss step pool grading & step replay anti-farming', async () => {
+    const db = require('../database/db');
+    const uname = `step_reg_${Date.now()}`;
+    const reg = await authService.register({
+      ten_dang_nhap: uname,
+      mat_khau: 'Step123@',
+      ten_hien_thi: 'Step Tester'
+    });
+    const uid = reg.nguoi_dung.ma_nguoi_dung;
+
+    try {
+      await courseService.enrollCourse('co-so-du-lieu', uid);
+      // Test on Mốc 1.5 (15 questions in pool, 10 per step) or Mốc 1.1 (13 questions in pool, 10 per step)
+      const stepContent = await courseService.getCheckpointContent('moc_csdl_01_01', uid, 1);
+      const stepQs = stepContent.danh_sach_cau_hoi;
+      assert.strictEqual(stepQs.length, 10, 'Step 1 should present 10 questions');
+
+      // TC-002b: Submitting only 2 correct answers out of 10 must fail (20% < 70%)
+      const partialSub = stepQs.slice(0, 2).map(q => ({
+        ma_cau_hoi: q.ma_cau_hoi,
+        chi_muc_chon: q.vi_tri_dap_an_dung,
+        selected_word: q.du_lieu?.blank_answer,
+        matched_pairs: q.du_lieu?.pairsMap ? Object.entries(q.du_lieu.pairsMap).map(([l, r]) => ({ left: l, right: r })) : undefined,
+        ordered_words: q.du_lieu?.correct_order
+      }));
+      const failRes = await courseService.submitStep('moc_csdl_01_01', 1, partialSub, uid);
+      assert.strictEqual(failRes.isPassed, false, '2/10 submitted questions must fail step');
+
+      // TC-002a: Submitting 8/10 correct answers must pass (80% >= 70%) even when checkpoint has 13+ questions
+      const fullSub = stepQs.map((q, idx) => {
+        if (idx >= 8) return { ma_cau_hoi: q.ma_cau_hoi, chi_muc_chon: 999 };
+        return {
+          ma_cau_hoi: q.ma_cau_hoi,
+          chi_muc_chon: q.vi_tri_dap_an_dung,
+          selected_word: q.du_lieu?.blank_answer,
+          matched_pairs: q.du_lieu?.pairsMap ? Object.entries(q.du_lieu.pairsMap).map(([l, r]) => ({ left: l, right: r })) : undefined,
+          ordered_words: q.du_lieu?.correct_order
+        };
+      });
+      const passRes = await courseService.submitStep('moc_csdl_01_01', 1, fullSub, uid);
+      assert.strictEqual(passRes.isPassed, true, '8/10 correct in step must pass');
+      assert.ok(passRes.earnedCoins > 0, 'First time passing step 1 must award coins');
+
+      const userAfterStep1 = await authService.getCurrentUser(uid);
+      const coinsAfterStep1 = userAfterStep1.xu_tri_thuc;
+
+      // Advance to Step 2 and pass it
+      const passStep2 = await courseService.submitStep('moc_csdl_01_01', 2, fullSub, uid);
+      assert.strictEqual(passStep2.isPassed, true);
+      const userAfterStep2 = await authService.getCurrentUser(uid);
+      const coinsAfterStep2 = userAfterStep2.xu_tri_thuc;
+      assert.ok(coinsAfterStep2 > coinsAfterStep1);
+
+      // TC-003a: Replay Step 1 while at Step 3 -> must NOT duplicate coins/EXP and must NOT regress cac_buoc_hoan_thanh
+      const replayStep1 = await courseService.submitStep('moc_csdl_01_01', 1, fullSub, uid);
+      assert.strictEqual(replayStep1.isPassed, true);
+      assert.strictEqual(replayStep1.earnedCoins, 0, 'Replay of step 1 must award 0 milestone coins');
+      assert.strictEqual(replayStep1.earnedExp, 0, 'Replay of step 1 must award 0 milestone EXP');
+
+      const userAfterReplay = await authService.getCurrentUser(uid);
+      assert.strictEqual(userAfterReplay.xu_tri_thuc, coinsAfterStep2, 'Coin balance must not inflate on step replay');
+
+      const progRow = await db.queryOne(
+        'SELECT buoc_hien_tai, cac_buoc_hoan_thanh FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2',
+        [uid, 'moc_csdl_01_01']
+      );
+      assert.strictEqual(progRow.buoc_hien_tai, 3, 'buoc_hien_tai must stay at 3');
+      assert.strictEqual(progRow.cac_buoc_hoan_thanh, '2/4', 'cac_buoc_hoan_thanh must stay at 2/4 and not regress to 1/4');
+    } finally {
+      await db.execute('DELETE FROM nguoi_dung WHERE ma_nguoi_dung = $1', [uid]);
+    }
+  });
+
+  runTest('TC-007a/b (LOGIC-007): combat.rules resolves P2 higher HP and equal-HP point tie-breaker accurately', () => {
+    // TC-007a: P2 has 70 HP, P1 has 20 HP -> P2 wins, P1 loses
+    const resHp = combatRules.resolveMatchOutcome({
+      p1HP: 20,
+      p2HP: 70,
+      p1Score: 2,
+      p2Score: 5
+    });
+    assert.strictEqual(resHp.p1Result, 'THUA');
+    assert.strictEqual(resHp.p2Result, 'THANG');
+    assert.strictEqual(resHp.finishReason, 'P2_MORE_HP');
+
+    // TC-007b: Equal HP (100 vs 100), P1 has 8 points vs P2 5 points -> P1 wins
+    const resTieHp = combatRules.resolveMatchOutcome({
+      p1HP: 100,
+      p2HP: 100,
+      p1Score: 8,
+      p2Score: 5
+    });
+    assert.strictEqual(resTieHp.p1Result, 'THANG');
+    assert.strictEqual(resTieHp.p2Result, 'THUA');
+    assert.strictEqual(resTieHp.finishReason, 'P1_MORE_POINTS');
+  });
+
+  await runAsyncTest('TC-005a/b (LOGIC-005): arena server rejects spoofed isCorrect flags on wrong answers', async () => {
+    const arenaService = require('../services/arena.service');
+    const db = require('../database/db');
+    const u1 = `pvp1_${Date.now()}`;
+    const u2 = `pvp2_${Date.now()}`;
+    const reg1 = await authService.register({ ten_dang_nhap: u1, mat_khau: 'Pass123@', ten_hien_thi: 'P1' });
+    const reg2 = await authService.register({ ten_dang_nhap: u2, mat_khau: 'Pass123@', ten_hien_thi: 'P2' });
+    const id1 = reg1.nguoi_dung.ma_nguoi_dung;
+    const id2 = reg2.nguoi_dung.ma_nguoi_dung;
+
+    let matchId = null;
+    try {
+      const match = await arenaService.createMatch(id1, id2, 'mon_csdl');
+      matchId = match.ma_tran;
+      const q1 = match.cau_hoi[0];
+
+      // Spoof client flag isCorrect: true while providing wrong answer choice (-1 / wrong pairs)
+      const spoofTurn = await arenaService.submitTurnAnswer({
+        ma_tran: matchId,
+        ma_nguoi_dung: id1,
+        thu_tu_cau: 1,
+        vi_tri_dap_an_chon: 99,
+        cau_tra_loi: { isCorrect: true, da_hoan_thanh: true, tu_chon: '__wrong__', matched_pairs: [] },
+        thoi_gian_giay: 2
+      });
+      assert.strictEqual(spoofTurn.la_dap_an_dung, false, 'Server must reject spoofed client isCorrect flag');
+      assert.strictEqual(spoofTurn.sat_thuong_gay_ra, 0, 'Spoofed wrong answer must deal 0 damage');
+    } finally {
+      if (matchId) await db.execute('DELETE FROM tran_dau_1v1 WHERE ma_tran = $1', [matchId]);
+      await db.execute('DELETE FROM nguoi_dung WHERE ma_nguoi_dung IN ($1, $2)', [id1, id2]);
+    }
+  });
+
+  await runAsyncTest('TC-008a (LOGIC-008): admin deleteQuestion blocks deletion of question referenced in match history', async () => {
+    const arenaService = require('../services/arena.service');
+    const db = require('../database/db');
+    const u1 = `adm_p1_${Date.now()}`;
+    const u2 = `adm_p2_${Date.now()}`;
+    const reg1 = await authService.register({ ten_dang_nhap: u1, mat_khau: 'Pass123@', ten_hien_thi: 'P1' });
+    const reg2 = await authService.register({ ten_dang_nhap: u2, mat_khau: 'Pass123@', ten_hien_thi: 'P2' });
+    const id1 = reg1.nguoi_dung.ma_nguoi_dung;
+    const id2 = reg2.nguoi_dung.ma_nguoi_dung;
+
+    let matchId = null;
+    try {
+      const match = await arenaService.createMatch(id1, id2, 'mon_csdl');
+      matchId = match.ma_tran;
+      const usedQuestionId = match.cau_hoi[0].ma_cau_hoi;
+
+      let blockedError = null;
+      try {
+        await adminService.deleteQuestion(usedQuestionId);
+      } catch (err) {
+        blockedError = err;
+      }
+      assert(blockedError, 'Deleting question used in match must throw a business error');
+      assert(blockedError.message.includes('lịch sử'), 'Error message must explain historical match data protection');
+    } finally {
+      if (matchId) await db.execute('DELETE FROM tran_dau_1v1 WHERE ma_tran = $1', [matchId]);
+      await db.execute('DELETE FROM nguoi_dung WHERE ma_nguoi_dung IN ($1, $2)', [id1, id2]);
+    }
+  });
+
+  await runAsyncTest('TC-009a & TC-010a (LOGIC-009 & LOGIC-010): pet level enforcement and concurrent mutateCoins safety', async () => {
+    const economyService = require('../services/economy.service');
+    const db = require('../database/db');
+    const uname = `econ_pet_${Date.now()}`;
+    const reg = await authService.register({ ten_dang_nhap: uname, mat_khau: 'Pass123@', ten_hien_thi: 'Econ Tester' });
+    const uid = reg.nguoi_dung.ma_nguoi_dung;
+
+    try {
+      // Give user 500 coins (still 0 EXP = Level 1 Tân thủ)
+      await economyService.mutateCoins(uid, 500, 'THUONG_STREAK', 'Seed coins for test');
+
+      // TC-009a: Level 1 user tries to buy pet_golem (requires Level 2 Tập sự - 100 EXP) -> must reject
+      let petErr = null;
+      try {
+        await petService.buyPet('pet_golem', uid);
+      } catch (err) {
+        petErr = err;
+      }
+      assert(petErr, 'Level 1 user must not be allowed to buy Level 2 pet_golem');
+      assert(petErr.message.includes('Cấp 2'), 'Error must state Level 2 requirement');
+
+      // Grant 120 EXP -> user reaches Level 2 (Tập sự) -> now can buy pet_golem (300 coins)
+      await economyService.addExperience(uid, 120);
+      const buyRes = await petService.buyPet('pet_golem', uid);
+      assert.strictEqual(buyRes.thanh_cong, true);
+
+      // User now has 200 coins left (500 - 300 = 200).
+      // TC-010a: Fire two concurrent deductions of 150 coins each -> exactly 1 succeeds, 1 fails, balance = 50
+      const results = await Promise.allSettled([
+        economyService.mutateCoins(uid, -150, 'MUA_THU_CUNG', 'Concurrent spend 1'),
+        economyService.mutateCoins(uid, -150, 'MUA_THU_CUNG', 'Concurrent spend 2')
+      ]);
+      const fulfilled = results.filter(r => r.status === 'fulfilled');
+      const rejected = results.filter(r => r.status === 'rejected');
+      assert.strictEqual(fulfilled.length, 1, 'Exactly one 150-coin spend must succeed from 200 balance');
+      assert.strictEqual(rejected.length, 1, 'Second concurrent 150-coin spend must be rejected');
+
+      const finalUser = await authService.getCurrentUser(uid);
+      assert.strictEqual(finalUser.xu_tri_thuc, 50, 'Final balance must be exactly 50 coins');
+    } finally {
+      await db.execute('DELETE FROM nguoi_dung WHERE ma_nguoi_dung = $1', [uid]);
+    }
   });
 
   console.log('\n================================================================');

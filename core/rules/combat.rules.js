@@ -77,6 +77,8 @@ function resolveMatchOutcome({
   p2HP,
   p1Score,
   p2Score,
+  p1Damage = 0,
+  p2Damage = 0,
   p1Forfeited = false,
   p2Forfeited = false,
   hasAnyAnswer = true,
@@ -165,15 +167,15 @@ function resolveMatchOutcome({
     };
   } else if (p2HP > p1HP) {
     return {
-      p1Result: 'THANG',
-      p2Result: 'THUA',
+      p1Result: 'THUA',
+      p2Result: 'THANG',
       matchStatus: 'KET_THUC',
       p1EarnedCoins: 0,
       p2EarnedCoins: winCoins,
       finishReason: 'P2_MORE_HP'
     };
   } else {
-    // Máu bằng nhau: so sánh điểm
+    // Máu bằng nhau: ưu tiên so sánh tổng số câu trả lời đúng (điểm)
     if (p1Score > p2Score) {
       return {
         p1Result: 'THANG',
@@ -191,6 +193,24 @@ function resolveMatchOutcome({
         p1EarnedCoins: 0,
         p2EarnedCoins: winCoins,
         finishReason: 'P2_MORE_POINTS'
+      };
+    } else if (p1Damage > p2Damage) {
+      return {
+        p1Result: 'THANG',
+        p2Result: 'THUA',
+        matchStatus: 'KET_THUC',
+        p1EarnedCoins: winCoins,
+        p2EarnedCoins: 0,
+        finishReason: 'P1_MORE_DAMAGE'
+      };
+    } else if (p2Damage > p1Damage) {
+      return {
+        p1Result: 'THUA',
+        p2Result: 'THANG',
+        matchStatus: 'KET_THUC',
+        p1EarnedCoins: 0,
+        p2EarnedCoins: winCoins,
+        finishReason: 'P2_MORE_DAMAGE'
       };
     } else {
       // Hòa tuyệt đối

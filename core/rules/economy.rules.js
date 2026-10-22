@@ -5,12 +5,12 @@
  */
 
 const RANK_THRESHOLDS = [
-  { minExp: 7000, title: 'DAI_SU' },
-  { minExp: 3500, title: 'THONG_THAI_3' },
-  { minExp: 1500, title: 'THONG_THAI_2' },
-  { minExp: 500,  title: 'THONG_THAI_1' },
-  { minExp: 100,  title: 'TAP_SU' },
-  { minExp: 0,    title: 'TAN_THU' }
+  { minExp: 7000, title: 'DAI_SU', level: 6, label: 'Đại sư' },
+  { minExp: 3500, title: 'THONG_THAI_3', level: 5, label: 'Thông thái III' },
+  { minExp: 1500, title: 'THONG_THAI_2', level: 4, label: 'Thông thái II' },
+  { minExp: 500,  title: 'THONG_THAI_1', level: 3, label: 'Thông thái I' },
+  { minExp: 100,  title: 'TAP_SU', level: 2, label: 'Tập sự' },
+  { minExp: 0,    title: 'TAN_THU', level: 1, label: 'Tân thủ' }
 ];
 
 /**
@@ -27,6 +27,21 @@ function deriveRankTitle(totalExp) {
     }
   }
   return 'TAN_THU';
+}
+
+/**
+ * Suy ra Cấp độ số nguyên (1 - 6) dựa trên Tổng điểm kinh nghiệm tích lũy (EXP).
+ * @param {number} totalExp - Tổng điểm kinh nghiệm tích lũy
+ * @returns {number} Cấp độ (1: Tân thủ, 2: Tập sự, 3: Thông thái I, 4: Thông thái II, 5: Thông thái III, 6: Đại sư)
+ */
+function deriveUserLevel(totalExp) {
+  const exp = Math.max(0, Number(totalExp) || 0);
+  for (const rank of RANK_THRESHOLDS) {
+    if (exp >= rank.minExp) {
+      return rank.level;
+    }
+  }
+  return 1;
 }
 
 /**
@@ -68,6 +83,7 @@ function applyCoinChange(currentCoins, changeAmount) {
 module.exports = {
   RANK_THRESHOLDS,
   deriveRankTitle,
+  deriveUserLevel,
   canAfford,
   applyCoinChange
 };

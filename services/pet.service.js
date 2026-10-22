@@ -5,6 +5,7 @@
 
 const db = require('../database/db');
 const { mutateCoins } = require('./economy.service');
+const { deriveUserLevel, RANK_THRESHOLDS } = require('../core/rules/economy.rules');
 
 /**
  * List all pets with user ownership and activation status
@@ -40,6 +41,19 @@ async function buyPet(ma_thu_cung, ma_nguoi_dung) {
   );
   if (existing) {
     throw new Error('Bạn đã sở hữu linh thú này rồi.');
+  }
+
+  // LOGIC-009 Fix: Check user level derived from total EXP against pet's cap_do_yeu_cau
+  const user = await db.queryOne('SELECT tong_diem_kinh_nghiem FROM nguoi_dung WHERE ma_nguoi_dung = $1', [ma_nguoi_dung]);
+  if (!user) {
+    throw new Error('Người dùng không tồn tại.');
+  }
+  const userLevel = deriveUserLevel(user.tong_diem_kinh_nghiem);
+  const requiredLevel = Number(pet.cap_do_yeu_cau) || 1;
+  if (userLevel < requiredLevel) {
+    const reqTier = RANK_THRESHOLDS.find(r => r.level === requiredLevel);
+    const tierDesc = reqTier ? ` (${reqTier.label} - ${reqTier.minExp} EXP)` : '';
+    throw new Error(`Yêu cầu đạt Cấp ${requiredLevel}${tierDesc} để mở khóa ${pet.ten_thu_cung}. Hiện tại bạn đang ở Cấp ${userLevel}.`);
   }
 
   // Deduct coins with ledger entry

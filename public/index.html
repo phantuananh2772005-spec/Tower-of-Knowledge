@@ -3481,6 +3481,7 @@
 
         let selectedLeft = null;
         let matchedCount = 0;
+        const matchedPairs = [];
         const totalPairs = pairs.length;
 
         box.innerHTML = `
@@ -3516,6 +3517,7 @@
             const leftBtn = document.getElementById(`pair-left-${selectedLeft}`);
             if (selectedLeft === item.id) {
               matchedCount++;
+              matchedPairs.push({ left: leftBtn ? leftBtn.textContent : '', right: item.text });
               leftBtn.disabled = true;
               btn.disabled = true;
               leftBtn.className = "w-full text-left p-3 rounded-xl border-emerald-500 bg-emerald-500/20 text-emerald-400 font-bold opacity-80 cursor-default text-xs";
@@ -3523,7 +3525,7 @@
               selectedLeft = null;
               if (audioSettings.battle) playAdvancedSound('click');
               if (matchedCount >= totalPairs) {
-                playerAnswer(1, q, null, { da_hoan_thanh: true, isCorrect: true });
+                playerAnswer(1, q, null, { matched_pairs: matchedPairs, cap_ghep: matchedPairs, isCorrect: true });
               }
             } else {
               btn.classList.add('border-rose-500', 'bg-rose-500/20');
