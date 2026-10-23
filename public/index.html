@@ -2012,7 +2012,7 @@
       <div id="pet-tour-spotlight" class="hidden fixed pointer-events-none transition-all duration-300 border-2 border-emerald-400 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.7)] z-[75]"></div>
 
       <!-- Companion Dialog Card -->
-      <div id="pet-tour-dialog" class="fixed z-[80] w-[92vw] max-w-md bg-[var(--card)] border-2 border-emerald-500/80 rounded-3xl p-5 shadow-2xl transition-all duration-300 space-y-4">
+      <div id="pet-tour-dialog" class="fixed z-[80] w-[94vw] sm:w-[460px] max-w-[480px] bg-[var(--card)] border-2 border-emerald-500/80 rounded-3xl p-5 shadow-2xl transition-all duration-300 space-y-4">
         <!-- Card Header -->
         <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
           <div class="flex items-center gap-2.5">
@@ -2037,18 +2037,18 @@
         </div>
 
         <!-- Actions -->
-        <div class="flex items-center justify-between pt-2 border-t border-[var(--border)]">
-          <button id="btn_pet_tour_skip" onclick="skipPetTour()" class="px-3 py-1.5 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-semibold transition cursor-pointer">
+        <div class="flex items-center justify-between pt-2 border-t border-[var(--border)] gap-2">
+          <button id="btn_pet_tour_skip" onclick="skipPetTour()" class="shrink-0 px-3 py-2 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-semibold transition cursor-pointer">
             Bỏ qua
           </button>
-          <div class="flex items-center gap-2">
-            <button id="btn_pet_tour_prev" onclick="prevPetTourStep()" class="hidden px-3 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer">
+          <div class="flex items-center gap-2 shrink-0">
+            <button id="btn_pet_tour_prev" onclick="prevPetTourStep()" class="hidden shrink-0 px-3.5 py-2 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer">
               ← Trước
             </button>
-            <button id="btn_pet_tour_next" onclick="nextPetTourStep()" class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-sm flex items-center gap-1">
+            <button id="btn_pet_tour_next" onclick="nextPetTourStep()" class="shrink-0 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-sm flex items-center gap-1">
               <span>Tiếp tục</span> <span>➜</span>
             </button>
-            <button id="btn_pet_tour_finish" onclick="finishPetTour()" class="hidden px-4 py-1.5 rounded-xl bg-linear-to-r from-amber-500 to-emerald-600 hover:opacity-90 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1">
+            <button id="btn_pet_tour_finish" onclick="finishPetTour()" class="hidden shrink-0 whitespace-nowrap px-4 py-2 rounded-xl bg-linear-to-r from-amber-500 to-emerald-600 hover:opacity-90 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5">
               <span>🎁 Nhận 20 Xu & Bắt đầu!</span>
             </button>
           </div>
@@ -8070,7 +8070,7 @@
         view: 'hub'
       },
       {
-        target: '#nav-minigame',
+        target: '#arena-modes-bar',
         title: 'Sảnh Đấu Trường Mini Game ⚔️',
         text: 'Trung tâm tranh tài và giải trí! Bạn có thể đem tớ vào Đấu Hạng 1v1 theo thời gian thực hoặc Đấu Thường luyện tập cùng Bot AI. Sắp tới sảnh sẽ mở thêm rất nhiều mini game thú vị khác!',
         view: 'minigame'
@@ -8082,12 +8082,87 @@
         view: 'hub'
       },
       {
-        target: '#nav-pet',
+        target: '#current-pet-icon-large',
+        fallbackTarget: '#nav-pet',
         title: 'Chăm Sóc Linh Thú & Quà Khởi Hành 🎁',
         text: 'Đừng quên ghé phòng Linh Thú và Cửa Hàng để cho tớ ăn, nâng cấp kỹ năng chiến đấu. Giờ thì nhận ngay 20 Xu tân thủ và bắt đầu thôi nào!',
         view: 'pet'
       }
     ];
+
+    function scrollTargetIntoFocus(targetEl) {
+      if (!targetEl) return;
+      const scrollContainer = document.getElementById('app-main-scroll');
+      if (scrollContainer && scrollContainer.contains(targetEl)) {
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+        const currentScrollTop = scrollContainer.scrollTop;
+        const targetOffsetTop = targetRect.top - containerRect.top + currentScrollTop;
+        const desiredScrollTop = Math.max(0, targetOffsetTop - (containerRect.height / 2) + (targetRect.height / 2));
+        scrollContainer.scrollTo({ top: desiredScrollTop, behavior: 'smooth' });
+      } else {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+      }
+    }
+
+    function positionPetTourDialog(targetEl, spotlight, dialog) {
+      if (!targetEl || !spotlight || !dialog) return;
+
+      const rect = targetEl.getBoundingClientRect();
+      const pad = 8;
+      spotlight.style.top = Math.max(0, rect.top - pad) + 'px';
+      spotlight.style.left = Math.max(0, rect.left - pad) + 'px';
+      spotlight.style.width = (rect.width + pad * 2) + 'px';
+      spotlight.style.height = (rect.height + pad * 2) + 'px';
+      spotlight.classList.remove('hidden');
+
+      const dWidth = Math.min(460, window.innerWidth - 32);
+      const dHeight = dialog.offsetHeight || 230;
+
+      dialog.style.transform = 'none';
+      dialog.style.left = '';
+      dialog.style.right = '';
+      dialog.style.top = '';
+      dialog.style.bottom = '';
+
+      const isSidebar = rect.right <= 350 || Boolean(targetEl.closest('aside'));
+
+      if (isSidebar && window.innerWidth >= 768) {
+        // Target trên Sidebar -> Đặt hộp thoại sang BÊN PHẢI thanh sidebar, không đè lên nút
+        dialog.style.left = Math.min(window.innerWidth - dWidth - 20, rect.right + 24) + 'px';
+        const topPos = Math.max(20, Math.min(window.innerHeight - dHeight - 20, rect.top - 10));
+        dialog.style.top = topPos + 'px';
+      } else {
+        // Target ở vùng Workspace chính
+        const spaceAbove = rect.top;
+        const spaceBelow = window.innerHeight - rect.bottom;
+
+        let hLeft = rect.left + (rect.width - dWidth) / 2;
+        hLeft = Math.max(16, Math.min(window.innerWidth - dWidth - 16, hLeft));
+        dialog.style.left = hLeft + 'px';
+
+        if (spaceAbove >= dHeight + 20) {
+          // Nhiều chỗ ở PHÍA TRÊN -> Đặt hộp thoại Ở TRÊN target (Ví dụ: Nhiệm vụ ngày)
+          dialog.style.bottom = (window.innerHeight - rect.top + 16) + 'px';
+        } else if (spaceBelow >= dHeight + 20) {
+          // Nhiều chỗ ở PHÍA DƯỚI -> Đặt hộp thoại Ở DƯỚI target (Ví dụ: Thanh chế độ Đấu trường)
+          dialog.style.top = (rect.bottom + 16) + 'px';
+        } else {
+          // Không gian trên dưới hẹp -> Đặt lệch sang bên cạnh
+          if (window.innerWidth >= 900) {
+            if (window.innerWidth - rect.right > dWidth + 20) {
+              dialog.style.left = (rect.right + 20) + 'px';
+              dialog.style.top = Math.max(20, rect.top) + 'px';
+            } else {
+              dialog.style.left = Math.max(16, rect.left - dWidth - 20) + 'px';
+              dialog.style.top = Math.max(20, rect.top) + 'px';
+            }
+          } else {
+            dialog.style.bottom = '20px';
+          }
+        }
+      }
+    }
 
     function startPetOnboardingTour() {
       currentPetTourStep = 0;
@@ -8132,40 +8207,35 @@
       
       if (step.target) {
         setTimeout(() => {
-          const targetEl = document.querySelector(step.target);
-          if (targetEl && spotlight && dialog) {
-            const rect = targetEl.getBoundingClientRect();
-            spotlight.style.top = Math.max(0, rect.top - 6) + 'px';
-            spotlight.style.left = Math.max(0, rect.left - 6) + 'px';
-            spotlight.style.width = (rect.width + 12) + 'px';
-            spotlight.style.height = (rect.height + 12) + 'px';
-            spotlight.classList.remove('hidden');
-
-            if (window.innerWidth > 768 && rect.top > 250) {
-              dialog.style.top = 'auto';
-              dialog.style.bottom = '32px';
-              dialog.style.left = Math.min(window.innerWidth - 460, Math.max(20, rect.left)) + 'px';
-              dialog.style.transform = 'none';
-            } else {
-              dialog.style.top = 'auto';
-              dialog.style.bottom = '24px';
-              dialog.style.left = '50%';
-              dialog.style.transform = 'translateX(-50%)';
-            }
-          } else if (spotlight && dialog) {
-            spotlight.classList.add('hidden');
-            dialog.style.top = '50%';
-            dialog.style.bottom = 'auto';
-            dialog.style.left = '50%';
-            dialog.style.transform = 'translate(-50%, -50%)';
+          let targetEl = document.querySelector(step.target);
+          if (!targetEl && step.fallbackTarget) {
+            targetEl = document.querySelector(step.fallbackTarget);
           }
-        }, 120);
+          if (targetEl) {
+            scrollTargetIntoFocus(targetEl);
+          }
+
+          setTimeout(() => {
+            let el = document.querySelector(step.target) || (step.fallbackTarget ? document.querySelector(step.fallbackTarget) : null);
+            if (el && spotlight && dialog) {
+              positionPetTourDialog(el, spotlight, dialog);
+            } else if (spotlight && dialog) {
+              spotlight.classList.add('hidden');
+              dialog.style.top = '50%';
+              dialog.style.left = '50%';
+              dialog.style.bottom = 'auto';
+              dialog.style.right = 'auto';
+              dialog.style.transform = 'translate(-50%, -50%)';
+            }
+          }, 220);
+        }, 100);
       } else {
         if (spotlight) spotlight.classList.add('hidden');
         if (dialog) {
           dialog.style.top = '50%';
-          dialog.style.bottom = 'auto';
           dialog.style.left = '50%';
+          dialog.style.bottom = 'auto';
+          dialog.style.right = 'auto';
           dialog.style.transform = 'translate(-50%, -50%)';
         }
       }
