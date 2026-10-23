@@ -11041,7 +11041,10 @@
       optionsContainer.innerHTML = '';
 
       const letters = ['A', 'B', 'C', 'D'];
-      const opts = q.dap_an || [];
+      const rawOpts = q.dap_an || [];
+      // Đảo ngẫu nhiên vị trí các đáp án (A, B, C, D) mỗi khi hiển thị để vị trí đáp án luôn thay đổi liên tục
+      const opts = shuffleArray(rawOpts);
+      q.currentShuffledOptions = opts;
 
       if (opts.length === 0 && q.loai_cau_hoi !== 'TRAC_NGHIEM_4') {
         // Fallback an toàn nếu có câu dạng khác
@@ -11069,7 +11072,7 @@
             <span class="text-xs sm:text-[13px] text-[var(--foreground)] group-hover:text-rose-500 font-medium leading-snug break-words">${escapeHtml(optText)}</span>
           </div>
         `;
-        btn.onclick = () => handleExtremeAnswer(idx, false);
+        btn.onclick = () => handleExtremeAnswer(idx, optText, false);
         optionsContainer.appendChild(btn);
       });
 
@@ -11080,13 +11083,16 @@
     /**
      * Xử lý chấm điểm và phản hồi câu hỏi
      */
-    async function handleExtremeAnswer(choiceIdx, isTimeout = false) {
+    async function handleExtremeAnswer(choiceIdx, selectedOptText = '', isTimeout = false) {
       if (!extremeSession || !extremeSession.active || extremeSession.isGrading) return;
       extremeSession.isGrading = true;
       stopExtremeQuestionTimer();
 
       const q = extremeSession.currentQuestion;
       if (!q) return;
+
+      const currentOpts = q.currentShuffledOptions || q.dap_an || [];
+      const chosenText = selectedOptText || (choiceIdx !== null && currentOpts[choiceIdx]) || '';
 
       // Vô hiệu hóa toàn bộ tùy chọn để tránh bấm 2 lần
       const container = document.getElementById('extreme-options-container');
@@ -11108,16 +11114,29 @@
           // Gọi API để lấy đáp án đúng
           const checkRes = await fetchExtremeApi('/api/extreme/check-answer', { ma_cau_hoi: q.ma_cau_hoi, tra_loi: -1 });
           if (checkRes.ok && checkRes.data) {
-            correctIdx = checkRes.data.vi_tri_dap_an_dung;
+            const expText = String(checkRes.data.dap_an_dung_text || checkRes.data.correct_answer || '').trim().toLowerCase();
+            correctIdx = currentOpts.findIndex(o => String(o || '').trim().toLowerCase() === expText);
+            if (correctIdx < 0 && checkRes.data.vi_tri_dap_an_dung !== undefined) {
+              correctIdx = checkRes.data.vi_tri_dap_an_dung;
+            }
             if (checkRes.data.giai_thich) explanation = checkRes.data.giai_thich;
           }
         } else {
-          // Gửi câu trả lời lên server chấm điểm
-          const checkRes = await fetchExtremeApi('/api/extreme/check-answer', { ma_cau_hoi: q.ma_cau_hoi, tra_loi: choiceIdx });
+          // Gửi câu trả lời kèm văn bản đáp án đã chọn lên server chấm điểm độc lập vị trí
+          const checkRes = await fetchExtremeApi('/api/extreme/check-answer', {
+            ma_cau_hoi: q.ma_cau_hoi,
+            tra_loi: chosenText,
+            tra_loi_text: chosenText,
+            choice_idx: choiceIdx
+          });
 
           if (checkRes.ok && checkRes.data) {
             isCorrect = Boolean(checkRes.data.is_correct);
-            correctIdx = checkRes.data.vi_tri_dap_an_dung;
+            const expText = String(checkRes.data.dap_an_dung_text || checkRes.data.correct_answer || '').trim().toLowerCase();
+            correctIdx = currentOpts.findIndex(o => String(o || '').trim().toLowerCase() === expText);
+            if (correctIdx < 0 && checkRes.data.vi_tri_dap_an_dung !== undefined) {
+              correctIdx = checkRes.data.vi_tri_dap_an_dung;
+            }
             if (checkRes.data.giai_thich) explanation = checkRes.data.giai_thich;
           } else {
             // Dự phòng offline nếu lỗi mạng
@@ -11125,11 +11144,11 @@
           }
         }
 
-        // Cập nhật giao diện các nút đáp án
+        // Cập nhật giao diện các nút đáp án (xanh cho đáp án đúng, đỏ nếu chọn sai)
         if (container) {
           const letters = ['A', 'B', 'C', 'D'];
           container.querySelectorAll('button').forEach((b, idx) => {
-            const optText = (q.dap_an && q.dap_an[idx]) || b.innerText;
+            const optText = currentOpts[idx] || b.innerText;
             if (idx === choiceIdx) {
               if (isCorrect) {
                 b.className = "w-full text-left px-3.5 py-2 sm:py-2.5 rounded-xl border-2 border-emerald-500 bg-emerald-500/15 text-emerald-600 transition flex items-center justify-between font-bold shadow-xs";

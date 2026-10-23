@@ -72,17 +72,27 @@ const ARTIFACT_DIR = 'C:/Users/phant/.gemini/antigravity/brain/1749ee9f-cdb1-485
   // 5. Answer questions 1 through 12 consecutively
   const answeredQuestionIds = [];
   answeredQuestionIds.push(startResult.currentQId);
+  const letters = ['A', 'B', 'C', 'D'];
+  const letterPicks = [];
 
   for (let qNum = 1; qNum <= 12; qNum++) {
-    const curQId = await page.evaluate(() => extremeSession?.currentQuestion?.ma_cau_hoi);
-    const evalData = await extremeService.checkAnswer(curQId, 0);
-    const correctIdx = evalData.vi_tri_dap_an_dung;
+    const curQ = await page.evaluate(() => ({
+      id: extremeSession?.currentQuestion?.ma_cau_hoi,
+      opts: extremeSession?.currentQuestion?.currentShuffledOptions || extremeSession?.currentQuestion?.dap_an || []
+    }));
+
+    const evalData = await extremeService.checkAnswer(curQ.id, 0);
+    const correctText = (evalData.dap_an_dung_text || '').trim().toLowerCase();
+    let correctBtnIdx = curQ.opts.findIndex(o => (o || '').trim().toLowerCase() === correctText);
+    if (correctBtnIdx < 0) correctBtnIdx = 0;
+
+    letterPicks.push(letters[correctBtnIdx]);
 
     // Click answer button
     await page.evaluate((btnIdx) => {
       const btn = document.getElementById(`btn_extreme_opt_${btnIdx}`);
       if (btn) btn.click();
-    }, correctIdx);
+    }, correctBtnIdx);
 
     // Wait for question index to advance
     await page.waitForFunction((expectedIndex) => {
@@ -98,7 +108,7 @@ const ARTIFACT_DIR = 'C:/Users/phant/.gemini/antigravity/brain/1749ee9f-cdb1-485
       qText: extremeSession.currentQuestion?.noi_dung?.substring(0, 45)
     }));
 
-    console.log(`  ✓ Q${qNum} correct -> Now at Question #${state.currentIndex}: [${state.qId}] "${state.qText}..." (Score: ${state.score}, Streak: ${state.streak}, HP: ${state.hp}/5)`);
+    console.log(`  ✓ Q${qNum} answered (Option ${letters[correctBtnIdx]}) -> Now at Question #${state.currentIndex}: [${state.qId}] "${state.qText}..." (Score: ${state.score}, Streak: ${state.streak}, HP: ${state.hp}/5)`);
 
     if (answeredQuestionIds.includes(state.qId)) {
       throw new Error(`Duplicate question detected at Question #${state.currentIndex}: ${state.qId}`);
@@ -112,6 +122,8 @@ const ARTIFACT_DIR = 'C:/Users/phant/.gemini/antigravity/brain/1749ee9f-cdb1-485
       console.log('📸 Screenshot saved: extreme_gameplay_q11.png');
     }
   }
+
+  console.log(`✓ Phân bổ vị trí đáp án đúng qua 12 câu:`, letterPicks.join(', '));
 
   console.log(`✓ Hoàn thành 12 câu liên tiếp mượt mà! Toàn bộ 13 câu hiển thị (${answeredQuestionIds.length} câu) đều phân biệt 100% không trùng lặp!`);
 

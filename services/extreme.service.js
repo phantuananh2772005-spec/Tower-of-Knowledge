@@ -58,13 +58,20 @@ function formatSafeQuestion(q) {
     dapAn = [q.dap_an_a || 'Đúng', q.dap_an_b || 'Sai', q.dap_an_c || 'Khác', q.dap_an_d || 'Không xác định'];
   }
 
+  // Đảo ngẫu nhiên vị trí các đáp án (Fisher-Yates) để đáp án đúng không bao giờ bị cố định ở vị trí A
+  const shuffledDapAn = [...dapAn];
+  for (let i = shuffledDapAn.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffledDapAn[i], shuffledDapAn[j]] = [shuffledDapAn[j], shuffledDapAn[i]];
+  }
+
   return {
     ma_cau_hoi: q.ma_cau_hoi,
     noi_dung: noiDung,
     loai_cau_hoi: loaiCauHoi,
     muc_bloom: q.muc_bloom || 'NHO',
     do_kho: q.do_kho || 1,
-    dap_an: dapAn,
+    dap_an: shuffledDapAn,
     giai_thich: q.giai_thich || ''
   };
 }
@@ -152,9 +159,27 @@ async function getNextBatch(ma_mon = 'mon_csdl', excludeIds = []) {
 }
 
 /**
- * Check an answer in real-time
+ * Helper to normalize string for answer comparison
  */
-async function checkAnswer(ma_cau_hoi, tra_loi) {
+function normalizeAnswer(str) {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Check an answer in real-time
+ * Position-independent: Matches against the exact text of the correct answer
+ */
+async function checkAnswer(ma_cau_hoi, tra_loi, tra_loi_text = null) {
   if (!ma_cau_hoi) throw new Error('Mã câu hỏi không được để trống.');
 
   const q = await db.queryOne('SELECT * FROM cau_hoi WHERE ma_cau_hoi = $1', [ma_cau_hoi]);
@@ -163,58 +188,65 @@ async function checkAnswer(ma_cau_hoi, tra_loi) {
   let isCorrect = false;
   let viTriDapAnDung = 0;
   let dapAnDungText = '';
-
-  const choiceIdx = typeof tra_loi === 'number' ? tra_loi : parseInt(tra_loi, 10);
+  const rawAnswers = [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d].filter(Boolean);
 
   if (q.loai_cau_hoi === 'TRAC_NGHIEM_4' || (!q.loai_cau_hoi && q.dap_an_a)) {
     viTriDapAnDung = Number(q.vi_tri_dap_an_dung ?? 0);
-    isCorrect = (choiceIdx === viTriDapAnDung);
-    const answers = [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d];
-    dapAnDungText = answers[viTriDapAnDung] || '';
+    const all4 = [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d];
+    dapAnDungText = all4[viTriDapAnDung] || all4[0] || '';
   } else if (q.loai_cau_hoi === 'DIEN_TU') {
     try {
       const parsed = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : q.du_lieu_cau_hoi;
+      dapAnDungText = parsed.blank_answer || (parsed.options ? parsed.options[0] : '');
       const opts = parsed.options || [];
-      const expected = String(parsed.blank_answer || '').trim().toLowerCase();
-      viTriDapAnDung = opts.findIndex(o => String(o).trim().toLowerCase() === expected);
-      if (viTriDapAnDung < 0) viTriDapAnDung = 0;
-      dapAnDungText = parsed.blank_answer;
-
-      if (choiceIdx >= 0 && choiceIdx < opts.length) {
-        isCorrect = (String(opts[choiceIdx]).trim().toLowerCase() === expected);
-      } else if (typeof tra_loi === 'string') {
-        isCorrect = (String(tra_loi).trim().toLowerCase() === expected);
-      }
+      const exp = normalizeAnswer(dapAnDungText);
+      const foundIdx = opts.findIndex(o => normalizeAnswer(o) === exp);
+      viTriDapAnDung = foundIdx >= 0 ? foundIdx : 0;
     } catch (e) {
-      isCorrect = false;
+      dapAnDungText = '';
     }
   } else if (q.loai_cau_hoi === 'NOI_CAP') {
     try {
       const parsed = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : q.du_lieu_cau_hoi;
       if (parsed.pairs && parsed.pairs[0]) {
-        viTriDapAnDung = 0; // Cặp đầu tiên được ghép chính xác với right[0]
         dapAnDungText = parsed.pairs[0].right;
-        isCorrect = (choiceIdx === 0 || tra_loi === dapAnDungText);
       } else if (parsed.left_items && parsed.right_items && parsed.matches) {
         const targetLeftId = parsed.left_items[0].id;
         const targetRightId = parsed.matches[targetLeftId];
         const rightItem = parsed.right_items.find(r => r.id === targetRightId) || parsed.right_items[0];
-        const correctIndex = parsed.right_items.findIndex(r => r.id === targetRightId);
-        viTriDapAnDung = correctIndex >= 0 ? correctIndex : 0;
-        dapAnDungText = rightItem.text;
-        isCorrect = (choiceIdx === viTriDapAnDung || tra_loi === dapAnDungText);
+        dapAnDungText = rightItem ? rightItem.text : '';
       }
+      viTriDapAnDung = 0;
     } catch (e) {
-      isCorrect = false;
+      dapAnDungText = '';
     }
   } else if (q.loai_cau_hoi === 'SAP_XEP_CAU') {
     try {
       const parsed = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : q.du_lieu_cau_hoi;
-      viTriDapAnDung = 0; // Trình tự cú pháp chuẩn ở vị trí 0
-      dapAnDungText = parsed.correct_order.join(' → ');
-      isCorrect = (choiceIdx === 0);
+      dapAnDungText = (parsed.correct_order || []).join(' → ');
+      viTriDapAnDung = 0;
     } catch (e) {
-      isCorrect = false;
+      dapAnDungText = '';
+    }
+  }
+
+  // So khớp đáp án theo nội dung văn bản (độc lập 100% với vị trí hiển thị A/B/C/D)
+  const normExpected = normalizeAnswer(dapAnDungText);
+  const textSubmitted = (typeof tra_loi === 'string' && isNaN(Number(tra_loi)))
+    ? tra_loi
+    : (typeof tra_loi_text === 'string' ? tra_loi_text : null);
+
+  if (textSubmitted !== null && textSubmitted.trim().length > 0) {
+    isCorrect = (normalizeAnswer(textSubmitted) === normExpected);
+  } else {
+    // Dự phòng nếu client hoặc unit test truyền vị trí index (0, 1, 2, 3)
+    const choiceIdx = typeof tra_loi === 'number' ? tra_loi : parseInt(tra_loi, 10);
+    if (!isNaN(choiceIdx)) {
+      if (choiceIdx === viTriDapAnDung) {
+        isCorrect = true;
+      } else if (rawAnswers[choiceIdx] && normalizeAnswer(rawAnswers[choiceIdx]) === normExpected) {
+        isCorrect = true;
+      }
     }
   }
 

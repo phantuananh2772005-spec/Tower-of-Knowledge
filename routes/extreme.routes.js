@@ -26,14 +26,14 @@ router.post('/next-batch', optionalAuthenticate, async (req, res) => {
   }
 });
 
-// 3. Real-time answer evaluation
+// 3. Real-time answer evaluation (supports both choice index and option text)
 router.post('/check-answer', optionalAuthenticate, async (req, res) => {
   try {
-    const { ma_cau_hoi, tra_loi } = req.body;
+    const { ma_cau_hoi, tra_loi, tra_loi_text, lua_chon_text } = req.body;
     if (!ma_cau_hoi) {
       return res.apiError('Thiếu mã câu hỏi.', 'MISSING_QUESTION_ID', 400);
     }
-    const result = await extremeService.checkAnswer(ma_cau_hoi, tra_loi);
+    const result = await extremeService.checkAnswer(ma_cau_hoi, tra_loi, tra_loi_text || lua_chon_text);
     return res.apiSuccess(result);
   } catch (err) {
     return res.apiError(err.message, 'CHECK_ANSWER_FAILED', 400);
