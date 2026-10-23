@@ -114,6 +114,30 @@ async function enrollCourse(slug, ma_nguoi_dung) {
 /**
  * Ensure course progress and first checkpoint are initialized (Legacy helper)
  */
+/**
+ * Safe, cross-database UPSERT for course progress (compatible with PostgreSQL & MSSQL)
+ */
+async function upsertCourseProgress(ma_nguoi_dung, ma_mon, compPct, isCompletedCourse) {
+  const existingProg = await db.queryOne(
+    'SELECT ma_tien_do_mon FROM tien_do_mon_hoc WHERE ma_nguoi_dung = $1 AND ma_mon = $2',
+    [ma_nguoi_dung, ma_mon]
+  );
+  if (!existingProg) {
+    const ma_tien_do_mon = `pm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    await db.execute(`
+      INSERT INTO tien_do_mon_hoc (ma_tien_do_mon, ma_nguoi_dung, ma_mon, phan_tram_hoan_thanh, ngay_bat_dau, ngay_hoan_thanh)
+      VALUES ($1, $2, $3, $4, SYSDATETIME(), ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'})
+    `, [ma_tien_do_mon, ma_nguoi_dung, ma_mon, compPct]);
+  } else {
+    await db.execute(`
+      UPDATE tien_do_mon_hoc
+      SET phan_tram_hoan_thanh = $1,
+          ngay_hoan_thanh = ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'}
+      WHERE ma_nguoi_dung = $2 AND ma_mon = $3
+    `, [compPct, ma_nguoi_dung, ma_mon]);
+  }
+}
+
 async function ensureCourseInitialized(ma_nguoi_dung, ma_mon) {
   let progMon = await db.queryOne(
     'SELECT ma_tien_do_mon FROM tien_do_mon_hoc WHERE ma_nguoi_dung = $1 AND ma_mon = $2',
@@ -668,16 +692,7 @@ async function submitStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
             const compPct = calculateCompletionPercentage(totalCount, completedCountResult ? completedCountResult.count : 0);
             const isCompletedCourse = compPct >= 100;
 
-                        await db.execute(`
-              IF NOT EXISTS (SELECT 1 FROM tien_do_mon_hoc WHERE ma_nguoi_dung = $2 AND ma_mon = $3)
-                INSERT INTO tien_do_mon_hoc (ma_tien_do_mon, ma_nguoi_dung, ma_mon, phan_tram_hoan_thanh, ngay_bat_dau, ngay_hoan_thanh)
-                VALUES ($4, $2, $3, $1, SYSDATETIME(), ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'})
-              ELSE
-                UPDATE tien_do_mon_hoc
-                SET phan_tram_hoan_thanh = $1,
-                    ngay_hoan_thanh = ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'}
-                WHERE ma_nguoi_dung = $2 AND ma_mon = $3
-            `, [compPct, ma_nguoi_dung, courseChapter.ma_mon, `pm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`]);
+                        await upsertCourseProgress(ma_nguoi_dung, courseChapter.ma_mon, compPct, isCompletedCourse);
           }
         } else {
           await db.execute(`
@@ -879,16 +894,7 @@ async function completeTheoreticalCheckpoint(ma_moc, ma_nguoi_dung) {
     const compPct = calculateCompletionPercentage(allCourseCheckpoints.length, completedCountResult ? completedCountResult.count : 0);
     const isCompletedCourse = compPct >= 100;
 
-                await db.execute(`
-              IF NOT EXISTS (SELECT 1 FROM tien_do_mon_hoc WHERE ma_nguoi_dung = $2 AND ma_mon = $3)
-                INSERT INTO tien_do_mon_hoc (ma_tien_do_mon, ma_nguoi_dung, ma_mon, phan_tram_hoan_thanh, ngay_bat_dau, ngay_hoan_thanh)
-                VALUES ($4, $2, $3, $1, SYSDATETIME(), ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'})
-              ELSE
-                UPDATE tien_do_mon_hoc
-                SET phan_tram_hoan_thanh = $1,
-                    ngay_hoan_thanh = ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'}
-                WHERE ma_nguoi_dung = $2 AND ma_mon = $3
-            `, [compPct, ma_nguoi_dung, courseChapter.ma_mon, `pm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`]);
+                await upsertCourseProgress(ma_nguoi_dung, courseChapter.ma_mon, compPct, isCompletedCourse);
   }
 
   await mutateCoins(ma_nguoi_dung, earnedCoins, 'HOAN_THANH_MOC', `Hoàn thành lý thuyết mốc ${checkpoint.tieu_de}`);
@@ -1090,16 +1096,7 @@ async function submitQuizCheckpoint(ma_moc, submissions, ma_nguoi_dung) {
         const compPct = calculateCompletionPercentage(allCourseCheckpoints.length, completedCountResult ? completedCountResult.count : 0);
         const isCompletedCourse = compPct >= 100;
 
-                    await db.execute(`
-              IF NOT EXISTS (SELECT 1 FROM tien_do_mon_hoc WHERE ma_nguoi_dung = $2 AND ma_mon = $3)
-                INSERT INTO tien_do_mon_hoc (ma_tien_do_mon, ma_nguoi_dung, ma_mon, phan_tram_hoan_thanh, ngay_bat_dau, ngay_hoan_thanh)
-                VALUES ($4, $2, $3, $1, SYSDATETIME(), ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'})
-              ELSE
-                UPDATE tien_do_mon_hoc
-                SET phan_tram_hoan_thanh = $1,
-                    ngay_hoan_thanh = ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'}
-                WHERE ma_nguoi_dung = $2 AND ma_mon = $3
-            `, [compPct, ma_nguoi_dung, courseChapter.ma_mon, `pm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`]);
+                    await upsertCourseProgress(ma_nguoi_dung, courseChapter.ma_mon, compPct, isCompletedCourse);
       }
 
       if (actualEarnedCoins > 0) {
