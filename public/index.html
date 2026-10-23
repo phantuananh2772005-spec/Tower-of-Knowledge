@@ -4790,8 +4790,18 @@
         toast.className = 'fixed bottom-6 right-6 z-[10000] transition-all duration-300 pointer-events-none transform translate-y-4 opacity-0';
         document.body.appendChild(toast);
       }
-      const bg = type === 'success' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white';
-      const icon = type === 'success' ? '✓' : '⚠️';
+      let bg = 'bg-emerald-600 text-white shadow-emerald-950/40';
+      let icon = '✓';
+      if (type === 'error') {
+        bg = 'bg-rose-600 text-white shadow-rose-950/40';
+        icon = '⚠️';
+      } else if (type === 'info') {
+        bg = 'bg-indigo-600 text-white shadow-indigo-950/40 border border-indigo-400/30';
+        icon = 'ℹ️';
+      } else if (type === 'warning') {
+        bg = 'bg-amber-600 text-white shadow-amber-950/40';
+        icon = '⚠️';
+      }
       toast.innerHTML = `<div class="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl shadow-xl font-medium text-xs ${bg}">
         <span class="font-bold text-sm">${icon}</span>
         <span>${message}</span>
@@ -6336,13 +6346,34 @@
 
       // Find active chapter from live DB course data
       const allChapters = courseData.cac_chuong || [];
-      const activeChapter = allChapters.find(c => c.ma_chuong === currentSagaChapterId) || allChapters[0];
+      const curChIdx = allChapters.findIndex(c => c.ma_chuong === currentSagaChapterId);
+      const activeChapter = curChIdx >= 0 ? allChapters[curChIdx] : allChapters[0];
       if (activeChapter) {
         currentSagaChapterId = activeChapter.ma_chuong;
       }
+      const actualChIdx = allChapters.findIndex(c => c.ma_chuong === currentSagaChapterId);
       const mocs = (activeChapter && activeChapter.cac_moc) ? activeChapter.cac_moc : [];
       if (mocs.length === 0) {
         container.innerHTML = '<div class="py-12 text-center text-slate-400 text-xs">Chưa có mốc học tập trong chương này.</div>';
+        return;
+      }
+
+      // Kiểm tra trạng thái mở khóa của chương (Chương 1 luôn mở; Chương K yêu cầu Boss Chương K-1 hoàn thành)
+      const isFirstChapter = (actualChIdx <= 0);
+      let isChapterUnlocked = isFirstChapter;
+      if (!isFirstChapter && actualChIdx > 0) {
+        const prevCh = allChapters[actualChIdx - 1];
+        const prevMocs = prevCh.cac_moc || [];
+        const prevBoss = prevMocs[prevMocs.length - 1];
+        isChapterUnlocked = Boolean(prevBoss && (prevBoss.trang_thai === 'HOAN_THANH' || prevBoss.trang_thai === 'DA_HOAN_THANH'));
+      }
+
+      // Nếu người dùng cố tình chuyển sang chương chưa mở khóa, tự động chuyển về chương mở hợp lệ
+      if (!isChapterUnlocked) {
+        console.warn('Chương hiện tại đang khóa. Điều hướng về Chương 1...');
+        currentSagaChapterId = allChapters[0].ma_chuong;
+        showToast('🔒 Hãy hoàn thành Thử Thách Boss để mở khóa chương tiếp theo!', 'info');
+        renderRealSagaRoadmap(courseData);
         return;
       }
 
@@ -6401,11 +6432,37 @@
       const svgH = isH ? 480 : 1010;
 
       let coords = [];
-      let gateCoord = isH ? { x: 1065, y: 220 } : { x: 340, y: 150 };
+      let gateCoord = isH ? { x: 1000, y: 220 } : { x: 340, y: 160 };
+      let prevGateCoord = isH ? { x: 180, y: 290 } : { x: 340, y: 840 };
 
       if (isH) {
-        // Màn hình ngang PC: 5 mốc uốn lượn theo hình sóng ngang từ Trái sang Phải
-        if (mocs.length === 5) {
+        // Màn hình ngang PC: Bố cục cân đối tự thích ứng theo số mốc (2, 3, 4, 5) không bị trống trải 820px
+        if (mocs.length === 2) {
+          prevGateCoord = { x: 180, y: 290 };
+          coords = [
+            { x: 450, y: 240 },
+            { x: 750, y: 290 }
+          ];
+          gateCoord = { x: 1000, y: 220 };
+        } else if (mocs.length === 3) {
+          prevGateCoord = { x: 140, y: 310 };
+          coords = [
+            { x: 370, y: 220 },
+            { x: 610, y: 320 },
+            { x: 850, y: 210 }
+          ];
+          gateCoord = { x: 1040, y: 260 };
+        } else if (mocs.length === 4) {
+          prevGateCoord = { x: 110, y: 320 };
+          coords = [
+            { x: 280, y: 220 },
+            { x: 490, y: 320 },
+            { x: 710, y: 200 },
+            { x: 920, y: 290 }
+          ];
+          gateCoord = { x: 1060, y: 220 };
+        } else if (mocs.length === 5) {
+          prevGateCoord = { x: 120, y: 420 };
           coords = [
             { x: 120, y: 310 },
             { x: 320, y: 190 },
@@ -6415,7 +6472,8 @@
           ];
           gateCoord = { x: 1065, y: 220 };
         } else {
-          const startX = 120, endX = 940;
+          prevGateCoord = { x: 100, y: 360 };
+          const startX = 140, endX = 940;
           const yOffsets = [310, 190, 320, 190, 270];
           const stepX = (endX - startX) / Math.max(1, mocs.length - 1);
           for (let i = 0; i < mocs.length; i++) {
@@ -6427,8 +6485,33 @@
           gateCoord = { x: 1065, y: 220 };
         }
       } else {
-        // Màn hình dọc Mobile: 5 mốc uốn lượn zigzag từ Dưới lên Trên
-        if (mocs.length === 5) {
+        // Màn hình dọc Mobile: 5 mốc uốn lượn zigzag từ Dưới lên Trên, thích ứng cân đối cho N < 5
+        if (mocs.length === 2) {
+          prevGateCoord = { x: 340, y: 840 };
+          coords = [
+            { x: 300, y: 620 },
+            { x: 380, y: 380 }
+          ];
+          gateCoord = { x: 340, y: 170 };
+        } else if (mocs.length === 3) {
+          prevGateCoord = { x: 340, y: 880 };
+          coords = [
+            { x: 300, y: 710 },
+            { x: 390, y: 520 },
+            { x: 320, y: 330 }
+          ];
+          gateCoord = { x: 340, y: 160 };
+        } else if (mocs.length === 4) {
+          prevGateCoord = { x: 340, y: 920 };
+          coords = [
+            { x: 300, y: 780 },
+            { x: 400, y: 620 },
+            { x: 280, y: 460 },
+            { x: 360, y: 310 }
+          ];
+          gateCoord = { x: 340, y: 160 };
+        } else if (mocs.length === 5) {
+          prevGateCoord = { x: 340, y: 975 };
           coords = [
             { x: 300, y: 880 },
             { x: 400, y: 760 },
@@ -6438,6 +6521,7 @@
           ];
           gateCoord = { x: 340, y: 150 };
         } else {
+          prevGateCoord = { x: 340, y: 950 };
           const startY = 820, endY = 360;
           const xOffsets = [300, 410, 270, 410, 340];
           const stepY = (startY - endY) / Math.max(1, mocs.length - 1);
@@ -6647,29 +6731,54 @@
         }, gPath);
       }
 
-      // Chapter Gate (Next Chapter from DB)
+      // Chapter Gate (Next Chapter from DB) - Tích hợp khóa Gate nếu chưa hạ Boss
       const gt = el('g', { class: 'cursor-pointer' }, gPath);
-      const curChIdx = allChapters.findIndex(c => c.ma_chuong === currentSagaChapterId);
-      const hasNextCh = (curChIdx >= 0 && curChIdx < allChapters.length - 1);
-      const nextCh = hasNextCh ? allChapters[curChIdx + 1] : null;
-      const nextChNum = nextCh ? (nextCh.thu_tu || curChIdx + 2) : (curChIdx + 1);
+      const hasNextCh = (actualChIdx >= 0 && actualChIdx < allChapters.length - 1);
+      const nextCh = hasNextCh ? allChapters[actualChIdx + 1] : null;
+      const nextChNum = nextCh ? (nextCh.thu_tu || actualChIdx + 2) : (actualChIdx + 1);
       const nextChId = nextCh ? nextCh.ma_chuong : currentSagaChapterId;
 
+      const lastMocInChapter = mocs[mocs.length - 1];
+      const isCurBossFinished = Boolean(
+        lastMocInChapter && (lastMocInChapter.trang_thai === 'HOAN_THANH' || lastMocInChapter.trang_thai === 'DA_HOAN_THANH')
+      );
+
       if (hasNextCh) {
-        if (isH) {
-          el('rect', { x: gateCoord.x - 52, y: gateCoord.y - 28, width: 104, height: 56, rx: 18, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 2 }, gt);
-          el('text', { x: gateCoord.x, y: gateCoord.y + 2, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 600, fill: '#CECBF6' }, gt).textContent = `Chương ${nextChNum}`;
-          el('text', { x: gateCoord.x, y: gateCoord.y + 18, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 600, fill: '#818cf8', 'letter-spacing': 0.5 }, gt).textContent = 'TIẾP THEO ▶';
+        if (isCurBossFinished) {
+          // Cổng đã mở khóa: Sáng tím công nghệ
+          if (isH) {
+            el('rect', { x: gateCoord.x - 52, y: gateCoord.y - 28, width: 104, height: 56, rx: 18, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 2 }, gt);
+            el('text', { x: gateCoord.x, y: gateCoord.y + 2, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 600, fill: '#CECBF6' }, gt).textContent = `Chương ${nextChNum}`;
+            el('text', { x: gateCoord.x, y: gateCoord.y + 18, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 600, fill: '#818cf8', 'letter-spacing': 0.5 }, gt).textContent = 'TIẾP THEO ▶';
+          } else {
+            el('rect', { x: gateCoord.x - 70, y: gateCoord.y - 20, width: 140, height: 44, rx: 22, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 2 }, gt);
+            el('text', { x: gateCoord.x, y: gateCoord.y + 8, 'text-anchor': 'middle', 'font-size': 16, 'font-weight': 600, fill: '#CECBF6' }, gt).textContent = `Chương ${nextChNum} ▶`;
+            el('line', { x1: gateCoord.x - 70, y1: gateCoord.y + 24, x2: gateCoord.x - 70, y2: gateCoord.y + 60, stroke: '#7F77DD', 'stroke-width': 3 }, gt);
+            el('line', { x1: gateCoord.x + 70, y1: gateCoord.y + 24, x2: gateCoord.x + 70, y2: gateCoord.y + 60, stroke: '#7F77DD', 'stroke-width': 3 }, gt);
+          }
+          gt.onclick = () => {
+            changeSagaChapter(nextChId);
+            showToast(`🚀 Chuyển sang ${nextCh.tieu_de || `Chương ${nextChNum}`}!`, 'info');
+          };
         } else {
-          el('rect', { x: gateCoord.x - 70, y: gateCoord.y - 20, width: 140, height: 44, rx: 22, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 2 }, gt);
-          el('text', { x: gateCoord.x, y: gateCoord.y + 8, 'text-anchor': 'middle', 'font-size': 16, 'font-weight': 600, fill: '#CECBF6' }, gt).textContent = `Chương ${nextChNum} ▶`;
-          el('line', { x1: gateCoord.x - 70, y1: gateCoord.y + 24, x2: gateCoord.x - 70, y2: gateCoord.y + 60, stroke: '#7F77DD', 'stroke-width': 3 }, gt);
-          el('line', { x1: gateCoord.x + 70, y1: gateCoord.y + 24, x2: gateCoord.x + 70, y2: gateCoord.y + 60, stroke: '#7F77DD', 'stroke-width': 3 }, gt);
+          // Cổng đang khóa (Gate Locked 🔒)
+          if (isH) {
+            el('rect', { x: gateCoord.x - 52, y: gateCoord.y - 28, width: 104, height: 56, rx: 18, fill: '#12172a', stroke: '#475569', 'stroke-width': 1.8 }, gt);
+            el('text', { x: gateCoord.x, y: gateCoord.y + 2, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 600, fill: '#64748b' }, gt).textContent = `Chương ${nextChNum} 🔒`;
+            el('text', { x: gateCoord.x, y: gateCoord.y + 18, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 700, fill: '#94a3b8', 'letter-spacing': 0.5 }, gt).textContent = 'CHƯA MỞ';
+          } else {
+            el('rect', { x: gateCoord.x - 70, y: gateCoord.y - 20, width: 140, height: 44, rx: 22, fill: '#12172a', stroke: '#475569', 'stroke-width': 1.8 }, gt);
+            el('text', { x: gateCoord.x, y: gateCoord.y + 8, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 600, fill: '#94a3b8' }, gt).textContent = `Chương ${nextChNum} 🔒 CHƯA MỞ`;
+          }
+          gt.onclick = () => {
+            showToast('🔒 Hãy hoàn thành Thử Thách Boss để mở khóa chương tiếp theo!', 'info');
+            const speechTxt = document.getElementById('roadmap-pet-speech-text');
+            if (speechTxt) speechTxt.textContent = 'Hạ Boss để mở cổng nhé! ⚔️';
+            setTimeout(() => {
+              if (speechTxt) speechTxt.textContent = 'Học tiếp nào! 🎯';
+            }, 2500);
+          };
         }
-        gt.onclick = () => {
-          changeSagaChapter(nextChId);
-          showToast(`🚀 Chuyển sang ${nextCh.tieu_de || `Chương ${nextChNum}`}!`, 'info');
-        };
       } else {
         if (isH) {
           el('rect', { x: gateCoord.x - 52, y: gateCoord.y - 28, width: 104, height: 56, rx: 18, fill: '#2a2412', stroke: '#d89a1b', 'stroke-width': 2 }, gt);
@@ -6814,27 +6923,51 @@
       });
 
       // Start Marker / Previous Chapter Gate
-      const hasPrevCh = (curChIdx > 0);
-      const prevCh = hasPrevCh ? allChapters[curChIdx - 1] : null;
+      const hasPrevCh = (actualChIdx > 0);
+      const prevCh = hasPrevCh ? allChapters[actualChIdx - 1] : null;
 
       if (hasPrevCh) {
         const prevGate = el('g', { class: 'cursor-pointer' }, gNodes);
         if (isH) {
-          el('rect', { x: 45, y: 405, width: 150, height: 32, rx: 12, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 1.5 }, prevGate);
-          el('text', { x: 120, y: 426, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 600, fill: '#CECBF6' }, prevGate).textContent = `◀ Về Chương ${prevCh.thu_tu || curChIdx}`;
+          el('rect', { x: prevGateCoord.x - 75, y: prevGateCoord.y - 18, width: 150, height: 36, rx: 14, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 1.8 }, prevGate);
+          el('text', { x: prevGateCoord.x, y: prevGateCoord.y + 5, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 600, fill: '#CECBF6' }, prevGate).textContent = `◀ Về Chương ${prevCh.thu_tu || actualChIdx}`;
         } else {
-          el('rect', { x: 260, y: 955, width: 160, height: 34, rx: 14, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 1.5 }, prevGate);
-          el('text', { x: 340, y: 977, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 600, fill: '#CECBF6' }, prevGate).textContent = `◀ Về Chương ${prevCh.thu_tu || curChIdx}`;
+          el('rect', { x: prevGateCoord.x - 80, y: prevGateCoord.y - 18, width: 160, height: 36, rx: 14, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 1.8 }, prevGate);
+          el('text', { x: prevGateCoord.x, y: prevGateCoord.y + 5, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 600, fill: '#CECBF6' }, prevGate).textContent = `◀ Về Chương ${prevCh.thu_tu || actualChIdx}`;
         }
         prevGate.onclick = () => {
           changeSagaChapter(prevCh.ma_chuong);
-          showToast(`🔙 Đang quay lại ${prevCh.tieu_de || `Chương ${curChIdx}`}!`, 'info');
+          showToast(`🔙 Đang quay lại ${prevCh.tieu_de || `Chương ${actualChIdx}`}!`, 'info');
         };
+
+        // Dòng liên kết nét đứt mượt mà nối Cổng Về với Mốc 1
+        const firstNode = N[0];
+        if (firstNode) {
+          if (isH) {
+            el('path', {
+              d: `M ${prevGateCoord.x + 75} ${prevGateCoord.y} L ${firstNode.x - 45} ${firstNode.y}`,
+              stroke: '#3a4766',
+              'stroke-width': 4,
+              'stroke-dasharray': '2 10',
+              'stroke-linecap': 'round',
+              fill: 'none'
+            }, gPath);
+          } else {
+            el('path', {
+              d: `M ${prevGateCoord.x} ${prevGateCoord.y - 20} L ${firstNode.x} ${firstNode.y + 45}`,
+              stroke: '#3a4766',
+              'stroke-width': 4,
+              'stroke-dasharray': '2 10',
+              'stroke-linecap': 'round',
+              fill: 'none'
+            }, gPath);
+          }
+        }
       } else {
         if (isH) {
           const sx = el('text', {
-            x: 120,
-            y: 430,
+            x: coords[0] ? coords[0].x : 120,
+            y: (coords[0] ? coords[0].y : 310) + 110,
             'text-anchor': 'middle',
             'font-size': 11,
             fill: '#7a8199',
@@ -6844,8 +6977,8 @@
           sx.textContent = '▲ XUẤT PHÁT TẠI ĐÂY ▲';
         } else {
           const sx = el('text', {
-            x: 340,
-            y: 985,
+            x: coords[0] ? coords[0].x : 340,
+            y: (coords[0] ? coords[0].y : 880) + 95,
             'text-anchor': 'middle',
             'font-size': 12,
             fill: '#7a8199',
