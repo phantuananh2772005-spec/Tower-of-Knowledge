@@ -245,7 +245,7 @@
             <span class="text-base shrink-0">🗺️</span>
             <span class="sidebar-text font-medium">Bản đồ leo tháp</span>
           </div>
-          <span class="sidebar-text text-[10px] bg-emerald-500/10 text-emerald-600 font-bold px-1.5 py-0.5 rounded font-mono">CSDL · C1</span>
+          <span id="sidebar-saga-course-tag" class="sidebar-text text-[10px] bg-emerald-500/10 text-emerald-600 font-bold px-1.5 py-0.5 rounded font-mono">CSDL · C1</span>
         </button>
 
         <!-- 4. Kho Môn học Hệ thống (Tách riêng để duyệt & đăng ký) -->
@@ -325,7 +325,7 @@
             ← Đổi môn học
           </button>
           <span>/</span>
-          <span class="font-semibold text-emerald-600 truncate">Cơ sở dữ liệu</span>
+          <span id="topbar-breadcrumb-course" class="font-semibold text-emerald-600 truncate">Cơ sở dữ liệu</span>
         </div>
         <!-- Tiêu đề lớn -->
         <h1 id="topbar-title" class="font-bold tracking-tight text-base sm:text-lg leading-tight truncate">Chương 1: Tổng quan CSDL</h1>
@@ -2689,7 +2689,7 @@
 
     const TOPBAR_CONFIG = {
       saga: {
-        breadcrumb: '<button id="btn_topbar_nav_doimon" onclick="navTo(\'enrolled\')" class="hover:text-[var(--foreground)] flex items-center gap-1 font-medium transition cursor-pointer truncate">← Đổi môn</button><span>/</span><span class="font-semibold text-emerald-600 truncate">Cơ sở dữ liệu</span>',
+        breadcrumb: '<button id="btn_topbar_nav_doimon" onclick="navTo(\'enrolled\')" class="hover:text-[var(--foreground)] flex items-center gap-1 font-medium transition cursor-pointer truncate">← Đổi môn</button><span>/</span><span id="topbar-breadcrumb-course" class="font-semibold text-emerald-600 truncate">Cơ sở dữ liệu</span>',
         title: 'Chương 1: CSDL',
         showProgress: true
       },
@@ -2743,7 +2743,16 @@
     function updateTopbarUI(viewName) {
       const cfg = TOPBAR_CONFIG[viewName] || TOPBAR_CONFIG.saga;
       const bcEl = document.getElementById('topbar-breadcrumb');
-      if (bcEl) bcEl.innerHTML = cfg.breadcrumb;
+      if (bcEl) {
+        if (viewName === 'saga') {
+          const currentCourseName = (liveCourseData && liveCourseData.mon_hoc && liveCourseData.mon_hoc.ten_mon) 
+            ? liveCourseData.mon_hoc.ten_mon 
+            : (currentActiveCourseSlug === 'chuyen-doi-so' ? 'Chuyển đổi số & Kinh tế số' : 'Cơ sở dữ liệu');
+          bcEl.innerHTML = `<button id="btn_topbar_nav_doimon" onclick="navTo('enrolled')" class="hover:text-[var(--foreground)] flex items-center gap-1 font-medium transition cursor-pointer truncate">← Đổi môn</button><span>/</span><span id="topbar-breadcrumb-course" class="font-semibold text-emerald-600 truncate">${currentCourseName}</span>`;
+        } else {
+          bcEl.innerHTML = cfg.breadcrumb;
+        }
+      }
       const titleEl = document.getElementById('topbar-title');
       if (titleEl) {
         if (viewName === 'saga' && liveCourseData && liveCourseData.cac_chuong) {
@@ -6560,7 +6569,15 @@
       }
       if (btn) {
         const isDone = (moc.trang_thai === 'HOAN_THANH' || moc.trang_thai === 'DA_HOAN_THANH');
-        btn.innerHTML = isDone ? '<span>⭐ Ôn tập mốc</span>' : '<span>🚀 Tiếp tục học ngay</span>';
+        const steps = String(moc.cac_buoc_hoan_thanh || '0/4');
+        const finishedSteps = parseInt(steps.split('/')[0] || '0', 10);
+        if (isDone) {
+          btn.innerHTML = '<span>⭐ Ôn tập mốc</span>';
+        } else if (finishedSteps > 0) {
+          btn.innerHTML = '<span>🚀 Tiếp tục học ngay</span>';
+        } else {
+          btn.innerHTML = '<span>🚀 Bắt đầu học ngay</span>';
+        }
       }
       if (card) {
         card.classList.remove('hidden');
@@ -6621,6 +6638,32 @@
       return 1;
     }
 
+    function getActiveMoc(mocs) {
+      if (!Array.isArray(mocs) || mocs.length === 0) return null;
+      const foundActive = mocs.find(m => m.trang_thai === 'DA_MO');
+      if (foundActive) return foundActive;
+      const lastDone = mocs.map(m => m.trang_thai).lastIndexOf('DA_HOAN_THANH');
+      const idx = lastDone >= 0 ? Math.min(mocs.length - 1, lastDone + 1) : 0;
+      return mocs[idx] || mocs[0];
+    }
+
+    function getMocSpeechText(moc) {
+      if (!moc) return 'Bắt đầu học! 🎯';
+      if (moc.trang_thai === 'DA_HOAN_THANH' || moc.trang_thai === 'HOAN_THANH') {
+        return 'Ôn lại nhé! ✨';
+      }
+      if (moc.loai_moc === 'THU_THACH_BOSS') {
+        return 'Thách đấu Boss! ⚔️';
+      }
+      const steps = String(moc.cac_buoc_hoan_thanh || '0/4');
+      const finishedSteps = parseInt(steps.split('/')[0] || '0', 10);
+      const score = typeof moc.diem_dat_duoc === 'number' ? moc.diem_dat_duoc : 0;
+      if (finishedSteps > 0 || score > 0) {
+        return 'Học tiếp nào! 🎯';
+      }
+      return 'Bắt đầu học! 🎯';
+    }
+
     function onSagaLockedClick(mocId) {
       const el = document.getElementById('btn_moc_lock_' + mocId);
       if (el) {
@@ -6632,7 +6675,12 @@
       if (speechTxt) speechTxt.textContent = 'Hoàn thành mốc trước đã! 🔒';
       showToast('Mốc này đang khóa. Hãy hoàn thành các mốc trước để mở khóa!', 'info');
       setTimeout(() => {
-        if (speechTxt) speechTxt.textContent = 'Học tiếp nào! 🎯';
+        if (speechTxt && liveCourseData && liveCourseData.cac_chuong) {
+          const allChapters = liveCourseData.cac_chuong || [];
+          const curCh = allChapters.find(c => c.ma_chuong === currentSagaChapterId) || allChapters[0];
+          const curMocs = curCh ? curCh.cac_moc || [] : [];
+          speechTxt.textContent = getMocSpeechText(getActiveMoc(curMocs));
+        }
       }, 2000);
     }
 
@@ -6685,6 +6733,21 @@
       const topbarTitle = document.getElementById('topbar-title');
       if (topbarTitle && activeChapter) {
         topbarTitle.textContent = activeChapter.tieu_de || `Chương ${activeChapter.thu_tu || 1}`;
+      }
+
+      // Update breadcrumb course name
+      const breadcrumbCourse = document.getElementById('topbar-breadcrumb-course');
+      if (breadcrumbCourse && courseData && courseData.mon_hoc) {
+        breadcrumbCourse.textContent = courseData.mon_hoc.ten_mon || 'Cơ sở dữ liệu';
+      }
+
+      // Update sidebar course badge
+      const sidebarCourseTag = document.getElementById('sidebar-saga-course-tag');
+      if (sidebarCourseTag && courseData && courseData.mon_hoc) {
+        const isCds = (courseData.mon_hoc.ma_mon === 'mon_cds' || courseData.mon_hoc.slug === 'chuyen-doi-so');
+        const code = isCds ? 'CĐS' : 'CSDL';
+        const chNum = (activeChapter && activeChapter.thu_tu) ? activeChapter.thu_tu : (actualChIdx + 1);
+        sidebarCourseTag.textContent = `${code} · C${chNum}`;
       }
 
       // Calculate overall progress across course
@@ -7083,7 +7146,12 @@
             const speechTxt = document.getElementById('roadmap-pet-speech-text');
             if (speechTxt) speechTxt.textContent = 'Hạ Boss để mở cổng nhé! ⚔️';
             setTimeout(() => {
-              if (speechTxt) speechTxt.textContent = 'Học tiếp nào! 🎯';
+              if (speechTxt && liveCourseData && liveCourseData.cac_chuong) {
+                const allChapters = liveCourseData.cac_chuong || [];
+                const curCh = allChapters.find(c => c.ma_chuong === currentSagaChapterId) || allChapters[0];
+                const curMocs = curCh ? curCh.cac_moc || [] : [];
+                speechTxt.textContent = getMocSpeechText(getActiveMoc(curMocs));
+              }
             }, 2500);
           };
         }
@@ -7299,10 +7367,10 @@
 
       // Real User Equipped Pet Container (Integrated with syncAllPetDisplays)
       const dg = el('g', { id: 'active-learning-node' }, gDr);
-      const bub = el('g', { transform: 'translate(-55,-44)' }, dg);
-      el('rect', { x: 0, y: 0, width: 110, height: 26, rx: 13, fill: '#0b1020', stroke: '#1D9E75', 'stroke-width': 1.5 }, bub);
-      const bt = el('text', { id: 'roadmap-pet-speech-text', x: 55, y: 17, 'text-anchor': 'middle', 'font-size': 12, fill: '#5DCAA5', 'font-weight': 600 }, bub);
-      bt.textContent = 'Học tiếp nào! 🎯';
+      const bub = el('g', { transform: 'translate(-62,-44)' }, dg);
+      el('rect', { x: 0, y: 0, width: 124, height: 26, rx: 13, fill: '#0b1020', stroke: '#1D9E75', 'stroke-width': 1.5 }, bub);
+      const bt = el('text', { id: 'roadmap-pet-speech-text', x: 62, y: 17, 'text-anchor': 'middle', 'font-size': 12, fill: '#5DCAA5', 'font-weight': 600 }, bub);
+      bt.textContent = getMocSpeechText(mocs[cur]);
 
       const bodyG = el('g', { class: 'bob' }, dg);
       const foPet = el('foreignObject', { x: -30, y: -95, width: 60, height: 60, class: 'overflow-visible pointer-events-none' }, bodyG);
@@ -7340,7 +7408,7 @@
             requestAnimationFrame(f);
           } else {
             sagaBusy = false;
-            bt.textContent = (targetIdx === cur) ? 'Học tiếp nào! 🎯' : 'Ôn lại nhé! ✨';
+            bt.textContent = getMocSpeechText(mocs[targetIdx]);
           }
         }
         requestAnimationFrame(f);
