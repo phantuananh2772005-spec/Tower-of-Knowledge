@@ -52,6 +52,61 @@
       display: inline-block;
       transform: none;
     }
+    /* Hiệu ứng Mở Hộp Quà Tân Thủ & Bàn Tay Tap-Tap */
+    @keyframes tapBounce {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      30% { transform: translate(-8px, -12px) scale(0.95); }
+      50% { transform: translate(0, 0) scale(1.08); }
+      70% { transform: translate(-4px, -6px) scale(0.98); }
+    }
+    .tap-guide-hand {
+      animation: tapBounce 1s ease-in-out infinite;
+      transform-origin: bottom right;
+      display: inline-block;
+    }
+    @keyframes giftRattle {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      20% { transform: rotate(-14deg) scale(1.08); }
+      40% { transform: rotate(14deg) scale(1.12); }
+      60% { transform: rotate(-10deg) scale(1.15); }
+      80% { transform: rotate(10deg) scale(1.18); }
+    }
+    .gift-wiggle-active {
+      animation: giftRattle 0.35s ease-in-out infinite;
+    }
+    @keyframes petBurstIn {
+      0% {
+        opacity: 0;
+        transform: scale(0.2) rotate(-12deg);
+      }
+      70% {
+        opacity: 1;
+        transform: scale(1.22) rotate(4deg);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+      }
+    }
+    .pet-burst-in {
+      animation: petBurstIn 0.75s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+    @keyframes particleFlyOut {
+      0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1) rotate(0deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translate(var(--tx, 80px), var(--ty, -80px)) scale(0.3) rotate(var(--rot, 360deg));
+      }
+    }
+    .boom-particle {
+      position: absolute;
+      pointer-events: none;
+      user-select: none;
+      animation: particleFlyOut 0.85s cubic-bezier(0.12, 0.8, 0.32, 1) forwards;
+    }
     /* ================= FLUID TYPOGRAPHY & CHỐNG VỠ GIAO DIỆN (FLUID CLAMP) ================= */
     :root {
       --fluid-h1: clamp(1.15rem, 1rem + 0.8vw, 1.75rem);
@@ -212,14 +267,6 @@
           <div class="flex items-center gap-3">
             <span class="text-base shrink-0">🛍️</span>
             <span class="sidebar-text font-medium">Cửa hàng Shop</span>
-          </div>
-        </button>
-
-        <!-- 8. Hướng dẫn cùng Pet -->
-        <button onclick="startPetOnboardingTour()" id="btn_sidebar_huong_dan" title="Hướng dẫn cùng Pet" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 transition flex items-center justify-between cursor-pointer">
-          <div class="flex items-center gap-3">
-            <span class="text-base shrink-0">🦉</span>
-            <span class="sidebar-text font-semibold">Hướng dẫn cùng Pet</span>
           </div>
         </button>
       </nav>
@@ -1287,6 +1334,23 @@
                 <span>→</span>
               </div>
             </div>
+
+            <!-- Mục 4: Mở lại Hộp Quà Tân Thủ & Gặp Pet -->
+            <div onclick="closeSettingsModal(); openNewbiePetUnboxing();" class="p-3.5 rounded-2xl bg-[var(--background)] border border-[var(--border)] hover:border-amber-500/50 hover:bg-[var(--card)] transition cursor-pointer flex items-center justify-between group shadow-2xs">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-base shrink-0 group-hover:scale-105 transition">
+                  🎁
+                </div>
+                <div>
+                  <span class="text-xs font-bold text-[var(--foreground)] group-hover:text-amber-600 transition block">Mở Hộp Quà Tân Thủ</span>
+                  <span class="text-[11px] text-[var(--muted-foreground)]">Trải nghiệm mở quà và nhận Linh thú ban đầu</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1 text-[var(--muted-foreground)] group-hover:text-amber-600 text-xs font-semibold transition">
+                <span>Mở quà</span>
+                <span>→</span>
+              </div>
+            </div>
           </div>
 
           <!-- DƯỚI CÙNG CARD CÀI ĐẶT: NÚT ĐĂNG XUẤT CĂN GIỮA -->
@@ -2054,6 +2118,119 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- ================= NÚT HỎI TRỢ GIÚP / PET TOUR NẰM GÓC DƯỚI BÊN PHẢI ================= -->
+    <button id="btn_floating_help_tour" onclick="startPetOnboardingTour()" title="Hướng dẫn cùng Pet" class="fixed bottom-4 right-4 z-40 w-10 h-10 rounded-full bg-linear-to-tr from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-xl hover:shadow-2xl flex items-center justify-center font-black text-sm transition-all duration-200 transform hover:scale-110 active:scale-95 cursor-pointer border border-white/30 backdrop-blur-xs group">
+      <span class="select-none">❓</span>
+      <span class="absolute right-12 bottom-1/2 translate-y-1/2 whitespace-nowrap px-2.5 py-1 rounded-lg bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] text-xs font-semibold shadow-lg opacity-0 group-hover:opacity-100 transition pointer-events-none">
+        Hướng dẫn cùng Pet 🦉
+      </span>
+    </button>
+
+    <!-- ================= MODAL MỞ HỘP QUÀ TÂN THỦ (UNBOXING STARTER PET) ================= -->
+    <div id="modal-unboxing-pet" class="hidden fixed inset-0 z-[85] flex items-center justify-center select-none overflow-hidden bg-black/90 backdrop-blur-md transition-opacity duration-300">
+      
+      <!-- Stage 1: Mystery Gift Box & Tap-Tap Hand Guide -->
+      <div id="unboxing-stage-box" class="relative flex flex-col items-center justify-center p-6 text-center max-w-md w-full">
+        <!-- Radial Ambient Aura -->
+        <div class="absolute w-80 h-80 rounded-full bg-linear-to-tr from-amber-500/25 via-emerald-500/20 to-teal-400/25 blur-3xl animate-pulse pointer-events-none"></div>
+
+        <!-- Banner Header -->
+        <div class="relative z-10 mb-6 space-y-1.5 animate-bounceGently">
+          <span class="inline-block px-3 py-1 rounded-full bg-linear-to-r from-amber-500/20 to-emerald-500/20 text-amber-300 border border-amber-500/40 text-[11px] font-bold uppercase tracking-widest">
+            🎁 MÓN QUÀ KHỞI ĐẦU DÀNH CHO BẠN
+          </span>
+          <h2 class="text-2xl sm:text-3xl font-black text-white drop-shadow-md">
+            Chạm Để Mở Hộp Quà!
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-300">
+            Một người bạn đặc biệt đang đợi bạn bên trong...
+          </p>
+        </div>
+
+        <!-- Interactive Gift Box Container with Tap Hand Guide -->
+        <div class="relative z-10 my-4 flex items-center justify-center">
+          <!-- The Gift Box Button -->
+          <button id="btn_unbox_gift" onclick="triggerGiftBoxUnbox()" title="Chạm để mở hộp quà" class="relative group cursor-pointer focus:outline-hidden transform active:scale-95 transition-transform duration-200">
+            <!-- Box Body Graphic -->
+            <div id="unboxing-gift-box-icon" class="text-8xl sm:text-9xl filter drop-shadow-[0_15px_30px_rgba(245,158,11,0.5)] select-none transition-all duration-300">
+              🎁
+            </div>
+            
+            <!-- Sparkles around box -->
+            <span class="absolute -top-3 -right-2 text-2xl animate-pulse select-none">✨</span>
+            <span class="absolute -bottom-1 -left-3 text-2xl animate-pulse select-none" style="animation-delay: 0.5s;">🌟</span>
+          </button>
+
+          <!-- Tap-Tap Guide Hand Indicator -->
+          <div id="unboxing-tap-guide" onclick="triggerGiftBoxUnbox()" class="absolute -right-4 -bottom-6 flex flex-col items-center pointer-events-auto cursor-pointer group">
+            <div class="relative flex items-center justify-center">
+              <span class="text-5xl sm:text-6xl tap-guide-hand select-none filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)]">👆</span>
+              <!-- Tap ripple wave -->
+              <span class="absolute -top-2 -left-2 w-8 h-8 rounded-full border-2 border-amber-300/80 animate-ping pointer-events-none"></span>
+            </div>
+            <span class="mt-1 px-3 py-1 rounded-full bg-linear-to-r from-amber-500 to-emerald-600 text-white font-extrabold text-[11px] uppercase tracking-wider shadow-lg border border-amber-300/40 animate-pulse whitespace-nowrap">
+              Tap vào đây!
+            </span>
+          </div>
+        </div>
+
+        <p class="relative z-10 mt-6 text-[11px] text-slate-400">
+          Chạm trực tiếp vào hộp quà để phá niêm phong
+        </p>
+      </div>
+
+      <!-- Explosion Flash & Particle Container -->
+      <div id="unboxing-flash-overlay" class="absolute inset-0 bg-white opacity-0 pointer-events-none transition-opacity duration-200 z-20"></div>
+      <div id="unboxing-particles-container" class="absolute inset-0 pointer-events-none z-20 overflow-hidden"></div>
+
+      <!-- Stage 2: Revealed Companion Pet & Greeting -->
+      <div id="unboxing-stage-pet" class="hidden relative z-30 flex flex-col items-center justify-center p-6 text-center max-w-md w-full space-y-4">
+        <!-- Radiant Gold Aura -->
+        <div class="absolute w-72 h-72 rounded-full bg-amber-400/20 blur-3xl pointer-events-none animate-pulse"></div>
+
+        <!-- Header Tag -->
+        <div class="space-y-1">
+          <span class="inline-block px-3.5 py-1 rounded-full bg-linear-to-r from-amber-500/20 via-emerald-500/20 to-teal-500/20 text-amber-300 border border-amber-400/50 text-xs font-black uppercase tracking-widest shadow-md">
+            ✨ LINH THÚ ĐỒNG HÀNH XUẤT HIỆN! ✨
+          </span>
+          <h2 class="text-2xl sm:text-3xl font-black text-white drop-shadow-lg">
+            Cú Tri Thức Archie
+          </h2>
+          <p class="text-xs text-emerald-400 font-semibold">
+            Đồng Hành Cấp 1 • Hộ Vệ Tháp Tri Thức
+          </p>
+        </div>
+
+        <!-- Big Pet Avatar with Pop Effect -->
+        <div class="relative my-2">
+          <div class="w-32 h-32 sm:w-36 sm:h-36 rounded-3xl bg-linear-to-b from-amber-500/20 via-emerald-500/20 to-teal-500/20 border-2 border-amber-400/70 shadow-[0_0_40px_rgba(245,158,11,0.5)] flex items-center justify-center text-7xl sm:text-8xl select-none pet-burst-in">
+            🦉
+          </div>
+          <span class="absolute -top-3 -right-3 text-3xl animate-bounce">👑</span>
+        </div>
+
+        <!-- Companion Speech Bubble -->
+        <div class="relative bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-4 text-left shadow-2xl backdrop-blur-md space-y-2">
+          <div class="flex items-center gap-2">
+            <span class="text-base">🦉</span>
+            <span class="font-bold text-xs text-emerald-400">Archie hào hứng nói:</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-200 leading-relaxed">
+            "Hú hú! Chào bạn mới! Tớ là <strong>Cú Tri Thức Archie</strong> 🦉! Từ giờ tớ sẽ luôn sát cánh cùng bạn chinh phục Tháp Tri Thức, rèn luyện tư duy và vượt qua mọi đối thủ. Để tớ dẫn bạn đi tham quan các khu vực nhé!"
+          </p>
+        </div>
+
+        <!-- Action Button -->
+        <div class="w-full pt-2">
+          <button id="btn_unboxing_start_tour" onclick="completeUnboxingAndStartTour()" class="w-full py-3.5 px-6 rounded-2xl bg-linear-to-r from-amber-500 via-emerald-600 to-teal-600 hover:from-amber-400 hover:to-teal-500 text-white font-black text-sm tracking-wide shadow-xl hover:shadow-2xl transition transform hover:scale-[1.02] active:scale-95 cursor-pointer flex items-center justify-center gap-2 border border-white/30">
+            <span>Cùng Archie Tham Quan Tháp Tri Thức</span>
+            <span>🚀</span>
+          </button>
+        </div>
+      </div>
+
     </div>
 
     </main>
@@ -5566,6 +5743,9 @@
             closeAuthModal();
             await reloadAllAccountData();
             showToast('🎉 Đăng ký thành công! Chào mừng ' + currentUserAccount.displayName);
+            if (!navigator.webdriver) {
+              setTimeout(openNewbiePetUnboxing, 350);
+            }
           } else {
             showToast(res.error?.message || 'Không thể tạo tài khoản!', 'error');
           }
@@ -5575,6 +5755,9 @@
           syncUserDataToUI();
           closeAuthModal();
           showToast('Đã lưu tài khoản ngoại tuyến!');
+          if (!navigator.webdriver) {
+            setTimeout(openNewbiePetUnboxing, 350);
+          }
         }
       } else {
         try {
@@ -8262,7 +8445,7 @@
       const banner = document.getElementById('hub-newbie-guide-banner');
       if (banner) banner.classList.add('hidden');
       navTo('hub');
-      showToast('Bạn có thể bấm vào "🦉 Hướng dẫn cùng Pet" ở thanh menu bất cứ lúc nào để xem lại.', 'info');
+      showToast('Bạn có thể bấm vào nút ❓ ở góc dưới bên phải màn hình bất cứ lúc nào để xem lại hướng dẫn.', 'info');
     }
 
     async function finishPetTour() {
@@ -8316,6 +8499,124 @@
         }
       }
       loadDailyQuests();
+    }
+
+    // ================= LOGIC MỞ HỘP QUÀ TÂN THỦ & NHẬN LINH THÚ =================
+    let isUnboxingInProgress = false;
+
+    function openNewbiePetUnboxing() {
+      const modal = document.getElementById('modal-unboxing-pet');
+      const stageBox = document.getElementById('unboxing-stage-box');
+      const stagePet = document.getElementById('unboxing-stage-pet');
+      const boxIcon = document.getElementById('unboxing-gift-box-icon');
+      const tapGuide = document.getElementById('unboxing-tap-guide');
+      const container = document.getElementById('unboxing-particles-container');
+
+      if (!modal) return;
+      isUnboxingInProgress = false;
+
+      if (stageBox) stageBox.classList.remove('hidden');
+      if (stagePet) stagePet.classList.add('hidden');
+      if (boxIcon) boxIcon.classList.remove('gift-wiggle-active');
+      if (tapGuide) tapGuide.classList.remove('opacity-0', 'pointer-events-none');
+      if (container) container.innerHTML = '';
+
+      modal.classList.remove('hidden');
+    }
+
+    function triggerGiftBoxUnbox() {
+      if (isUnboxingInProgress) return;
+      isUnboxingInProgress = true;
+
+      const boxIcon = document.getElementById('unboxing-gift-box-icon');
+      const tapGuide = document.getElementById('unboxing-tap-guide');
+      const flash = document.getElementById('unboxing-flash-overlay');
+      const stageBox = document.getElementById('unboxing-stage-box');
+      const stagePet = document.getElementById('unboxing-stage-pet');
+
+      // 1. Hide tap hand guide and rattle box
+      if (tapGuide) tapGuide.classList.add('opacity-0', 'pointer-events-none');
+      if (boxIcon) boxIcon.classList.add('gift-wiggle-active');
+
+      if (typeof playAdvancedSound === 'function') {
+        playAdvancedSound('click');
+      }
+
+      // 2. Shake for 480ms then BOOM explosion!
+      setTimeout(() => {
+        // Flash screen effect
+        if (flash) {
+          flash.style.opacity = '0.9';
+          setTimeout(() => {
+            flash.style.opacity = '0';
+          }, 180);
+        }
+
+        // Particle burst explosion
+        createExplosionParticles();
+
+        if (typeof playAdvancedSound === 'function') {
+          playAdvancedSound('win-fanfare');
+        }
+
+        // Transition from box stage to pet stage
+        if (stageBox) stageBox.classList.add('hidden');
+        if (stagePet) {
+          stagePet.classList.remove('hidden');
+          const petAvatar = stagePet.querySelector('.pet-burst-in');
+          if (petAvatar) {
+            petAvatar.classList.remove('pet-burst-in');
+            void petAvatar.offsetWidth; // force reflow
+            petAvatar.classList.add('pet-burst-in');
+          }
+        }
+      }, 480);
+    }
+
+    function createExplosionParticles() {
+      const container = document.getElementById('unboxing-particles-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const emojis = ['🎉', '✨', '⭐', '💥', '🌟', '🪙', '💫', '🎊', '✨', '🔥'];
+      const rect = container.getBoundingClientRect();
+      const cx = (rect.width || window.innerWidth) / 2;
+      const cy = (rect.height || window.innerHeight) / 2;
+
+      for (let i = 0; i < 28; i++) {
+        const p = document.createElement('div');
+        p.className = 'boom-particle text-2xl sm:text-3xl';
+        p.textContent = emojis[i % emojis.length];
+
+        const angle = (i / 28) * (2 * Math.PI) + (Math.random() * 0.4 - 0.2);
+        const distance = 90 + Math.random() * 160;
+        const tx = Math.cos(angle) * distance;
+        const ty = Math.sin(angle) * distance;
+        const rot = (Math.random() * 720 - 360) + 'deg';
+
+        p.style.left = cx + 'px';
+        p.style.top = cy + 'px';
+        p.style.setProperty('--tx', `${tx}px`);
+        p.style.setProperty('--ty', `${ty}px`);
+        p.style.setProperty('--rot', rot);
+        p.style.animationDelay = (Math.random() * 0.1) + 's';
+
+        container.appendChild(p);
+      }
+
+      setTimeout(() => {
+        if (container) container.innerHTML = '';
+      }, 1000);
+    }
+
+    function completeUnboxingAndStartTour() {
+      const modal = document.getElementById('modal-unboxing-pet');
+      if (modal) modal.classList.add('hidden');
+      localStorage.setItem('tok_unboxed_starter_pet', 'true');
+      isUnboxingInProgress = false;
+
+      // Launch companion onboarding tour
+      startPetOnboardingTour();
     }
 
 </script>
