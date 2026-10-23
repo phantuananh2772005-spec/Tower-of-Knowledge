@@ -368,32 +368,6 @@
       <!-- ================= VIEW 1: BẢN ĐỒ LỘ TRÌNH LEO THÁP (CHUYỂN VÀO KHI HỌC MÔN) ================= -->
       <section id="view-saga" class="hidden px-2 sm:px-4 max-w-2xl lg:max-w-6xl xl:max-w-7xl w-full mx-auto pt-4 pb-16 transition-all duration-300">
 
-        <!-- Header & Chapter Selector Toolbar -->
-        <div class="w-full bg-[var(--card)]/90 border border-indigo-500/25 rounded-2xl p-3 mb-4 shadow-xl backdrop-blur-sm flex items-center justify-between flex-wrap gap-2">
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-bold text-[var(--foreground)] flex items-center gap-1.5">
-              <span>🗺️</span>
-              <span>Bản Đồ Tháp Mốc Học</span>
-            </span>
-            <select id="saga-chapter-select" onchange="changeSagaChapter(this.value)" class="bg-[var(--background)] border border-[var(--border)] text-xs text-[var(--foreground)] rounded-xl px-2.5 py-1.5 font-semibold outline-hidden cursor-pointer">
-              <option value="ch_csdl_01">Chương 1: Tổng quan CSDL (5 mốc)</option>
-              <option value="ch_csdl_02">Chương 2: Mô hình ERD</option>
-              <option value="ch_csdl_03">Chương 3: Ngôn ngữ SQL</option>
-              <option value="ch_csdl_04">Chương 4: Chuẩn hóa CSDL</option>
-            </select>
-          </div>
-          <div class="flex items-center gap-2">
-            <button id="btn_saga_toggle_layout" onclick="toggleSagaLayoutMode()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--background)]/80 hover:bg-[var(--background)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer shadow-xs" title="Chuyển đổi giao diện Bản đồ ngang PC / Bản đồ dọc Mobile">
-              <span id="saga-layout-icon">🖥️</span>
-              <span id="saga-layout-label">Màn ngang PC</span>
-            </button>
-            <span id="saga-chapter-stars-badge" class="text-xs font-bold text-amber-500 font-mono bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-lg flex items-center gap-1">
-              <span>⭐</span>
-              <span id="saga-chapter-stars-count">0/15 sao</span>
-            </span>
-          </div>
-        </div>
-
         <!-- Dynamic Roadmap Content rendered via renderRealSagaRoadmap() from live DB -->
         <div id="saga-roadmap-track" class="w-full flex flex-col items-center gap-4">
           <div class="flex flex-col items-center justify-center py-16 text-[var(--muted-foreground)]">
@@ -402,27 +376,39 @@
           </div>
         </div>
 
-        <!-- PC Milestone Focus Card -->
-        <div id="saga-focus-card" class="w-full mt-4 p-4 rounded-2xl bg-[var(--card)]/90 border border-indigo-500/20 shadow-lg hidden items-center justify-between flex-wrap gap-4">
-          <div class="flex items-center gap-3.5">
+        <!-- Card Lộ Trình / Mốc Học Trọng Tâm -->
+        <div id="saga-focus-card" class="w-full mt-4 p-4 sm:p-5 rounded-2xl bg-[var(--card)]/90 border border-indigo-500/25 shadow-xl hidden items-center justify-between flex-wrap gap-4 backdrop-blur-sm">
+          <div class="flex items-center gap-3.5 min-w-[260px] flex-1">
             <div class="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-2xl shrink-0">
               📖
             </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="text-[11px] font-bold text-emerald-500 font-mono uppercase">Mốc học trọng tâm</span>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span id="saga-focus-chapter-tag" class="text-[11px] font-bold text-indigo-500 dark:text-indigo-400 font-mono uppercase tracking-wide">Chương 1: Tổng quan CSDL</span>
                 <span class="text-xs text-[var(--muted-foreground)]">•</span>
-                <span id="saga-focus-title" class="text-sm font-bold text-[var(--foreground)]">Mốc 1.1: Giới thiệu CSDL</span>
+                <span id="saga-focus-title" class="text-sm font-bold text-[var(--foreground)] truncate">Mốc 1.1: Giới thiệu CSDL</span>
               </div>
-              <p id="saga-focus-desc" class="text-xs text-[var(--muted-foreground)] mt-0.5 max-w-xl">Lộ trình học tập tương tác cùng Linh vật Pet của bạn.</p>
+              <p id="saga-focus-desc" class="text-xs text-[var(--muted-foreground)] mt-0.5 max-w-xl truncate">Lộ trình rèn luyện kỹ năng cùng Linh vật Pet của bạn.</p>
             </div>
           </div>
-          <div class="flex items-center gap-3">
-            <div class="text-right hidden md:block">
-              <div class="text-[11px] text-[var(--muted-foreground)]">Phần thưởng mốc</div>
+          <div class="flex items-center gap-3 flex-wrap justify-end">
+            <!-- Số sao của chương (đưa trực tiếp vào Card Lộ Trình) -->
+            <div id="saga-chapter-stars-badge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs font-bold font-mono shrink-0" title="Tổng số sao tích lũy trong chương">
+              <span>⭐</span>
+              <span id="saga-chapter-stars-count">0/15 sao</span>
+            </div>
+            <!-- Phần thưởng mốc -->
+            <div class="text-right hidden lg:block shrink-0">
+              <div class="text-[10px] text-[var(--muted-foreground)] uppercase font-semibold">Phần thưởng mốc</div>
               <div class="text-xs font-bold text-amber-500 font-mono">+150 EXP • +30 Xu</div>
             </div>
-            <button id="btn_saga_start_active" onclick="startFocusMocLearning()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5">
+            <!-- Nút chuyển chế độ ngang/dọc -->
+            <button id="btn_saga_toggle_layout" onclick="toggleSagaLayoutMode()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--background)]/80 hover:bg-[var(--background)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer shadow-xs shrink-0" title="Chuyển đổi giao diện Bản đồ ngang PC / Bản đồ dọc Mobile">
+              <span id="saga-layout-icon">🖥️</span>
+              <span id="saga-layout-label" class="hidden sm:inline">Màn ngang PC</span>
+            </button>
+            <!-- Nút hành động chính -->
+            <button id="btn_saga_start_active" onclick="startFocusMocLearning()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5 shrink-0">
               <span>🚀 Bắt đầu học ngay</span>
             </button>
           </div>
@@ -6272,8 +6258,15 @@
       const card = document.getElementById('saga-focus-card');
       const titleEl = document.getElementById('saga-focus-title');
       const descEl = document.getElementById('saga-focus-desc');
+      const chTag = document.getElementById('saga-focus-chapter-tag');
       const btn = document.getElementById('btn_saga_start_active');
 
+      if (chTag && liveCourseData && liveCourseData.cac_chuong) {
+        const activeChapter = liveCourseData.cac_chuong.find(c => c.ma_chuong === currentSagaChapterId) || liveCourseData.cac_chuong[0];
+        if (activeChapter) {
+          chTag.textContent = activeChapter.tieu_de || `Chương ${activeChapter.thu_tu || 1}`;
+        }
+      }
       if (titleEl) titleEl.textContent = moc.tieu_de || 'Mốc học tập';
       if (descEl) descEl.textContent = moc.mo_ta || 'Lộ trình rèn luyện kỹ năng cùng Linh vật Pet của bạn.';
       if (btn) {
@@ -6342,16 +6335,28 @@
       const container = document.getElementById('saga-roadmap-track');
       if (!container || !courseData || !courseData.cac_chuong) return;
 
-      // Update chapter select dropdown if present
-      const chSelect = document.getElementById('saga-chapter-select');
-      if (chSelect && chSelect.value !== currentSagaChapterId) {
-        chSelect.value = currentSagaChapterId;
+      // Find active chapter from live DB course data
+      const allChapters = courseData.cac_chuong || [];
+      const activeChapter = allChapters.find(c => c.ma_chuong === currentSagaChapterId) || allChapters[0];
+      if (activeChapter) {
+        currentSagaChapterId = activeChapter.ma_chuong;
+      }
+      const mocs = (activeChapter && activeChapter.cac_moc) ? activeChapter.cac_moc : [];
+      if (mocs.length === 0) {
+        container.innerHTML = '<div class="py-12 text-center text-slate-400 text-xs">Chưa có mốc học tập trong chương này.</div>';
+        return;
+      }
+
+      // Update Chapter title tag in Card Lộ Trình
+      const chTag = document.getElementById('saga-focus-chapter-tag');
+      if (chTag && activeChapter) {
+        chTag.textContent = activeChapter.tieu_de || `Chương ${activeChapter.thu_tu || 1}`;
       }
 
       // Calculate overall progress across course
       let totalMocs = 0;
       let completedMocs = 0;
-      courseData.cac_chuong.forEach(ch => {
+      allChapters.forEach(ch => {
         (ch.cac_moc || []).forEach(m => {
           totalMocs++;
           if (m.trang_thai === 'DA_HOAN_THANH' || m.trang_thai === 'HOAN_THANH') completedMocs++;
@@ -6363,14 +6368,6 @@
       if (progText) progText.textContent = `Đã qua ${completedMocs}/${totalMocs} mốc`;
       const progBar = document.getElementById('topbar-progress-bar');
       if (progBar) progBar.style.width = `${pct}%`;
-
-      // Find active chapter
-      const activeChapter = courseData.cac_chuong.find(c => c.ma_chuong === currentSagaChapterId) || courseData.cac_chuong[0];
-      const mocs = activeChapter.cac_moc || [];
-      if (mocs.length === 0) {
-        container.innerHTML = '<div class="py-12 text-center text-slate-400 text-xs">Chưa có mốc học tập trong chương này.</div>';
-        return;
-      }
 
       // Calculate stars for chapter badge
       const earnedStars = mocs.reduce((sum, m) => sum + getStarCountForMoc(m), 0);
@@ -6647,24 +6644,42 @@
         }, gPath);
       }
 
-      // Chapter Gate
+      // Chapter Gate (Next Chapter from DB)
       const gt = el('g', { class: 'cursor-pointer' }, gPath);
-      const nextChNum = (currentSagaChapterId === 'ch_csdl_01') ? '2' : (currentSagaChapterId === 'ch_csdl_02') ? '3' : '4';
-      const nextChId = (currentSagaChapterId === 'ch_csdl_01') ? 'ch_csdl_02' : (currentSagaChapterId === 'ch_csdl_02') ? 'ch_csdl_03' : 'ch_csdl_04';
+      const curChIdx = allChapters.findIndex(c => c.ma_chuong === currentSagaChapterId);
+      const hasNextCh = (curChIdx >= 0 && curChIdx < allChapters.length - 1);
+      const nextCh = hasNextCh ? allChapters[curChIdx + 1] : null;
+      const nextChNum = nextCh ? (nextCh.thu_tu || curChIdx + 2) : (curChIdx + 1);
+      const nextChId = nextCh ? nextCh.ma_chuong : currentSagaChapterId;
 
-      if (isH) {
-        el('rect', { x: gateCoord.x - 52, y: gateCoord.y - 28, width: 104, height: 56, rx: 18, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 2 }, gt);
-        el('text', { x: gateCoord.x, y: gateCoord.y + 2, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 600, fill: '#CECBF6' }, gt).textContent = `Chương ${nextChNum}`;
-        el('text', { x: gateCoord.x, y: gateCoord.y + 18, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 600, fill: '#818cf8', 'letter-spacing': 0.5 }, gt).textContent = 'TIẾP THEO ▶';
+      if (hasNextCh) {
+        if (isH) {
+          el('rect', { x: gateCoord.x - 52, y: gateCoord.y - 28, width: 104, height: 56, rx: 18, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 2 }, gt);
+          el('text', { x: gateCoord.x, y: gateCoord.y + 2, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 600, fill: '#CECBF6' }, gt).textContent = `Chương ${nextChNum}`;
+          el('text', { x: gateCoord.x, y: gateCoord.y + 18, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 600, fill: '#818cf8', 'letter-spacing': 0.5 }, gt).textContent = 'TIẾP THEO ▶';
+        } else {
+          el('rect', { x: gateCoord.x - 70, y: gateCoord.y - 20, width: 140, height: 44, rx: 22, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 2 }, gt);
+          el('text', { x: gateCoord.x, y: gateCoord.y + 8, 'text-anchor': 'middle', 'font-size': 16, 'font-weight': 600, fill: '#CECBF6' }, gt).textContent = `Chương ${nextChNum} ▶`;
+          el('line', { x1: gateCoord.x - 70, y1: gateCoord.y + 24, x2: gateCoord.x - 70, y2: gateCoord.y + 60, stroke: '#7F77DD', 'stroke-width': 3 }, gt);
+          el('line', { x1: gateCoord.x + 70, y1: gateCoord.y + 24, x2: gateCoord.x + 70, y2: gateCoord.y + 60, stroke: '#7F77DD', 'stroke-width': 3 }, gt);
+        }
+        gt.onclick = () => {
+          changeSagaChapter(nextChId);
+          showToast(`🚀 Chuyển sang ${nextCh.tieu_de || `Chương ${nextChNum}`}!`, 'info');
+        };
       } else {
-        el('rect', { x: gateCoord.x - 70, y: gateCoord.y - 20, width: 140, height: 44, rx: 22, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 2 }, gt);
-        el('text', { x: gateCoord.x, y: gateCoord.y + 8, 'text-anchor': 'middle', 'font-size': 16, 'font-weight': 600, fill: '#CECBF6' }, gt).textContent = `Chương ${nextChNum}`;
-        el('line', { x1: gateCoord.x - 70, y1: gateCoord.y + 24, x2: gateCoord.x - 70, y2: gateCoord.y + 60, stroke: '#7F77DD', 'stroke-width': 3 }, gt);
-        el('line', { x1: gateCoord.x + 70, y1: gateCoord.y + 24, x2: gateCoord.x + 70, y2: gateCoord.y + 60, stroke: '#7F77DD', 'stroke-width': 3 }, gt);
+        if (isH) {
+          el('rect', { x: gateCoord.x - 52, y: gateCoord.y - 28, width: 104, height: 56, rx: 18, fill: '#2a2412', stroke: '#d89a1b', 'stroke-width': 2 }, gt);
+          el('text', { x: gateCoord.x, y: gateCoord.y + 2, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 600, fill: '#fac775' }, gt).textContent = 'ĐỈNH THÁP';
+          el('text', { x: gateCoord.x, y: gateCoord.y + 18, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 600, fill: '#f59e0b', 'letter-spacing': 0.5 }, gt).textContent = '🏆 HOÀN THÀNH';
+        } else {
+          el('rect', { x: gateCoord.x - 70, y: gateCoord.y - 20, width: 140, height: 44, rx: 22, fill: '#2a2412', stroke: '#d89a1b', 'stroke-width': 2 }, gt);
+          el('text', { x: gateCoord.x, y: gateCoord.y + 8, 'text-anchor': 'middle', 'font-size': 15, 'font-weight': 600, fill: '#fac775' }, gt).textContent = '🏆 ĐỈNH THÁP';
+        }
+        gt.onclick = () => {
+          showToast('🎉 Bạn đã chinh phục đến đỉnh tháp của môn học này!', 'success');
+        };
       }
-      gt.onclick = () => {
-        changeSagaChapter(nextChId);
-      };
 
       // Draw Checkpoints with HTML Buttons via foreignObject
       N.forEach((n, i) => {
@@ -6795,29 +6810,47 @@
         });
       });
 
-      // Start Marker
-      if (isH) {
-        const sx = el('text', {
-          x: 120,
-          y: 430,
-          'text-anchor': 'middle',
-          'font-size': 11,
-          fill: '#7a8199',
-          'letter-spacing': 1.5,
-          'font-weight': 600
-        }, gNodes);
-        sx.textContent = '▲ XUẤT PHÁT TẠI ĐÂY ▲';
+      // Start Marker / Previous Chapter Gate
+      const hasPrevCh = (curChIdx > 0);
+      const prevCh = hasPrevCh ? allChapters[curChIdx - 1] : null;
+
+      if (hasPrevCh) {
+        const prevGate = el('g', { class: 'cursor-pointer' }, gNodes);
+        if (isH) {
+          el('rect', { x: 45, y: 405, width: 150, height: 32, rx: 12, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 1.5 }, prevGate);
+          el('text', { x: 120, y: 426, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 600, fill: '#CECBF6' }, prevGate).textContent = `◀ Về Chương ${prevCh.thu_tu || curChIdx}`;
+        } else {
+          el('rect', { x: 260, y: 955, width: 160, height: 34, rx: 14, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 1.5 }, prevGate);
+          el('text', { x: 340, y: 977, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 600, fill: '#CECBF6' }, prevGate).textContent = `◀ Về Chương ${prevCh.thu_tu || curChIdx}`;
+        }
+        prevGate.onclick = () => {
+          changeSagaChapter(prevCh.ma_chuong);
+          showToast(`🔙 Đang quay lại ${prevCh.tieu_de || `Chương ${curChIdx}`}!`, 'info');
+        };
       } else {
-        const sx = el('text', {
-          x: 340,
-          y: 985,
-          'text-anchor': 'middle',
-          'font-size': 12,
-          fill: '#7a8199',
-          'letter-spacing': 1.5,
-          'font-weight': 600
-        }, gNodes);
-        sx.textContent = '▲ XUẤT PHÁT TỪ ĐÂY ▲';
+        if (isH) {
+          const sx = el('text', {
+            x: 120,
+            y: 430,
+            'text-anchor': 'middle',
+            'font-size': 11,
+            fill: '#7a8199',
+            'letter-spacing': 1.5,
+            'font-weight': 600
+          }, gNodes);
+          sx.textContent = '▲ XUẤT PHÁT TẠI ĐÂY ▲';
+        } else {
+          const sx = el('text', {
+            x: 340,
+            y: 985,
+            'text-anchor': 'middle',
+            'font-size': 12,
+            fill: '#7a8199',
+            'letter-spacing': 1.5,
+            'font-weight': 600
+          }, gNodes);
+          sx.textContent = '▲ XUẤT PHÁT TỪ ĐÂY ▲';
+        }
       }
 
       // Real User Equipped Pet Container (Integrated with syncAllPetDisplays)
