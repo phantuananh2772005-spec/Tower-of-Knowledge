@@ -1062,7 +1062,7 @@
             <!-- Thẻ 2: Rank Tổng -->
             <div class="rounded-2xl border border-indigo-500/30 bg-slate-900/80 p-3 space-y-1.5 shadow-xs">
               <div class="flex items-center justify-between">
-                <span class="text-[10px] uppercase font-bold text-slate-400">Rank Tổng</span>
+                <span class="text-[10px] uppercase font-bold text-slate-400" id="res-all-name">Rank Tổng</span>
                 <span id="res-all-delta" class="text-xs font-mono font-extrabold text-emerald-400">+25</span>
               </div>
               <div>
@@ -3150,6 +3150,7 @@
 
   // ===== Trận đấu pet =====
   const B = { my:100, op:100, combo:0, qi:0, list:[], t0:0, tick:null, botT:null, pDone:false, bDone:false, shield:false, shieldUsed:false, over:false, locked:false };
+  window.B = B;
 
   let matchmakingInterval = null;
   let matchmakingTimeout = null;
@@ -3789,7 +3790,12 @@
         { id: 'usr_bot_002', name: 'Chiến Binh Lữ Khách', petIcon: '🦊', petName: 'Hồ Ly Kitsune', tier: '⚡ Tinh thông II' },
         { id: 'usr_bot_003', name: 'Hộ Vệ Tri Thức', petIcon: '🗿', petName: 'Thạch Cự Nhân Golem', tier: '👑 Cao thủ III' }
       ];
-      const chosenBot = botPool[Math.floor(Math.random() * botPool.length)];
+      const chosenBot = {
+        ...botPool[Math.floor(Math.random() * botPool.length)],
+        isBot: true,
+        isCasual: true,
+        isFriendMatch: false
+      };
 
       let liveMatchData = null;
       try {
@@ -3870,18 +3876,31 @@
   }
 
   function startBattle() {
-    startMatchmaking();
+    if (B && B.isCasual) {
+      if (B.isFriendMatch) {
+        startCasualFriendMatch();
+      } else {
+        startBotPractice();
+      }
+    } else {
+      startMatchmaking();
+    }
   }
 
   function startActualBattle(opponent, matchData) {
     clearBattleTimers();
-    B.subject = document.getElementById('lobby-subject') ? document.getElementById('lobby-subject').value : 'csdl';
+    const activeSub = (currentArenaMode === 'casual' && document.getElementById('casual-subject'))
+      ? document.getElementById('casual-subject').value
+      : (document.getElementById('lobby-subject') ? document.getElementById('lobby-subject').value : 'csdl');
+    B.subject = activeSub;
     Object.assign(B, { my: 100, op: 100, combo: 0, qi: 0, shield: false, shieldUsed: false, over: false });
 
     // Xác định vai trò đối thủ (Bot hay Người chơi thực PvP) & Định danh người dùng
     B.isBot = (typeof opponent?.isBot === 'boolean')
       ? opponent.isBot
       : Boolean(matchData?.doi_thu_la_bot ?? (opponent?.id && opponent.id.startsWith('usr_bot_')));
+    B.isCasual = Boolean(opponent?.isCasual || currentArenaMode === 'casual' || matchData?.isCasual);
+    B.isFriendMatch = Boolean(opponent?.isFriendMatch);
     B.myUserId = matchData?.my_user_id || B.myUserId || currentUserAccount?.userId;
 
     // Trích xuất ngân hàng câu hỏi đầy đủ 4 dạng từ Backend CSDL thật
@@ -4563,30 +4582,40 @@
       const koSub = document.getElementById('b-result-sub');
       const petImg = document.getElementById('b-result-pet-img');
 
+      const isCasual = Boolean(B.isCasual || (B.isBot && currentArenaMode === 'casual'));
+
       if (isSurrender) {
         if (koBadge) koBadge.className = "inline-block bg-gradient-to-r from-zinc-700 to-rose-700 text-white px-6 py-2 rounded-2xl transform rotate-1 shadow-xl border-2 border-white/80";
         if (koTitle) koTitle.textContent = "🏳️ ĐÃ ĐẦU HÀNG";
-        if (koSub) koSub.textContent = "BẠN ĐÃ NHẬN THUA TRẬN ĐẤU · (+15 XU KHÍCH LỆ)";
+        if (koSub) koSub.textContent = isCasual
+          ? "BẠN ĐÃ NHẬN THUA TRẬN TẬP LUYỆN · (+10 XU KHÍCH LỆ)"
+          : "BẠN ĐÃ NHẬN THUA TRẬN ĐẤU · (+15 XU KHÍCH LỆ)";
         if (audioSettings.outcome) playAdvancedSound('defeat-sad');
-        showToast('Trận đấu kết thúc: Bạn đã đầu hàng (+15 Xu tham gia).', 'info');
+        showToast(isCasual ? 'Trận tập luyện kết thúc: Bạn đã đầu hàng (+10 Xu).' : 'Trận đấu kết thúc: Bạn đã đầu hàng (+15 Xu tham gia).', 'info');
       } else if (isOpSurrender) {
         if (koBadge) koBadge.className = "inline-block bg-gradient-to-r from-fuchsia-600 via-rose-500 to-cyan-400 text-white px-6 py-2 rounded-2xl transform -rotate-2 shadow-xl border-2 border-white animate-bounce";
         if (koTitle) koTitle.textContent = "🏆 ĐỐI THỦ ĐẦU HÀNG!";
-        if (koSub) koSub.textContent = "ĐỐI THỦ ĐÃ XIN THUA · CHIẾN THẮNG TRỌN VẸN! (+50 XU, +75 EXP)";
+        if (koSub) koSub.textContent = isCasual
+          ? "ĐỐI THỦ ĐÃ DỪNG TRẬN GIAO HỮU! (+25 XU, +35 EXP · KHÔNG TÍNH RANK)"
+          : "ĐỐI THỦ ĐÃ XIN THUA · CHIẾN THẮNG TRỌN VẸN! (+50 XU, +75 EXP)";
         if (audioSettings.outcome) playAdvancedSound('win-fanfare');
-        showToast('🎉 Đối thủ đã đầu hàng! Bạn nhận trọn vẹn +50 Xu và +75 EXP.', 'success');
+        showToast(isCasual ? '🎉 Trận giao hữu kết thúc! Nhận +25 Xu và +35 EXP (không tính rank).' : '🎉 Đối thủ đã đầu hàng! Bạn nhận trọn vẹn +50 Xu và +75 EXP.', 'success');
       } else if (win) {
         if (koBadge) koBadge.className = "inline-block bg-gradient-to-r from-fuchsia-600 via-rose-500 to-cyan-400 text-white px-6 py-2 rounded-2xl transform -rotate-2 shadow-xl border-2 border-white animate-bounce";
         if (koTitle) koTitle.textContent = "K.O. VICTORY!";
-        if (koSub) koSub.textContent = "COMBO STREAK · CHIẾN THẮNG TUYỆT ĐỐI! (+50 XU, +75 EXP)";
+        if (koSub) koSub.textContent = isCasual
+          ? "ĐẤU TẬP LUYỆN & GIAO HỮU · CHIẾN THẮNG! (+25 XU, +35 EXP · KHÔNG TÍNH RANK)"
+          : "COMBO STREAK · CHIẾN THẮNG TUYỆT ĐỐI! (+50 XU, +75 EXP)";
         if (audioSettings.outcome) playAdvancedSound('win-fanfare');
-        showToast('🎉 Chiến thắng Đấu trường! Bạn nhận được +50 Xu và +75 EXP.', 'success');
+        showToast(isCasual ? '🥊 Chiến thắng trận tập luyện / giao hữu! (+25 Xu, +35 EXP, không tính điểm Rank).' : '🎉 Chiến thắng Đấu Hạng! +30 Điểm Rank, +50 Xu và +75 EXP.', 'success');
       } else {
         if (koBadge) koBadge.className = "inline-block bg-gradient-to-r from-rose-700 to-red-600 text-white px-6 py-2 rounded-2xl transform rotate-2 shadow-xl border-2 border-white/80";
         if (koTitle) koTitle.textContent = "K.O. THẤT BẠI";
-        if (koSub) koSub.textContent = "BẠN ĐÃ BỊ HẠ GỤC · HÃY RÈN LUYỆN THÊM! (+20 XU THAM GIA)";
+        if (koSub) koSub.textContent = isCasual
+          ? "BẠN ĐÃ BỊ HẠ GỤC Ở TRẬN TẬP LUYỆN · (+10 XU KHÍCH LỆ)"
+          : "BẠN ĐÃ BỊ HẠ GỤC · HÃY RÈN LUYỆN THÊM! (+20 XU THAM GIA)";
         if (audioSettings.outcome) playAdvancedSound('defeat-sad');
-        showToast('Bạn đã bị hạ gục. Nhận được +20 Xu khích lệ.', 'info');
+        showToast(isCasual ? 'Trận tập luyện kết thúc (+10 Xu khích lệ).' : 'Bạn đã bị hạ gục. Nhận được +20 Xu khích lệ.', 'info');
       }
 
       // Render pet in result
@@ -4596,19 +4625,24 @@
         else petImg.src = SPARKY_ANIM_GIF;
       }
 
-      // Tính điểm rank
-      const hpBonus = (win && B.my >= 50);
-      const delta = win ? (hpBonus ? 30 : 25) : (isSurrender ? -15 : -15);
+      // Tính điểm rank: CHỈ CỘNG/TRỪ ĐIỂM TRONG ĐẤU HẠNG (RANKED), ĐẤU THƯỜNG/BOT LUÔN LÀ 0!
       const sub = B.subject || 'csdl';
-      RANKS[sub] = Math.max(0, RANKS[sub] + delta);
+      let delta = 0;
+      let deltaTxt = '±0';
+      let deltaColor = 'text-cyan-400';
 
-      const deltaTxt = delta > 0 ? `+${delta}` : `${delta}`;
-      const deltaColor = delta > 0 ? 'text-emerald-400' : 'text-rose-500';
+      if (!isCasual) {
+        const hpBonus = (win && B.my >= 50);
+        delta = win ? (hpBonus ? 30 : 25) : (isSurrender ? -15 : -15);
+        RANKS[sub] = Math.max(0, RANKS[sub] + delta);
+        deltaTxt = delta > 0 ? `+${delta}` : `${delta}`;
+        deltaColor = delta > 0 ? 'text-emerald-400' : 'text-rose-500';
+      }
 
       // Cột 1: Rank Môn
       const elSubName = document.getElementById('res-sub-name');
       const safeSubName = (typeof SUBJ !== 'undefined' && SUBJ[sub]) ? SUBJ[sub] : 'CSDL';
-      if (elSubName) elSubName.textContent = 'Rank ' + safeSubName;
+      if (elSubName) elSubName.textContent = isCasual ? `Rank ${safeSubName} (Tập luyện)` : `Rank ${safeSubName}`;
       const elSubDelta = document.getElementById('res-sub-delta');
       if (elSubDelta) {
         elSubDelta.textContent = deltaTxt;
@@ -4622,6 +4656,8 @@
       if (elSubBar) elSubBar.style.width = tierProgress(RANKS[sub], false) + '%';
 
       // Cột 2: Rank Tổng
+      const elAllName = document.getElementById('res-all-name');
+      if (elAllName) elAllName.textContent = isCasual ? 'Rank Tổng (Không đổi)' : 'Rank Tổng';
       const elAllDelta = document.getElementById('res-all-delta');
       if (elAllDelta) {
         elAllDelta.textContent = deltaTxt;
@@ -4638,6 +4674,7 @@
       if (resBox) resBox.classList.remove('hidden');
     }, 700);
   }
+  window.checkEnd = checkEnd;
 
   // ================= QUẢN LÝ PROFILE & AVATAR HỆ THỐNG / GOOGLE =================
     const PRESET_AVATARS = [
@@ -8456,7 +8493,10 @@
         name: 'Bạn Giao Hữu (' + targetRoom + ')',
         petIcon: '🦊',
         petName: 'Hồ Ly Kitsune',
-        tier: '🌱 Khởi nguyên II'
+        tier: '🌱 Khởi nguyên II',
+        isBot: true,
+        isCasual: true,
+        isFriendMatch: true
       };
 
       let liveMatchData = null;
@@ -8585,7 +8625,12 @@
         { id: 'usr_bot_002', name: 'Chiến Binh Lữ Khách (Bot)', petIcon: '🦊', petName: 'Hồ Ly Kitsune', tier: '⚡ Tinh thông II' },
         { id: 'usr_bot_003', name: 'Hộ Vệ Tri Thức (Bot)', petIcon: '🗿', petName: 'Thạch Cự Nhân Golem', tier: '👑 Cao thủ III' }
       ];
-      const chosenBot = botPool[Math.floor(Math.random() * botPool.length)];
+      const chosenBot = {
+        ...botPool[Math.floor(Math.random() * botPool.length)],
+        isBot: true,
+        isCasual: true,
+        isFriendMatch: false
+      };
       const token = localStorage.getItem('tok_token');
       const subCode = document.getElementById('lobby-subject') ? document.getElementById('lobby-subject').value : 'csdl';
       const maMon = subCode.startsWith('mon_') ? subCode : ('mon_' + subCode);
