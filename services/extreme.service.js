@@ -65,14 +65,15 @@ function formatSafeQuestion(q) {
     [shuffledDapAn[i], shuffledDapAn[j]] = [shuffledDapAn[j], shuffledDapAn[i]];
   }
 
+  // BẢO MẬT CHỐNG F12: Tuyệt đối không gửi giai_thich (chứa lời giải) về client ở bước khởi tạo.
+  // giai_thich chỉ được server trả về sau khi người chơi đã gửi câu trả lời lên /api/extreme/check-answer.
   return {
     ma_cau_hoi: q.ma_cau_hoi,
     noi_dung: noiDung,
     loai_cau_hoi: loaiCauHoi,
     muc_bloom: q.muc_bloom || 'NHO',
     do_kho: q.do_kho || 1,
-    dap_an: shuffledDapAn,
-    giai_thich: q.giai_thich || ''
+    dap_an: shuffledDapAn
   };
 }
 
@@ -90,27 +91,32 @@ async function startSession(ma_mon = 'mon_csdl', ma_nguoi_dung = null) {
   }
   const resolvedMon = course ? course.ma_mon : 'mon_csdl';
 
-  // Fetch ALL questions for this course at once
+  // Fetch ALL questions for this course at once (sử dụng Index scan nhẹ, không dùng ORDER BY NEWID())
   const rawQuestions = await db.query(`
     SELECT q.ma_cau_hoi, q.noi_dung, q.loai_cau_hoi, q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d,
-           q.du_lieu_cau_hoi, q.muc_bloom, q.do_kho, q.vi_tri_dap_an_dung, q.giai_thich
+           q.du_lieu_cau_hoi, q.muc_bloom, q.do_kho, q.vi_tri_dap_an_dung
     FROM cau_hoi q
     JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
     JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
     WHERE c.ma_mon = $1
-    ORDER BY NEWID()
+    ORDER BY q.ma_cau_hoi ASC
   `, [resolvedMon]);
 
-  const formattedQuestions = (rawQuestions || []).map(formatSafeQuestion);
+  // Xáo trộn mảng câu hỏi trên RAM Node.js bằng thuật toán Fisher-Yates (0ms disk overhead)
+  const pool = (rawQuestions || []).map(formatSafeQuestion);
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
 
   return {
     ma_mon: resolvedMon,
     ten_mon: course ? course.ten_mon : 'Cơ sở Dữ liệu',
-    tong_so_cau_trong_kho: formattedQuestions.length,
+    tong_so_cau_trong_kho: pool.length,
     max_sinh_mang: 5,
     thoi_gian_moi_cau: 25,
-    danh_sach_cau_hoi: formattedQuestions,
-    questions: formattedQuestions
+    danh_sach_cau_hoi: pool,
+    questions: pool
   };
 }
 
@@ -269,13 +275,44 @@ async function checkAnswer(ma_cau_hoi, tra_loi, tra_loi_text = null) {
 async function finishSession(ma_nguoi_dung, sessionData = {}) {
   const {
     ma_mon = 'mon_csdl',
-    tong_so_cau_lam = sessionData.total_answered || sessionData.tong_so_cau_lam || 0,
-    tong_so_cau_dung = sessionData.correct_count || sessionData.tong_so_cau_dung || 0,
-    chuoi_dung_cao_nhat = sessionData.max_streak || sessionData.chuoi_dung_cao_nhat || 0,
-    tong_diem = sessionData.total_score || sessionData.tong_diem || 0,
     thoi_gian_giay = sessionData.duration_seconds || sessionData.thoi_gian_giay || 0,
     vong_lap = sessionData.loops_completed || sessionData.vong_lap || 1
   } = sessionData;
+
+  const questionLog = Array.isArray(sessionData.danh_sach_cau_hoi) && sessionData.danh_sach_cau_hoi.length > 0
+    ? sessionData.danh_sach_cau_hoi 
+    : (Array.isArray(sessionData.questions) && sessionData.questions.length > 0 ? sessionData.questions : null);
+
+  // XÁC THỰC PHÍA SERVER: Tính toán lại từ nhật ký câu hỏi đã làm thực tế để chống hack/spoofing
+  let verifiedTotal = 0;
+  let verifiedCorrect = 0;
+  let verifiedMaxStreak = 0;
+  let verifiedScore = 0;
+
+  if (Array.isArray(questionLog) && questionLog.length > 0) {
+    verifiedTotal = questionLog.length;
+    let currentStreak = 0;
+    for (const qItem of questionLog) {
+      if (qItem.la_dung === true || qItem.is_correct === true) {
+        verifiedCorrect++;
+        currentStreak++;
+        if (currentStreak > verifiedMaxStreak) verifiedMaxStreak = currentStreak;
+        let streakMult = 1.0;
+        if (currentStreak >= 10) streakMult = 3.0;
+        else if (currentStreak >= 6) streakMult = 2.0;
+        else if (currentStreak >= 3) streakMult = 1.5;
+        const loopMult = 1 + (Number(vong_lap || 1) - 1) * 0.5;
+        verifiedScore += Math.round(10 * streakMult * loopMult);
+      } else {
+        currentStreak = 0;
+      }
+    }
+  }
+
+  const tong_so_cau_lam = verifiedTotal > 0 ? verifiedTotal : (sessionData.total_answered || sessionData.tong_so_cau_lam || 0);
+  const tong_so_cau_dung = verifiedTotal > 0 ? verifiedCorrect : (sessionData.correct_count || sessionData.tong_so_cau_dung || 0);
+  const chuoi_dung_cao_nhat = verifiedTotal > 0 ? verifiedMaxStreak : (sessionData.max_streak || sessionData.chuoi_dung_cao_nhat || 0);
+  const tong_diem = verifiedTotal > 0 ? verifiedScore : (sessionData.total_score || sessionData.tong_diem || 0);
 
   // Reward Calculations: Proportional to survival endurance
   const earnedCoins = Math.min(250, Math.floor(tong_diem / 40) + tong_so_cau_dung * 2 + chuoi_dung_cao_nhat * 3);

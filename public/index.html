@@ -2605,6 +2605,19 @@
           </select>
         </div>
 
+        <!-- Resume Box (nếu có trận đấu dở dang lưu trong localStorage) -->
+        <div id="extreme-resume-box" class="hidden p-3.5 rounded-2xl bg-amber-500/15 border border-amber-500/35 flex items-center justify-between gap-3 animate-in fade-in duration-200">
+          <div class="min-w-0 pr-1">
+            <div class="text-xs font-bold text-amber-500 flex items-center gap-1.5">
+              <span>⚡ Trận đấu dở dang</span>
+            </div>
+            <div id="extreme-resume-desc" class="text-[11px] text-[var(--muted-foreground)] truncate mt-0.5">Đang ở Câu 8 · Điểm: 120</div>
+          </div>
+          <button id="btn_extreme_resume_play" onclick="resumeExtremeSession()" class="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs shrink-0 cursor-pointer shadow-xs transition">
+            Tiếp tục ▶
+          </button>
+        </div>
+
         <div class="pt-2">
           <button id="btn_start_extreme_play" onclick="startExtremeSurvival(document.getElementById('extreme-subject-select').value)" class="w-full py-3 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold text-sm transition cursor-pointer shadow-lg flex items-center justify-center gap-2">
             <span>🔥</span>
@@ -10699,27 +10712,125 @@
     let pendingExtremeNavView = null;
 
     /**
-     * Helper gọi API chuẩn cho Thi Đấu Cực Hạn (có Bearer Token)
+     * Helper gọi API chuẩn cho Thi Đấu Cực Hạn (có Bearer Token & Tự động thử lại khi mạng di động chập chờn)
      */
-    async function fetchExtremeApi(endpoint, body = {}) {
-      try {
-        const token = localStorage.getItem('tok_token');
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = 'Bearer ' + token;
+    async function fetchExtremeApi(endpoint, body = {}, retries = 2) {
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+          const token = localStorage.getItem('tok_token');
+          const headers = { 'Content-Type': 'application/json' };
+          if (token) headers['Authorization'] = 'Bearer ' + token;
 
-        const resp = await fetch(endpoint, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(body)
-        });
-        const json = await resp.json();
-        return {
-          ok: resp.ok && json.success !== false,
-          data: json.data !== undefined ? json.data : json
+          const resp = await fetch(endpoint, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body)
+          });
+          const json = await resp.json();
+          return {
+            ok: resp.ok && json.success !== false,
+            data: json.data !== undefined ? json.data : json
+          };
+        } catch (err) {
+          if (attempt < retries) {
+            await new Promise(r => setTimeout(r, 600));
+            continue;
+          }
+          console.error('fetchExtremeApi network error after retries:', err);
+          return { ok: false, data: null, error: err.message };
+        }
+      }
+    }
+
+    /**
+     * Quản lý lưu trữ trạng thái phiên cực hạn trên localStorage (Chống mất phiên khi F5 / Reload)
+     */
+    function saveExtremeSessionToStorage() {
+      if (!extremeSession || !extremeSession.active) {
+        localStorage.removeItem('tok_extreme_session');
+        return;
+      }
+      try {
+        const remainingQueue = extremeSession.bufferQueue ? [...extremeSession.bufferQueue] : [];
+        const backup = {
+          active: true,
+          timestamp: Date.now(),
+          maMon: extremeSession.maMon,
+          tenMon: extremeSession.tenMon,
+          tongSoCauKho: extremeSession.tongSoCauKho,
+          thoiGianMoiCau: extremeSession.thoiGianMoiCau,
+          hp: extremeSession.hp,
+          maxHp: extremeSession.maxHp,
+          soCauDaLam: extremeSession.soCauDaLam,
+          soCauDung: extremeSession.soCauDung,
+          soCauSai: extremeSession.soCauSai,
+          streak: extremeSession.streak,
+          maxStreak: extremeSession.maxStreak,
+          score: extremeSession.score,
+          vongLap: extremeSession.vongLap,
+          cachedPool: extremeSession.cachedPool,
+          bufferQueue: remainingQueue,
+          answeredQuestions: extremeSession.answeredQuestions || [],
+          currentQuestionIndex: extremeSession.currentQuestionIndex,
+          startTime: extremeSession.startTime
         };
-      } catch (err) {
-        console.error('fetchExtremeApi network error:', err);
-        return { ok: false, data: null, error: err.message };
+        localStorage.setItem('tok_extreme_session', JSON.stringify(backup));
+      } catch (e) {}
+    }
+
+    function clearExtremeSessionStorage() {
+      try {
+        localStorage.removeItem('tok_extreme_session');
+      } catch (e) {}
+    }
+
+    /**
+     * Khôi phục phiên thi đấu cực hạn dở dang
+     */
+    function resumeExtremeSession() {
+      try {
+        const raw = localStorage.getItem('tok_extreme_session');
+        if (!raw) {
+          showToast('Không tìm thấy phiên chơi cần khôi phục.', 'warning');
+          return;
+        }
+        const saved = JSON.parse(raw);
+        closeExtremeSetupModal();
+        showToast('⚡ Đã khôi phục thành công trận đấu cực hạn!', 'success');
+
+        extremeSession = {
+          active: true,
+          maMon: saved.maMon,
+          tenMon: saved.tenMon,
+          tongSoCauKho: saved.tongSoCauKho || (saved.cachedPool ? saved.cachedPool.length : 108),
+          thoiGianMoiCau: saved.thoiGianMoiCau || 25,
+          hp: saved.hp !== undefined ? saved.hp : 5,
+          maxHp: saved.maxHp || 5,
+          soCauDaLam: saved.soCauDaLam || 0,
+          soCauDung: saved.soCauDung || 0,
+          soCauSai: saved.soCauSai || 0,
+          streak: saved.streak || 0,
+          maxStreak: saved.maxStreak || 0,
+          score: saved.score || 0,
+          vongLap: saved.vongLap || 1,
+          cachedPool: saved.cachedPool || [],
+          bufferQueue: saved.bufferQueue || [],
+          answeredQuestions: saved.answeredQuestions || [],
+          currentQuestionIndex: saved.currentQuestionIndex || 0,
+          currentQuestion: null,
+          currentQuestionStartTime: null,
+          isGrading: false,
+          timeRemaining: 25,
+          startTime: saved.startTime || Date.now()
+        };
+
+        navTo('extreme');
+        updateExtremeHeartsUI();
+        updateExtremeHeaderUI();
+        renderNextExtremeQuestion();
+      } catch (e) {
+        console.error('resumeExtremeSession error:', e);
+        showToast('Lỗi khi khôi phục trận đấu: ' + e.message, 'error');
       }
     }
 
@@ -10729,6 +10840,31 @@
     async function openExtremeSetupModal(preferredMaMon) {
       const modal = document.getElementById('modal-extreme-setup');
       if (!modal) return;
+
+      // Kiểm tra có phiên thi đấu dở dang lưu trong localStorage không (< 3 giờ)
+      const resumeBox = document.getElementById('extreme-resume-box');
+      const resumeDesc = document.getElementById('extreme-resume-desc');
+      if (resumeBox) {
+        try {
+          const raw = localStorage.getItem('tok_extreme_session');
+          if (raw) {
+            const saved = JSON.parse(raw);
+            const isFresh = (Date.now() - (saved.timestamp || 0)) < 3 * 3600 * 1000;
+            if (isFresh && saved.active && saved.currentQuestionIndex) {
+              if (resumeDesc) {
+                resumeDesc.textContent = `${saved.tenMon || 'Môn học'} · Câu ${saved.currentQuestionIndex} · Điểm: ${saved.score || 0} · ❤️ ${saved.hp || 5}`;
+              }
+              resumeBox.classList.remove('hidden');
+            } else {
+              resumeBox.classList.add('hidden');
+            }
+          } else {
+            resumeBox.classList.add('hidden');
+          }
+        } catch (e) {
+          resumeBox.classList.add('hidden');
+        }
+      }
 
       const select = document.getElementById('extreme-subject-select');
       if (select) {
@@ -10776,10 +10912,30 @@
     }
 
     /**
+     * Tính toán thời gian làm bài động theo mức Bloom và độ dài đề bài (Pedagogical Balance)
+     */
+    function getExtremeQuestionTime(q) {
+      if (!q) return 25;
+      const bloom = (q.muc_bloom || '').toUpperCase();
+      const textLen = (q.noi_dung || '').length;
+      if (bloom === 'PHAN_TICH' || bloom === 'DANH_GIA' || textLen > 140) {
+        return 35; // Câu phân tích, tình huống thực tế dài: 35 giây
+      }
+      if (bloom === 'VAN_DUNG' || textLen > 80) {
+        return 30; // Câu vận dụng: 30 giây
+      }
+      if (bloom === 'HIEU') {
+        return 25; // Câu thông hiểu chuẩn: 25 giây
+      }
+      return 20; // Câu nhớ/định nghĩa ngắn: 20 giây
+    }
+
+    /**
      * Bắt đầu phiên Thi đấu Cực hạn
      */
     async function startExtremeSurvival(maMon) {
       try {
+        clearExtremeSessionStorage();
         const resolvedMon = maMon || (document.getElementById('extreme-subject-select') ? document.getElementById('extreme-subject-select').value : 'mon_csdl');
         closeExtremeSetupModal();
         showToast('Đang nạp toàn bộ kho câu hỏi vào bộ nhớ...', 'info');
@@ -10808,7 +10964,7 @@
           maMon: data.ma_mon || resolvedMon,
           tenMon: data.ten_mon || 'Cơ sở Dữ liệu',
           tongSoCauKho: fullCachedPool.length,
-          thoiGianMoiCau: data.thoi_gian_moi_cau || 25,
+          thoiGianMoiCau: 25,
           hp: data.max_sinh_mang || 5,
           maxHp: 5,
           soCauDaLam: 0,
@@ -10994,11 +11150,36 @@
       // Nếu đã làm hết toàn bộ câu trong buffer (đã trải qua trọn vẹn toàn bộ kho câu hỏi):
       if (extremeSession.bufferQueue.length === 0) {
         if (extremeSession.cachedPool && extremeSession.cachedPool.length > 0) {
-          // Kích hoạt Vòng lặp mới: Đảo ngẫu nhiên lại 100% kho câu hỏi còn lưu trên RAM
           extremeSession.vongLap++;
-          extremeSession.bufferQueue = shuffleArray(extremeSession.cachedPool);
+
+          // THUẬT TOÁN LẶP LẠI NGẮT QUÃNG (Spaced Repetition):
+          // Tách riêng các câu người chơi đã từng trả lời SAI ở các vòng trước để ưu tiên ôn tập lại
+          const wrongQIds = new Set(
+            (extremeSession.answeredQuestions || [])
+              .filter(a => a.la_dung === false)
+              .map(a => a.ma_cau_hoi)
+          );
+
+          const wrongPool = [];
+          const rightPool = [];
+
+          extremeSession.cachedPool.forEach(item => {
+            if (wrongQIds.has(item.ma_cau_hoi)) {
+              wrongPool.push(item);
+            } else {
+              rightPool.push(item);
+            }
+          });
+
+          // Đưa toàn bộ các câu từng làm sai lên đầu vòng mới, xáo trộn nội bộ mỗi nhóm
+          extremeSession.bufferQueue = [
+            ...shuffleArray(wrongPool),
+            ...shuffleArray(rightPool)
+          ];
+
           const bonusMult = (1 + (extremeSession.vongLap - 1) * 0.5).toFixed(1);
-          showToast(`🔥 Huyền thoại! Bạn đã chinh phục toàn bộ ${extremeSession.cachedPool.length} câu hỏi! Bắt đầu Vòng ${extremeSession.vongLap} (Điểm x${bonusMult}) với thứ tự đảo ngẫu nhiên mới!`, 'success');
+          const wrongNote = wrongPool.length > 0 ? ` (Ưu tiên ôn tập lại ${wrongPool.length} câu bạn từng làm sai!)` : '';
+          showToast(`🔥 Vòng ${extremeSession.vongLap} (x${bonusMult} điểm)!${wrongNote}`, 'success');
         } else {
           // Không còn câu nào trong pool
           finishExtremeGame(false);
@@ -11013,12 +11194,16 @@
       extremeSession.isGrading = false;
       extremeSession.currentQuestionIndex = (extremeSession.currentQuestionIndex || 0) + 1;
 
+      // Tính toán thời lượng suy nghĩ động (Pedagogical Balance)
+      const qTime = getExtremeQuestionTime(q);
+      extremeSession.thoiGianMoiCau = qTime;
+
       // Cập nhật UI
       updateExtremeHeaderUI();
 
       const bloomTag = document.getElementById('extreme-q-bloom');
       if (bloomTag) {
-        bloomTag.textContent = `🎯 CÂU HỎI SINH TỒN · [${q.muc_bloom || 'HIỂU'}]`;
+        bloomTag.textContent = `🎯 CÂU HỎI SINH TỒN · [${q.muc_bloom || 'HIỂU'}] · ${qTime}s`;
       }
 
       const promptEl = document.getElementById('extreme-q-prompt');
@@ -11233,6 +11418,7 @@
           }
 
           updateExtremeHeaderUI();
+          saveExtremeSessionToStorage();
 
           // Chuyển câu mượt mà sau 700ms
           setTimeout(() => {
@@ -11251,6 +11437,7 @@
 
           updateExtremeHeartsUI();
           updateExtremeHeaderUI();
+          saveExtremeSessionToStorage();
 
           // Hiển thị giải thích
           const fbBox = document.getElementById('extreme-feedback-box');
@@ -11329,6 +11516,7 @@
      */
     async function finishExtremeGame(isDead = false) {
       if (!extremeSession) return;
+      clearExtremeSessionStorage();
       stopExtremeQuestionTimer();
       extremeSession.active = false;
 
