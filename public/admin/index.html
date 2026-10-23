@@ -189,7 +189,7 @@
       <!-- TAB 1: ANALYTICS / KPI -->
       <section id="panel-analytics" class="space-y-6">
         <!-- KPI Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
           <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
             <span class="text-xs text-[var(--muted)] font-medium">Tổng Người Học</span>
             <div id="stat-users" class="text-2xl font-bold font-mono text-emerald-400 mt-1">--</div>
@@ -206,9 +206,14 @@
             <span class="text-[10px] text-amber-500/80 font-medium">Câu hỏi trắc nghiệm</span>
           </div>
           <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs">
-            <span class="text-xs text-[var(--muted)] font-medium">Trận Đấu 1v1 Đã Diễn Ra</span>
+            <span class="text-xs text-[var(--muted)] font-medium">Trận Đấu 1v1 PvP</span>
             <div id="stat-matches" class="text-2xl font-bold font-mono text-purple-400 mt-1">--</div>
             <span class="text-[10px] text-purple-500/80 font-medium">Đấu trường PvP</span>
+          </div>
+          <div class="p-4 rounded-2xl bg-[var(--card)] border border-[var(--border)] shadow-xs col-span-2 sm:col-span-1">
+            <span class="text-xs text-[var(--muted)] font-medium">Phiên Thi Đấu Cực Hạn</span>
+            <div id="stat-extreme" class="text-2xl font-bold font-mono text-rose-400 mt-1">--</div>
+            <span class="text-[10px] text-rose-500/80 font-medium">Sinh tồn vô tận</span>
           </div>
         </div>
 
@@ -1363,6 +1368,9 @@
         document.getElementById('stat-courses').innerText = stats.tong_quan.tong_mon_hoc;
         document.getElementById('stat-questions').innerText = stats.tong_quan.tong_cau_hoi;
         document.getElementById('stat-matches').innerText = stats.tong_quan.tong_tran_dau;
+        if (document.getElementById('stat-extreme')) {
+          document.getElementById('stat-extreme').innerText = stats.tong_quan.tong_phien_cuc_han !== undefined ? stats.tong_quan.tong_phien_cuc_han : 0;
+        }
 
         const tbodyUsers = document.getElementById('table-recent-users');
         tbodyUsers.innerHTML = stats.nguoi_dung_moi.map(u => `
@@ -2426,15 +2434,20 @@
         const recentTbody = document.getElementById('table-recent-activities');
         if (recentTbody) {
           recentTbody.innerHTML = (feed.recent_activities || []).map(a => {
+            const isExtreme = a.loai_phien === 'THI_DAU_CUC_HAN';
             const accClass = a.ti_le_dung >= 80 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : a.ti_le_dung >= 50 ? 'text-amber-400 bg-amber-500/10 border-amber-500/30' : 'text-rose-400 bg-rose-500/10 border-rose-500/30';
-            const sessionBadge = a.loai_phien === 'DUOLINGO_STEP' ? '📘 Chặng Học' : a.loai_phien === 'DUOLINGO_STEP_PARTIAL' ? '⏸️ Tạm Dừng (Lưu Dở)' : a.loai_phien === 'THU_THACH_BOSS' ? '⚔️ Boss' : '🎯 Mốc Học';
+            const sessionBadge = a.loai_phien === 'DUOLINGO_STEP' ? '📘 Chặng Học' : a.loai_phien === 'DUOLINGO_STEP_PARTIAL' ? '⏸️ Tạm Dừng (Lưu Dở)' : a.loai_phien === 'THU_THACH_BOSS' ? '⚔️ Boss' : isExtreme ? '🔥 Cực Hạn (Sinh Tồn)' : '🎯 Mốc Học';
+            const badgeClass = isExtreme ? 'bg-rose-500/15 text-rose-400 border-rose-500/40 font-bold' : 'bg-slate-800 text-[var(--muted)] border-[var(--border)]';
             const dateStr = a.tao_luc ? new Date(a.tao_luc).toLocaleString('vi-VN') : '--';
+            const mocSubtext = isExtreme
+              ? `<span class="text-rose-400 font-bold">🔥 Sinh Tồn Vòng ${a.buoc_so || 1}</span> • <span class="text-amber-400 font-mono">${a.so_cau_dung || 0}/${a.tong_so_cau || 0} đúng</span>`
+              : `🎯 ${escapeHtml(a.ten_moc)} (Chặng ${a.buoc_so || 1})`;
 
             return `
               <tr class="hover:bg-[var(--background)]/50 transition">
                 <td class="py-2.5 px-3">
                   <div class="flex items-center gap-2 min-w-0">
-                    <span class="text-base shrink-0">🧙</span>
+                    <span class="text-base shrink-0">${isExtreme ? '🔥' : '🧙'}</span>
                     <button onclick="openLearnerTelemetryModal('${a.ma_nguoi_dung}')" class="font-bold text-[var(--foreground)] hover:text-amber-400 transition text-left cursor-pointer truncate max-w-[170px] block" title="Xem toàn bộ hồ sơ của ${escapeHtml(a.ten_hien_thi)}">
                       ${escapeHtml(a.ten_hien_thi)}
                       <span class="text-[10px] text-[var(--muted)] font-mono block">@${escapeHtml(a.ten_dang_nhap)}</span>
@@ -2446,11 +2459,11 @@
                     📘 ${escapeHtml(a.ten_mon || 'CSDL')}
                   </div>
                   <div class="text-[10px] text-[var(--muted)] font-mono truncate" title="${escapeHtml(a.ten_moc)}">
-                    🎯 ${escapeHtml(a.ten_moc)} (Chặng ${a.buoc_so || 1})
+                    ${mocSubtext}
                   </div>
                 </td>
                 <td class="py-2.5 px-2 text-center whitespace-nowrap">
-                  <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-[var(--muted)] border border-[var(--border)]">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${badgeClass}">
                     ${sessionBadge}
                   </span>
                 </td>
@@ -2687,23 +2700,28 @@
           sessContainer.innerHTML = '<div class="p-6 text-center text-xs text-[var(--muted)]">Học viên chưa thực hiện phiên làm bài trắc nghiệm nào.</div>';
         } else {
           sessContainer.innerHTML = sessions.map((s, sIdx) => {
+            const isExtreme = s.loai_phien === 'THI_DAU_CUC_HAN';
             const accClass = s.ti_le_dung >= 80 ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' : s.ti_le_dung >= 50 ? 'text-amber-400 bg-amber-500/10 border-amber-500/30' : 'text-rose-400 bg-rose-500/10 border-rose-500/30';
             const sessionDate = s.tao_luc ? new Date(s.tao_luc).toLocaleString('vi-VN') : '--';
             const questions = s.chi_tiet_cau_hoi || [];
+            const sessionTitle = isExtreme
+              ? `🔥 Thi Đấu Cực Hạn • Vòng ${s.buoc_so || 1}`
+              : `Chặng ${s.buoc_so || 1} • ${escapeHtml(s.ten_moc)}`;
 
             return `
               <div class="border border-[var(--border)] rounded-2xl bg-[var(--background)]/40 overflow-hidden space-y-0">
                 <!-- Session Header Accordion -->
                 <div class="p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[var(--card)] border-b border-[var(--border)]">
                   <div class="flex items-center gap-3 min-w-0">
-                    <span class="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-400 font-mono font-bold text-xs flex items-center justify-center shrink-0">
-                      #${sessions.length - sIdx}
+                    <span class="w-8 h-8 rounded-xl ${isExtreme ? 'bg-rose-500/15 text-rose-400' : 'bg-blue-500/15 text-blue-400'} font-mono font-bold text-xs flex items-center justify-center shrink-0">
+                      ${isExtreme ? '🔥' : `#${sessions.length - sIdx}`}
                     </span>
                     <div class="min-w-0">
                       <div class="flex items-center gap-2 flex-wrap">
                         <span class="font-bold text-xs text-[var(--foreground)] truncate">
-                          Chặng ${s.buoc_so || 1} • ${escapeHtml(s.ten_moc)}
+                          ${sessionTitle}
                         </span>
+                        ${isExtreme ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40 font-mono">🔥 Sinh Tồn Vô Tận</span>' : ''}
                         ${s.loai_phien === 'DUOLINGO_STEP_PARTIAL' ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40 font-mono">⏸️ Tạm Dừng (Lưu Dở)</span>' : ''}
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${accClass}">
                           ${s.ti_le_dung}% (${s.so_cau_dung}/${s.tong_so_cau} đúng)
@@ -2713,6 +2731,7 @@
                         <span>📘 ${escapeHtml(s.ten_mon)}</span>
                         <span>•</span>
                         <span>⏱️ ${escapeHtml(s.thoi_gian_dinh_dang)}</span>
+                        ${isExtreme && s.thong_tin_cuc_han ? `<span>•</span><span class="text-amber-400 font-bold">🏆 ${s.thong_tin_cuc_han.tong_diem || 0} điểm</span><span>•</span><span class="text-rose-400 font-bold">🔥 Chuỗi max: ${s.thong_tin_cuc_han.chuoi_dung_cao_nhat || 0}</span>` : ''}
                         <span>•</span>
                         <span>📖 ${s.tong_so_lan_tra_cuu} lần xem giải thích</span>
                         <span>•</span>

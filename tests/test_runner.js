@@ -660,18 +660,18 @@ async function main() {
   });
 
 
-  await runAsyncTest('TC-012 (EXTREME SURVIVAL MODE): endless batch prefetching, real-time grading, and survival rewards', async () => {
+  await runAsyncTest('TC-012 (EXTREME SURVIVAL MODE): 1-time RAM load, real-time grading, and survival rewards', async () => {
     const extremeService = require('../services/extreme.service');
     const db = require('../database/db');
     
-    // 1. Start session
+    // 1. Start session loads full question pool into RAM
     const s = await extremeService.startSession('mon_csdl');
     assert.strictEqual(s.max_sinh_mang, 5);
-    assert.strictEqual(s.danh_sach_cau_hoi.length, 10);
-    assert.ok(s.tong_so_cau_trong_kho >= 10);
+    assert.ok(s.danh_sach_cau_hoi.length >= 10);
+    assert.strictEqual(s.danh_sach_cau_hoi.length, s.tong_so_cau_trong_kho);
 
-    // 2. Prefetch next batch without overlap
-    const exclude = s.danh_sach_cau_hoi.map(q => q.ma_cau_hoi);
+    // 2. Backward compatibility fallback for getNextBatch
+    const exclude = s.danh_sach_cau_hoi.slice(0, 10).map(q => q.ma_cau_hoi);
     const nextB = await extremeService.getNextBatch('mon_csdl', exclude);
     assert.ok(nextB.danh_sach_cau_hoi.length > 0);
     const overlap = nextB.danh_sach_cau_hoi.filter(q => exclude.includes(q.ma_cau_hoi));

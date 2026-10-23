@@ -18,6 +18,7 @@ async function getSystemStats() {
   const checkpointCount = await db.queryOne('SELECT count(*) as total FROM moc_bai_hoc');
   const questionCount = await db.queryOne('SELECT count(*) as total FROM cau_hoi');
   const matchCount = await db.queryOne('SELECT count(*) as total FROM tran_dau_1v1');
+  const extremeSessionCount = await db.queryOne("SELECT count(*) as total FROM lich_su_phien_hoc WHERE loai_phien = 'THI_DAU_CUC_HAN'");
   const txCount = await db.queryOne('SELECT count(*) as total FROM giao_dich_xu');
 
   const recentUsers = await db.query('SELECT TOP 5 ma_nguoi_dung, ten_dang_nhap, ten_hien_thi, vai_tro, tong_diem_kinh_nghiem, xu_tri_thuc, chuoi_streak_ngay, tao_luc FROM nguoi_dung ORDER BY tao_luc DESC');
@@ -31,6 +32,7 @@ async function getSystemStats() {
       tong_moc: checkpointCount ? checkpointCount.total : 0,
       tong_cau_hoi: questionCount ? questionCount.total : 0,
       tong_tran_dau: matchCount ? matchCount.total : 0,
+      tong_phien_cuc_han: extremeSessionCount ? extremeSessionCount.total : 0,
       tong_giao_dich: txCount ? txCount.total : 0
     },
     nguoi_dung_moi: recentUsers,
@@ -395,11 +397,30 @@ async function getLearningActivityFeed() {
   const enrichedRecent = [];
   for (const s of (recentSessions || [])) {
     let parsedQ = [];
+    let sessionSummary = null;
     try {
-      parsedQ = typeof s.chi_tiet_cau_hoi === 'string' ? JSON.parse(s.chi_tiet_cau_hoi) : (s.chi_tiet_cau_hoi || []);
+      const parsed = typeof s.chi_tiet_cau_hoi === 'string' ? JSON.parse(s.chi_tiet_cau_hoi) : (s.chi_tiet_cau_hoi || []);
+      if (Array.isArray(parsed)) {
+        parsedQ = parsed;
+      } else if (parsed && typeof parsed === 'object') {
+        sessionSummary = parsed;
+        if (Array.isArray(parsed.danh_sach_cau_hoi)) parsedQ = parsed.danh_sach_cau_hoi;
+        else if (Array.isArray(parsed.questions)) parsedQ = parsed.questions;
+      }
     } catch (e) { parsedQ = []; }
+
     const hydratedQ = await hydrateQuestionDetails(parsedQ);
-    const correctCount = hydratedQ.filter(q => q.la_dung).length;
+    let correctCount = hydratedQ.filter(q => q.la_dung).length;
+    let totalCount = hydratedQ.length;
+
+    if (s.loai_phien === 'THI_DAU_CUC_HAN' && sessionSummary) {
+      if (totalCount === 0 && (sessionSummary.tong_so_cau_lam || sessionSummary.total_answered)) {
+        totalCount = sessionSummary.tong_so_cau_lam || sessionSummary.total_answered || 0;
+      }
+      if (correctCount === 0 && (sessionSummary.tong_so_cau_dung || sessionSummary.correct_count)) {
+        correctCount = sessionSummary.tong_so_cau_dung || sessionSummary.correct_count || 0;
+      }
+    }
 
     enrichedRecent.push({
       ma_phien: s.ma_phien,
@@ -409,18 +430,19 @@ async function getLearningActivityFeed() {
       khung_avatar: s.khung_avatar,
       rank_title: deriveRankTitle(s.tong_diem_kinh_nghiem || 0),
       ten_mon: s.ten_mon,
-      ten_chuong: s.ten_chuong,
-      ten_moc: s.ten_moc,
+      ten_chuong: s.loai_phien === 'THI_DAU_CUC_HAN' ? 'Đấu Trường Sinh Tồn' : s.ten_chuong,
+      ten_moc: s.loai_phien === 'THI_DAU_CUC_HAN' ? `Vòng ${s.buoc_so || 1} (${totalCount} câu)` : s.ten_moc,
       loai_phien: s.loai_phien,
       buoc_so: s.buoc_so,
       ti_le_dung: Math.round(Number(s.ti_le_dung) || 0),
       so_cau_dung: correctCount,
-      tong_so_cau: hydratedQ.length,
+      tong_so_cau: totalCount,
       thoi_gian_tong_giay: Number(s.thoi_gian_tong_giay) || 0,
       thoi_gian_dinh_dang: formatDuration(s.thoi_gian_tong_giay),
       tong_so_lan_tra_cuu: Number(s.tong_so_lan_tra_cuu) || 0,
       tao_luc: s.tao_luc,
-      chi_tiet_cau_hoi: hydratedQ
+      chi_tiet_cau_hoi: hydratedQ,
+      thong_tin_cuc_han: sessionSummary
     });
   }
 
@@ -568,13 +590,32 @@ async function getLearnerDeepTelemetry(userId) {
   const enrichedSessions = [];
   for (const s of (sessions || [])) {
     let parsedQ = [];
+    let sessionSummary = null;
     try {
-      parsedQ = typeof s.chi_tiet_cau_hoi === 'string' ? JSON.parse(s.chi_tiet_cau_hoi) : (s.chi_tiet_cau_hoi || []);
+      const parsed = typeof s.chi_tiet_cau_hoi === 'string' ? JSON.parse(s.chi_tiet_cau_hoi) : (s.chi_tiet_cau_hoi || []);
+      if (Array.isArray(parsed)) {
+        parsedQ = parsed;
+      } else if (parsed && typeof parsed === 'object') {
+        sessionSummary = parsed;
+        if (Array.isArray(parsed.danh_sach_cau_hoi)) parsedQ = parsed.danh_sach_cau_hoi;
+        else if (Array.isArray(parsed.questions)) parsedQ = parsed.questions;
+      }
     } catch (e) { parsedQ = []; }
-    const hydratedQ = await hydrateQuestionDetails(parsedQ);
-    const correctCount = hydratedQ.filter(q => q.la_dung).length;
 
-    totalQuestionsCount += hydratedQ.length;
+    const hydratedQ = await hydrateQuestionDetails(parsedQ);
+    let correctCount = hydratedQ.filter(q => q.la_dung).length;
+    let totalCount = hydratedQ.length;
+
+    if (s.loai_phien === 'THI_DAU_CUC_HAN' && sessionSummary) {
+      if (totalCount === 0 && (sessionSummary.tong_so_cau_lam || sessionSummary.total_answered)) {
+        totalCount = sessionSummary.tong_so_cau_lam || sessionSummary.total_answered || 0;
+      }
+      if (correctCount === 0 && (sessionSummary.tong_so_cau_dung || sessionSummary.correct_count)) {
+        correctCount = sessionSummary.tong_so_cau_dung || sessionSummary.correct_count || 0;
+      }
+    }
+
+    totalQuestionsCount += totalCount;
     totalCorrectCount += correctCount;
     totalLookupsCount += (Number(s.tong_so_lan_tra_cuu) || 0);
     totalTimeSeconds += (Number(s.thoi_gian_tong_giay) || 0);
@@ -583,19 +624,19 @@ async function getLearnerDeepTelemetry(userId) {
       ma_phien: s.ma_phien,
       ma_moc: s.ma_moc,
       ten_mon: s.ten_mon,
-      ten_chuong: s.ten_chuong,
-      ten_moc: s.ten_moc,
+      ten_chuong: s.loai_phien === 'THI_DAU_CUC_HAN' ? 'Đấu Trường Sinh Tồn' : s.ten_chuong,
+      ten_moc: s.loai_phien === 'THI_DAU_CUC_HAN' ? `Vòng ${s.buoc_so || 1} (${totalCount} câu)` : s.ten_moc,
       loai_phien: s.loai_phien,
       buoc_so: s.buoc_so,
       ti_le_dung: Math.round(Number(s.ti_le_dung) || 0),
       so_cau_dung: correctCount,
-      tong_so_cau: hydratedQ.length,
+      tong_so_cau: totalCount,
       thoi_gian_tong_giay: Number(s.thoi_gian_tong_giay) || 0,
       thoi_gian_dinh_dang: formatDuration(s.thoi_gian_tong_giay),
-      toc_do_trung_binh_giay: Number(s.toc_do_trung_binh_giay) || 0,
       tong_so_lan_tra_cuu: Number(s.tong_so_lan_tra_cuu) || 0,
       tao_luc: s.tao_luc,
-      chi_tiet_cau_hoi: hydratedQ
+      chi_tiet_cau_hoi: hydratedQ,
+      thong_tin_cuc_han: sessionSummary
     });
   }
 

@@ -71,7 +71,9 @@ function formatSafeQuestion(q) {
 
 /**
  * Start an Extreme Survival Session
- * Fetches course info, total question count, and first batch of 10 random questions
+ * Fetches course info and ALL questions for the course at once.
+ * The client stores all questions in RAM, shuffles them, and serves them instantly
+ * without needing chunked DB requests during gameplay.
  */
 async function startSession(ma_mon = 'mon_csdl', ma_nguoi_dung = null) {
   // Resolve ma_mon from slug if needed
@@ -81,19 +83,9 @@ async function startSession(ma_mon = 'mon_csdl', ma_nguoi_dung = null) {
   }
   const resolvedMon = course ? course.ma_mon : 'mon_csdl';
 
-  // Count total questions in this course
-  const totalRow = await db.queryOne(`
-    SELECT COUNT(q.ma_cau_hoi) as total
-    FROM cau_hoi q
-    JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
-    JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
-    WHERE c.ma_mon = $1
-  `, [resolvedMon]);
-  const totalQuestionsInPool = totalRow ? parseInt(totalRow.total || 0, 10) : 0;
-
-  // Fetch initial batch of 10 random questions
+  // Fetch ALL questions for this course at once
   const rawQuestions = await db.query(`
-    SELECT TOP 10 q.ma_cau_hoi, q.noi_dung, q.loai_cau_hoi, q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d,
+    SELECT q.ma_cau_hoi, q.noi_dung, q.loai_cau_hoi, q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d,
            q.du_lieu_cau_hoi, q.muc_bloom, q.do_kho, q.vi_tri_dap_an_dung, q.giai_thich
     FROM cau_hoi q
     JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
@@ -107,15 +99,16 @@ async function startSession(ma_mon = 'mon_csdl', ma_nguoi_dung = null) {
   return {
     ma_mon: resolvedMon,
     ten_mon: course ? course.ten_mon : 'Cơ sở Dữ liệu',
-    tong_so_cau_trong_kho: totalQuestionsInPool,
+    tong_so_cau_trong_kho: formattedQuestions.length,
     max_sinh_mang: 5,
     thoi_gian_moi_cau: 25,
-    danh_sach_cau_hoi: formattedQuestions
+    danh_sach_cau_hoi: formattedQuestions,
+    questions: formattedQuestions
   };
 }
 
 /**
- * Fetch the next batch of 10 random questions excluding already fetched question IDs
+ * Fetch the next batch of questions (kept as backward-compatible fallback)
  */
 async function getNextBatch(ma_mon = 'mon_csdl', excludeIds = []) {
   let course = await db.queryOne('SELECT ma_mon FROM mon_hoc WHERE ma_mon = $1 OR slug = $1', [ma_mon]);
@@ -127,7 +120,7 @@ async function getNextBatch(ma_mon = 'mon_csdl', excludeIds = []) {
   if (safeExclude.length > 0) {
     const safeInClause = safeExclude.map(id => `'${id.replace(/'/g, "''")}'`).join(',');
     rawQuestions = await db.query(`
-      SELECT TOP 10 q.ma_cau_hoi, q.noi_dung, q.loai_cau_hoi, q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d,
+      SELECT q.ma_cau_hoi, q.noi_dung, q.loai_cau_hoi, q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d,
              q.du_lieu_cau_hoi, q.muc_bloom, q.do_kho, q.vi_tri_dap_an_dung, q.giai_thich
       FROM cau_hoi q
       JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
@@ -137,7 +130,7 @@ async function getNextBatch(ma_mon = 'mon_csdl', excludeIds = []) {
     `, [resolvedMon]);
   } else {
     rawQuestions = await db.query(`
-      SELECT TOP 10 q.ma_cau_hoi, q.noi_dung, q.loai_cau_hoi, q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d,
+      SELECT q.ma_cau_hoi, q.noi_dung, q.loai_cau_hoi, q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d,
              q.du_lieu_cau_hoi, q.muc_bloom, q.do_kho, q.vi_tri_dap_an_dung, q.giai_thich
       FROM cau_hoi q
       JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
@@ -152,8 +145,9 @@ async function getNextBatch(ma_mon = 'mon_csdl', excludeIds = []) {
   return {
     ma_mon: resolvedMon,
     so_luong: formattedQuestions.length,
-    da_het_kho: formattedQuestions.length < 10,
-    danh_sach_cau_hoi: formattedQuestions
+    da_het_kho: formattedQuestions.length === 0,
+    danh_sach_cau_hoi: formattedQuestions,
+    questions: formattedQuestions
   };
 }
 
@@ -276,6 +270,12 @@ async function finishSession(ma_nguoi_dung, sessionData = {}) {
     const accPct = tong_so_cau_lam > 0 ? Math.round((tong_so_cau_dung / tong_so_cau_lam) * 100) : 0;
     const avgSec = tong_so_cau_lam > 0 ? Number((thoi_gian_giay / tong_so_cau_lam).toFixed(1)) : 0;
 
+    const questionLog = Array.isArray(sessionData.danh_sach_cau_hoi) && sessionData.danh_sach_cau_hoi.length > 0
+      ? sessionData.danh_sach_cau_hoi 
+      : (Array.isArray(sessionData.questions) && sessionData.questions.length > 0 ? sessionData.questions : null);
+
+    const detailPayload = questionLog || sessionData;
+
     try {
       await db.execute(`
         INSERT INTO lich_su_phien_hoc (
@@ -292,7 +292,7 @@ async function finishSession(ma_nguoi_dung, sessionData = {}) {
         accPct,
         avgSec,
         0,
-        JSON.stringify(sessionData)
+        JSON.stringify(detailPayload)
       ]);
     } catch (errLog) {
       console.warn('⚠️ Extreme session log notice:', errLog.message);

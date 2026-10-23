@@ -2600,7 +2600,8 @@
         <div class="space-y-1.5 text-left">
           <label for="extreme-subject-select" class="text-xs font-semibold text-[var(--foreground)] block">Chọn môn học thử thách:</label>
           <select id="extreme-subject-select" class="w-full text-xs font-semibold bg-[var(--background)] border border-[var(--border)] rounded-xl px-3.5 py-2.5 cursor-pointer text-[var(--foreground)]">
-            <option value="mon_csdl">Cơ sở Dữ liệu (Kho hơn 100 câu)</option>
+            <option value="mon_cds">Chuyển đổi số & Kinh tế số (Kho 174 câu)</option>
+            <option value="mon_csdl">Cơ sở Dữ liệu & Hệ Quản trị (Kho 108 câu)</option>
           </select>
         </div>
 
@@ -10732,30 +10733,30 @@
       const select = document.getElementById('extreme-subject-select');
       if (select) {
         select.innerHTML = '';
-        // Ưu tiên danh sách môn học đã đăng ký hoặc từ catalog
+        // Ưu tiên toàn bộ môn học trong hệ thống để người chơi thoải mái chọn môn thử thách
         let coursesToUse = [];
-        if (Array.isArray(myEnrolledCourses) && myEnrolledCourses.length > 0) {
-          coursesToUse = myEnrolledCourses;
-        } else if (Array.isArray(allSystemCourses) && allSystemCourses.length > 0) {
+        if (Array.isArray(allSystemCourses) && allSystemCourses.length > 0) {
           coursesToUse = allSystemCourses;
-        } else if (typeof enrolledCourses !== 'undefined' && Array.isArray(enrolledCourses) && enrolledCourses.length > 0) {
-          coursesToUse = enrolledCourses;
-        } else if (typeof catalogCourses !== 'undefined' && Array.isArray(catalogCourses) && catalogCourses.length > 0) {
+        } else if (Array.isArray(catalogCourses) && catalogCourses.length > 0) {
           coursesToUse = catalogCourses;
+        } else if (Array.isArray(myEnrolledCourses) && myEnrolledCourses.length > 0) {
+          coursesToUse = myEnrolledCourses;
         }
 
         if (coursesToUse.length > 0) {
           coursesToUse.forEach(c => {
             const opt = document.createElement('option');
             opt.value = c.ma_mon;
-            opt.textContent = `${c.ten_mon} (Toàn bộ kho câu hỏi)`;
+            const isCds = c.ma_mon === 'mon_cds' || c.slug === 'chuyen-doi-so';
+            const countStr = isCds ? '174 câu' : '108 câu';
+            opt.textContent = `${c.ten_mon} (Kho ${countStr})`;
             select.appendChild(opt);
           });
         } else {
-          const opt = document.createElement('option');
-          opt.value = 'mon_csdl';
-          opt.textContent = 'Cơ sở Dữ liệu (Kho hơn 100 câu)';
-          select.appendChild(opt);
+          select.innerHTML = `
+            <option value="mon_cds">Chuyển đổi số & Kinh tế số (Kho 174 câu)</option>
+            <option value="mon_csdl">Cơ sở Dữ liệu & Hệ Quản trị (Kho 108 câu)</option>
+          `;
         }
 
         if (preferredMaMon) {
@@ -10781,7 +10782,7 @@
       try {
         const resolvedMon = maMon || (document.getElementById('extreme-subject-select') ? document.getElementById('extreme-subject-select').value : 'mon_csdl');
         closeExtremeSetupModal();
-        showToast('Đang kết nối kho dữ liệu cực hạn...', 'info');
+        showToast('Đang nạp toàn bộ kho câu hỏi vào bộ nhớ...', 'info');
 
         const res = await fetchExtremeApi('/api/extreme/start', { ma_mon: resolvedMon });
 
@@ -10791,21 +10792,22 @@
         }
 
         const data = res.data;
-        const initialQuestions = data.danh_sach_cau_hoi || [];
+        const initialQuestions = data.danh_sach_cau_hoi || data.questions || [];
 
         if (initialQuestions.length === 0) {
           showToast('Môn học này chưa có câu hỏi trong kho!', 'warning');
           return;
         }
 
-        const fetchedIds = new Set();
-        initialQuestions.forEach(q => fetchedIds.add(q.ma_cau_hoi));
+        // Tải 1 lần toàn bộ câu hỏi và lưu tạm trên RAM người dùng, xáo trộn ngẫu nhiên ở nền
+        const fullCachedPool = [...initialQuestions];
+        const shuffledQueue = shuffleArray(fullCachedPool);
 
         extremeSession = {
           active: true,
           maMon: data.ma_mon || resolvedMon,
           tenMon: data.ten_mon || 'Cơ sở Dữ liệu',
-          tongSoCauKho: data.tong_so_cau_trong_kho || 108,
+          tongSoCauKho: fullCachedPool.length,
           thoiGianMoiCau: data.thoi_gian_moi_cau || 25,
           hp: data.max_sinh_mang || 5,
           maxHp: 5,
@@ -10816,12 +10818,11 @@
           maxStreak: 0,
           score: 0,
           vongLap: 1,
-          fetchedIds: fetchedIds,
-          cachedPool: [...initialQuestions], // Giữ toàn bộ câu đã tải trên trình duyệt
-          bufferQueue: [...initialQuestions], // Hàng đợi câu hỏi chuẩn bị hiển thị
+          cachedPool: fullCachedPool,   // Toàn bộ kho câu hỏi lưu trên RAM người dùng
+          bufferQueue: shuffledQueue,   // Hàng đợi làm bài (đã đảo ngẫu nhiên)
+          answeredQuestions: [],        // Nhật ký câu hỏi để gửi telemetry
           currentQuestion: null,
           currentQuestionStartTime: null,
-          isPrefetching: false,
           isGrading: false,
           timeRemaining: 25,
           startTime: Date.now()
@@ -10973,44 +10974,7 @@
     }
 
     /**
-     * Tự động lấy ngầm 10 câu hỏi tiếp theo ở background khi buffer còn <= 2 câu
-     */
-    async function checkAndPrefetchExtremeQuestions() {
-      if (!extremeSession || !extremeSession.active || extremeSession.isPrefetching) return;
-
-      // Nếu còn nhiều hơn 2 câu trong hàng đợi, chưa cần fetch
-      if (extremeSession.bufferQueue.length > 2) return;
-
-      // Nếu số câu đã tải đã bằng hoặc vượt tổng số câu trong CSDL, không cần gọi API nữa
-      if (extremeSession.fetchedIds.size >= extremeSession.tongSoCauKho) return;
-
-      extremeSession.isPrefetching = true;
-      try {
-        const excludeArray = Array.from(extremeSession.fetchedIds);
-        const res = await fetchExtremeApi('/api/extreme/next-batch', {
-          ma_mon: extremeSession.maMon,
-          excludeIds: excludeArray
-        });
-
-        if (res.ok && res.data && Array.isArray(res.data.questions)) {
-          const newQuestions = res.data.questions;
-          newQuestions.forEach(q => {
-            if (!extremeSession.fetchedIds.has(q.ma_cau_hoi)) {
-              extremeSession.fetchedIds.add(q.ma_cau_hoi);
-              extremeSession.cachedPool.push(q);
-              extremeSession.bufferQueue.push(q);
-            }
-          });
-        }
-      } catch (err) {
-        console.warn('Lỗi khi nạp ngầm câu hỏi cực hạn (không ảnh hưởng trải nghiệm):', err);
-      } finally {
-        if (extremeSession) extremeSession.isPrefetching = false;
-      }
-    }
-
-    /**
-     * Trộn ngẫu nhiên mảng câu hỏi (Fisher-Yates) khi hoàn thành 1 vòng kho câu hỏi
+     * Trộn ngẫu nhiên mảng câu hỏi (Fisher-Yates) ở nền
      */
     function shuffleArray(array) {
       const arr = [...array];
@@ -11022,18 +10986,19 @@
     }
 
     /**
-     * Hiển thị câu hỏi cực hạn tiếp theo
+     * Hiển thị câu hỏi cực hạn tiếp theo từ RAM người dùng
      */
     function renderNextExtremeQuestion() {
       if (!extremeSession || !extremeSession.active) return;
 
-      // Nếu người chơi "quá pro" và giải hết sạch câu trong buffer:
+      // Nếu đã làm hết toàn bộ câu trong buffer (đã trải qua trọn vẹn toàn bộ kho câu hỏi):
       if (extremeSession.bufferQueue.length === 0) {
-        if (extremeSession.cachedPool.length > 0) {
-          // Kích hoạt Vòng lặp mới (Loop 2, 3...)
+        if (extremeSession.cachedPool && extremeSession.cachedPool.length > 0) {
+          // Kích hoạt Vòng lặp mới: Đảo ngẫu nhiên lại 100% kho câu hỏi còn lưu trên RAM
           extremeSession.vongLap++;
           extremeSession.bufferQueue = shuffleArray(extremeSession.cachedPool);
-          showToast(`🔥 Huyền thoại! Bạn đã chinh phục toàn bộ kho câu hỏi! Bắt đầu Vòng lặp ${extremeSession.vongLap} (Điểm x${(1 + (extremeSession.vongLap - 1) * 0.5).toFixed(1)})!`, 'success');
+          const bonusMult = (1 + (extremeSession.vongLap - 1) * 0.5).toFixed(1);
+          showToast(`🔥 Huyền thoại! Bạn đã chinh phục toàn bộ ${extremeSession.cachedPool.length} câu hỏi! Bắt đầu Vòng ${extremeSession.vongLap} (Điểm x${bonusMult}) với thứ tự đảo ngẫu nhiên mới!`, 'success');
         } else {
           // Không còn câu nào trong pool
           finishExtremeGame(false);
@@ -11041,15 +11006,12 @@
         }
       }
 
-      // Lấy câu hỏi kế tiếp từ buffer
+      // Lấy câu hỏi kế tiếp trực tiếp từ buffer trên RAM (tốc độ tức thì)
       const q = extremeSession.bufferQueue.shift();
       extremeSession.currentQuestion = q;
       extremeSession.currentQuestionStartTime = Date.now();
       extremeSession.isGrading = false;
       extremeSession.currentQuestionIndex = (extremeSession.currentQuestionIndex || 0) + 1;
-
-      // Kích hoạt kiểm tra prefetch ngầm trong background
-      checkAndPrefetchExtremeQuestions();
 
       // Cập nhật UI
       updateExtremeHeaderUI();
@@ -11203,6 +11165,19 @@
           });
         }
 
+        // Ghi lại nhật ký câu hỏi đã làm để đồng bộ telemetry về Cổng Quản Trị
+        if (!extremeSession.answeredQuestions) extremeSession.answeredQuestions = [];
+        extremeSession.answeredQuestions.push({
+          ma_cau_hoi: q.ma_cau_hoi,
+          noi_dung: q.noi_dung,
+          muc_bloom: q.muc_bloom,
+          do_kho: q.do_kho,
+          lua_chon: choiceIdx,
+          la_dung: isCorrect,
+          thoi_gian_giay: Math.max(1, Math.round((Date.now() - (extremeSession.currentQuestionStartTime || Date.now())) / 1000)),
+          giai_thich: explanation
+        });
+
         // Cập nhật trạng thái người chơi
         if (isCorrect) {
           extremeSession.soCauDung++;
@@ -11354,7 +11329,9 @@
         total_score: extremeSession.score,
         thoi_gian_giay: durationSec,
         vong_lap: extremeSession.vongLap,
-        loops_completed: extremeSession.vongLap
+        loops_completed: extremeSession.vongLap,
+        danh_sach_cau_hoi: extremeSession.answeredQuestions || [],
+        questions: extremeSession.answeredQuestions || []
       };
 
       try {
