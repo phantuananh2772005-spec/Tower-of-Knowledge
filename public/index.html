@@ -366,7 +366,7 @@
     <main id="app-main-scroll" class="flex-1 overflow-y-auto">
 
       <!-- ================= VIEW 1: BẢN ĐỒ LỘ TRÌNH LEO THÁP (CHUYỂN VÀO KHI HỌC MÔN) ================= -->
-      <section id="view-saga" class="hidden px-4 max-w-2xl w-full mx-auto pt-4 pb-16">
+      <section id="view-saga" class="hidden px-2 sm:px-4 max-w-2xl lg:max-w-6xl xl:max-w-7xl w-full mx-auto pt-4 pb-16 transition-all duration-300">
 
         <!-- Header & Chapter Selector Toolbar -->
         <div class="w-full bg-[var(--card)]/90 border border-indigo-500/25 rounded-2xl p-3 mb-4 shadow-xl backdrop-blur-sm flex items-center justify-between flex-wrap gap-2">
@@ -383,6 +383,10 @@
             </select>
           </div>
           <div class="flex items-center gap-2">
+            <button id="btn_saga_toggle_layout" onclick="toggleSagaLayoutMode()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--background)]/80 hover:bg-[var(--background)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer shadow-xs" title="Chuyển đổi giao diện Bản đồ ngang PC / Bản đồ dọc Mobile">
+              <span id="saga-layout-icon">🖥️</span>
+              <span id="saga-layout-label">Màn ngang PC</span>
+            </button>
             <span id="saga-chapter-stars-badge" class="text-xs font-bold text-amber-500 font-mono bg-amber-500/10 border border-amber-500/30 px-2.5 py-1 rounded-lg flex items-center gap-1">
               <span>⭐</span>
               <span id="saga-chapter-stars-count">0/15 sao</span>
@@ -395,6 +399,32 @@
           <div class="flex flex-col items-center justify-center py-16 text-[var(--muted-foreground)]">
             <div class="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-3"></div>
             <span class="text-xs font-medium">Đang tải bản đồ mốc học từ hệ thống...</span>
+          </div>
+        </div>
+
+        <!-- PC Milestone Focus Card -->
+        <div id="saga-focus-card" class="w-full mt-4 p-4 rounded-2xl bg-[var(--card)]/90 border border-indigo-500/20 shadow-lg hidden items-center justify-between flex-wrap gap-4">
+          <div class="flex items-center gap-3.5">
+            <div class="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-2xl shrink-0">
+              📖
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] font-bold text-emerald-500 font-mono uppercase">Mốc học trọng tâm</span>
+                <span class="text-xs text-[var(--muted-foreground)]">•</span>
+                <span id="saga-focus-title" class="text-sm font-bold text-[var(--foreground)]">Mốc 1.1: Giới thiệu CSDL</span>
+              </div>
+              <p id="saga-focus-desc" class="text-xs text-[var(--muted-foreground)] mt-0.5 max-w-xl">Lộ trình học tập tương tác cùng Linh vật Pet của bạn.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <div class="text-right hidden md:block">
+              <div class="text-[11px] text-[var(--muted-foreground)]">Phần thưởng mốc</div>
+              <div class="text-xs font-bold text-amber-500 font-mono">+150 EXP • +30 Xu</div>
+            </div>
+            <button id="btn_saga_start_active" onclick="startFocusMocLearning()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5">
+              <span>🚀 Bắt đầu học ngay</span>
+            </button>
           </div>
         </div>
 
@@ -2494,7 +2524,7 @@
         return;
       }
 
-      if (typeof currentQuizSession !== 'undefined' && currentQuizSession && currentQuizSession.submissions && currentQuizSession.submissions.length > 0 && viewName !== 'play') {
+      if (typeof currentQuizSession !== 'undefined' && currentQuizSession && checkCoItNhatMotCau(currentQuizSession) && viewName !== 'play') {
         // Mặc định tự động lưu kết quả khi rời trang theo yêu cầu người dùng
         autoSaveQuizAndNavigate(viewName);
         return;
@@ -2562,7 +2592,7 @@
     // Legacy startPlay(mNum) replaced by DB-driven startPlay(mocId, tieuDe, loaiMoc) at line ~4000
 
     function closePlay() {
-      if (typeof currentQuizSession !== 'undefined' && currentQuizSession && currentQuizSession.submissions && currentQuizSession.submissions.length > 0) {
+      if (typeof currentQuizSession !== 'undefined' && currentQuizSession && checkCoItNhatMotCau(currentQuizSession)) {
         // Mặc định tự động lưu kết quả và quay về bản đồ theo yêu cầu người dùng
         autoSaveQuizAndNavigate('saga');
         return;
@@ -2601,9 +2631,23 @@
     // ================= XỬ LÝ TỰ ĐỘNG LƯU BÀI HỌC KHI RỜI ĐI (DEFAULT AUTO-SAVE ON EXIT) =================
     let pendingQuizNavView = null;
 
+    /**
+     * Hàm kiểm tra điều kiện lưu phiên học:
+     * Người dùng ít nhất phải giải được / hoàn thành ít nhất 1 câu hỏi.
+     * Nếu chưa làm câu nào (< 1 câu) thì khỏi lưu vì không có giá trị học tập.
+     */
+    function checkCoItNhatMotCau(session = currentQuizSession) {
+      if (!session || !session.submissions || !Array.isArray(session.submissions)) return false;
+      const validSubmissions = session.submissions.filter(s => s && (s.tra_loi !== undefined || s.cau_tra_loi !== undefined || s.ma_cau_hoi));
+      return validSubmissions.length >= 1;
+    }
+    window.checkCoItNhatMotCau = checkCoItNhatMotCau;
+
     async function autoSaveQuizAndNavigate(targetView = 'saga') {
       const target = targetView || pendingQuizNavView || 'saga';
-      if (!currentQuizSession || !currentQuizSession.submissions || currentQuizSession.submissions.length === 0) {
+
+      // Kiểm tra: nếu chưa làm được ít nhất 1 câu thì khỏi lưu
+      if (!checkCoItNhatMotCau(currentQuizSession)) {
         closeQuitQuizModal();
         currentQuizSession = null;
         pendingQuizNavView = null;
@@ -2617,14 +2661,14 @@
       const subs = [...currentQuizSession.submissions];
       const count = subs.length;
 
-      // Đóng modal phòng trường hợp và dọn state ngay để chuyển view lập tức không trễ
+      // Đóng modal và dọn state ngay lập tức
       closeQuitQuizModal();
       currentQuizSession = null;
       pendingQuizNavView = null;
       navTo(target);
       if (target === 'saga') scrollToActiveNode(true);
 
-      // Lưu ngầm lên server và hiển thị Toast thông báo nhẹ nhàng
+      // Lưu ngầm lên server
       try {
         const token = localStorage.getItem('tok_token');
         const resp = await fetch(`/api/checkpoints/${mocId}/abandon-step`, {
@@ -2651,7 +2695,6 @@
 
     window.openQuitQuizModal = openQuitQuizModal;
     function openQuitQuizModal() {
-      // Yêu cầu người dùng: Cứ mặc định lưu luôn, không hiển thị popup làm phiền
       autoSaveQuizAndNavigate(pendingQuizNavView || 'saga');
     }
 
@@ -2677,7 +2720,7 @@
     // ================= BẢO VỆ ĐÓNG TAB HOẶC TẢI LẠI TRANG (BEFOREUNLOAD GUARD) =================
     window.addEventListener('beforeunload', (e) => {
       const isBattleOngoing = typeof currentLiveMatch !== 'undefined' && currentLiveMatch && typeof B !== 'undefined' && B && !B.over;
-      const isQuizOngoing = typeof currentQuizSession !== 'undefined' && currentQuizSession && currentQuizSession.submissions && currentQuizSession.submissions.length > 0;
+      const isQuizOngoing = typeof currentQuizSession !== 'undefined' && currentQuizSession && checkCoItNhatMotCau(currentQuizSession);
       if (isBattleOngoing || isQuizOngoing) {
         e.preventDefault();
         e.returnValue = 'Bạn đang trong trận đấu 1v1 hoặc phiên học tập dở. Rời đi lúc này sẽ ảnh hưởng đến kết quả!';
@@ -6188,6 +6231,67 @@
     let answeredInCurrentQuiz = false;
 
     // --- 1. Load & Render Real Saga Roadmap ---
+    let currentSagaChapterId = 'ch_csdl_01';
+    let sagaDragD = 0;
+    let sagaCumLengths = [0];
+    let sagaSegs = [];
+    let sagaBusy = false;
+    let currentFocusMoc = null;
+
+    // Chế độ hiển thị bản đồ: 'auto' (tự động theo màn hình), 'pc' (màn ngang), 'mobile' (màn dọc)
+    let sagaLayoutMode = localStorage.getItem('tok_saga_layout_mode') || 'auto';
+
+    function isSagaHorizontal() {
+      if (sagaLayoutMode === 'pc') return true;
+      if (sagaLayoutMode === 'mobile') return false;
+      return window.innerWidth >= 1024;
+    }
+
+    function toggleSagaLayoutMode() {
+      const current = isSagaHorizontal();
+      sagaLayoutMode = current ? 'mobile' : 'pc';
+      localStorage.setItem('tok_saga_layout_mode', sagaLayoutMode);
+      updateSagaLayoutButton();
+      if (liveCourseData) {
+        renderRealSagaRoadmap(liveCourseData);
+      }
+      showToast(sagaLayoutMode === 'pc' ? '🖥️ Đã chuyển sang Bản đồ ngang thân thiện PC' : '📱 Đã chuyển sang Bản đồ dọc Mobile', 'info');
+    }
+
+    function updateSagaLayoutButton() {
+      const isH = isSagaHorizontal();
+      const icon = document.getElementById('saga-layout-icon');
+      const label = document.getElementById('saga-layout-label');
+      if (icon) icon.textContent = isH ? '📱' : '🖥️';
+      if (label) label.textContent = isH ? 'Bản đồ dọc Mobile' : 'Màn ngang PC';
+    }
+
+    function setSagaFocusMoc(moc) {
+      if (!moc) return;
+      currentFocusMoc = moc;
+      const card = document.getElementById('saga-focus-card');
+      const titleEl = document.getElementById('saga-focus-title');
+      const descEl = document.getElementById('saga-focus-desc');
+      const btn = document.getElementById('btn_saga_start_active');
+
+      if (titleEl) titleEl.textContent = moc.tieu_de || 'Mốc học tập';
+      if (descEl) descEl.textContent = moc.mo_ta || 'Lộ trình rèn luyện kỹ năng cùng Linh vật Pet của bạn.';
+      if (btn) {
+        const isDone = (moc.trang_thai === 'HOAN_THANH' || moc.trang_thai === 'DA_HOAN_THANH');
+        btn.innerHTML = isDone ? '<span>⭐ Ôn tập lại mốc</span>' : '<span>🚀 Bắt đầu học ngay</span>';
+      }
+      if (card) {
+        card.classList.remove('hidden');
+        card.classList.add('flex');
+      }
+    }
+
+    function startFocusMocLearning() {
+      if (currentFocusMoc && currentFocusMoc.ma_moc) {
+        startMocLearning(currentFocusMoc.ma_moc);
+      }
+    }
+
     async function loadCourseRoadmap() {
       const token = localStorage.getItem('tok_token');
       try {
@@ -6202,12 +6306,6 @@
         console.error('Lỗi khi tải lộ trình môn học:', err);
       }
     }
-
-    let currentSagaChapterId = 'ch_csdl_01';
-    let sagaDragD = 0;
-    let sagaCumLengths = [0];
-    let sagaSegs = [];
-    let sagaBusy = false;
 
     function getStarCountForMoc(moc) {
       if (!moc || (moc.trang_thai !== 'HOAN_THANH' && moc.trang_thai !== 'DA_HOAN_THANH')) return 0;
@@ -6292,30 +6390,65 @@
         cur = lastDone >= 0 ? Math.min(mocs.length - 1, lastDone + 1) : 0;
       }
 
-      // Coordinates setup
-      let coords = [];
-      let gateCoord = { x: 340, y: 150 };
+      // Update focus card with active milestone
+      setSagaFocusMoc(mocs[cur] || mocs[0]);
 
-      if (mocs.length === 5) {
-        coords = [
-          { x: 300, y: 880 },
-          { x: 400, y: 760 },
-          { x: 280, y: 630 },
-          { x: 400, y: 500 },
-          { x: 340, y: 330 }
-        ];
-        gateCoord = { x: 340, y: 150 };
-      } else {
-        const startY = 820, endY = 360;
-        const xOffsets = [300, 410, 270, 410, 340];
-        const stepY = (startY - endY) / Math.max(1, mocs.length - 1);
-        for (let i = 0; i < mocs.length; i++) {
-          coords.push({
-            x: xOffsets[i % xOffsets.length],
-            y: Math.round(startY - i * stepY)
-          });
+      // Responsive dual-mode: Horizontal (PC Widescreen) vs Vertical (Mobile Portrait)
+      const isH = isSagaHorizontal();
+      updateSagaLayoutButton();
+
+      const svgW = isH ? 1150 : 680;
+      const svgH = isH ? 480 : 1010;
+
+      let coords = [];
+      let gateCoord = isH ? { x: 1065, y: 220 } : { x: 340, y: 150 };
+
+      if (isH) {
+        // Màn hình ngang PC: 5 mốc uốn lượn theo hình sóng ngang từ Trái sang Phải
+        if (mocs.length === 5) {
+          coords = [
+            { x: 120, y: 310 },
+            { x: 320, y: 190 },
+            { x: 530, y: 320 },
+            { x: 740, y: 190 },
+            { x: 940, y: 270 }
+          ];
+          gateCoord = { x: 1065, y: 220 };
+        } else {
+          const startX = 120, endX = 940;
+          const yOffsets = [310, 190, 320, 190, 270];
+          const stepX = (endX - startX) / Math.max(1, mocs.length - 1);
+          for (let i = 0; i < mocs.length; i++) {
+            coords.push({
+              x: Math.round(startX + i * stepX),
+              y: yOffsets[i % yOffsets.length]
+            });
+          }
+          gateCoord = { x: 1065, y: 220 };
         }
-        gateCoord = { x: 340, y: 160 };
+      } else {
+        // Màn hình dọc Mobile: 5 mốc uốn lượn zigzag từ Dưới lên Trên
+        if (mocs.length === 5) {
+          coords = [
+            { x: 300, y: 880 },
+            { x: 400, y: 760 },
+            { x: 280, y: 630 },
+            { x: 400, y: 500 },
+            { x: 340, y: 330 }
+          ];
+          gateCoord = { x: 340, y: 150 };
+        } else {
+          const startY = 820, endY = 360;
+          const xOffsets = [300, 410, 270, 410, 340];
+          const stepY = (startY - endY) / Math.max(1, mocs.length - 1);
+          for (let i = 0; i < mocs.length; i++) {
+            coords.push({
+              x: xOffsets[i % xOffsets.length],
+              y: Math.round(startY - i * stepY)
+            });
+          }
+          gateCoord = { x: 340, y: 160 };
+        }
       }
 
       const N = mocs.map((m, i) => ({
@@ -6325,12 +6458,12 @@
         raw: m
       }));
 
-      // Render SVG Roadmap
+      // Render SVG Roadmap container
       container.innerHTML = `
         <div class="w-full bg-[#0b1020] rounded-3xl overflow-hidden border border-indigo-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.6)] relative">
-          <svg id="saga-map-svg" width="100%" viewBox="0 0 680 1010" role="img" class="block touch-manipulation select-none">
+          <svg id="saga-map-svg" width="100%" viewBox="0 0 ${svgW} ${svgH}" role="img" class="block touch-manipulation select-none">
             <title>Bản đồ học tập - Tháp Tri Thức</title>
-            <desc>Bản đồ các mốc học zigzag có đường nối Bezier, bầu trời đêm công nghệ và linh vật Pet di chuyển</desc>
+            <desc>Bản đồ các mốc học uốn lượn Bezier ${isH ? 'ngang chuẩn PC' : 'dọc chuẩn Mobile'}, bầu trời đêm công nghệ và linh vật Pet</desc>
           </svg>
         </div>
       `;
@@ -6349,7 +6482,7 @@
             gNodes = el('g', {}),
             gDr = el('g', {});
 
-      // Seeded random for consistent twinkling stars
+      // Seeded random for consistent stars
       let seed = 7;
       function rnd() {
         seed = (seed * 16807) % 2147483647;
@@ -6357,15 +6490,16 @@
       }
 
       // Background Gradient Sections
-      el('rect', { x: 0, y: 0, width: 680, height: 1010, fill: '#0b1020' }, gBg);
-      el('rect', { x: 0, y: 0, width: 680, height: 330, fill: '#10163a' }, gBg);
-      el('rect', { x: 0, y: 330, width: 680, height: 340, fill: '#0e1433' }, gBg);
+      el('rect', { x: 0, y: 0, width: svgW, height: svgH, fill: '#0b1020' }, gBg);
+      el('rect', { x: 0, y: 0, width: svgW, height: Math.round(svgH * 0.4), fill: '#10163a' }, gBg);
+      el('rect', { x: 0, y: Math.round(svgH * 0.4), width: svgW, height: Math.round(svgH * 0.35), fill: '#0e1433' }, gBg);
 
-      // 80 Twinkling stars
-      for (let i = 0; i < 80; i++) {
+      // Twinkling stars across the sky
+      const starTotal = isH ? 110 : 80;
+      for (let i = 0; i < starTotal; i++) {
         const c = el('circle', {
-          cx: rnd() * 680,
-          cy: rnd() * 1000,
+          cx: rnd() * svgW,
+          cy: rnd() * (svgH - 10),
           r: rnd() * 1.4 + 0.4,
           fill: '#cfd8ff',
           opacity: 0.35 + rnd() * 0.5
@@ -6381,7 +6515,7 @@
       }
 
       // Isometric Database Cylinder decoration
-      function db(x, y, s, col) {
+      function dbDeco(x, y, s, col) {
         const g = el('g', { opacity: 0.45, transform: 'translate(' + x + ',' + y + ') scale(' + s + ')' }, gBg);
         el('rect', { x: -30, y: -24, width: 60, height: 48, fill: col }, g);
         el('ellipse', { cx: 0, cy: 24, rx: 30, ry: 10, fill: col }, g);
@@ -6391,7 +6525,7 @@
       }
 
       // Server Rack decoration
-      function rack(x, y, s, col) {
+      function rackDeco(x, y, s, col) {
         const g = el('g', { opacity: 0.4, transform: 'translate(' + x + ',' + y + ') scale(' + s + ')' }, gBg);
         for (let i = 0; i < 3; i++) {
           el('rect', { x: -32, y: -30 + i * 22, width: 64, height: 18, rx: 3, fill: col }, g);
@@ -6401,7 +6535,7 @@
       }
 
       // Tech Hexagon decoration
-      function hexo(x, y, r, col) {
+      function hexoDeco(x, y, r, col) {
         const p = [];
         for (let i = 0; i < 6; i++) {
           const a = Math.PI / 3 * i;
@@ -6410,21 +6544,43 @@
         el('polygon', { points: p.join(' '), fill: 'none', stroke: col, 'stroke-width': 2, opacity: 0.35 }, gBg);
       }
 
-      db(95, 330, 1.1, '#3C3489');
-      db(130, 720, 0.9, '#3C3489');
-      db(570, 560, 1, '#185FA5');
-      db(585, 900, 0.8, '#3C3489');
-      db(120, 980, 0.6, '#185FA5');
+      if (isH) {
+        // Landscape PC decorations
+        dbDeco(80, 110, 0.9, '#3C3489');
+        dbDeco(440, 90, 0.85, '#185FA5');
+        dbDeco(820, 100, 0.9, '#3C3489');
+        dbDeco(260, 410, 0.8, '#185FA5');
+        dbDeco(660, 420, 0.85, '#3C3489');
+        dbDeco(1010, 410, 0.75, '#185FA5');
 
-      rack(570, 230, 1, '#26215C');
-      rack(100, 520, 0.9, '#26215C');
-      rack(560, 780, 0.8, '#26215C');
-      rack(105, 130, 0.8, '#26215C');
+        rackDeco(200, 80, 0.85, '#26215C');
+        rackDeco(600, 75, 0.85, '#26215C');
+        rackDeco(980, 80, 0.8, '#26215C');
+        rackDeco(470, 420, 0.8, '#26215C');
+        rackDeco(860, 420, 0.8, '#26215C');
 
-      hexo(540, 90, 26, '#7F77DD');
-      hexo(150, 860, 22, '#7F77DD');
-      hexo(590, 400, 18, '#378ADD');
-      hexo(60, 620, 16, '#378ADD');
+        hexoDeco(150, 200, 22, '#7F77DD');
+        hexoDeco(390, 240, 18, '#378ADD');
+        hexoDeco(790, 230, 20, '#7F77DD');
+        hexoDeco(990, 220, 18, '#378ADD');
+      } else {
+        // Portrait Mobile decorations
+        dbDeco(95, 330, 1.1, '#3C3489');
+        dbDeco(130, 720, 0.9, '#3C3489');
+        dbDeco(570, 560, 1, '#185FA5');
+        dbDeco(585, 900, 0.8, '#3C3489');
+        dbDeco(120, 980, 0.6, '#185FA5');
+
+        rackDeco(570, 230, 1, '#26215C');
+        rackDeco(100, 520, 0.9, '#26215C');
+        rackDeco(560, 780, 0.8, '#26215C');
+        rackDeco(105, 130, 0.8, '#26215C');
+
+        hexoDeco(540, 90, 26, '#7F77DD');
+        hexoDeco(150, 860, 22, '#7F77DD');
+        hexoDeco(590, 400, 18, '#378ADD');
+        hexoDeco(60, 620, 16, '#378ADD');
+      }
 
       // Helper function to draw star polygons
       function drawStarPolygon(cx, cy, R, col, strokeCol) {
@@ -6442,18 +6598,25 @@
 
       // Draw Bezier curved path
       for (let i = 0; i < N.length - 1; i++) {
-        const a = N[i], b = N[i + 1], m = (a.y + b.y) / 2;
-        const d = 'M' + a.x + ' ' + a.y + ' C' + a.x + ' ' + m + ' ' + b.x + ' ' + m + ' ' + b.x + ' ' + b.y;
+        const a = N[i], b = N[i + 1];
+        let d = '';
+        if (isH) {
+          const mx = (a.x + b.x) / 2;
+          d = `M ${a.x} ${a.y} C ${mx} ${a.y} ${mx} ${b.y} ${b.x} ${b.y}`;
+        } else {
+          const m = (a.y + b.y) / 2;
+          d = 'M' + a.x + ' ' + a.y + ' C' + a.x + ' ' + m + ' ' + b.x + ' ' + m + ' ' + b.x + ' ' + b.y;
+        }
 
         // Wide underlay track
-        el('path', { d: d, fill: 'none', stroke: '#1a2342', 'stroke-width': 20, 'stroke-linecap': 'round' }, gPath);
+        el('path', { d: d, fill: 'none', stroke: '#1a2342', 'stroke-width': isH ? 22 : 20, 'stroke-linecap': 'round' }, gPath);
 
         const reached = (i + 1 <= cur);
         const s = el('path', {
           d: d,
           fill: 'none',
           stroke: reached ? '#1D9E75' : '#3a4766',
-          'stroke-width': reached ? 10 : 6,
+          'stroke-width': reached ? (isH ? 12 : 10) : 6,
           'stroke-linecap': 'round',
           'stroke-dasharray': reached ? 'none' : '2 14'
         }, gPath);
@@ -6464,23 +6627,41 @@
 
       // Connecting line to Gate
       const lastNode = N[N.length - 1];
-      el('path', {
-        d: 'M' + lastNode.x + ' ' + (lastNode.y - 55) + ' L' + gateCoord.x + ' ' + (gateCoord.y + 40),
-        stroke: '#3a4766',
-        'stroke-width': 5,
-        'stroke-dasharray': '2 12',
-        'stroke-linecap': 'round',
-        fill: 'none'
-      }, gPath);
+      if (isH) {
+        el('path', {
+          d: `M ${lastNode.x + 50} ${lastNode.y} L ${gateCoord.x - 55} ${gateCoord.y}`,
+          stroke: '#3a4766',
+          'stroke-width': 5,
+          'stroke-dasharray': '2 12',
+          'stroke-linecap': 'round',
+          fill: 'none'
+        }, gPath);
+      } else {
+        el('path', {
+          d: 'M' + lastNode.x + ' ' + (lastNode.y - 55) + ' L' + gateCoord.x + ' ' + (gateCoord.y + 40),
+          stroke: '#3a4766',
+          'stroke-width': 5,
+          'stroke-dasharray': '2 12',
+          'stroke-linecap': 'round',
+          fill: 'none'
+        }, gPath);
+      }
 
       // Chapter Gate
       const gt = el('g', { class: 'cursor-pointer' }, gPath);
-      el('rect', { x: gateCoord.x - 70, y: gateCoord.y - 20, width: 140, height: 44, rx: 22, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 2 }, gt);
       const nextChNum = (currentSagaChapterId === 'ch_csdl_01') ? '2' : (currentSagaChapterId === 'ch_csdl_02') ? '3' : '4';
       const nextChId = (currentSagaChapterId === 'ch_csdl_01') ? 'ch_csdl_02' : (currentSagaChapterId === 'ch_csdl_02') ? 'ch_csdl_03' : 'ch_csdl_04';
-      el('text', { x: gateCoord.x, y: gateCoord.y + 8, 'text-anchor': 'middle', 'font-size': 16, 'font-weight': 600, fill: '#CECBF6' }, gt).textContent = `Chương ${nextChNum}`;
-      el('line', { x1: gateCoord.x - 70, y1: gateCoord.y + 24, x2: gateCoord.x - 70, y2: gateCoord.y + 60, stroke: '#7F77DD', 'stroke-width': 3 }, gt);
-      el('line', { x1: gateCoord.x + 70, y1: gateCoord.y + 24, x2: gateCoord.x + 70, y2: gateCoord.y + 60, stroke: '#7F77DD', 'stroke-width': 3 }, gt);
+
+      if (isH) {
+        el('rect', { x: gateCoord.x - 52, y: gateCoord.y - 28, width: 104, height: 56, rx: 18, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 2 }, gt);
+        el('text', { x: gateCoord.x, y: gateCoord.y + 2, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 600, fill: '#CECBF6' }, gt).textContent = `Chương ${nextChNum}`;
+        el('text', { x: gateCoord.x, y: gateCoord.y + 18, 'text-anchor': 'middle', 'font-size': 9, 'font-weight': 600, fill: '#818cf8', 'letter-spacing': 0.5 }, gt).textContent = 'TIẾP THEO ▶';
+      } else {
+        el('rect', { x: gateCoord.x - 70, y: gateCoord.y - 20, width: 140, height: 44, rx: 22, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 2 }, gt);
+        el('text', { x: gateCoord.x, y: gateCoord.y + 8, 'text-anchor': 'middle', 'font-size': 16, 'font-weight': 600, fill: '#CECBF6' }, gt).textContent = `Chương ${nextChNum}`;
+        el('line', { x1: gateCoord.x - 70, y1: gateCoord.y + 24, x2: gateCoord.x - 70, y2: gateCoord.y + 60, stroke: '#7F77DD', 'stroke-width': 3 }, gt);
+        el('line', { x1: gateCoord.x + 70, y1: gateCoord.y + 24, x2: gateCoord.x + 70, y2: gateCoord.y + 60, stroke: '#7F77DD', 'stroke-width': 3 }, gt);
+      }
       gt.onclick = () => {
         changeSagaChapter(nextChId);
       };
@@ -6527,7 +6708,7 @@
           fo.innerHTML = `<button id="btn_moc_boss_${m.ma_moc}" onclick="${isLocked ? `onSagaLockedClick('${m.ma_moc}')` : `startMocLearning('${m.ma_moc}')`}" class="w-full h-full opacity-0 cursor-pointer" title="${escapeHtml(m.tieu_de)}"></button>`;
 
           // Label
-          el('text', { x: n.x, y: n.y + 84, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 600, fill: isLocked ? '#7a6528' : '#fac775' }, g).textContent = n.l;
+          el('text', { x: n.x, y: n.y + (isH ? 72 : 84), 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 600, fill: isLocked ? '#7a6528' : '#fac775' }, g).textContent = n.l;
 
         } else if (isActive) {
           // Active Learning Node with pulsating radar rings
@@ -6550,7 +6731,7 @@
           fo.innerHTML = `<button id="btn_moc_active_${m.ma_moc}" onclick="startMocLearning('${m.ma_moc}')" class="w-full h-full opacity-0 cursor-pointer" title="Bắt đầu: ${escapeHtml(m.tieu_de)}"></button>`;
 
           // Label
-          el('text', { x: n.x, y: n.y + r + 36, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 600, fill: '#5DCAA5' }, g).textContent = n.l;
+          el('text', { x: n.x, y: n.y + r + (isH ? 24 : 36), 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 600, fill: '#5DCAA5' }, g).textContent = n.l;
 
         } else if (isCompleted) {
           // Completed Node: Green 3D circle with Checkmark + Gold Stars
@@ -6573,7 +6754,7 @@
           const starOffsets = (starCount === 3) ? [-18, 0, 18] : (starCount === 2) ? [-10, 10] : [0];
           starOffsets.forEach((dx, k) => {
             const isCenterBig = (starCount === 3 && k === 1);
-            drawStarPolygon(n.x + dx, n.y + r + 16, isCenterBig ? 8.5 : 7, '#fac775');
+            drawStarPolygon(n.x + dx, n.y + r + 15, isCenterBig ? 8.5 : 7, '#fac775');
           });
 
           // Clickable button for review
@@ -6581,7 +6762,7 @@
           fo.innerHTML = `<button id="btn_moc_done_${m.ma_moc}" onclick="startMocLearning('${m.ma_moc}')" class="w-full h-full opacity-0 cursor-pointer" title="Ôn tập: ${escapeHtml(m.tieu_de)}"></button>`;
 
           // Label
-          el('text', { x: n.x, y: n.y + r + 38, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 600, fill: '#b9c2dd' }, g).textContent = n.l;
+          el('text', { x: n.x, y: n.y + r + (isH ? 32 : 38), 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 600, fill: '#b9c2dd' }, g).textContent = n.l;
 
         } else {
           // Locked Node: Steel padlock
@@ -6603,27 +6784,41 @@
           fo.innerHTML = `<div id="btn_moc_lock_${m.ma_moc}" onclick="onSagaLockedClick('${m.ma_moc}')" class="w-full h-full cursor-not-allowed"></div>`;
 
           // Label
-          el('text', { x: n.x, y: n.y + r + 38, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 600, fill: '#5d6785' }, g).textContent = n.l;
+          el('text', { x: n.x, y: n.y + r + (isH ? 30 : 38), 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 600, fill: '#5d6785' }, g).textContent = n.l;
         }
 
         g.addEventListener('click', () => {
+          setSagaFocusMoc(m);
           if (!isLocked) {
             slidePetToNode(i);
           }
         });
       });
 
-      // Bottom Start Marker
-      const sx = el('text', {
-        x: 340,
-        y: 985,
-        'text-anchor': 'middle',
-        'font-size': 12,
-        fill: '#7a8199',
-        'letter-spacing': 1.5,
-        'font-weight': 600
-      }, gNodes);
-      sx.textContent = '▲ XUẤT PHÁT TỪ ĐÂY ▲';
+      // Start Marker
+      if (isH) {
+        const sx = el('text', {
+          x: 120,
+          y: 430,
+          'text-anchor': 'middle',
+          'font-size': 11,
+          fill: '#7a8199',
+          'letter-spacing': 1.5,
+          'font-weight': 600
+        }, gNodes);
+        sx.textContent = '▲ XUẤT PHÁT TẠI ĐÂY ▲';
+      } else {
+        const sx = el('text', {
+          x: 340,
+          y: 985,
+          'text-anchor': 'middle',
+          'font-size': 12,
+          fill: '#7a8199',
+          'letter-spacing': 1.5,
+          'font-weight': 600
+        }, gNodes);
+        sx.textContent = '▲ XUẤT PHÁT TỪ ĐÂY ▲';
+      }
 
       // Real User Equipped Pet Container (Integrated with syncAllPetDisplays)
       const dg = el('g', { id: 'active-learning-node' }, gDr);
@@ -6679,8 +6874,23 @@
       placePet(sagaDragD);
 
       syncAllPetDisplays();
-      scrollToActiveNode(true);
+      if (!isH) {
+        scrollToActiveNode(true);
+      }
     }
+
+    // Auto-update on window resize if in auto layout mode
+    let lastWindowWidth = window.innerWidth;
+    window.addEventListener('resize', () => {
+      if (sagaLayoutMode === 'auto' && liveCourseData) {
+        const wasH = lastWindowWidth >= 1024;
+        const nowH = window.innerWidth >= 1024;
+        if (wasH !== nowH) {
+          lastWindowWidth = window.innerWidth;
+          renderRealSagaRoadmap(liveCourseData);
+        }
+      }
+    });
 
     function handleTheoryHintClick() {
       if (currentMocSession) {
