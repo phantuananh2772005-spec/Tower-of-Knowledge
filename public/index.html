@@ -214,6 +214,14 @@
             <span class="sidebar-text font-medium">Cửa hàng Shop</span>
           </div>
         </button>
+
+        <!-- 8. Hướng dẫn cùng Pet -->
+        <button onclick="startPetOnboardingTour()" id="btn_sidebar_huong_dan" title="Hướng dẫn cùng Pet" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold text-emerald-600 bg-emerald-500/10 hover:bg-emerald-500/20 transition flex items-center justify-between cursor-pointer">
+          <div class="flex items-center gap-3">
+            <span class="text-base shrink-0">🦉</span>
+            <span class="sidebar-text font-semibold">Hướng dẫn cùng Pet</span>
+          </div>
+        </button>
       </nav>
 
     </div>
@@ -421,6 +429,117 @@
         </div>
       </div>
 
+      <!-- Banner Hướng dẫn Tân thủ cùng Pet (Tự động hiển thị nếu chưa hoàn thành) -->
+      <div id="hub-newbie-guide-banner" class="hidden bg-linear-to-r from-emerald-500/15 via-teal-500/10 to-transparent border border-emerald-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+        <div class="flex items-center gap-3">
+          <span class="text-3xl pet-animated">🦉</span>
+          <div>
+            <h4 class="text-xs font-bold text-emerald-500">Linh Thú muốn dạo quanh cùng bạn!</h4>
+            <p class="text-[11px] text-[var(--muted-foreground)]">Khám phá nhanh các tính năng cốt lõi và nhận ngay 20 Xu tân thủ.</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button id="btn_hub_start_tour" onclick="startPetOnboardingTour()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-xs">
+            Khám phá ngay 🚀
+          </button>
+          <button id="btn_hub_dismiss_tour" onclick="dismissNewbieGuideBanner()" class="px-2.5 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs text-[var(--muted-foreground)] transition cursor-pointer">
+            Để sau ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Khu vực Nhiệm Vụ Hàng Ngày (Daily Quests Hub) -->
+      <div id="hub-daily-quests" class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 space-y-4 shadow-xs">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="text-base">📜</span>
+            <span class="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider">Nhiệm Vụ Hôm Nay</span>
+            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">Làm mới 00:00</span>
+          </div>
+          <span id="daily-quest-summary" class="text-xs font-medium text-[var(--muted-foreground)]">0/3 hoàn thành</span>
+        </div>
+
+        <div id="daily-quests-list" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <!-- Quest 1: Học tập -->
+          <div id="card-quest-hoc-tap" class="p-4 rounded-xl border border-[var(--border)] bg-[var(--background)]/60 flex flex-col justify-between gap-3">
+            <div class="space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="text-lg">📖</span>
+                <span class="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">+15 🪙 · +25 ⭐</span>
+              </div>
+              <h4 class="text-xs font-bold text-[var(--foreground)]">Chăm chỉ học tập</h4>
+              <p class="text-[11px] text-[var(--muted-foreground)]">Vượt qua ít nhất 1 bài học hoặc mốc kiến thức</p>
+            </div>
+            <div>
+              <div class="flex items-center justify-between text-[10px] text-[var(--muted-foreground)] mb-1">
+                <span>Tiến độ</span>
+                <span id="quest-progress-hoc-tap-text">0/1</span>
+              </div>
+              <div class="w-full h-1.5 rounded-full bg-[var(--border)] overflow-hidden">
+                <div id="quest-progress-hoc-tap-bar" class="h-full bg-emerald-500 transition-all duration-300 w-0"></div>
+              </div>
+              <div class="mt-2.5">
+                <button id="btn_quest_hoc_tap" onclick="claimDailyQuest('hoc_tap')" class="w-full py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold transition cursor-pointer">
+                  Làm bài ngay →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quest 2: Đấu trường -->
+          <div id="card-quest-dau-truong" class="p-4 rounded-xl border border-[var(--border)] bg-[var(--background)]/60 flex flex-col justify-between gap-3">
+            <div class="space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="text-lg">⚔️</span>
+                <span class="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">+15 🪙 · +25 ⭐</span>
+              </div>
+              <h4 class="text-xs font-bold text-[var(--foreground)]">Chiến binh Đấu trường</h4>
+              <p class="text-[11px] text-[var(--muted-foreground)]">Tham gia 1 trận so tài tại Đấu Trường Mini Game</p>
+            </div>
+            <div>
+              <div class="flex items-center justify-between text-[10px] text-[var(--muted-foreground)] mb-1">
+                <span>Tiến độ</span>
+                <span id="quest-progress-dau-truong-text">0/1</span>
+              </div>
+              <div class="w-full h-1.5 rounded-full bg-[var(--border)] overflow-hidden">
+                <div id="quest-progress-dau-truong-bar" class="h-full bg-emerald-500 transition-all duration-300 w-0"></div>
+              </div>
+              <div class="mt-2.5">
+                <button id="btn_quest_dau_truong" onclick="claimDailyQuest('dau_truong')" class="w-full py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold transition cursor-pointer">
+                  Vào đấu trường →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quest 3: Linh thú -->
+          <div id="card-quest-cham-pet" class="p-4 rounded-xl border border-[var(--border)] bg-[var(--background)]/60 flex flex-col justify-between gap-3">
+            <div class="space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="text-lg">🐾</span>
+                <span class="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">+10 🪙 · +15 ⭐</span>
+              </div>
+              <h4 class="text-xs font-bold text-[var(--foreground)]">Chăm sóc Linh thú</h4>
+              <p class="text-[11px] text-[var(--muted-foreground)]">Ghé thăm hoặc tương tác cùng Linh thú của bạn</p>
+            </div>
+            <div>
+              <div class="flex items-center justify-between text-[10px] text-[var(--muted-foreground)] mb-1">
+                <span>Tiến độ</span>
+                <span id="quest-progress-cham-pet-text">0/1</span>
+              </div>
+              <div class="w-full h-1.5 rounded-full bg-[var(--border)] overflow-hidden">
+                <div id="quest-progress-cham-pet-bar" class="h-full bg-emerald-500 transition-all duration-300 w-0"></div>
+              </div>
+              <div class="mt-2.5">
+                <button id="btn_quest_cham_pet" onclick="claimDailyQuest('cham_pet')" class="w-full py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold transition cursor-pointer">
+                  Chăm sóc Pet →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Danh sách Môn đang học (Render động từ CSDL thật) -->
       <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 space-y-4 shadow-xs">
         <div class="flex items-center justify-between">
@@ -460,17 +579,79 @@
       </div>
     </section>
 
-    <!-- ================= VIEW 6: ĐẤU TRƯỜNG (SẢNH + BXH) ================= -->
-    <section id="view-minigame" class="hidden p-6 sm:p-10 max-w-4xl w-full mx-auto space-y-6">
-      
+    <!-- ================= VIEW 6: ĐẤU TRƯỜNG MINI GAME (SẢNH CHẾ ĐỘ + BXH) ================= -->
+    <section id="view-minigame" class="hidden p-6 sm:p-10 max-w-5xl w-full mx-auto space-y-6">
+      <!-- Tiêu đề Sảnh Đấu Trường Mini Game -->
+      <div id="arena-header-banner" class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border)] pb-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-2xl">⚔️</span>
+            <h2 class="text-xl font-bold tracking-tight">Sảnh Đấu Trường Mini Game</h2>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">MÙA GIẢI 1</span>
+          </div>
+          <p class="text-xs text-[var(--muted-foreground)] mt-1">Tranh tài kiến thức đối kháng thời gian thực, rèn luyện phản xạ và giải trí cùng Linh thú</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btn_bxh_dautruong" onclick="arenaTab('rank')" class="px-3.5 py-2 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-amber-500/10 hover:border-amber-500/30 text-amber-500 font-semibold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Bảng xếp hạng đấu trường">
+            <span class="text-base">🏆</span>
+            <span>Bảng Xếp Hạng</span>
+          </button>
+        </div>
+      </div>
 
-      <!-- Tab Đấu -->
+      <!-- Thanh Chọn Chế Độ Chơi (Game Mode Cards) -->
+      <div id="arena-modes-bar" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Chế độ 1: Đấu Hạng 1v1 (Đang mở) -->
+        <div id="card-mode-ranked" onclick="selectArenaMode('ranked')" class="cursor-pointer rounded-2xl border-2 border-emerald-500 bg-emerald-500/5 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-2xl">🏆</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white uppercase tracking-wider">Đang Mở</span>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-[var(--foreground)] group-hover:text-emerald-500 transition">Đấu Hạng 1v1</h3>
+            <p class="text-[11px] text-[var(--muted-foreground)] leading-snug mt-0.5">So tài đối kháng thời gian thực, tính điểm xếp hạng mùa giải</p>
+          </div>
+          <div class="text-[10px] font-semibold text-emerald-600 flex items-center gap-1 pt-1">
+            <span>✓ Đang chọn</span>
+          </div>
+        </div>
+
+        <!-- Chế độ 2: Đấu Thường & Tập Luyện -->
+        <div id="card-mode-casual" onclick="selectArenaMode('casual')" class="cursor-pointer rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-cyan-500/50 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-2xl">🥊</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 uppercase tracking-wider">Luyện Tập</span>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-[var(--foreground)] group-hover:text-cyan-500 transition">Đấu Thường & Bot</h3>
+            <p class="text-[11px] text-[var(--muted-foreground)] leading-snug mt-0.5">Thử thách cùng Bot AI tự do, không trừ điểm xếp hạng Rank</p>
+          </div>
+          <div class="text-[10px] font-semibold text-cyan-600 flex items-center gap-1 pt-1">
+            <span>Tập luyện ngay →</span>
+          </div>
+        </div>
+
+        <!-- Chế độ 3: Sảnh Mini Game Giải Trí -->
+        <div id="card-mode-arcade" onclick="selectArenaMode('arcade')" class="cursor-pointer rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-purple-500/50 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-2xl">🎪</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 uppercase tracking-wider">Sắp Mở Khóa</span>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-[var(--foreground)] group-hover:text-purple-400 transition">Mini Game Trí Tuệ</h3>
+            <p class="text-[11px] text-[var(--muted-foreground)] leading-snug mt-0.5">Nhiều tựa game giải trí đồng đội & đố vui phản xạ nhanh</p>
+          </div>
+          <div class="flex flex-wrap gap-1 pt-1">
+            <span class="text-[9px] px-1.5 py-0.5 rounded bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--border)]">⚡ Đố Siêu Tốc</span>
+            <span class="text-[9px] px-1.5 py-0.5 rounded bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--border)]">🐉 Săn Boss</span>
+            <span class="text-[9px] px-1.5 py-0.5 rounded bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--border)]">🃏 Lật Thẻ</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Đấu Hạng 1v1 -->
       <div id="arena-fight" class="space-y-4">
         <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 text-center space-y-5 relative shadow-xs">
-          <!-- Nút BXH hình cúp ở góc phải trên của thẻ đấu -->
-          <button id="btn_bxh_dautruong" onclick="arenaTab('rank')" class="absolute top-4 right-4 p-2.5 rounded-2xl border border-[var(--border)] bg-[var(--background)] hover:bg-emerald-500/10 hover:border-emerald-500/30 text-amber-500 hover:text-amber-400 transition cursor-pointer shadow-2xs group flex items-center gap-1.5 flex items-center justify-center" title="Bảng xếp hạng đấu trường">
-            <span class="text-base group-hover:scale-110 transition-transform">🏆</span>
-          </button>
           <div class="flex items-center justify-center gap-10 text-7xl select-none">
             <div onclick="navTo('pet')" title="Đổi linh vật ra trận" class="cursor-pointer group flex flex-col items-center">
               <div id="arena-lobby-pet" class="w-24 h-24 flex items-center justify-center select-none group-hover:scale-105 transition">
@@ -516,7 +697,70 @@
             <span>⚔️</span>
             <span>Tìm trận đấu 1v1</span>
           </button>
-          
+        </div>
+      </div>
+
+      <!-- Tab Đấu Thường & Bot (Casual Mode Panel) -->
+      <div id="arena-casual" class="hidden space-y-4">
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 text-center space-y-5 relative shadow-xs">
+          <div class="w-16 h-16 rounded-2xl bg-cyan-500/10 text-cyan-600 text-3xl flex items-center justify-center mx-auto border border-cyan-500/20">
+            🥊
+          </div>
+          <div class="max-w-md mx-auto space-y-2">
+            <h3 class="text-base font-bold text-[var(--foreground)]">Phòng Luyện Tập Tự Do cùng Bot AI</h3>
+            <p class="text-xs text-[var(--muted-foreground)] leading-relaxed">
+              Thử thách phản xạ câu hỏi và thử nghiệm kỹ năng của Linh thú mà không tính điểm thắng thua vào Bảng xếp hạng. Thích hợp để khởi động trước khi bước vào đấu trường xếp hạng!
+            </p>
+          </div>
+          <div class="pt-2">
+            <button id="btn_dauthuong_bot" onclick="startBotPractice()" class="px-8 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-sm transition shadow-md flex items-center justify-center gap-2 mx-auto cursor-pointer hover:scale-105 active:scale-95 duration-150">
+              <span>🥊</span>
+              <span>Bắt đầu đấu tập với Bot ngay</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Sảnh Mini Game Giải Trí (Arcade Panel) -->
+      <div id="arena-arcade" class="hidden space-y-4">
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 space-y-6 shadow-xs">
+          <div class="text-center max-w-md mx-auto space-y-1.5">
+            <div class="w-16 h-16 rounded-2xl bg-purple-500/10 text-purple-400 text-3xl flex items-center justify-center mx-auto border border-purple-500/20">
+              🎪
+            </div>
+            <h3 class="text-base font-bold text-[var(--foreground)]">Sảnh Mini Game Trí Tuệ & Giải Trí</h3>
+            <p class="text-xs text-[var(--muted-foreground)]">
+              Các chế độ chơi tương tác nhanh giúp ôn bài thú vị và xả stress sau những giờ học tập căng thẳng.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="p-4 rounded-2xl border border-[var(--border)] bg-[var(--background)]/60 space-y-2 text-center">
+              <span class="text-3xl block">⚡</span>
+              <h4 class="text-xs font-bold text-[var(--foreground)]">Đố Vui Siêu Tốc</h4>
+              <p class="text-[10px] text-[var(--muted-foreground)]">5 giây mỗi câu hỏi, duy trì chuỗi trả lời đúng để nhân x3 điểm thưởng</p>
+              <span class="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500">Sắp ra mắt</span>
+            </div>
+            <div class="p-4 rounded-2xl border border-[var(--border)] bg-[var(--background)]/60 space-y-2 text-center">
+              <span class="text-3xl block">🐉</span>
+              <h4 class="text-xs font-bold text-[var(--foreground)]">Săn Boss Tri Thức</h4>
+              <p class="text-[10px] text-[var(--muted-foreground)]">Cùng đồng đội giải những câu hỏi hóc búa để bào mòn thanh máu Boss</p>
+              <span class="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500">Sắp ra mắt</span>
+            </div>
+            <div class="p-4 rounded-2xl border border-[var(--border)] bg-[var(--background)]/60 space-y-2 text-center">
+              <span class="text-3xl block">🃏</span>
+              <h4 class="text-xs font-bold text-[var(--foreground)]">Lật Thẻ Trí Nhớ</h4>
+              <p class="text-[10px] text-[var(--muted-foreground)]">Trúc xanh lật thẻ ghép đôi định nghĩa và thuật ngữ chuyên ngành IT</p>
+              <span class="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600">Sắp ra mắt</span>
+            </div>
+          </div>
+
+          <div class="text-center pt-2">
+            <button id="btn_arcade_kham_pha" onclick="previewArcadeModes()" class="px-6 py-2.5 rounded-xl border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 mx-auto">
+              <span>🔔</span>
+              <span>Đăng ký nhận thông báo khi mở</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1023,6 +1267,23 @@
               </div>
               <div class="flex items-center gap-1 text-[var(--muted-foreground)] group-hover:text-amber-600 text-xs font-semibold transition">
                 <span>Chi tiết</span>
+                <span>→</span>
+              </div>
+            </div>
+
+            <!-- Mục 3: Xem lại Hướng dẫn Tân thủ cùng Linh Thú -->
+            <div onclick="closeSettingsModal(); startPetOnboardingTour();" class="p-3.5 rounded-2xl bg-[var(--background)] border border-[var(--border)] hover:border-emerald-500/50 hover:bg-[var(--card)] transition cursor-pointer flex items-center justify-between group shadow-2xs">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-base shrink-0 group-hover:scale-105 transition">
+                  🦉
+                </div>
+                <div>
+                  <span class="text-xs font-bold text-[var(--foreground)] group-hover:text-emerald-600 transition block">Hướng dẫn cùng Pet</span>
+                  <span class="text-[11px] text-[var(--muted-foreground)]">Dạo quanh các tính năng chính cùng Linh thú</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1 text-[var(--muted-foreground)] group-hover:text-emerald-600 text-xs font-semibold transition">
+                <span>Khám phá</span>
                 <span>→</span>
               </div>
             </div>
@@ -1742,6 +2003,59 @@
       </div>
     </div>
 
+    <!-- ================= MODAL HƯỚNG DẪN TÂN THỦ CÙNG LINH THÚ (PET ONBOARDING SPOTLIGHT TOUR) ================= -->
+    <div id="modal-pet-onboarding" class="hidden fixed inset-0 z-[70] transition-opacity duration-300">
+      <!-- Dark Backdrop with click to dismiss/continue -->
+      <div id="pet-tour-backdrop" class="absolute inset-0 bg-black/60 pointer-events-auto"></div>
+      
+      <!-- Spotlight highlight box around target element -->
+      <div id="pet-tour-spotlight" class="hidden fixed pointer-events-none transition-all duration-300 border-2 border-emerald-400 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.7)] z-[75]"></div>
+
+      <!-- Companion Dialog Card -->
+      <div id="pet-tour-dialog" class="fixed z-[80] w-[92vw] max-w-md bg-[var(--card)] border-2 border-emerald-500/80 rounded-3xl p-5 shadow-2xl transition-all duration-300 space-y-4">
+        <!-- Card Header -->
+        <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-2xl select-none shrink-0 border border-emerald-500/20">
+              <span id="pet-tour-avatar" class="pet-animated">🦉</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span id="pet-tour-name" class="font-bold text-xs text-emerald-500">Cú Tri Thức Archie</span>
+                <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600">Đồng Hành</span>
+              </div>
+              <p class="text-[10px] text-[var(--muted-foreground)]">Hướng dẫn viên Tháp Tri Thức</p>
+            </div>
+          </div>
+          <span id="pet-tour-step-badge" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">1/5</span>
+        </div>
+
+        <!-- Speech Content -->
+        <div class="space-y-1.5">
+          <h3 id="pet-tour-title" class="font-bold text-sm text-[var(--foreground)]">Chào mừng bạn mới! 👋</h3>
+          <p id="pet-tour-text" class="text-xs text-[var(--muted-foreground)] leading-relaxed">...</p>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center justify-between pt-2 border-t border-[var(--border)]">
+          <button id="btn_pet_tour_skip" onclick="skipPetTour()" class="px-3 py-1.5 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-semibold transition cursor-pointer">
+            Bỏ qua
+          </button>
+          <div class="flex items-center gap-2">
+            <button id="btn_pet_tour_prev" onclick="prevPetTourStep()" class="hidden px-3 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer">
+              ← Trước
+            </button>
+            <button id="btn_pet_tour_next" onclick="nextPetTourStep()" class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-sm flex items-center gap-1">
+              <span>Tiếp tục</span> <span>➜</span>
+            </button>
+            <button id="btn_pet_tour_finish" onclick="finishPetTour()" class="hidden px-4 py-1.5 rounded-xl bg-linear-to-r from-amber-500 to-emerald-600 hover:opacity-90 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1">
+              <span>🎁 Nhận 20 Xu & Bắt đầu!</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     </main>
   </div>
 
@@ -1864,6 +2178,9 @@
         }
       }
       if (targetView) targetView.classList.remove('hidden');
+      if (viewName === 'pet' && typeof trackDailyQuestAction === 'function') {
+        trackDailyQuestAction('cham_pet');
+      }
       if (viewName === 'saga') {
         scrollToActiveNode(true);
       }
@@ -2350,12 +2667,27 @@
 
   // ===== Đấu trường: tab =====
   function arenaTab(t) {
-    document.getElementById('arena-fight').classList.toggle('hidden', t !== 'fight');
-    document.getElementById('arena-rank').classList.toggle('hidden', t !== 'rank');
+    const modesBar = document.getElementById('arena-modes-bar');
+    if (modesBar) modesBar.classList.toggle('hidden', t !== 'fight');
+    const headerBanner = document.getElementById('arena-header-banner');
+    if (headerBanner) headerBanner.classList.toggle('hidden', t !== 'fight');
+    
+    const casualPanel = document.getElementById('arena-casual');
+    const arcadePanel = document.getElementById('arena-arcade');
     if (t === 'rank') {
+      if (casualPanel) casualPanel.classList.add('hidden');
+      if (arcadePanel) arcadePanel.classList.add('hidden');
+      document.getElementById('arena-fight').classList.add('hidden');
+      document.getElementById('arena-rank').classList.remove('hidden');
       renderRank();
       if (typeof loadRealLeaderboard === 'function') loadRealLeaderboard();
     } else {
+      document.getElementById('arena-rank').classList.add('hidden');
+      if (typeof selectArenaMode === 'function') {
+        selectArenaMode('ranked');
+      } else {
+        document.getElementById('arena-fight').classList.remove('hidden');
+      }
       renderLobby();
       syncAllPetDisplays();
     }
@@ -3847,6 +4179,9 @@
     if (!specialReason && B.my > 0 && B.op > 0 && B.qi < B.list.length) return;
     B.over = true;
     clearBattleTimers();
+    if (typeof trackDailyQuestAction === 'function') {
+      trackDailyQuestAction('dau_truong');
+    }
 
     const isSurrender = specialReason === 'DAU_HANG';
     const isOpSurrender = specialReason === 'OP_SURRENDER';
@@ -4990,6 +5325,9 @@
       syncUserDataToUI();
       syncAllPetDisplays();
       renderLobby();
+      if (typeof initNewbieGuideAndQuests === 'function') {
+        initNewbieGuideAndQuests();
+      }
     }
 
     function logoutAndOpenAuth() {
@@ -6074,6 +6412,9 @@
 
         // Cập nhật ngay số dư xu và exp thật từ máy chủ
         await refreshUserData();
+        if (typeof trackDailyQuestAction === 'function') {
+          trackDailyQuestAction('hoc_tap');
+        }
 
         const congratsModal = document.getElementById('modal-moc-congrats');
         const titleEl = document.getElementById('congrats-moc-title');
@@ -7454,6 +7795,457 @@
           slot.innerHTML = currentAvatar.icon;
         }
       });
+    }
+
+    // =========================================================================
+    // HỆ THỐNG NHIỆM VỤ NGÀY & HƯỚNG DẪN TÂN THỦ CÙNG LINH THÚ (PET ONBOARDING)
+    // =========================================================================
+
+    function getVietnamDateStr() {
+      const d = new Date(Date.now() + 7 * 3600 * 1000);
+      return d.toISOString().substring(0, 10);
+    }
+
+    let dailyQuestsState = {
+      progress: { hoc_tap: false, dau_truong: false, cham_pet: false },
+      claimed: { hoc_tap: false, dau_truong: false, cham_pet: false },
+      today: ''
+    };
+
+    async function loadDailyQuests() {
+      const token = localStorage.getItem('tok_token');
+      if (!token) return;
+
+      const todayStr = getVietnamDateStr();
+      dailyQuestsState.today = todayStr;
+
+      // 1. Khôi phục tiến độ thao tác hôm nay từ localStorage
+      const userKey = currentUserAccount?.userId || 'usr_guest';
+      const storageKey = `tok_quests_prog_${userKey}_${todayStr}`;
+      try {
+        const cached = localStorage.getItem(storageKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          dailyQuestsState.progress = { ...dailyQuestsState.progress, ...parsed };
+        }
+      } catch (e) {}
+
+      // 2. Đồng bộ trạng thái đã nhận thưởng từ Backend CSDL thật
+      try {
+        const resp = await fetch('/api/economy/quests-status', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const res = await resp.json();
+        if (res.success && res.data) {
+          dailyQuestsState.claimed = res.data.claimed || {};
+          if (res.data.onboardingClaimed) {
+            localStorage.setItem('tok_onboarding_completed', 'true');
+            const banner = document.getElementById('hub-newbie-guide-banner');
+            if (banner) banner.classList.add('hidden');
+          }
+        }
+      } catch (e) {
+        console.warn('Sync quests status fallback:', e);
+      }
+
+      renderDailyQuests();
+    }
+
+    function trackDailyQuestAction(actionKey) {
+      if (!dailyQuestsState.progress) dailyQuestsState.progress = {};
+      const wasCompleted = Boolean(dailyQuestsState.progress[actionKey]);
+      dailyQuestsState.progress[actionKey] = true;
+
+      const todayStr = getVietnamDateStr();
+      const userKey = currentUserAccount?.userId || 'usr_guest';
+      const storageKey = `tok_quests_prog_${userKey}_${todayStr}`;
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(dailyQuestsState.progress));
+      } catch (e) {}
+
+      renderDailyQuests();
+
+      if (!wasCompleted && !dailyQuestsState.claimed[actionKey]) {
+        const titles = {
+          hoc_tap: 'Chăm chỉ học tập',
+          dau_truong: 'Chiến binh Đấu trường',
+          cham_pet: 'Chăm sóc Linh thú'
+        };
+        showToast(`📜 Bạn vừa hoàn thành nhiệm vụ ngày: "${titles[actionKey] || 'Nhiệm vụ'}"! Hãy vào Trang chủ để nhận thưởng 🎁`, 'success');
+      }
+    }
+
+    async function claimDailyQuest(questId) {
+      const isCompleted = Boolean(dailyQuestsState.progress[questId]);
+      const isClaimed = Boolean(dailyQuestsState.claimed[questId]);
+
+      if (isClaimed) {
+        showToast('Nhiệm vụ này đã được nhận thưởng hôm nay rồi.', 'info');
+        return;
+      }
+
+      // Nếu chưa hoàn thành -> chuyển hướng người học đến tính năng tương ứng
+      if (!isCompleted) {
+        if (questId === 'hoc_tap') {
+          navTo('saga');
+        } else if (questId === 'dau_truong') {
+          navTo('minigame');
+        } else if (questId === 'cham_pet') {
+          navTo('pet');
+        }
+        return;
+      }
+
+      // Đã hoàn thành và chưa nhận -> Gọi API nhận Xu và EXP
+      const token = localStorage.getItem('tok_token');
+      try {
+        const resp = await fetch('/api/economy/claim-quest', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+          },
+          body: JSON.stringify({ questId })
+        });
+        const res = await resp.json();
+        if (res.success && res.data) {
+          dailyQuestsState.claimed[questId] = true;
+          if (res.data.newCoins !== undefined && typeof updateCoinDisplay === 'function') {
+            updateCoinDisplay(res.data.newCoins);
+          }
+          if (typeof refreshUserProfileBar === 'function') {
+            refreshUserProfileBar();
+          }
+          showToast(`🎉 Nhận thành công thưởng nhiệm vụ: +${res.data.coinsAwarded} 🪙 Xu Tri Thức & +${res.data.expAwarded} ⭐ EXP!`, 'success');
+          renderDailyQuests();
+        } else {
+          showToast(res.error?.message || 'Không thể nhận thưởng lúc này.', 'error');
+        }
+      } catch (err) {
+        showToast('Lỗi kết nối khi nhận thưởng nhiệm vụ ngày!', 'error');
+      }
+    }
+
+    function renderDailyQuests() {
+      const quests = [
+        { id: 'hoc_tap', name: 'Chăm chỉ học tập', shortcut: 'Làm bài ngay →' },
+        { id: 'dau_truong', name: 'Chiến binh Đấu trường', shortcut: 'Vào đấu trường →' },
+        { id: 'cham_pet', name: 'Chăm sóc Linh thú', shortcut: 'Chăm sóc Pet →' }
+      ];
+
+      let completedCount = 0;
+
+      quests.forEach(q => {
+        const isDone = Boolean(dailyQuestsState.progress[q.id]);
+        const isClaimed = Boolean(dailyQuestsState.claimed[q.id]);
+        if (isClaimed || isDone) completedCount++;
+
+        const bar = document.getElementById(`quest-progress-${q.id.replace('_', '-')}-bar`);
+        const text = document.getElementById(`quest-progress-${q.id.replace('_', '-')}-text`);
+        const btn = document.getElementById(`btn_quest_${q.id}`);
+
+        if (bar) bar.style.width = isDone || isClaimed ? '100%' : '0%';
+        if (text) text.textContent = isDone || isClaimed ? '1/1' : '0/1';
+
+        if (btn) {
+          if (isClaimed) {
+            btn.innerHTML = '<span>✓ Đã nhận thưởng</span>';
+            btn.disabled = true;
+            btn.className = 'w-full py-1.5 rounded-lg border border-transparent bg-emerald-500/10 text-emerald-600 text-xs font-semibold cursor-default';
+          } else if (isDone) {
+            btn.innerHTML = '<span>Nhận thưởng 🎁</span>';
+            btn.disabled = false;
+            btn.className = 'w-full py-1.5 rounded-lg bg-linear-to-r from-amber-500 to-emerald-600 hover:opacity-90 text-white text-xs font-bold shadow-md cursor-pointer transition';
+          } else {
+            btn.innerHTML = `<span>${q.shortcut}</span>`;
+            btn.disabled = false;
+            btn.className = 'w-full py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--card)] text-xs font-semibold transition cursor-pointer';
+          }
+        }
+      });
+
+      const summary = document.getElementById('daily-quest-summary');
+      if (summary) {
+        summary.textContent = `${completedCount}/3 hoàn thành`;
+      }
+    }
+
+    // =========================================================================
+    // QUẢN LÝ SẢNH ĐẤU TRƯỜNG MINI GAME: CÁC CHẾ ĐỘ CHƠI (GAME MODE CARDS)
+    // =========================================================================
+
+    function selectArenaMode(mode) {
+      const rankedCard = document.getElementById('card-mode-ranked');
+      const casualCard = document.getElementById('card-mode-casual');
+      const arcadeCard = document.getElementById('card-mode-arcade');
+      const fightPanel = document.getElementById('arena-fight');
+      const casualPanel = document.getElementById('arena-casual');
+      const arcadePanel = document.getElementById('arena-arcade');
+
+      if (rankedCard) {
+        rankedCard.className = (mode === 'ranked')
+          ? 'cursor-pointer rounded-2xl border-2 border-emerald-500 bg-emerald-500/5 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs'
+          : 'cursor-pointer rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-emerald-500/50 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs';
+      }
+
+      if (casualCard) {
+        casualCard.className = (mode === 'casual')
+          ? 'cursor-pointer rounded-2xl border-2 border-cyan-500 bg-cyan-500/5 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs'
+          : 'cursor-pointer rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-cyan-500/50 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs';
+      }
+
+      if (arcadeCard) {
+        arcadeCard.className = (mode === 'arcade')
+          ? 'cursor-pointer rounded-2xl border-2 border-purple-500 bg-purple-500/5 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs'
+          : 'cursor-pointer rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-purple-500/50 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs';
+      }
+
+      if (fightPanel) fightPanel.classList.toggle('hidden', mode !== 'ranked');
+      if (casualPanel) casualPanel.classList.toggle('hidden', mode !== 'casual');
+      if (arcadePanel) arcadePanel.classList.toggle('hidden', mode !== 'arcade');
+    }
+
+    async function startBotPractice() {
+      clearBattleTimers();
+      trackDailyQuestAction('dau_truong');
+      const mmModal = document.getElementById('modal-matchmaking');
+      if (mmModal) mmModal.classList.add('hidden');
+      
+      const botPool = [
+        { id: 'usr_bot_001', name: 'Đấu Sĩ Tập Sự (Bot)', petIcon: '🦉', petName: 'Cú Tri Thức Archie', tier: '🌱 Khởi nguyên I' },
+        { id: 'usr_bot_002', name: 'Chiến Binh Lữ Khách (Bot)', petIcon: '🦊', petName: 'Hồ Ly Kitsune', tier: '⚡ Tinh thông II' },
+        { id: 'usr_bot_003', name: 'Hộ Vệ Tri Thức (Bot)', petIcon: '🗿', petName: 'Thạch Cự Nhân Golem', tier: '👑 Cao thủ III' }
+      ];
+      const chosenBot = botPool[Math.floor(Math.random() * botPool.length)];
+      const token = localStorage.getItem('tok_token');
+      const subCode = document.getElementById('lobby-subject') ? document.getElementById('lobby-subject').value : 'csdl';
+      const maMon = subCode.startsWith('mon_') ? subCode : ('mon_' + subCode);
+
+      let liveMatchData = null;
+      try {
+        const resp = await fetch('/api/arena/create-match', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+          },
+          body: JSON.stringify({
+            doi_thu_id: chosenBot.id,
+            ma_mon: maMon
+          })
+        });
+        const res = await resp.json();
+        if (res.success && res.data) {
+          liveMatchData = res.data;
+          currentLiveMatch = res.data;
+        }
+      } catch (e) {
+        console.warn('Practice match fallback:', e);
+      }
+
+      showToast('🥊 Bắt đầu trận đấu tập luyện cùng ' + chosenBot.name + '!', 'info');
+      showVersusScreen(chosenBot, liveMatchData);
+    }
+
+    function previewArcadeModes() {
+      showToast('🎪 Các tựa Mini Game đang được phát triển tích cực! Bạn sẽ nhận được thông báo sớm nhất.', 'info');
+    }
+
+    // =========================================================================
+    // HƯỚNG DẪN TÂN THỦ CÙNG LINH THÚ (PET ONBOARDING SPOTLIGHT TOUR)
+    // =========================================================================
+
+    let currentPetTourStep = 0;
+    const PET_TOUR_STEPS = [
+      {
+        target: null,
+        title: 'Chào mừng bạn đến với Tháp Tri Thức! 👋',
+        text: 'Tớ là Linh Thú đồng hành của bạn! Tớ sẽ cùng bạn học tập, rèn luyện tư duy và vượt qua các thử thách tri thức. Hãy cùng tớ khám phá nhanh nhé!',
+        view: 'hub'
+      },
+      {
+        target: '#nav-saga',
+        title: 'Bản Đồ Tháp Mốc Học 🗺️',
+        text: 'Mỗi môn học gồm nhiều mốc thử thách với đa dạng dạng bài: Trắc nghiệm, Điền từ, Nối cặp, Sắp xếp câu. Vượt qua mốc để mở khóa tầng cao hơn và tích lũy Xu thưởng!',
+        view: 'hub'
+      },
+      {
+        target: '#nav-minigame',
+        title: 'Sảnh Đấu Trường Mini Game ⚔️',
+        text: 'Trung tâm tranh tài và giải trí! Bạn có thể đem tớ vào Đấu Hạng 1v1 theo thời gian thực hoặc Đấu Thường luyện tập cùng Bot AI. Sắp tới sảnh sẽ mở thêm rất nhiều mini game thú vị khác!',
+        view: 'minigame'
+      },
+      {
+        target: '#hub-daily-quests',
+        title: 'Nhiệm Vụ Ngày & Chuỗi Streak 🔥',
+        text: 'Mỗi ngày hãy vào học ít nhất 1 bài để duy trì Chuỗi Streak nhận thưởng Xu nhân đôi, và hoàn thành 3 Nhiệm Vụ Ngày để rinh thêm nhiều phần thưởng hấp dẫn!',
+        view: 'hub'
+      },
+      {
+        target: '#nav-pet',
+        title: 'Chăm Sóc Linh Thú & Quà Khởi Hành 🎁',
+        text: 'Đừng quên ghé phòng Linh Thú và Cửa Hàng để cho tớ ăn, nâng cấp kỹ năng chiến đấu. Giờ thì nhận ngay 20 Xu tân thủ và bắt đầu thôi nào!',
+        view: 'pet'
+      }
+    ];
+
+    function startPetOnboardingTour() {
+      currentPetTourStep = 0;
+      const modal = document.getElementById('modal-pet-onboarding');
+      if (modal) modal.classList.remove('hidden');
+      renderPetTourStep();
+    }
+
+    function renderPetTourStep() {
+      const step = PET_TOUR_STEPS[currentPetTourStep];
+      if (!step) return;
+
+      if (step.view && typeof navTo === 'function') {
+        navTo(step.view);
+      }
+
+      const myPetName = (currentEquippedPet && currentEquippedPet.ten_thu_cung) ? currentEquippedPet.ten_thu_cung : (document.getElementById('sidebar-pet-name')?.textContent || 'Cú Tri Thức Archie');
+      const myPetIcon = (currentEquippedPet && currentEquippedPet.icon) ? currentEquippedPet.icon : (document.getElementById('sidebar-pet-avatar')?.textContent || '🦉');
+      
+      const petNameEl = document.getElementById('pet-tour-name');
+      const petAvatarEl = document.getElementById('pet-tour-avatar');
+      if (petNameEl) petNameEl.textContent = myPetName;
+      if (petAvatarEl) petAvatarEl.textContent = myPetIcon;
+
+      const badgeEl = document.getElementById('pet-tour-step-badge');
+      const titleEl = document.getElementById('pet-tour-title');
+      const textEl = document.getElementById('pet-tour-text');
+      if (badgeEl) badgeEl.textContent = (currentPetTourStep + 1) + '/' + PET_TOUR_STEPS.length;
+      if (titleEl) titleEl.textContent = step.title;
+      if (textEl) textEl.textContent = step.text;
+
+      const prevBtn = document.getElementById('btn_pet_tour_prev');
+      const nextBtn = document.getElementById('btn_pet_tour_next');
+      const finishBtn = document.getElementById('btn_pet_tour_finish');
+      
+      if (prevBtn) prevBtn.classList.toggle('hidden', currentPetTourStep === 0);
+      if (nextBtn) nextBtn.classList.toggle('hidden', currentPetTourStep === PET_TOUR_STEPS.length - 1);
+      if (finishBtn) finishBtn.classList.toggle('hidden', currentPetTourStep !== PET_TOUR_STEPS.length - 1);
+
+      const spotlight = document.getElementById('pet-tour-spotlight');
+      const dialog = document.getElementById('pet-tour-dialog');
+      
+      if (step.target) {
+        setTimeout(() => {
+          const targetEl = document.querySelector(step.target);
+          if (targetEl && spotlight && dialog) {
+            const rect = targetEl.getBoundingClientRect();
+            spotlight.style.top = Math.max(0, rect.top - 6) + 'px';
+            spotlight.style.left = Math.max(0, rect.left - 6) + 'px';
+            spotlight.style.width = (rect.width + 12) + 'px';
+            spotlight.style.height = (rect.height + 12) + 'px';
+            spotlight.classList.remove('hidden');
+
+            if (window.innerWidth > 768 && rect.top > 250) {
+              dialog.style.top = 'auto';
+              dialog.style.bottom = '32px';
+              dialog.style.left = Math.min(window.innerWidth - 460, Math.max(20, rect.left)) + 'px';
+              dialog.style.transform = 'none';
+            } else {
+              dialog.style.top = 'auto';
+              dialog.style.bottom = '24px';
+              dialog.style.left = '50%';
+              dialog.style.transform = 'translateX(-50%)';
+            }
+          } else if (spotlight && dialog) {
+            spotlight.classList.add('hidden');
+            dialog.style.top = '50%';
+            dialog.style.bottom = 'auto';
+            dialog.style.left = '50%';
+            dialog.style.transform = 'translate(-50%, -50%)';
+          }
+        }, 120);
+      } else {
+        if (spotlight) spotlight.classList.add('hidden');
+        if (dialog) {
+          dialog.style.top = '50%';
+          dialog.style.bottom = 'auto';
+          dialog.style.left = '50%';
+          dialog.style.transform = 'translate(-50%, -50%)';
+        }
+      }
+    }
+
+    function nextPetTourStep() {
+      if (currentPetTourStep < PET_TOUR_STEPS.length - 1) {
+        currentPetTourStep++;
+        renderPetTourStep();
+      }
+    }
+
+    function prevPetTourStep() {
+      if (currentPetTourStep > 0) {
+        currentPetTourStep--;
+        renderPetTourStep();
+      }
+    }
+
+    function skipPetTour() {
+      const modal = document.getElementById('modal-pet-onboarding');
+      if (modal) modal.classList.add('hidden');
+      localStorage.setItem('tok_onboarding_completed', 'true');
+      const banner = document.getElementById('hub-newbie-guide-banner');
+      if (banner) banner.classList.add('hidden');
+      navTo('hub');
+      showToast('Bạn có thể bấm vào "🦉 Hướng dẫn cùng Pet" ở thanh menu bất cứ lúc nào để xem lại.', 'info');
+    }
+
+    async function finishPetTour() {
+      const modal = document.getElementById('modal-pet-onboarding');
+      if (modal) modal.classList.add('hidden');
+      localStorage.setItem('tok_onboarding_completed', 'true');
+      const banner = document.getElementById('hub-newbie-guide-banner');
+      if (banner) banner.classList.add('hidden');
+      navTo('hub');
+
+      const token = localStorage.getItem('tok_token');
+      try {
+        const res = await fetch('/api/economy/onboarding-gift', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+          }
+        });
+        const data = await res.json();
+        if (data.success && !data.data?.alreadyClaimed) {
+          showToast('🎉 Chúc mừng! Bạn nhận được 20 🪙 Xu Tri Thức và +30 ⭐ EXP tân thủ!', 'success');
+          if (typeof updateCoinDisplay === 'function' && data.data?.newCoins !== undefined) {
+            updateCoinDisplay(data.data.newCoins);
+          }
+          if (typeof refreshUserProfileBar === 'function') {
+            refreshUserProfileBar();
+          }
+        } else {
+          showToast('✨ Chúc mừng bạn đã hoàn thành chuyến dạo quanh cùng Linh Thú!', 'success');
+        }
+      } catch (err) {
+        showToast('✨ Chúc mừng bạn đã hoàn thành chuyến dạo quanh cùng Linh Thú!', 'success');
+      }
+    }
+
+    function dismissNewbieGuideBanner() {
+      const banner = document.getElementById('hub-newbie-guide-banner');
+      if (banner) banner.classList.add('hidden');
+      localStorage.setItem('tok_onboarding_completed', 'true');
+    }
+
+    function initNewbieGuideAndQuests() {
+      const isCompleted = localStorage.getItem('tok_onboarding_completed');
+      const banner = document.getElementById('hub-newbie-guide-banner');
+      if (banner) {
+        if (!isCompleted) {
+          banner.classList.remove('hidden');
+        } else {
+          banner.classList.add('hidden');
+        }
+      }
+      loadDailyQuests();
     }
 
 </script>

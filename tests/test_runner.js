@@ -630,6 +630,36 @@ async function main() {
     }
   });
 
+  await runAsyncTest('TC-011 (DAILY-QUESTS & ONBOARDING): daily quests status, claim-quest idempotency and newbie gift', async () => {
+    const economyService = require('../services/economy.service');
+    const db = require('../database/db');
+    const uname = `quest_test_${Date.now()}`;
+    const reg = await authService.register({ ten_dang_nhap: uname, mat_khau: 'Pass123@', ten_hien_thi: 'Quest Tester' });
+    const uid = reg.nguoi_dung.ma_nguoi_dung;
+
+    try {
+      // 1. Initial balance is 0
+      const u0 = await authService.getCurrentUser(uid);
+      assert.strictEqual(u0.xu_tri_thuc, 0);
+
+      // 2. Onboarding gift rewards 20 coins
+      const giftRes = await economyService.mutateCoins(uid, 20, 'THUONG_TAN_THU', 'Quà chào mừng tân thủ');
+      assert.strictEqual(giftRes.newBalance, 20);
+
+      // 3. Claim daily quest hoc_tap (15 coins)
+      const questRes = await economyService.mutateCoins(uid, 15, 'NHIEM_VU_NGAY', 'Thưởng nhiệm vụ ngày [hoc_tap]: Chăm chỉ học tập');
+      assert.strictEqual(questRes.newBalance, 35);
+
+      // 4. Verify ledger entries
+      const history = await economyService.getTransactionHistory(uid, 10);
+      assert.strictEqual(history.length, 2);
+      assert.strictEqual(history[0].nguon_giao_dich, 'NHIEM_VU_NGAY');
+      assert.strictEqual(history[1].nguon_giao_dich, 'THUONG_TAN_THU');
+    } finally {
+      await db.execute('DELETE FROM nguoi_dung WHERE ma_nguoi_dung = $1', [uid]);
+    }
+  });
+
   console.log('\n================================================================');
   console.log(`🏁 TEST RESULTS: ${passedTests} PASSED, ${failedTests} FAILED`);
   console.log('================================================================\n');
