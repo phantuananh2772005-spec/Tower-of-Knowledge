@@ -6244,6 +6244,30 @@
 
     // --- 1. Load & Render Real Saga Roadmap ---
     let currentSagaChapterId = 'ch_csdl_01';
+    let userManuallyNavigatedChapter = false;
+
+    function getPlayerCurrentChapter(courseData) {
+      if (!courseData || !courseData.cac_chuong || courseData.cac_chuong.length === 0) return null;
+      // 1. Prioritize HIGHEST chapter containing an unlocked active milestone ('DA_MO')
+      for (let i = courseData.cac_chuong.length - 1; i >= 0; i--) {
+        const ch = courseData.cac_chuong[i];
+        if ((ch.cac_moc || []).some(m => m.trang_thai === 'DA_MO')) {
+          return ch.ma_chuong;
+        }
+      }
+      // 2. Or the highest unlocked chapter where previous chapter's boss is passed
+      for (let i = courseData.cac_chuong.length - 1; i >= 0; i--) {
+        const ch = courseData.cac_chuong[i];
+        if (i === 0) return ch.ma_chuong;
+        const prevCh = courseData.cac_chuong[i - 1];
+        const prevMocs = prevCh.cac_moc || [];
+        const prevBoss = prevMocs[prevMocs.length - 1];
+        if (prevBoss && (prevBoss.trang_thai === 'DA_HOAN_THANH' || prevBoss.trang_thai === 'HOAN_THANH')) {
+          return ch.ma_chuong;
+        }
+      }
+      return courseData.cac_chuong[0].ma_chuong;
+    }
     let sagaDragD = 0;
     let sagaCumLengths = [0];
     let sagaSegs = [];
@@ -6294,7 +6318,7 @@
       }
     }
 
-    async function loadCourseRoadmap() {
+    async function loadCourseRoadmap(preferredChapterId = null) {
       const token = localStorage.getItem('tok_token');
       try {
         const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
@@ -6302,6 +6326,15 @@
         const res = await resp.json();
         if (res.success && res.data) {
           liveCourseData = res.data;
+          if (preferredChapterId) {
+            currentSagaChapterId = preferredChapterId;
+            userManuallyNavigatedChapter = true;
+          } else if (!userManuallyNavigatedChapter) {
+            const activeChId = getPlayerCurrentChapter(res.data);
+            if (activeChId) {
+              currentSagaChapterId = activeChId;
+            }
+          }
           renderRealSagaRoadmap(res.data);
         }
       } catch (err) {
@@ -6334,6 +6367,7 @@
     }
 
     function changeSagaChapter(chId) {
+      userManuallyNavigatedChapter = true;
       currentSagaChapterId = chId || 'ch_csdl_01';
       if (liveCourseData) {
         renderRealSagaRoadmap(liveCourseData);
@@ -7637,12 +7671,29 @@
       if (congratsModal) congratsModal.classList.add('hidden');
       document.body.style.overflow = '';
 
+      const lastFinishedMoc = currentMocSession;
+      currentMocSession = null;
+      currentQuizSession = null;
+
       navTo('saga');
 
       await Promise.all([
         refreshUserData(),
         loadCourseRoadmap()
       ]);
+
+      if (lastFinishedMoc && (lastFinishedMoc.loaiMoc === 'THU_THACH_BOSS' || String(lastFinishedMoc.mocId).endsWith('_05'))) {
+        if (liveCourseData && liveCourseData.cac_chuong) {
+          const chIdx = liveCourseData.cac_chuong.findIndex(c => (c.cac_moc || []).some(m => m.ma_moc === lastFinishedMoc.mocId));
+          if (chIdx >= 0 && chIdx + 1 < liveCourseData.cac_chuong.length) {
+            const nextCh = liveCourseData.cac_chuong[chIdx + 1];
+            currentSagaChapterId = nextCh.ma_chuong;
+            userManuallyNavigatedChapter = false;
+            renderRealSagaRoadmap(liveCourseData);
+            showToast(`🚀 Tiến bước vào ${nextCh.tieu_de || `Chương ${chIdx + 2}`}! Chúc bạn chinh phục thành công!`, 'success');
+          }
+        }
+      }
 
       setTimeout(() => {
         scrollToActiveNode(true);
@@ -8554,9 +8605,23 @@
             if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-correct');
             showToast(`🎉 VƯỢT QUA CHẶNG ${step}/${totalSteps}! ${scorePercentage}% điểm (+${earnedCoins || 5} 🪙, +${earnedExp || 10} ⭐ EXP)`);
             if (moc_hoan_thanh) {
+              const isBossMoc = (currentQuizSession && (currentQuizSession.loaiMoc === 'THU_THACH_BOSS' || String(currentQuizSession.mocId).endsWith('_05')));
               setTimeout(() => {
                 showToast(`🏆 CHÚC MỪNG BẠN ĐÃ HOÀN THÀNH TOÀN BỘ ${totalSteps} CHẶNG CỦA MỐC HỌC!`);
               }, 1200);
+
+              if (isBossMoc && liveCourseData && liveCourseData.cac_chuong) {
+                const chIdx = liveCourseData.cac_chuong.findIndex(c => (c.cac_moc || []).some(m => m.ma_moc === mocId));
+                if (chIdx >= 0 && chIdx + 1 < liveCourseData.cac_chuong.length) {
+                  const nextCh = liveCourseData.cac_chuong[chIdx + 1];
+                  currentSagaChapterId = nextCh.ma_chuong;
+                  userManuallyNavigatedChapter = false;
+                  renderRealSagaRoadmap(liveCourseData);
+                  setTimeout(() => {
+                    showToast(`🚀 Tiến bước vào ${nextCh.tieu_de || `Chương ${chIdx + 2}`}!`, 'success');
+                  }, 2000);
+                }
+              }
             }
           } else {
             if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-wrong');

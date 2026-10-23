@@ -163,6 +163,7 @@ async function getCourseDetails(slug, ma_nguoi_dung) {
   let isEnrolled = false;
   let userProgress = null;
   if (ma_nguoi_dung) {
+    await ensureCourseInitialized(ma_nguoi_dung, course.ma_mon);
     userProgress = await db.queryOne(
       'SELECT ma_tien_do_mon, phan_tram_hoan_thanh FROM tien_do_mon_hoc WHERE ma_nguoi_dung = $1 AND ma_mon = $2',
       [ma_nguoi_dung, course.ma_mon]
@@ -198,7 +199,7 @@ async function getCourseDetails(slug, ma_nguoi_dung) {
       let buoc_hien_tai = 1;
       let cac_buoc_hoan_thanh = `0/${totalSteps}`;
 
-      if (isEnrolled && ma_nguoi_dung) {
+      if (ma_nguoi_dung) {
         const prog = await db.queryOne(
           'SELECT trang_thai, diem_dat_duoc, xu_da_nhan, buoc_hien_tai, cac_buoc_hoan_thanh FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2',
           [ma_nguoi_dung, m.ma_moc]
@@ -635,7 +636,7 @@ async function submitStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
             if (nextUnlock && nextUnlock.nextCheckpoint) {
               nextCheckpointUnlocked = nextUnlock.nextCheckpoint;
               const nextProg = await db.queryOne(
-                'SELECT ma_tien_do_moc FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2',
+                'SELECT ma_tien_do_moc, trang_thai FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2',
                 [ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc]
               );
               if (!nextProg) {
@@ -645,6 +646,12 @@ async function submitStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
                   INSERT INTO tien_do_moc_bai_hoc (ma_tien_do_moc, ma_nguoi_dung, ma_moc, trang_thai, diem_dat_duoc, xu_da_nhan, buoc_hien_tai, cac_buoc_hoan_thanh, du_lieu_tri_nho)
                   VALUES ($1, $2, $3, 'DA_MO', 0, 0, 1, $4, $5)
                 `, [newMocProgId, ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc, `0/${nextTotalSteps}`, '{}']);
+              } else if (nextProg.trang_thai === 'KHOA' || nextProg.trang_thai === 'CHUA_MO') {
+                await db.execute(`
+                  UPDATE tien_do_moc_bai_hoc
+                  SET trang_thai = 'DA_MO'
+                  WHERE ma_nguoi_dung = $1 AND ma_moc = $2
+                `, [ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc]);
               }
             }
 
@@ -661,12 +668,16 @@ async function submitStep(ma_moc, buocNumber, submissions, ma_nguoi_dung) {
             const compPct = calculateCompletionPercentage(totalCount, completedCountResult ? completedCountResult.count : 0);
             const isCompletedCourse = compPct >= 100;
 
-            await db.execute(`
-              UPDATE tien_do_mon_hoc
-              SET phan_tram_hoan_thanh = $1,
-                  ngay_hoan_thanh = ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'}
-              WHERE ma_nguoi_dung = $2 AND ma_mon = $3
-            `, [compPct, ma_nguoi_dung, courseChapter.ma_mon]);
+                        await db.execute(`
+              IF NOT EXISTS (SELECT 1 FROM tien_do_mon_hoc WHERE ma_nguoi_dung = $2 AND ma_mon = $3)
+                INSERT INTO tien_do_mon_hoc (ma_tien_do_mon, ma_nguoi_dung, ma_mon, phan_tram_hoan_thanh, ngay_bat_dau, ngay_hoan_thanh)
+                VALUES ($4, $2, $3, $1, SYSDATETIME(), ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'})
+              ELSE
+                UPDATE tien_do_mon_hoc
+                SET phan_tram_hoan_thanh = $1,
+                    ngay_hoan_thanh = ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'}
+                WHERE ma_nguoi_dung = $2 AND ma_mon = $3
+            `, [compPct, ma_nguoi_dung, courseChapter.ma_mon, `pm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`]);
           }
         } else {
           await db.execute(`
@@ -868,12 +879,16 @@ async function completeTheoreticalCheckpoint(ma_moc, ma_nguoi_dung) {
     const compPct = calculateCompletionPercentage(allCourseCheckpoints.length, completedCountResult ? completedCountResult.count : 0);
     const isCompletedCourse = compPct >= 100;
 
-    await db.execute(`
-      UPDATE tien_do_mon_hoc
-      SET phan_tram_hoan_thanh = $1,
-          ngay_hoan_thanh = ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'}
-      WHERE ma_nguoi_dung = $2 AND ma_mon = $3
-    `, [compPct, ma_nguoi_dung, courseChapter.ma_mon]);
+                await db.execute(`
+              IF NOT EXISTS (SELECT 1 FROM tien_do_mon_hoc WHERE ma_nguoi_dung = $2 AND ma_mon = $3)
+                INSERT INTO tien_do_mon_hoc (ma_tien_do_mon, ma_nguoi_dung, ma_mon, phan_tram_hoan_thanh, ngay_bat_dau, ngay_hoan_thanh)
+                VALUES ($4, $2, $3, $1, SYSDATETIME(), ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'})
+              ELSE
+                UPDATE tien_do_mon_hoc
+                SET phan_tram_hoan_thanh = $1,
+                    ngay_hoan_thanh = ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'}
+                WHERE ma_nguoi_dung = $2 AND ma_mon = $3
+            `, [compPct, ma_nguoi_dung, courseChapter.ma_mon, `pm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`]);
   }
 
   await mutateCoins(ma_nguoi_dung, earnedCoins, 'HOAN_THANH_MOC', `Hoàn thành lý thuyết mốc ${checkpoint.tieu_de}`);
@@ -892,7 +907,19 @@ async function completeTheoreticalCheckpoint(ma_moc, ma_nguoi_dung) {
  * Check a single question answer in real-time
  */
 async function checkSingleQuestion(ma_moc, ma_cau_hoi, tra_loi) {
-  const q = await db.queryOne('SELECT * FROM cau_hoi WHERE ma_cau_hoi = $1 AND ma_moc = $2', [ma_cau_hoi, ma_moc]);
+  const checkpoint = await db.queryOne('SELECT * FROM moc_bai_hoc WHERE ma_moc = $1', [ma_moc]);
+  if (!checkpoint) throw new Error('Không tìm thấy mốc bài học.');
+
+  let q = null;
+  if (checkpoint.loai_moc === 'THU_THACH_BOSS') {
+    q = await db.queryOne(`
+      SELECT q.* FROM cau_hoi q
+      JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
+      WHERE q.ma_cau_hoi = $1 AND m.ma_chuong = $2
+    `, [ma_cau_hoi, checkpoint.ma_chuong]);
+  } else {
+    q = await db.queryOne('SELECT * FROM cau_hoi WHERE ma_cau_hoi = $1 AND ma_moc = $2', [ma_cau_hoi, ma_moc]);
+  }
   if (!q) throw new Error('Không tìm thấy câu hỏi.');
 
   const evalResult = evaluateQuizSubmission([tra_loi], [q], 0, 0, 0);
@@ -912,7 +939,17 @@ async function submitQuizCheckpoint(ma_moc, submissions, ma_nguoi_dung) {
   const checkpoint = await db.queryOne('SELECT * FROM moc_bai_hoc WHERE ma_moc = $1', [ma_moc]);
   if (!checkpoint) throw new Error('Không tìm thấy mốc bài học.');
 
-  let questions = await db.query('SELECT * FROM cau_hoi WHERE ma_moc = $1 ORDER BY ma_cau_hoi ASC', [ma_moc]);
+  let questions = [];
+  if (checkpoint.loai_moc === 'THU_THACH_BOSS') {
+    questions = await db.query(`
+      SELECT q.* FROM cau_hoi q
+      JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
+      WHERE m.ma_chuong = $1
+      ORDER BY q.ma_cau_hoi ASC
+    `, [checkpoint.ma_chuong]);
+  } else {
+    questions = await db.query('SELECT * FROM cau_hoi WHERE ma_moc = $1 ORDER BY ma_cau_hoi ASC', [ma_moc]);
+  }
   if (!questions || questions.length === 0) {
     return await completeTheoreticalCheckpoint(ma_moc, ma_nguoi_dung);
   }
@@ -1022,7 +1059,7 @@ async function submitQuizCheckpoint(ma_moc, submissions, ma_nguoi_dung) {
         if (nextUnlock && nextUnlock.nextCheckpoint) {
           nextCheckpointUnlocked = nextUnlock.nextCheckpoint;
           const nextProg = await db.queryOne(
-            'SELECT ma_tien_do_moc FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2',
+            'SELECT ma_tien_do_moc, trang_thai FROM tien_do_moc_bai_hoc WHERE ma_nguoi_dung = $1 AND ma_moc = $2',
             [ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc]
           );
           if (!nextProg) {
@@ -1032,6 +1069,12 @@ async function submitQuizCheckpoint(ma_moc, submissions, ma_nguoi_dung) {
               INSERT INTO tien_do_moc_bai_hoc (ma_tien_do_moc, ma_nguoi_dung, ma_moc, trang_thai, diem_dat_duoc, xu_da_nhan, buoc_hien_tai, cac_buoc_hoan_thanh)
               VALUES ($1, $2, $3, 'DA_MO', 0, 0, 1, $4)
             `, [newMocProgId, ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc, `0/${nextTotalSteps}`]);
+          } else if (nextProg.trang_thai === 'KHOA' || nextProg.trang_thai === 'CHUA_MO') {
+            await db.execute(`
+              UPDATE tien_do_moc_bai_hoc
+              SET trang_thai = 'DA_MO'
+              WHERE ma_nguoi_dung = $1 AND ma_moc = $2
+            `, [ma_nguoi_dung, nextUnlock.nextCheckpoint.ma_moc]);
           }
         }
 
@@ -1047,12 +1090,16 @@ async function submitQuizCheckpoint(ma_moc, submissions, ma_nguoi_dung) {
         const compPct = calculateCompletionPercentage(allCourseCheckpoints.length, completedCountResult ? completedCountResult.count : 0);
         const isCompletedCourse = compPct >= 100;
 
-        await db.execute(`
-          UPDATE tien_do_mon_hoc
-          SET phan_tram_hoan_thanh = $1,
-              ngay_hoan_thanh = ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'}
-          WHERE ma_nguoi_dung = $2 AND ma_mon = $3
-        `, [compPct, ma_nguoi_dung, courseChapter.ma_mon]);
+                    await db.execute(`
+              IF NOT EXISTS (SELECT 1 FROM tien_do_mon_hoc WHERE ma_nguoi_dung = $2 AND ma_mon = $3)
+                INSERT INTO tien_do_mon_hoc (ma_tien_do_mon, ma_nguoi_dung, ma_mon, phan_tram_hoan_thanh, ngay_bat_dau, ngay_hoan_thanh)
+                VALUES ($4, $2, $3, $1, SYSDATETIME(), ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'})
+              ELSE
+                UPDATE tien_do_mon_hoc
+                SET phan_tram_hoan_thanh = $1,
+                    ngay_hoan_thanh = ${isCompletedCourse ? 'SYSDATETIME()' : 'NULL'}
+                WHERE ma_nguoi_dung = $2 AND ma_mon = $3
+            `, [compPct, ma_nguoi_dung, courseChapter.ma_mon, `pm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`]);
       }
 
       if (actualEarnedCoins > 0) {
