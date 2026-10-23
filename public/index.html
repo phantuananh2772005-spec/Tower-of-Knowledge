@@ -852,28 +852,32 @@
 
           <!-- Thanh Công Cụ Nhập Mã Phòng & Tạo Mã (Top Bar) -->
           <div class="flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3 py-2 sm:py-2.5 border-b border-[var(--border)] shrink-0">
-            <!-- Nhập mã phòng từ bạn bè (Góc trái) -->
+            <!-- Nhập KEY từ bạn bè (Góc trái) -->
             <div class="flex items-center gap-2 w-full sm:w-auto">
-              <span class="text-xs font-bold text-[var(--muted-foreground)] whitespace-nowrap">🔑 Vào phòng:</span>
-              <input type="text" id="input_casual_room_code" placeholder="Nhập mã phòng (VD: TOK-8842)..." class="w-full sm:w-52 px-3 py-1.5 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs font-mono uppercase focus:outline-hidden focus:border-cyan-500">
-              <button id="btn_casual_join_room" onclick="joinCasualFriendRoom()" class="px-3.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs transition cursor-pointer shrink-0 shadow-2xs">
-                Tham gia
+              <span class="text-xs font-bold text-[var(--muted-foreground)] whitespace-nowrap" title="Nhập KEY phòng">KEY:</span>
+              <input type="text" id="input_casual_room_code" placeholder="Nhập KEY (VD: TOK-8842)..." class="w-full sm:w-48 px-3 py-1.5 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs font-mono uppercase focus:outline-hidden focus:border-cyan-500">
+              <button id="btn_casual_join_room" onclick="joinCasualFriendRoom()" class="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs transition cursor-pointer shrink-0 shadow-2xs flex items-center justify-center hover:scale-105 active:scale-95 duration-150" title="Vào phòng" aria-label="Vào phòng">
+                <svg class="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" />
+                </svg>
               </button>
             </div>
 
-            <!-- Mã phòng và Nút tạo mã phòng mới (Góc phải) -->
+            <!-- KEY của bạn và Nút tạo mã mới trước KEY (Góc phải) -->
             <div class="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
               <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[var(--background)] border border-cyan-500/30 text-xs shadow-2xs">
-                <span class="font-bold text-[var(--muted-foreground)] text-[11px]">MP:</span>
-                <span id="casual-room-code-display" onclick="copyCasualRoomCode()" title="Bấm để sao chép mã phòng" class="font-mono font-black text-cyan-500 tracking-wider cursor-pointer hover:underline">TOK-7294</span>
+                <!-- Nút tạo mã mới: icon đơn giản nhỏ gọn nằm trước mã phòng -->
+                <button id="btn_casual_create_code" onclick="createCasualRoomCode()" class="p-1 hover:bg-cyan-500/20 text-cyan-500 hover:text-cyan-400 rounded-lg transition-transform hover:rotate-180 duration-300 cursor-pointer flex items-center justify-center shrink-0" title="Tạo KEY phòng mới" aria-label="Tạo KEY phòng mới">
+                  <svg class="w-3.5 h-3.5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                </button>
+                <span class="font-bold text-[var(--muted-foreground)] text-[11px] tracking-wide">KEY:</span>
+                <span id="casual-room-code-display" onclick="copyCasualRoomCode()" title="Bấm để sao chép KEY phòng" class="font-mono font-black text-cyan-500 tracking-wider cursor-pointer hover:underline">TOK-7294</span>
                 <button id="btn_show_room_qr" onclick="showRoomQRModal()" class="ml-0.5 px-1.5 py-0.5 hover:bg-cyan-500/10 rounded-md text-[11px] font-semibold text-[var(--foreground)] transition cursor-pointer border border-[var(--border)]" title="Xem mã QR">
                   📱 QR
                 </button>
               </div>
-              <button id="btn_casual_create_code" onclick="createCasualRoomCode()" class="px-3 py-1.5 rounded-xl border border-cyan-500/40 hover:bg-cyan-500/10 text-cyan-500 font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-2xs">
-                <span>🔄</span>
-                <span>Tạo mã mới</span>
-              </button>
             </div>
           </div>
 
