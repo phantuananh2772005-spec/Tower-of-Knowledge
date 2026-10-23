@@ -1334,23 +1334,6 @@
                 <span>→</span>
               </div>
             </div>
-
-            <!-- Mục 4: Mở lại Hộp Quà Tân Thủ & Gặp Pet -->
-            <div onclick="closeSettingsModal(); openNewbiePetUnboxing();" class="p-3.5 rounded-2xl bg-[var(--background)] border border-[var(--border)] hover:border-amber-500/50 hover:bg-[var(--card)] transition cursor-pointer flex items-center justify-between group shadow-2xs">
-              <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center text-base shrink-0 group-hover:scale-105 transition">
-                  🎁
-                </div>
-                <div>
-                  <span class="text-xs font-bold text-[var(--foreground)] group-hover:text-amber-600 transition block">Mở Hộp Quà Tân Thủ</span>
-                  <span class="text-[11px] text-[var(--muted-foreground)]">Trải nghiệm mở quà và nhận Linh thú ban đầu</span>
-                </div>
-              </div>
-              <div class="flex items-center gap-1 text-[var(--muted-foreground)] group-hover:text-amber-600 text-xs font-semibold transition">
-                <span>Mở quà</span>
-                <span>→</span>
-              </div>
-            </div>
           </div>
 
           <!-- DƯỚI CÙNG CARD CÀI ĐẶT: NÚT ĐĂNG XUẤT CĂN GIỮA -->
@@ -5450,6 +5433,10 @@
       currentEquippedPet = allPets.find(p => p.id === 'dragon') || { id: 'dragon', name: 'Rồng Nhỏ Sparky', icon: '🐉', buff: 'Tăng 10% kinh nghiệm', image: SPARKY_ANIM_GIF };
       myEnrolledCourses = [];
       liveCourseData = null;
+      if (typeof dailyQuestsState !== 'undefined') {
+        dailyQuestsState.onboardingClaimed = false;
+        dailyQuestsState.claimed = {};
+      }
 
       // Xóa các mốc và tiến độ của tài khoản cũ trên giao diện
       syncUserDataToUI();
@@ -5740,6 +5727,14 @@
           if (res.success && res.data) {
             localStorage.setItem('tok_token', res.data.token);
             applyUserData(res.data.nguoi_dung);
+            if (typeof dailyQuestsState !== 'undefined') {
+              dailyQuestsState.onboardingClaimed = false;
+              dailyQuestsState.claimed = {};
+            }
+            if (currentUserAccount.userId) {
+              localStorage.removeItem('tok_onboarding_completed_' + currentUserAccount.userId);
+            }
+            localStorage.removeItem('tok_onboarding_completed');
             closeAuthModal();
             await reloadAllAccountData();
             showToast('🎉 Đăng ký thành công! Chào mừng ' + currentUserAccount.displayName);
@@ -5752,6 +5747,11 @@
         } catch (err) {
           currentUserAccount.username = username;
           currentUserAccount.displayName = username;
+          if (typeof dailyQuestsState !== 'undefined') {
+            dailyQuestsState.onboardingClaimed = false;
+            dailyQuestsState.claimed = {};
+          }
+          localStorage.removeItem('tok_onboarding_completed');
           syncUserDataToUI();
           closeAuthModal();
           showToast('Đã lưu tài khoản ngoại tuyến!');
@@ -8021,6 +8021,7 @@
         const res = await resp.json();
         if (res.success && res.data) {
           dailyQuestsState.claimed = res.data.claimed || {};
+          dailyQuestsState.onboardingClaimed = Boolean(res.data.onboardingClaimed);
           if (res.data.onboardingClaimed) {
             localStorage.setItem('tok_onboarding_completed', 'true');
             const banner = document.getElementById('hub-newbie-guide-banner');
@@ -8354,6 +8355,12 @@
       renderPetTourStep();
     }
 
+    function hasClaimedOnboardingGift() {
+      if (dailyQuestsState && dailyQuestsState.onboardingClaimed) return true;
+      if (localStorage.getItem('tok_onboarding_completed') === 'true') return true;
+      return false;
+    }
+
     function renderPetTourStep() {
       const step = PET_TOUR_STEPS[currentPetTourStep];
       if (!step) return;
@@ -8374,12 +8381,32 @@
       const titleEl = document.getElementById('pet-tour-title');
       const textEl = document.getElementById('pet-tour-text');
       if (badgeEl) badgeEl.textContent = (currentPetTourStep + 1) + '/' + PET_TOUR_STEPS.length;
-      if (titleEl) titleEl.textContent = step.title;
-      if (textEl) textEl.textContent = step.text;
 
       const prevBtn = document.getElementById('btn_pet_tour_prev');
       const nextBtn = document.getElementById('btn_pet_tour_next');
       const finishBtn = document.getElementById('btn_pet_tour_finish');
+
+      const isClaimed = hasClaimedOnboardingGift();
+      if (currentPetTourStep === PET_TOUR_STEPS.length - 1) {
+        if (isClaimed) {
+          if (titleEl) titleEl.textContent = 'Chăm Sóc Linh Thú & Hành Trình Tri Thức 🌟';
+          if (textEl) textEl.textContent = 'Đừng quên ghé phòng Linh Thú và Cửa Hàng mỗi ngày để tương tác và nâng cấp sức mạnh chiến đấu cùng tớ nhé! Chúc bạn học tập thật tốt!';
+          if (finishBtn) {
+            finishBtn.innerHTML = '<span>✓ Hoàn thành hướng dẫn</span>';
+            finishBtn.className = 'shrink-0 whitespace-nowrap px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5';
+          }
+        } else {
+          if (titleEl) titleEl.textContent = step.title;
+          if (textEl) textEl.textContent = step.text;
+          if (finishBtn) {
+            finishBtn.innerHTML = '<span>🎁 Nhận 20 Xu & Bắt đầu!</span>';
+            finishBtn.className = 'shrink-0 whitespace-nowrap px-4 py-2 rounded-xl bg-linear-to-r from-amber-500 to-emerald-600 hover:opacity-90 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5';
+          }
+        }
+      } else {
+        if (titleEl) titleEl.textContent = step.title;
+        if (textEl) textEl.textContent = step.text;
+      }
       
       if (prevBtn) prevBtn.classList.toggle('hidden', currentPetTourStep === 0);
       if (nextBtn) nextBtn.classList.toggle('hidden', currentPetTourStep === PET_TOUR_STEPS.length - 1);
@@ -8451,10 +8478,18 @@
     async function finishPetTour() {
       const modal = document.getElementById('modal-pet-onboarding');
       if (modal) modal.classList.add('hidden');
-      localStorage.setItem('tok_onboarding_completed', 'true');
       const banner = document.getElementById('hub-newbie-guide-banner');
       if (banner) banner.classList.add('hidden');
       navTo('hub');
+
+      const isClaimed = hasClaimedOnboardingGift();
+      localStorage.setItem('tok_onboarding_completed', 'true');
+
+      // Nếu đã từng nhận quà tân thủ trước đó rồi (xem lại lần 2 trở đi):
+      if (isClaimed) {
+        showToast('✨ Bạn đã hoàn thành việc xem lại hướng dẫn cùng Linh Thú!', 'info');
+        return;
+      }
 
       const token = localStorage.getItem('tok_token');
       try {
@@ -8467,6 +8502,7 @@
         });
         const data = await res.json();
         if (data.success && !data.data?.alreadyClaimed) {
+          if (dailyQuestsState) dailyQuestsState.onboardingClaimed = true;
           showToast('🎉 Chúc mừng! Bạn nhận được 20 🪙 Xu Tri Thức và +30 ⭐ EXP tân thủ!', 'success');
           if (typeof updateCoinDisplay === 'function' && data.data?.newCoins !== undefined) {
             updateCoinDisplay(data.data.newCoins);
@@ -8475,6 +8511,7 @@
             refreshUserProfileBar();
           }
         } else {
+          if (dailyQuestsState) dailyQuestsState.onboardingClaimed = true;
           showToast('✨ Chúc mừng bạn đã hoàn thành chuyến dạo quanh cùng Linh Thú!', 'success');
         }
       } catch (err) {
