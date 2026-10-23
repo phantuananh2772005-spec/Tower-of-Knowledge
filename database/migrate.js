@@ -111,6 +111,18 @@ async function main() {
     console.warn('[MIGRATE] Warning: seed_chapter1_5levels error (non-fatal):', seedErr.message);
   }
 
+  if (isPostgres) {
+    const cdsPgSql = path.join(__dirname, 'seed_postgres_cds.sql');
+    if (fs.existsSync(cdsPgSql)) {
+      console.log('==> Seeding Chuyen Doi So for PostgreSQL...');
+      try {
+        await runPostgresFile(cdsPgSql);
+      } catch (e) {
+        console.warn('[MIGRATE] Warning: seed_postgres_cds error (non-fatal):', e.message);
+      }
+    }
+  }
+
   console.log('==> Initializing Telemetry Schema...');
   try {
     const { initTelemetrySchema } = require('./init_telemetry');
