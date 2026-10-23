@@ -333,6 +333,12 @@
 
       <!-- Khu vực bên phải: Tiến độ học + Nút Cài đặt tài khoản -->
       <div id="topbar-right" class="shrink-0 flex items-center gap-3">
+        <!-- Huy hiệu số sao chương (chỉ hiển thị khi mở Bản đồ leo tháp) -->
+        <div id="saga-chapter-stars-badge" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-500 text-xs font-bold font-mono shrink-0" title="Số sao đạt được trong chương này">
+          <span>⭐</span>
+          <span id="saga-chapter-stars-count">0/15 sao</span>
+        </div>
+
         <div id="topbar-progress" class="text-right">
           <span id="topbar-progress-text" class="text-xs font-bold text-emerald-600 font-mono">Đang tải tiến độ...</span>
           <div class="w-24 sm:w-28 h-1.5 bg-[var(--border)] rounded-full mt-1 overflow-hidden ml-auto">
@@ -366,51 +372,13 @@
     <main id="app-main-scroll" class="flex-1 overflow-y-auto">
 
       <!-- ================= VIEW 1: BẢN ĐỒ LỘ TRÌNH LEO THÁP (CHUYỂN VÀO KHI HỌC MÔN) ================= -->
-      <section id="view-saga" class="hidden px-2 sm:px-4 max-w-2xl lg:max-w-6xl xl:max-w-7xl w-full mx-auto pt-4 pb-16 transition-all duration-300">
+      <section id="view-saga" class="hidden px-2 sm:px-4 max-w-2xl lg:max-w-6xl xl:max-w-7xl w-full mx-auto pt-4 pb-8 transition-all duration-300">
 
         <!-- Dynamic Roadmap Content rendered via renderRealSagaRoadmap() from live DB -->
-        <div id="saga-roadmap-track" class="w-full flex flex-col items-center gap-4">
+        <div id="saga-roadmap-track" class="w-full flex flex-col items-center">
           <div class="flex flex-col items-center justify-center py-16 text-[var(--muted-foreground)]">
             <div class="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-3"></div>
             <span class="text-xs font-medium">Đang tải bản đồ mốc học từ hệ thống...</span>
-          </div>
-        </div>
-
-        <!-- Card Lộ Trình / Mốc Học Trọng Tâm -->
-        <div id="saga-focus-card" class="w-full mt-4 p-4 sm:p-5 rounded-2xl bg-[var(--card)]/90 border border-indigo-500/25 shadow-xl hidden items-center justify-between flex-wrap gap-4 backdrop-blur-sm">
-          <div class="flex items-center gap-3.5 min-w-[260px] flex-1">
-            <div class="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-2xl shrink-0">
-              📖
-            </div>
-            <div class="min-w-0">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span id="saga-focus-chapter-tag" class="text-[11px] font-bold text-indigo-500 dark:text-indigo-400 font-mono uppercase tracking-wide">Chương 1: Tổng quan CSDL</span>
-                <span class="text-xs text-[var(--muted-foreground)]">•</span>
-                <span id="saga-focus-title" class="text-sm font-bold text-[var(--foreground)] truncate">Mốc 1.1: Giới thiệu CSDL</span>
-              </div>
-              <p id="saga-focus-desc" class="text-xs text-[var(--muted-foreground)] mt-0.5 max-w-xl truncate">Lộ trình rèn luyện kỹ năng cùng Linh vật Pet của bạn.</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-3 flex-wrap justify-end">
-            <!-- Số sao của chương (đưa trực tiếp vào Card Lộ Trình) -->
-            <div id="saga-chapter-stars-badge" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs font-bold font-mono shrink-0" title="Tổng số sao tích lũy trong chương">
-              <span>⭐</span>
-              <span id="saga-chapter-stars-count">0/15 sao</span>
-            </div>
-            <!-- Phần thưởng mốc -->
-            <div class="text-right hidden lg:block shrink-0">
-              <div class="text-[10px] text-[var(--muted-foreground)] uppercase font-semibold">Phần thưởng mốc</div>
-              <div class="text-xs font-bold text-amber-500 font-mono">+150 EXP • +30 Xu</div>
-            </div>
-            <!-- Nút chuyển chế độ ngang/dọc -->
-            <button id="btn_saga_toggle_layout" onclick="toggleSagaLayoutMode()" class="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--background)]/80 hover:bg-[var(--background)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer shadow-xs shrink-0" title="Chuyển đổi giao diện Bản đồ ngang PC / Bản đồ dọc Mobile">
-              <span id="saga-layout-icon">🖥️</span>
-              <span id="saga-layout-label" class="hidden sm:inline">Màn ngang PC</span>
-            </button>
-            <!-- Nút hành động chính -->
-            <button id="btn_saga_start_active" onclick="startFocusMocLearning()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5 shrink-0">
-              <span>🚀 Bắt đầu học ngay</span>
-            </button>
           </div>
         </div>
 
@@ -521,6 +489,32 @@
             <span class="text-6xl sm:text-7xl pet-animated select-none">🐉</span>
           </div>
           <span id="hub-pet-name" class="text-[11px] font-bold text-emerald-600 mt-1">Rồng Lửa Sparky</span>
+        </div>
+      </div>
+
+      <!-- Thẻ Tiếp Tục Học Tập Trọng Tâm Trên Trang Chủ -->
+      <div id="hub-continue-learning-card" class="hidden bg-[var(--card)] border border-[var(--border)] hover:border-emerald-500/40 rounded-2xl p-4 sm:p-5 shadow-xs items-center justify-between flex-wrap gap-4 transition">
+        <div class="flex items-center gap-3.5 min-w-[240px] flex-1">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-2xl shrink-0">
+            📖
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span id="hub-focus-chapter-tag" class="text-[11px] font-bold text-emerald-600 font-mono uppercase tracking-wide">Chương 1: Tổng quan CSDL</span>
+              <span class="text-xs text-[var(--muted-foreground)]">•</span>
+              <span id="hub-focus-title" class="text-sm font-bold text-[var(--foreground)] truncate">Mốc 1.1: Giới thiệu CSDL</span>
+            </div>
+            <p id="hub-focus-desc" class="text-xs text-[var(--muted-foreground)] mt-0.5 max-w-xl truncate">Tiếp tục hành trình học tập tương tác cùng Linh vật Pet của bạn.</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 flex-wrap justify-end">
+          <div class="text-right hidden sm:block shrink-0">
+            <div class="text-[10px] text-[var(--muted-foreground)] uppercase font-semibold">Phần thưởng mốc</div>
+            <div id="hub-focus-reward" class="text-xs font-bold text-amber-500 font-mono">+150 EXP • +30 Xu</div>
+          </div>
+          <button id="btn_hub_start_focus_moc" onclick="startFocusMocLearning()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5 shrink-0">
+            <span>🚀 Tiếp tục học ngay</span>
+          </button>
         </div>
       </div>
 
@@ -2498,9 +2492,26 @@
       const bcEl = document.getElementById('topbar-breadcrumb');
       if (bcEl) bcEl.innerHTML = cfg.breadcrumb;
       const titleEl = document.getElementById('topbar-title');
-      if (titleEl) titleEl.textContent = cfg.title;
+      if (titleEl) {
+        if (viewName === 'saga' && liveCourseData && liveCourseData.cac_chuong) {
+          const activeCh = liveCourseData.cac_chuong.find(c => c.ma_chuong === currentSagaChapterId) || liveCourseData.cac_chuong[0];
+          titleEl.textContent = activeCh ? (activeCh.tieu_de || cfg.title) : cfg.title;
+        } else {
+          titleEl.textContent = cfg.title;
+        }
+      }
       const progEl = document.getElementById('topbar-progress');
       if (progEl) progEl.style.display = cfg.showProgress ? 'block' : 'none';
+      const starsBadge = document.getElementById('saga-chapter-stars-badge');
+      if (starsBadge) {
+        if (viewName === 'saga') {
+          starsBadge.classList.remove('hidden');
+          starsBadge.classList.add('flex');
+        } else {
+          starsBadge.classList.remove('flex');
+          starsBadge.classList.add('hidden');
+        }
+      }
     }
 
     function navTo(viewName) {
@@ -3278,6 +3289,11 @@
         renderHubCourses();
         renderEnrolledCourses();
         renderCatalogCourses();
+
+        // 6. Preload active course roadmap to populate Hub focus card
+        if (myEnrolledCourses.length > 0) {
+          loadCourseRoadmap();
+        }
       } catch (err) {
         console.error('Lỗi khi tải danh sách môn học:', err);
       }
@@ -6224,42 +6240,20 @@
     let sagaBusy = false;
     let currentFocusMoc = null;
 
-    // Chế độ hiển thị bản đồ: 'auto' (tự động theo màn hình), 'pc' (màn ngang), 'mobile' (màn dọc)
-    let sagaLayoutMode = localStorage.getItem('tok_saga_layout_mode') || 'auto';
-
+    // SAGA ROADMAP RESPONSIVE LAYOUT (PC WIDESCREEN HORIZONTAL VS MOBILE VERTICAL)
     function isSagaHorizontal() {
-      if (sagaLayoutMode === 'pc') return true;
-      if (sagaLayoutMode === 'mobile') return false;
       return window.innerWidth >= 1024;
-    }
-
-    function toggleSagaLayoutMode() {
-      const current = isSagaHorizontal();
-      sagaLayoutMode = current ? 'mobile' : 'pc';
-      localStorage.setItem('tok_saga_layout_mode', sagaLayoutMode);
-      updateSagaLayoutButton();
-      if (liveCourseData) {
-        renderRealSagaRoadmap(liveCourseData);
-      }
-      showToast(sagaLayoutMode === 'pc' ? '🖥️ Đã chuyển sang Bản đồ ngang thân thiện PC' : '📱 Đã chuyển sang Bản đồ dọc Mobile', 'info');
-    }
-
-    function updateSagaLayoutButton() {
-      const isH = isSagaHorizontal();
-      const icon = document.getElementById('saga-layout-icon');
-      const label = document.getElementById('saga-layout-label');
-      if (icon) icon.textContent = isH ? '📱' : '🖥️';
-      if (label) label.textContent = isH ? 'Bản đồ dọc Mobile' : 'Màn ngang PC';
     }
 
     function setSagaFocusMoc(moc) {
       if (!moc) return;
       currentFocusMoc = moc;
-      const card = document.getElementById('saga-focus-card');
-      const titleEl = document.getElementById('saga-focus-title');
-      const descEl = document.getElementById('saga-focus-desc');
-      const chTag = document.getElementById('saga-focus-chapter-tag');
-      const btn = document.getElementById('btn_saga_start_active');
+      const card = document.getElementById('hub-continue-learning-card');
+      const titleEl = document.getElementById('hub-focus-title');
+      const descEl = document.getElementById('hub-focus-desc');
+      const chTag = document.getElementById('hub-focus-chapter-tag');
+      const rewardEl = document.getElementById('hub-focus-reward');
+      const btn = document.getElementById('btn_hub_start_focus_moc');
 
       if (chTag && liveCourseData && liveCourseData.cac_chuong) {
         const activeChapter = liveCourseData.cac_chuong.find(c => c.ma_chuong === currentSagaChapterId) || liveCourseData.cac_chuong[0];
@@ -6268,10 +6262,13 @@
         }
       }
       if (titleEl) titleEl.textContent = moc.tieu_de || 'Mốc học tập';
-      if (descEl) descEl.textContent = moc.mo_ta || 'Lộ trình rèn luyện kỹ năng cùng Linh vật Pet của bạn.';
+      if (descEl) descEl.textContent = moc.mo_ta || 'Tiếp tục hành trình học tập tương tác cùng Linh vật Pet của bạn.';
+      if (rewardEl) {
+        rewardEl.textContent = `+${moc.diem_thuong || 150} EXP • +${moc.xu_thuong || 30} Xu`;
+      }
       if (btn) {
         const isDone = (moc.trang_thai === 'HOAN_THANH' || moc.trang_thai === 'DA_HOAN_THANH');
-        btn.innerHTML = isDone ? '<span>⭐ Ôn tập lại mốc</span>' : '<span>🚀 Bắt đầu học ngay</span>';
+        btn.innerHTML = isDone ? '<span>⭐ Ôn tập mốc</span>' : '<span>🚀 Tiếp tục học ngay</span>';
       }
       if (card) {
         card.classList.remove('hidden');
@@ -6282,6 +6279,8 @@
     function startFocusMocLearning() {
       if (currentFocusMoc && currentFocusMoc.ma_moc) {
         startMocLearning(currentFocusMoc.ma_moc);
+      } else {
+        openCourseRoadmap('co-so-du-lieu');
       }
     }
 
@@ -6347,10 +6346,10 @@
         return;
       }
 
-      // Update Chapter title tag in Card Lộ Trình
-      const chTag = document.getElementById('saga-focus-chapter-tag');
-      if (chTag && activeChapter) {
-        chTag.textContent = activeChapter.tieu_de || `Chương ${activeChapter.thu_tu || 1}`;
+      // Update topbar header title with active chapter title
+      const topbarTitle = document.getElementById('topbar-title');
+      if (topbarTitle && activeChapter) {
+        topbarTitle.textContent = activeChapter.tieu_de || `Chương ${activeChapter.thu_tu || 1}`;
       }
 
       // Calculate overall progress across course
@@ -6369,10 +6368,15 @@
       const progBar = document.getElementById('topbar-progress-bar');
       if (progBar) progBar.style.width = `${pct}%`;
 
-      // Calculate stars for chapter badge
+      // Calculate stars for chapter badge in topbar
       const earnedStars = mocs.reduce((sum, m) => sum + getStarCountForMoc(m), 0);
       const maxStars = mocs.length * 3;
+      const starsBadgeContainer = document.getElementById('saga-chapter-stars-badge');
       const starsBadge = document.getElementById('saga-chapter-stars-count');
+      if (starsBadgeContainer) {
+        starsBadgeContainer.classList.remove('hidden');
+        starsBadgeContainer.classList.add('flex');
+      }
       if (starsBadge) {
         starsBadge.textContent = `${earnedStars}/${maxStars} sao`;
       }
@@ -6387,12 +6391,11 @@
         cur = lastDone >= 0 ? Math.min(mocs.length - 1, lastDone + 1) : 0;
       }
 
-      // Update focus card with active milestone
+      // Update focus card on home page with active milestone
       setSagaFocusMoc(mocs[cur] || mocs[0]);
 
       // Responsive dual-mode: Horizontal (PC Widescreen) vs Vertical (Mobile Portrait)
       const isH = isSagaHorizontal();
-      updateSagaLayoutButton();
 
       const svgW = isH ? 1150 : 680;
       const svgH = isH ? 480 : 1010;
@@ -6912,10 +6915,10 @@
       }
     }
 
-    // Auto-update on window resize if in auto layout mode
+    // Auto-update on window resize between PC widescreen (>= 1024px) and mobile (< 1024px)
     let lastWindowWidth = window.innerWidth;
     window.addEventListener('resize', () => {
-      if (sagaLayoutMode === 'auto' && liveCourseData) {
+      if (liveCourseData) {
         const wasH = lastWindowWidth >= 1024;
         const nowH = window.innerWidth >= 1024;
         if (wasH !== nowH) {
