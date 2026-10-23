@@ -467,191 +467,230 @@
     </section>
 
     <!-- ================= VIEW 3: TRANG CHỦ CHÍNH (HUB OVERVIEW - MẶC ĐỊNH MỞ NGAY) ================= -->
-    <section id="view-hub" class="p-6 sm:p-10 max-w-5xl w-full mx-auto space-y-8">
-      <!-- Hero Banner -->
-      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 sm:p-8 shadow-xs flex items-center justify-between">
-        <div class="space-y-3">
-          <span id="hub-streak-badge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600">
-            🔥 Chuỗi học tập: 0 ngày liên tiếp
-          </span>
-          <h1 id="hub-welcome-title" class="text-2xl font-bold tracking-tight">Chào mừng bạn đến với Tháp Tri Thức, <span class="user-display-name">Học viên</span>! 👋</h1>
-          <p id="hub-target-desc" class="text-xs text-[var(--muted-foreground)] max-w-md leading-relaxed">
-            Khám phá các khóa học hệ thống và bắt đầu hành trình nâng cao kiến thức ngay hôm nay.
-          </p>
-          <div class="pt-2">
-            <button id="btn_hub_tieptuc_csdl" onclick="handleHubMainAction()" class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition shadow-sm cursor-pointer">
-              🔍 Khám phá Kho môn học →
-            </button>
-          </div>
-        </div>
-        <div onclick="navTo('pet')" title="Đổi linh vật đồng hành" class="cursor-pointer group flex flex-col items-center shrink-0 ml-4">
-          <div id="hub-pet-avatar" class="w-24 h-24 sm:w-28 sm:h-28 flex items-center justify-center select-none group-hover:scale-105 transition">
-            <span class="text-6xl sm:text-7xl pet-animated select-none">🐉</span>
-          </div>
-          <span id="hub-pet-name" class="text-[11px] font-bold text-emerald-600 mt-1">Rồng Lửa Sparky</span>
-        </div>
-      </div>
+    <!-- ================= VIEW 3: TRANG CHỦ CHÍNH (COMMAND CENTER ACTION HUB) ================= -->
+    <section id="view-hub" class="p-3 sm:p-5 max-w-6xl w-full mx-auto space-y-4 sm:space-y-5">
 
-      <!-- Thẻ Tiếp Tục Học Tập Trọng Tâm Trên Trang Chủ -->
-      <div id="hub-continue-learning-card" class="hidden bg-[var(--card)] border border-[var(--border)] hover:border-emerald-500/40 rounded-2xl p-4 sm:p-5 shadow-xs items-center justify-between flex-wrap gap-4 transition">
-        <div class="flex items-center gap-3.5 min-w-[240px] flex-1">
-          <div class="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-2xl shrink-0">
-            📖
-          </div>
-          <div class="min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-              <span id="hub-focus-chapter-tag" class="text-[11px] font-bold text-emerald-600 font-mono uppercase tracking-wide">Chương 1: Tổng quan CSDL</span>
-              <span class="text-xs text-[var(--muted-foreground)]">•</span>
-              <span id="hub-focus-title" class="text-sm font-bold text-[var(--foreground)] truncate">Mốc 1.1: Giới thiệu CSDL</span>
-            </div>
-            <p id="hub-focus-desc" class="text-xs text-[var(--muted-foreground)] mt-0.5 max-w-xl truncate">Tiếp tục hành trình học tập tương tác cùng Linh vật Pet của bạn.</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-3 flex-wrap justify-end">
-          <div class="text-right hidden sm:block shrink-0">
-            <div class="text-[10px] text-[var(--muted-foreground)] uppercase font-semibold">Phần thưởng mốc</div>
-            <div id="hub-focus-reward" class="text-xs font-bold text-amber-500 font-mono">+150 EXP • +30 Xu</div>
-          </div>
-          <button id="btn_hub_start_focus_moc" onclick="startFocusMocLearning()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5 shrink-0">
-            <span>🚀 Tiếp tục học ngay</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Thẻ Thử Thách Thi Đấu Cực Hạn (Endless Survival Mode Banner) -->
-      <div id="hub-extreme-card" class="bg-linear-to-r from-rose-950/40 via-[var(--card)] to-amber-950/30 border border-rose-500/30 hover:border-rose-500/60 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition">
-        <div class="flex items-center gap-3.5">
-          <div class="w-12 h-12 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-2xl shrink-0">
-            🔥
-          </div>
-          <div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white uppercase tracking-wider">CHẾ ĐỘ MỚI</span>
-              <span class="text-sm font-bold text-[var(--foreground)]">Thi Đấu Cực Hạn (Endless Survival)</span>
-            </div>
-            <p class="text-xs text-[var(--muted-foreground)] mt-0.5 max-w-xl">5 sinh mạng ❤️, dòng câu hỏi ngẫu nhiên vô hạn từ kho câu hỏi, chuỗi 10 hồi 1 ❤️, thưởng Xu & EXP siêu khủng!</p>
+      <!-- BANNER TÂN THỦ CÙNG LINH THÚ (Hiển thị nếu chưa hoàn thành) -->
+      <div id="hub-newbie-guide-banner" class="hidden bg-linear-to-r from-emerald-500/15 via-teal-500/10 to-transparent border border-emerald-500/30 rounded-2xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <span class="text-2xl pet-animated shrink-0">🦉</span>
+          <div class="min-w-0 flex-1">
+            <h4 class="text-xs font-bold text-emerald-500 truncate">Linh Thú muốn dạo quanh cùng bạn!</h4>
+            <p class="text-[11px] text-[var(--muted-foreground)] truncate">Khám phá nhanh các tính năng và nhận ngay 20 Xu tân thủ.</p>
           </div>
         </div>
         <div class="flex items-center gap-2 shrink-0">
-          <button id="btn_hub_start_extreme" onclick="openExtremeSetupModal()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5 shrink-0">
-            <span>⚡ Thử Thách Ngay</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Banner Hướng dẫn Tân thủ cùng Pet (Tự động hiển thị nếu chưa hoàn thành) -->
-      <div id="hub-newbie-guide-banner" class="hidden bg-linear-to-r from-emerald-500/15 via-teal-500/10 to-transparent border border-emerald-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
-        <div class="flex items-center gap-3">
-          <span class="text-3xl pet-animated">🦉</span>
-          <div>
-            <h4 class="text-xs font-bold text-emerald-500">Linh Thú muốn dạo quanh cùng bạn!</h4>
-            <p class="text-[11px] text-[var(--muted-foreground)]">Khám phá nhanh các tính năng cốt lõi và nhận ngay 20 Xu tân thủ.</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 shrink-0">
-          <button id="btn_hub_start_tour" onclick="startPetOnboardingTour()" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-xs">
-            Khám phá ngay 🚀
+          <button id="btn_hub_start_tour" onclick="startPetOnboardingTour()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-xs">
+            Khám phá 🚀
           </button>
           <button id="btn_hub_dismiss_tour" onclick="dismissNewbieGuideBanner()" class="px-2.5 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs text-[var(--muted-foreground)] transition cursor-pointer">
-            Để sau ✕
+            ✕
           </button>
         </div>
       </div>
 
-      <!-- Khu vực Nhiệm Vụ Hàng Ngày (Daily Quests Hub) -->
-      <div id="hub-daily-quests" class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 space-y-4 shadow-xs">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-base">📜</span>
-            <span class="text-xs font-bold text-[var(--foreground)] uppercase tracking-wider">Nhiệm Vụ Hôm Nay</span>
-            <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">Làm mới 00:00</span>
+      <!-- ================= MAIN COMMAND GRID: 2 CỘT CÂN ĐỐI (MOBILE: TỰ ĐỘNG XẾP DỌC) ================= -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-stretch">
+
+        <!-- CỘT TRÁI (7 cols trên desktop): TRỌNG TÂM HỌC TẬP & TIẾP TỤC BÀI DỞ -->
+        <div class="lg:col-span-7 xl:col-span-8 flex flex-col justify-between p-4 sm:p-6 rounded-2xl sm:rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-xs relative overflow-hidden space-y-4">
+          
+          <!-- Top Row: Chào mừng & Badge Streak -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--border)]/60 pb-3">
+            <div class="min-w-0 flex-1">
+              <span class="text-[10px] sm:text-xs font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-1.5">
+                <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                TRUNG TÂM HỌC TẬP
+              </span>
+              <h1 id="hub-welcome-title" class="text-sm sm:text-base md:text-xl font-bold tracking-tight text-[var(--foreground)] leading-tight mt-0.5 break-words">
+                Chào mừng, <span class="user-display-name">Học viên</span>! 👋
+              </h1>
+            </div>
+            <div class="shrink-0">
+              <span id="hub-streak-badge" class="inline-flex items-center gap-1 text-[11px] sm:text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 max-w-full">
+                🔥 Chuỗi học tập: 0 ngày
+              </span>
+            </div>
           </div>
-          <span id="daily-quest-summary" class="text-xs font-medium text-[var(--muted-foreground)]">0/3 hoàn thành</span>
+
+          <!-- Mid Row: Thẻ bài học trọng tâm cần tiếp tục (Focus Card) -->
+          <div id="hub-continue-learning-card" class="rounded-2xl p-3.5 sm:p-4 bg-[var(--background)]/80 border border-emerald-500/30 flex flex-col gap-3 shadow-2xs">
+            <div class="flex items-start sm:items-center gap-3 min-w-0">
+              <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-xl sm:text-2xl shrink-0 mt-0.5 sm:mt-0">
+                📖
+              </div>
+              <div class="min-w-0 flex-1">
+                <span id="hub-focus-chapter-tag" class="text-[10px] sm:text-[11px] font-bold text-emerald-600 font-mono uppercase tracking-wide block truncate">Chương 1: Tổng quan CSDL</span>
+                <span id="hub-focus-title" class="text-xs sm:text-sm font-bold text-[var(--foreground)] block truncate mt-0.5">Mốc 1.1: Giới thiệu CSDL</span>
+                <p id="hub-focus-desc" class="text-[11px] text-[var(--muted-foreground)] mt-0.5 line-clamp-1">Tiếp tục hành trình học tập tương tác cùng Linh vật Pet.</p>
+              </div>
+            </div>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-[var(--border)]/40">
+              <div class="flex items-center justify-between sm:justify-start gap-2">
+                <span class="text-[10px] text-[var(--muted-foreground)] uppercase font-semibold">Phần thưởng:</span>
+                <span id="hub-focus-reward" class="text-xs font-bold text-amber-500 font-mono">+150 EXP • +30 Xu</span>
+              </div>
+              <button id="btn_hub_start_focus_moc" onclick="startFocusMocLearning()" class="w-full sm:w-auto px-4 py-2 sm:px-5 sm:py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md transition cursor-pointer flex items-center justify-center gap-1.5 hover:scale-105 active:scale-95 duration-150">
+                <span>🚀</span>
+                <span>Bắt đầu học ngay</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Bottom Row: Mô tả hành động & Phím điều hướng nhanh -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-1">
+            <p id="hub-target-desc" class="text-[11px] text-[var(--muted-foreground)] line-clamp-2 sm:truncate max-w-md">
+              Chinh phục các mốc kiến thức tương tác để nhận Xu & EXP thăng hạng.
+            </p>
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+              <button id="btn_hub_tieptuc_csdl" onclick="handleHubMainAction()" class="flex-1 sm:flex-none px-3.5 py-2 sm:py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs">
+                <span>🔍</span>
+                <span class="truncate">Khám phá Kho môn</span>
+                <span>→</span>
+              </button>
+              <button id="btn_hub_khampha_kho_mon" onclick="navTo('catalog')" class="hidden flex-1 sm:flex-none px-3 py-2 sm:py-1.5 rounded-xl border border-dashed border-[var(--border)] hover:border-emerald-500/50 hover:bg-emerald-500/5 text-xs font-semibold text-[var(--muted-foreground)] hover:text-emerald-600 transition cursor-pointer flex items-center justify-center gap-1 shrink-0">
+                <span>+</span>
+                <span>Kho môn</span>
+              </button>
+            </div>
+          </div>
+
         </div>
 
-        <div id="daily-quests-list" class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <!-- Quest 1: Học tập -->
-          <div id="card-quest-hoc-tap" class="p-4 rounded-xl border border-[var(--border)] bg-[var(--background)]/60 flex flex-col justify-between gap-3">
-            <div class="space-y-1">
-              <div class="flex items-center justify-between">
-                <span class="text-lg">📖</span>
-                <span class="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">+15 🪙 · +25 ⭐</span>
-              </div>
-              <h4 class="text-xs font-bold text-[var(--foreground)]">Chăm chỉ học tập</h4>
-              <p class="text-[11px] text-[var(--muted-foreground)]">Vượt qua ít nhất 1 bài học hoặc mốc kiến thức</p>
+        <!-- CỘT PHẢI (5 cols trên desktop): LINH THÚ PET & NHIỆM VỤ HÀNG NGÀY -->
+        <div class="lg:col-span-5 xl:col-span-4 flex flex-col justify-between p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-[var(--card)] border border-[var(--border)] shadow-xs space-y-3.5">
+          
+          <!-- Mini Pet Companion Status -->
+          <div onclick="navTo('pet')" title="Ghé thăm Linh Thú" class="flex items-center gap-3 p-2.5 rounded-2xl bg-[var(--background)]/60 border border-[var(--border)] hover:border-cyan-500/40 cursor-pointer group transition">
+            <div id="hub-pet-avatar" class="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center select-none group-hover:scale-105 transition shrink-0">
+              <span class="text-4xl sm:text-5xl pet-animated select-none">🐉</span>
             </div>
-            <div>
-              <div class="flex items-center justify-between text-[10px] text-[var(--muted-foreground)] mb-1">
-                <span>Tiến độ</span>
-                <span id="quest-progress-hoc-tap-text">0/1</span>
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center justify-between gap-1">
+                <span id="hub-pet-name" class="text-xs font-bold text-cyan-600 truncate">Rồng Lửa Sparky</span>
+                <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-cyan-500/10 text-cyan-500 font-mono shrink-0">ĐỒNG HÀNH</span>
               </div>
-              <div class="w-full h-1.5 rounded-full bg-[var(--border)] overflow-hidden">
-                <div id="quest-progress-hoc-tap-bar" class="h-full bg-emerald-500 transition-all duration-300 w-0"></div>
+              <p class="text-[11px] text-[var(--muted-foreground)] mt-0.5 line-clamp-1 italic">"Hôm nay cùng leo tháp nhé!"</p>
+              <span class="text-[10px] text-cyan-500 hover:underline font-semibold flex items-center gap-1 mt-0.5">Chăm sóc Pet →</span>
+            </div>
+          </div>
+
+          <!-- Nhiệm Vụ Hôm Nay Tinh Gọn (3 dòng task) -->
+          <div id="hub-daily-quests" class="space-y-2">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs">📜</span>
+                <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--foreground)]">Nhiệm Vụ Hôm Nay</span>
               </div>
-              <div class="mt-2.5">
-                <button id="btn_quest_hoc_tap" onclick="claimDailyQuest('hoc_tap')" class="w-full py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold transition cursor-pointer">
-                  Làm bài ngay →
-                </button>
+              <span id="daily-quest-summary" class="text-[10px] font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full shrink-0">0/3 Xong</span>
+            </div>
+
+            <div id="daily-quests-list" class="space-y-2">
+              <!-- Quest 1: Học tập -->
+              <div id="card-quest-hoc-tap" class="p-2.5 rounded-xl border border-[var(--border)] bg-[var(--background)]/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center justify-between sm:justify-start gap-1.5">
+                    <span class="text-xs shrink-0">📖</span>
+                    <span class="text-xs font-bold text-[var(--foreground)] truncate">Học 1 bài</span>
+                    <span class="text-[9px] text-amber-500 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded-md shrink-0">+15🪙</span>
+                  </div>
+                  <div class="w-full h-1.5 rounded-full bg-[var(--border)] mt-1.5 overflow-hidden">
+                    <div id="quest-progress-hoc-tap-bar" class="h-full bg-emerald-500 transition-all duration-300 w-0"></div>
+                  </div>
+                </div>
+                <div class="shrink-0 flex items-center justify-between sm:justify-end gap-1.5">
+                  <span id="quest-progress-hoc-tap-text" class="text-[10px] font-mono text-[var(--muted-foreground)]">0/1</span>
+                  <button id="btn_quest_hoc_tap" onclick="claimDailyQuest('hoc_tap')" class="w-full sm:w-auto px-3 py-1 rounded-lg border border-[var(--border)] hover:bg-[var(--card)] text-[11px] font-bold transition cursor-pointer text-center">
+                    Học
+                  </button>
+                </div>
+              </div>
+
+              <!-- Quest 2: Đấu trường -->
+              <div id="card-quest-dau-truong" class="p-2.5 rounded-xl border border-[var(--border)] bg-[var(--background)]/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center justify-between sm:justify-start gap-1.5">
+                    <span class="text-xs shrink-0">⚔️</span>
+                    <span class="text-xs font-bold text-[var(--foreground)] truncate">Đấu trí 1 trận</span>
+                    <span class="text-[9px] text-amber-500 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded-md shrink-0">+15🪙</span>
+                  </div>
+                  <div class="w-full h-1.5 rounded-full bg-[var(--border)] mt-1.5 overflow-hidden">
+                    <div id="quest-progress-dau-truong-bar" class="h-full bg-emerald-500 transition-all duration-300 w-0"></div>
+                  </div>
+                </div>
+                <div class="shrink-0 flex items-center justify-between sm:justify-end gap-1.5">
+                  <span id="quest-progress-dau-truong-text" class="text-[10px] font-mono text-[var(--muted-foreground)]">0/1</span>
+                  <button id="btn_quest_dau_truong" onclick="claimDailyQuest('dau_truong')" class="w-full sm:w-auto px-3 py-1 rounded-lg border border-[var(--border)] hover:bg-[var(--card)] text-[11px] font-bold transition cursor-pointer text-center">
+                    Đấu
+                  </button>
+                </div>
+              </div>
+
+              <!-- Quest 3: Linh thú -->
+              <div id="card-quest-cham-pet" class="p-2.5 rounded-xl border border-[var(--border)] bg-[var(--background)]/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center justify-between sm:justify-start gap-1.5">
+                    <span class="text-xs shrink-0">🐾</span>
+                    <span class="text-xs font-bold text-[var(--foreground)] truncate">Chăm sóc Pet</span>
+                    <span class="text-[9px] text-amber-500 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded-md shrink-0">+10🪙</span>
+                  </div>
+                  <div class="w-full h-1.5 rounded-full bg-[var(--border)] mt-1.5 overflow-hidden">
+                    <div id="quest-progress-cham-pet-bar" class="h-full bg-emerald-500 transition-all duration-300 w-0"></div>
+                  </div>
+                </div>
+                <div class="shrink-0 flex items-center justify-between sm:justify-end gap-1.5">
+                  <span id="quest-progress-cham-pet-text" class="text-[10px] font-mono text-[var(--muted-foreground)]">0/1</span>
+                  <button id="btn_quest_cham_pet" onclick="claimDailyQuest('cham_pet')" class="w-full sm:w-auto px-3 py-1 rounded-lg border border-[var(--border)] hover:bg-[var(--card)] text-[11px] font-bold transition cursor-pointer text-center">
+                    Pet
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Quest 2: Đấu trường -->
-          <div id="card-quest-dau-truong" class="p-4 rounded-xl border border-[var(--border)] bg-[var(--background)]/60 flex flex-col justify-between gap-3">
-            <div class="space-y-1">
-              <div class="flex items-center justify-between">
-                <span class="text-lg">⚔️</span>
-                <span class="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">+15 🪙 · +25 ⭐</span>
-              </div>
-              <h4 class="text-xs font-bold text-[var(--foreground)]">Chiến binh Đấu trường</h4>
-              <p class="text-[11px] text-[var(--muted-foreground)]">Tham gia 1 trận so tài tại Đấu Trường Mini Game</p>
-            </div>
-            <div>
-              <div class="flex items-center justify-between text-[10px] text-[var(--muted-foreground)] mb-1">
-                <span>Tiến độ</span>
-                <span id="quest-progress-dau-truong-text">0/1</span>
-              </div>
-              <div class="w-full h-1.5 rounded-full bg-[var(--border)] overflow-hidden">
-                <div id="quest-progress-dau-truong-bar" class="h-full bg-emerald-500 transition-all duration-300 w-0"></div>
-              </div>
-              <div class="mt-2.5">
-                <button id="btn_quest_dau_truong" onclick="claimDailyQuest('dau_truong')" class="w-full py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold transition cursor-pointer">
-                  Vào đấu trường →
-                </button>
-              </div>
-            </div>
-          </div>
+        </div>
 
-          <!-- Quest 3: Linh thú -->
-          <div id="card-quest-cham-pet" class="p-4 rounded-xl border border-[var(--border)] bg-[var(--background)]/60 flex flex-col justify-between gap-3">
-            <div class="space-y-1">
-              <div class="flex items-center justify-between">
-                <span class="text-lg">🐾</span>
-                <span class="text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full">+10 🪙 · +15 ⭐</span>
-              </div>
-              <h4 class="text-xs font-bold text-[var(--foreground)]">Chăm sóc Linh thú</h4>
-              <p class="text-[11px] text-[var(--muted-foreground)]">Ghé thăm hoặc tương tác cùng Linh thú của bạn</p>
+      </div>
+
+      <!-- ================= 2. KHỐI THỬ THÁCH NHANH & MINI GAME (2 TIỂU THẺ GỌN) ================= -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <!-- Đấu trường 1v1 -->
+        <div onclick="navTo('minigame')" class="p-3.5 rounded-2xl border border-[var(--border)] hover:border-cyan-500/50 bg-[var(--card)] flex items-center justify-between gap-3 cursor-pointer group transition shadow-2xs">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-500 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition">
+              ⚔️
             </div>
-            <div>
-              <div class="flex items-center justify-between text-[10px] text-[var(--muted-foreground)] mb-1">
-                <span>Tiến độ</span>
-                <span id="quest-progress-cham-pet-text">0/1</span>
-              </div>
-              <div class="w-full h-1.5 rounded-full bg-[var(--border)] overflow-hidden">
-                <div id="quest-progress-cham-pet-bar" class="h-full bg-emerald-500 transition-all duration-300 w-0"></div>
-              </div>
-              <div class="mt-2.5">
-                <button id="btn_quest_cham_pet" onclick="claimDailyQuest('cham_pet')" class="w-full py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold transition cursor-pointer">
-                  Chăm sóc Pet →
-                </button>
-              </div>
+            <div class="min-w-0">
+              <h4 class="text-xs font-bold text-[var(--foreground)] group-hover:text-cyan-500 transition truncate">Đấu Trường Trí Tuệ</h4>
+              <p class="text-[11px] text-[var(--muted-foreground)] truncate">Đấu hạng 1v1 thời gian thực & phòng giao hữu</p>
             </div>
           </div>
+          <span class="text-xs font-bold text-cyan-500 group-hover:translate-x-0.5 transition shrink-0">Vào →</span>
+        </div>
+
+        <!-- Thi đấu Cực Hạn -->
+        <div id="hub-extreme-card" onclick="openExtremeSetupModal()" class="p-3.5 rounded-2xl border border-rose-500/30 hover:border-rose-500/60 bg-linear-to-r from-rose-950/30 via-[var(--card)] to-transparent flex items-center justify-between gap-3 cursor-pointer group transition shadow-2xs">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-500 flex items-center justify-center text-xl shrink-0 group-hover:scale-105 transition">
+              🔥
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-rose-500 text-white uppercase tracking-wider shrink-0">HOT</span>
+                <h4 class="text-xs font-bold text-[var(--foreground)] group-hover:text-rose-400 transition truncate">Thi Đấu Cực Hạn</h4>
+              </div>
+              <p class="text-[11px] text-[var(--muted-foreground)] truncate">5 sinh mạng ❤️, vượt mốc vô tận kiếm Xu khủng</p>
+            </div>
+          </div>
+          <button id="btn_hub_start_extreme" onclick="event.stopPropagation(); openExtremeSetupModal()" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 text-white font-bold text-[11px] shadow-xs hover:shadow-sm transition shrink-0">
+            Thử thách
+          </button>
         </div>
       </div>
 
-      <!-- Danh sách Môn đang học (Render động từ CSDL thật) -->
-      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-6 space-y-4 shadow-xs">
+      <!-- ================= 3. KHỐI MÔN ĐANG THEO HỌC ================= -->
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-4 sm:p-5 space-y-3 shadow-xs">
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-wider">Môn đang theo học</span>
           <button id="btn_hub_xem_tatca_mon" onclick="navTo('enrolled')" class="text-xs font-semibold text-emerald-600 hover:underline cursor-pointer">Xem tất cả →</button>
@@ -660,6 +699,8 @@
           <div class="py-4 text-center text-xs text-[var(--muted-foreground)] col-span-2">Đang tải danh sách môn học...</div>
         </div>
       </div>
+
+    </section>
     </section>
 
     <!-- ================= VIEW 4: MÔN ĐANG THEO HỌC (MY LEARNING - CHỈ HIỂN THỊ MÔN ĐÃ THAM GIA) ================= -->
@@ -2837,6 +2878,10 @@
         }
       }
       if (targetView) targetView.classList.remove('hidden');
+      if (viewName === 'hub') {
+        if (typeof updateHubWelcomeBanner === 'function') updateHubWelcomeBanner();
+        if (typeof renderDailyQuests === 'function') renderDailyQuests();
+      }
       if (viewName === 'pet' && typeof trackDailyQuestAction === 'function') {
         trackDailyQuestAction('cham_pet');
       }
@@ -3588,22 +3633,26 @@
       const descEl = document.getElementById('hub-target-desc');
       const actionBtn = document.getElementById('btn_hub_tieptuc_csdl');
       const uName = currentUserAccount.displayName || 'Học viên';
+      const extraBtn = document.getElementById('btn_hub_khampha_kho_mon');
 
       if (myEnrolledCourses.length === 0) {
         if (titleEl) titleEl.innerHTML = `Chào mừng bạn đến với Tháp Tri Thức, <span class="user-display-name">${escapeHtml(uName)}</span>! 👋`;
         if (descEl) descEl.textContent = 'Khám phá các khóa học hệ thống và bắt đầu hành trình nâng cao kiến thức ngay hôm nay.';
         if (actionBtn) {
-          actionBtn.textContent = '🔍 Khám phá Kho môn học →';
+          actionBtn.innerHTML = '<span>🔍</span> <span class="truncate">Khám phá Kho môn</span> <span>→</span>';
           actionBtn.onclick = () => navTo('catalog');
         }
+        if (extraBtn) extraBtn.classList.add('hidden');
       } else {
         if (titleEl) titleEl.innerHTML = `Chào mừng quay trở lại, <span class="user-display-name">${escapeHtml(uName)}</span>! ⚡`;
         if (descEl) descEl.textContent = 'Tiếp tục hành trình chinh phục kiến thức và vượt qua các mốc trên lộ trình học tập.';
         if (actionBtn) {
           const firstCourse = myEnrolledCourses[0];
-          actionBtn.textContent = `Tiếp tục leo tháp ${firstCourse.slug === 'co-so-du-lieu' ? 'CSDL' : firstCourse.ten_mon.split(' ')[0]} →`;
+          const courseShort = firstCourse.slug === 'co-so-du-lieu' ? 'CSDL' : (firstCourse.ten_mon ? firstCourse.ten_mon.split(' ')[0] : 'Leo tháp');
+          actionBtn.innerHTML = `<span>🗺️</span> <span class="truncate">Lộ trình ${courseShort}</span> <span>→</span>`;
           actionBtn.onclick = () => openCourseRoadmap(firstCourse.slug);
         }
+        if (extraBtn) extraBtn.classList.remove('hidden');
       }
     }
 
@@ -9606,17 +9655,17 @@
 
         if (btn) {
           if (isClaimed) {
-            btn.innerHTML = '<span>✓ Đã nhận thưởng</span>';
+            btn.innerHTML = '<span>✓ Đã nhận</span>';
             btn.disabled = true;
-            btn.className = 'w-full py-1.5 rounded-lg border border-transparent bg-emerald-500/10 text-emerald-600 text-xs font-semibold cursor-default';
+            btn.className = 'w-full sm:w-auto px-3 py-1.5 rounded-lg border border-transparent bg-emerald-500/10 text-emerald-600 text-xs font-semibold cursor-default text-center';
           } else if (isDone) {
-            btn.innerHTML = '<span>Nhận thưởng 🎁</span>';
+            btn.innerHTML = '<span>Nhận quà 🎁</span>';
             btn.disabled = false;
-            btn.className = 'w-full py-1.5 rounded-lg bg-linear-to-r from-amber-500 to-emerald-600 hover:opacity-90 text-white text-xs font-bold shadow-md cursor-pointer transition';
+            btn.className = 'w-full sm:w-auto px-3 py-1.5 rounded-lg bg-linear-to-r from-amber-500 to-emerald-600 hover:opacity-90 text-white text-xs font-bold shadow-md cursor-pointer transition text-center';
           } else {
             btn.innerHTML = `<span>${q.shortcut}</span>`;
             btn.disabled = false;
-            btn.className = 'w-full py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--card)] text-xs font-semibold transition cursor-pointer';
+            btn.className = 'w-full sm:w-auto px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--card)] text-xs font-semibold transition cursor-pointer text-center';
           }
         }
       });
