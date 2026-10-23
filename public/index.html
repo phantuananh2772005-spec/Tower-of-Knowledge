@@ -1156,78 +1156,82 @@
     </section>
 
     <!-- ================= VIEW 10: THI ĐẤU CỰC HẠN (ENDLESS SURVIVAL MODE) ================= -->
-    <section id="view-extreme" class="hidden flex-1 flex flex-col justify-between max-w-2xl w-full mx-auto p-4 sm:p-8 min-h-[550px]">
-      <div>
-        <!-- Top Bar: Exit button, Hearts, Mode tag -->
-        <div class="flex items-center justify-between gap-3 text-xs mb-3">
-          <button id="btn_extreme_quit" onclick="openExtremeQuitConfirmModal()" class="hover:text-[var(--foreground)] border border-[var(--border)] px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer shrink-0 flex items-center gap-1">
-            <span>✕</span> <span>Dừng trận</span>
-          </button>
-
-          <!-- 5 Hearts Container -->
-          <div id="extreme-hearts-container" class="flex items-center gap-1.5 bg-[var(--card)] px-3 py-1.5 rounded-xl border border-[var(--border)] shadow-xs select-none">
-            <span id="extreme-heart-1" class="text-lg transition-transform duration-200">❤️</span>
-            <span id="extreme-heart-2" class="text-lg transition-transform duration-200">❤️</span>
-            <span id="extreme-heart-3" class="text-lg transition-transform duration-200">❤️</span>
-            <span id="extreme-heart-4" class="text-lg transition-transform duration-200">❤️</span>
-            <span id="extreme-heart-5" class="text-lg transition-transform duration-200">❤️</span>
-          </div>
-
+    <section id="view-extreme" class="hidden flex-1 flex flex-col justify-between max-w-3xl w-full mx-auto px-4 py-2 sm:px-6 sm:py-3 select-none">
+      <!-- 1. THANH ĐIỀU KHIỂN & CHỈ SỐ GỌN GÀNG (COMPACT CONSOLIDATED BAR) -->
+      <div class="shrink-0 space-y-2 border-b border-[var(--border)]/70 pb-2.5">
+        <!-- Hàng 1: Nút Dừng trận + Môn | 5 Tim Sinh mạng | Combo & Điểm số -->
+        <div class="flex items-center justify-between gap-2 flex-wrap">
+          <!-- Cụm trái: Nút dừng trận & Tên môn & Huy hiệu Vòng -->
           <div class="flex items-center gap-2">
-            <span id="extreme-course-tag" class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 font-mono truncate max-w-[140px]">CSDL</span>
-          </div>
-        </div>
-
-        <!-- Metric Bar: Question counter, Loop badge, Streak/Combo, Score -->
-        <div class="flex items-center justify-between text-xs py-2 border-b border-[var(--border)]/60">
-          <div class="flex items-center gap-2">
-            <span id="extreme-q-counter" class="font-bold text-sm text-[var(--foreground)] font-mono">Câu 1</span>
+            <button id="btn_extreme_quit" onclick="openExtremeQuitConfirmModal()" class="hover:text-rose-500 hover:border-rose-500/40 border border-[var(--border)] px-2.5 py-1 rounded-lg text-xs font-semibold transition cursor-pointer shrink-0 flex items-center gap-1.5 text-[var(--muted-foreground)]">
+              <span>✕</span> <span>Dừng trận</span>
+            </button>
+            <span id="extreme-course-tag" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 font-mono truncate max-w-[130px]">CSDL</span>
             <span id="extreme-loop-badge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/30 font-mono">Vòng 2 (x1.5)</span>
           </div>
-          <div class="flex items-center gap-3">
-            <span id="extreme-combo-badge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-500 border border-orange-500/30 font-mono">🔥 Chuỗi: 0</span>
-            <span id="extreme-score-display" class="font-bold text-amber-500 font-mono text-sm">0 điểm</span>
+
+          <!-- Cụm giữa: 5 Tim Sinh Mạng -->
+          <div id="extreme-hearts-container" class="flex items-center gap-1 bg-[var(--card)] px-2.5 py-1 rounded-xl border border-[var(--border)] shadow-xs select-none">
+            <span id="extreme-heart-1" class="text-base transition-transform duration-200">❤️</span>
+            <span id="extreme-heart-2" class="text-base transition-transform duration-200">❤️</span>
+            <span id="extreme-heart-3" class="text-base transition-transform duration-200">❤️</span>
+            <span id="extreme-heart-4" class="text-base transition-transform duration-200">❤️</span>
+            <span id="extreme-heart-5" class="text-base transition-transform duration-200">❤️</span>
+          </div>
+
+          <!-- Cụm phải: Chuỗi Combo & Tổng Điểm -->
+          <div class="flex items-center gap-2">
+            <span id="extreme-combo-badge" class="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-500 border border-orange-500/30 font-mono">🔥 Chuỗi: 0</span>
+            <span id="extreme-score-display" class="font-bold text-amber-500 font-mono text-xs sm:text-sm">0 điểm</span>
           </div>
         </div>
 
-        <!-- Question Timer Bar -->
-        <div class="w-full h-1.5 bg-[var(--border)] rounded-full overflow-hidden mt-3 relative">
-          <div id="extreme-timer-bar" class="h-full bg-rose-500 transition-all duration-100 ease-linear" style="width: 100%;"></div>
-        </div>
-        <div class="flex justify-between items-center text-[10px] text-[var(--muted-foreground)] font-mono mt-1">
-          <span id="extreme-timer-label">Thời gian suy nghĩ</span>
-          <span id="extreme-timer-text">25s</span>
+        <!-- Hàng 2: Câu số, Tag Bloom & Đồng hồ đếm ngược -->
+        <div class="space-y-1">
+          <div class="flex justify-between items-center text-[11px] font-mono">
+            <div class="flex items-center gap-2">
+              <span id="extreme-q-counter" class="font-bold text-xs sm:text-sm text-[var(--foreground)] font-mono">Câu 1</span>
+              <span id="extreme-q-bloom" class="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-rose-500/10 text-rose-500 font-mono">
+                🎯 CÂU HỎI SINH TỒN
+              </span>
+              <span id="extreme-heart-heal-notice" class="hidden text-[11px] font-bold text-emerald-500 animate-bounce">
+                +1 ❤️ Hồi Sinh Mạng!
+              </span>
+            </div>
+            <div class="flex items-center gap-1.5 text-[var(--muted-foreground)]">
+              <span id="extreme-timer-label" class="text-[10px]">Thời gian:</span>
+              <span id="extreme-timer-text" class="font-bold text-rose-500 font-mono">25s</span>
+            </div>
+          </div>
+          <!-- Thanh đếm giờ mảnh gọn -->
+          <div class="w-full h-1 bg-[var(--border)] rounded-full overflow-hidden relative">
+            <div id="extreme-timer-bar" class="h-full bg-rose-500 transition-all duration-100 ease-linear rounded-full" style="width: 100%;"></div>
+          </div>
         </div>
       </div>
 
-      <!-- Question Practice Body -->
-      <div id="extreme-q-body" class="py-6 space-y-6 flex-1 flex flex-col justify-center">
-        <div class="flex items-center justify-between">
-          <span id="extreme-q-bloom" class="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-md bg-rose-500/10 text-rose-500 font-mono">
-            🎯 CÂU HỎI SINH TỒN
-          </span>
-          <span id="extreme-heart-heal-notice" class="hidden text-[11px] font-bold text-emerald-500 animate-bounce">
-            +1 ❤️ Hồi Sinh Mạng!
-          </span>
+      <!-- 2. NỘI DUNG CÂU HỎI & CÁC LỰA CHỌN (COMPACT PRACTICE BODY) -->
+      <div id="extreme-q-body" class="py-2.5 sm:py-3 space-y-2.5 flex-1 flex flex-col justify-center min-h-0">
+        <!-- Khung Câu hỏi -->
+        <div class="bg-[var(--card)] px-4 py-3 rounded-2xl border border-[var(--border)] shadow-xs">
+          <h2 id="extreme-q-prompt" class="text-xs sm:text-sm md:text-base font-medium sm:font-semibold leading-snug sm:leading-relaxed text-[var(--foreground)]">
+            Đang chuẩn bị câu hỏi...
+          </h2>
         </div>
 
-        <h2 id="extreme-q-prompt" class="text-base sm:text-lg font-semibold leading-relaxed">
-          Đang chuẩn bị câu hỏi...
-        </h2>
+        <!-- Khung 4 Lựa chọn Đáp án -->
+        <div id="extreme-options-container" class="grid grid-cols-1 gap-2"></div>
 
-        <!-- Interactive Question Options Container -->
-        <div id="extreme-options-container" class="space-y-3"></div>
-
-        <!-- Feedback Box -->
-        <div id="extreme-feedback-box" class="hidden rounded-2xl p-4 border text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <!-- Hộp Phản hồi kết quả (chỉ hiện sau khi chọn) -->
+        <div id="extreme-feedback-box" class="hidden rounded-xl p-2.5 sm:p-3 border text-xs space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <div class="flex items-center gap-2 font-bold text-xs" id="extreme-feedback-title"></div>
-          <p id="extreme-feedback-desc" class="text-[var(--foreground)]/90 leading-relaxed font-sans"></p>
+          <p id="extreme-feedback-desc" class="text-[var(--foreground)]/90 leading-tight font-sans text-[11px] sm:text-xs line-clamp-2"></p>
         </div>
       </div>
 
-      <!-- Footer Info -->
-      <div class="pt-3 border-t border-[var(--border)]/60 flex justify-between items-center text-[11px] text-[var(--muted-foreground)]">
-        <span>💡 Trả lời đúng 10 câu liên tiếp để hồi lại 1 ❤️ sinh mạng</span>
+      <!-- 3. CHÂN TRANG GỌN GÀNG (FOOTER INFO) -->
+      <div class="shrink-0 pt-2 border-t border-[var(--border)]/60 flex justify-between items-center text-[10px] sm:text-[11px] text-[var(--muted-foreground)]">
+        <span>💡 Chuỗi 10 câu đúng liên tiếp được hồi +1 ❤️</span>
         <span class="font-mono">Chuỗi tối đa: <strong id="extreme-max-streak-label" class="text-[var(--foreground)]">0</strong></span>
       </div>
     </section>
@@ -2730,8 +2734,8 @@
         showProgress: false
       },
       extreme: {
-        breadcrumb: '<button id="btn_extreme_header_quit" onclick="openExtremeQuitConfirmModal()" class="hover:text-rose-400 text-rose-500 font-bold transition cursor-pointer">✕ Dừng trận</button>',
-        title: 'Sinh Tồn Cực Hạn',
+        breadcrumb: '<button id="btn_extreme_header_quit" onclick="openExtremeQuitConfirmModal()" class="hover:text-rose-400 text-rose-500 font-bold transition cursor-pointer flex items-center gap-1">← Rời trận</button><span>/</span><span>Cực Hạn</span>',
+        title: 'Sinh Tồn Vô Tận',
         showProgress: false
       }
     };
@@ -10346,10 +10350,10 @@
         if (heartEl) {
           if (i <= currentHp) {
             heartEl.textContent = '❤️';
-            heartEl.className = 'text-lg transition-transform duration-200 scale-100 opacity-100';
+            heartEl.className = 'text-base transition-transform duration-200 scale-100 opacity-100';
           } else {
             heartEl.textContent = '💔';
-            heartEl.className = 'text-lg transition-transform duration-200 scale-90 opacity-40 grayscale';
+            heartEl.className = 'text-base transition-transform duration-200 scale-90 opacity-40 grayscale';
           }
         }
       }
@@ -10595,10 +10599,12 @@
       opts.forEach((optText, idx) => {
         const btn = document.createElement('button');
         btn.id = `btn_extreme_opt_${idx}`;
-        btn.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border border-[var(--border)] hover:border-rose-500/60 hover:bg-rose-500/5 transition flex items-center justify-between cursor-pointer group";
+        btn.className = "w-full text-left px-3.5 py-2 sm:py-2.5 rounded-xl border border-[var(--border)] hover:border-rose-500/60 hover:bg-rose-500/5 transition flex items-center justify-between cursor-pointer group shadow-2xs";
         btn.innerHTML = `
-          <span class="text-xs sm:text-sm text-[var(--foreground)] group-hover:text-rose-500 font-medium leading-relaxed">${escapeHtml(optText)}</span>
-          <span class="w-7 h-7 rounded-xl border border-[var(--border)] flex items-center justify-center text-xs font-mono text-[var(--muted-foreground)] group-hover:border-rose-500 group-hover:text-rose-500 shrink-0 ml-3">${letters[idx]}</span>
+          <div class="flex items-center gap-2.5 min-w-0 pr-2">
+            <span class="w-6 h-6 rounded-lg border border-[var(--border)] flex items-center justify-center text-[11px] font-bold font-mono text-[var(--muted-foreground)] group-hover:border-rose-500 group-hover:text-rose-500 group-hover:bg-rose-500/10 shrink-0 transition-colors">${letters[idx]}</span>
+            <span class="text-xs sm:text-[13px] text-[var(--foreground)] group-hover:text-rose-500 font-medium leading-snug break-words">${escapeHtml(optText)}</span>
+          </div>
         `;
         btn.onclick = () => handleExtremeAnswer(idx, false);
         optionsContainer.appendChild(btn);
@@ -10658,30 +10664,40 @@
 
         // Cập nhật giao diện các nút đáp án
         if (container) {
+          const letters = ['A', 'B', 'C', 'D'];
           container.querySelectorAll('button').forEach((b, idx) => {
             const optText = (q.dap_an && q.dap_an[idx]) || b.innerText;
             if (idx === choiceIdx) {
               if (isCorrect) {
-                b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-500/15 text-emerald-600 transition flex items-center justify-between font-bold shadow-sm";
+                b.className = "w-full text-left px-3.5 py-2 sm:py-2.5 rounded-xl border-2 border-emerald-500 bg-emerald-500/15 text-emerald-600 transition flex items-center justify-between font-bold shadow-xs";
                 b.innerHTML = `
-                  <span class="text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 font-bold leading-relaxed">${escapeHtml(optText)}</span>
-                  <span class="px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-600 text-xs font-bold shrink-0 ml-3">✓ Chính xác</span>
+                  <div class="flex items-center gap-2.5 min-w-0 pr-2">
+                    <span class="w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-[11px] font-bold font-mono shrink-0">${letters[idx]}</span>
+                    <span class="text-xs sm:text-[13px] text-emerald-600 dark:text-emerald-400 font-bold leading-snug break-words">${escapeHtml(optText)}</span>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-600 text-[11px] font-bold shrink-0 ml-2 whitespace-nowrap">✓ Đúng</span>
                 `;
               } else {
-                b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 border-rose-500 bg-rose-500/15 text-rose-600 transition flex items-center justify-between font-bold shadow-sm pair-shake-error";
+                b.className = "w-full text-left px-3.5 py-2 sm:py-2.5 rounded-xl border-2 border-rose-500 bg-rose-500/15 text-rose-600 transition flex items-center justify-between font-bold shadow-xs pair-shake-error";
                 b.innerHTML = `
-                  <span class="text-xs sm:text-sm text-rose-600 dark:text-rose-400 font-bold leading-relaxed">${escapeHtml(optText)}</span>
-                  <span class="px-2.5 py-1 rounded-xl bg-rose-500/20 text-rose-600 text-xs font-bold shrink-0 ml-3">✕ Sai</span>
+                  <div class="flex items-center gap-2.5 min-w-0 pr-2">
+                    <span class="w-6 h-6 rounded-lg bg-rose-500 text-white flex items-center justify-center text-[11px] font-bold font-mono shrink-0">${letters[idx]}</span>
+                    <span class="text-xs sm:text-[13px] text-rose-600 dark:text-rose-400 font-bold leading-snug break-words">${escapeHtml(optText)}</span>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-lg bg-rose-500/20 text-rose-600 text-[11px] font-bold shrink-0 ml-2 whitespace-nowrap">✕ Sai</span>
                 `;
               }
             } else if (correctIdx !== null && idx === Number(correctIdx)) {
-              b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 border-emerald-500/80 bg-emerald-500/10 text-emerald-600 transition flex items-center justify-between font-semibold shadow-xs";
+              b.className = "w-full text-left px-3.5 py-2 sm:py-2.5 rounded-xl border-2 border-emerald-500/80 bg-emerald-500/10 text-emerald-600 transition flex items-center justify-between font-semibold shadow-xs";
               b.innerHTML = `
-                <span class="text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 font-semibold leading-relaxed">${escapeHtml(optText)}</span>
-                <span class="px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-600 text-xs font-bold shrink-0 ml-3">✓ Đáp án đúng</span>
+                <div class="flex items-center gap-2.5 min-w-0 pr-2">
+                  <span class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-600 border border-emerald-500/40 flex items-center justify-center text-[11px] font-bold font-mono shrink-0">${letters[idx]}</span>
+                  <span class="text-xs sm:text-[13px] text-emerald-600 dark:text-emerald-400 font-semibold leading-snug break-words">${escapeHtml(optText)}</span>
+                </div>
+                <span class="px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-600 text-[11px] font-bold shrink-0 ml-2 whitespace-nowrap">✓ Đáp án đúng</span>
               `;
             } else {
-              b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border border-[var(--border)] opacity-35 transition flex items-center justify-between";
+              b.className = "w-full text-left px-3.5 py-2 sm:py-2.5 rounded-xl border border-[var(--border)] opacity-35 transition flex items-center justify-between";
             }
           });
         }
@@ -10750,7 +10766,7 @@
               ? `<span class="text-rose-500 font-bold">⏱️ Hết thời gian! (-1 ❤️ Sinh Mạng)</span>`
               : `<span class="text-rose-500 font-bold">❌ Chưa chính xác! (-1 ❤️ Sinh Mạng)</span>`;
             fbDesc.textContent = explanation;
-            fbBox.className = "rounded-2xl p-4 border border-rose-500/40 bg-rose-500/10 text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200";
+            fbBox.className = "rounded-xl p-2.5 sm:p-3 border border-rose-500/40 bg-rose-500/10 text-xs space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-200";
             fbBox.classList.remove('hidden');
           }
 
