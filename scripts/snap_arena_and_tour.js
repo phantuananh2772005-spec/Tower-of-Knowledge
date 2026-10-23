@@ -49,6 +49,10 @@ async function run() {
   await new Promise(r => setTimeout(r, 500));
   await page.screenshot({ path: path.join(artifactDir, 'snap_arena_mode_ranked.png') });
 
+  // Click "Đổi chế độ" to return to 3 cards
+  await page.click('#btn_back_modes_ranked');
+  await new Promise(r => setTimeout(r, 400));
+
   // Click Card 2: Casual / Friend Match
   console.log('--- Snapping Arena Casual Friend Mode ---');
   await page.click('#card-mode-casual');
