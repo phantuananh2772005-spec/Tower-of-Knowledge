@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bản Đồ Leo Tháp - Demo Tương Tác Chương 1 | Tháp Tri Thức</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background: #060913;
+      color: #e2e8f0;
+    }
+    @keyframes bob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-6px); }
+      40% { transform: translateX(6px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { filter: drop-shadow(0 0 6px rgba(93, 202, 165, 0.4)); }
+      50% { filter: drop-shadow(0 0 16px rgba(93, 202, 165, 0.8)); }
+    }
+    .bob { animation: bob 1.4s ease-in-out infinite; }
+    .shake { animation: shake 0.35s ease-in-out; }
+    .nd { cursor: pointer; transition: transform 0.15s ease; }
+    .nd:hover { filter: brightness(1.15); }
+    .radar-glow { animation: pulseGlow 2s infinite ease-in-out; }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0b1020; }
+    ::-webkit-scrollbar-thumb { background: #263353; border-radius: 999px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-emerald-500/30">
+
+  <!-- TOPBAR -->
+  <header class="sticky top-0 z-50 bg-[#090d1a]/90 backdrop-blur-md border-b border-indigo-500/20 px-4 py-3">
+    <div class="max-w-4xl mx-auto flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <a href="/" id="btn_demo_back_app" class="px-3 py-1.5 rounded-xl border border-indigo-500/30 bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 text-xs font-semibold flex items-center gap-1.5 transition">
+          <span>←</span>
+          <span>Về ứng dụng chính</span>
+        </a>
+        <div class="h-4 w-px bg-slate-700/60 hidden sm:block"></div>
+        <div>
+          <h1 class="text-sm font-bold text-white flex items-center gap-1.5">
+            <span>🗺️</span>
+            <span>Bản Đồ Leo Tháp - Demo Chương 1</span>
+          </h1>
+          <p class="text-[11px] text-slate-400">Mô hình đường nối cong Bezier · Rồng Sparky đồng hành · Tương tác 3D</p>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-emerald-400 font-mono font-bold bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-500/30 hidden md:inline-block" id="demo-top-progress">
+          Tiến độ: Mốc 1.3 / 1.5
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN WRAPPER -->
+  <main class="flex-1 max-w-2xl w-full mx-auto px-4 py-6 flex flex-col items-center">
+
+    <!-- CONTROLS & STATUS BAR -->
+    <div class="w-full bg-[#0d142b]/80 border border-indigo-500/25 rounded-2xl p-3.5 mb-4 shadow-xl backdrop-blur-sm">
+      <div class="flex flex-wrap items-center justify-between gap-2.5">
+        <div class="flex items-center gap-2">
+          <button id="btn_demo_done" class="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold text-xs shadow-md shadow-emerald-900/40 active:scale-95 transition cursor-pointer flex items-center gap-1.5">
+            <span>⚡</span>
+            <span>Hoàn thành mốc hiện tại</span>
+          </button>
+          <button id="btn_demo_reset" class="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-slate-300 font-semibold text-xs active:scale-95 transition cursor-pointer flex items-center gap-1.5">
+            <span>🔄</span>
+            <span>Đặt lại mốc 1.3</span>
+          </button>
+        </div>
+
+        <!-- Mode status pill -->
+        <div class="flex items-center gap-2 text-xs">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          <span id="demo-status-text" class="text-slate-300 font-medium">Bấm vào một mốc để rồng chạy tới</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAP CONTAINER -->
+    <div class="w-full bg-[#0b1020] rounded-3xl overflow-hidden border border-indigo-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.6)] relative">
+      <svg id="map" width="100%" viewBox="0 0 680 1010" role="img" class="block touch-manipulation select-none">
+        <title>Bản đồ học tập chương 1 - Tháp Tri Thức</title>
+        <desc>Bản đồ các mốc học zigzag có đường nối Bezier, nền bầu trời đêm công nghệ và rồng pixel Sparky di chuyển</desc>
+      </svg>
+    </div>
+
+    <!-- ACTIVE CHECKPOINT INFO CARD -->
+    <div id="demo-card-info" class="w-full mt-4 bg-gradient-to-b from-[#111936] to-[#0d142b] border border-indigo-500/30 rounded-2xl p-4 shadow-xl">
+      <div class="flex items-start justify-between gap-3">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span id="card-badge" class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              ĐANG HỌC
+            </span>
+            <span class="text-xs text-slate-400 font-mono">Chương 1: Tổng quan CSDL</span>
+          </div>
+          <h3 id="card-title" class="text-sm font-bold text-white">Mốc 1.3: Ngôn ngữ SQL & Các nhóm lệnh DDL, DML, DQL</h3>
+          <p id="card-desc" class="text-xs text-slate-300">
+            Nắm vững cú pháp truy vấn cơ bản, tạo bảng, chèn dữ liệu và các ràng buộc toàn vẹn quan trọng.
+          </p>
+        </div>
+        <div class="text-right shrink-0">
+          <div class="text-[11px] font-bold text-amber-400 font-mono">+100 Xu</div>
+          <div class="text-[10px] text-cyan-300 font-mono">+50 EXP</div>
+        </div>
+      </div>
+
+      <div class="mt-3 pt-3 border-t border-slate-700/60 flex items-center justify-between">
+        <span class="text-[11px] text-slate-400">💡 Bấm vào mốc trên bản đồ để chuyển đổi hoặc click nút bên dưới:</span>
+        <button id="btn_demo_start_quiz" onclick="simulateQuizAction()" class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition cursor-pointer">
+          ▶ Bắt đầu học mốc này
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="py-4 text-center text-xs text-slate-500 border-t border-slate-800/60 mt-6">
+    Tháp Tri Thức &copy; 2026 · Hệ thống bản đồ học tập thích ứng phong cách Duolingo & Game RPG
+  </footer>
+
+  <!-- SCRIPT -->
+  <script>
+    const NS = 'http://www.w3.org/2000/svg';
+    const svg = document.getElementById('map');
+
+    function el(t, a, p) {
+      const e = document.createElementNS(NS, t);
+      for (const k in a) e.setAttribute(k, a[k]);
+      (p || svg).appendChild(e);
+      return e;
+    }
+
+    const gBg = el('g', {}),
+          gPath = el('g', {}),
+          gNodes = el('g', {}),
+          gDr = el('g', {});
+
+    // Seeded random for consistent stars
+    let seed = 7;
+    function rnd() {
+      seed = (seed * 16807) % 2147483647;
+      return seed / 2147483647;
+    }
+
+    // Background Gradient Sections
+    el('rect', { x: 0, y: 0, width: 680, height: 1010, fill: '#0b1020' }, gBg);
+    el('rect', { x: 0, y: 0, width: 680, height: 330, fill: '#10163a' }, gBg);
+    el('rect', { x: 0, y: 330, width: 680, height: 340, fill: '#0e1433' }, gBg);
+
+    // 80 Stars with Twinkle Animation
+    for (let i = 0; i < 80; i++) {
+      const c = el('circle', {
+        cx: rnd() * 680,
+        cy: rnd() * 1000,
+        r: rnd() * 1.4 + 0.4,
+        fill: '#cfd8ff',
+        opacity: 0.35 + rnd() * 0.5
+      }, gBg);
+      if (i % 6 === 0) {
+        el('animate', {
+          attributeName: 'opacity',
+          values: '0.2;1;0.2',
+          dur: (2 + rnd() * 3) + 's',
+          repeatCount: 'indefinite'
+        }, c);
+      }
+    }
+
+    // Tech Decorations: Database cylinder
+    function db(x, y, s, col) {
+      const g = el('g', { opacity: 0.45, transform: 'translate(' + x + ',' + y + ') scale(' + s + ')' }, gBg);
+      el('rect', { x: -30, y: -24, width: 60, height: 48, fill: col }, g);
+      el('ellipse', { cx: 0, cy: 24, rx: 30, ry: 10, fill: col }, g);
+      el('ellipse', { cx: 0, cy: -24, rx: 30, ry: 10, fill: '#9fb4ff' }, g);
+      el('path', { d: 'M-30 -6 A30 10 0 0 0 30 -6', fill: 'none', stroke: '#0b1020', 'stroke-width': 2 }, g);
+      el('path', { d: 'M-30 10 A30 10 0 0 0 30 10', fill: 'none', stroke: '#0b1020', 'stroke-width': 2 }, g);
+    }
+
+    // Tech Decorations: Server Rack
+    function rack(x, y, s, col) {
+      const g = el('g', { opacity: 0.4, transform: 'translate(' + x + ',' + y + ') scale(' + s + ')' }, gBg);
+      for (let i = 0; i < 3; i++) {
+        el('rect', { x: -32, y: -30 + i * 22, width: 64, height: 18, rx: 3, fill: col }, g);
+        el('circle', { cx: -22, cy: -21 + i * 22, r: 3, fill: '#5DCAA5' }, g);
+        el('rect', { x: -8, y: -23 + i * 22, width: 34, height: 4, fill: '#0b1020' }, g);
+      }
+    }
+
+    // Tech Decorations: Hexagon grid
+    function hexo(x, y, r, col) {
+      const p = [];
+      for (let i = 0; i < 6; i++) {
+        const a = Math.PI / 3 * i;
+        p.push((x + r * Math.cos(a)).toFixed(1) + ',' + (y + r * Math.sin(a)).toFixed(1));
+      }
+      el('polygon', { points: p.join(' '), fill: 'none', stroke: col, 'stroke-width': 2, opacity: 0.35 }, gBg);
+    }
+
+    // Place decorative props
+    db(95, 330, 1.1, '#3C3489');
+    db(130, 720, 0.9, '#3C3489');
+    db(570, 560, 1, '#185FA5');
+    db(585, 900, 0.8, '#3C3489');
+    db(120, 980, 0.6, '#185FA5');
+
+    rack(570, 230, 1, '#26215C');
+    rack(100, 520, 0.9, '#26215C');
+    rack(560, 780, 0.8, '#26215C');
+    rack(105, 130, 0.8, '#26215C');
+
+    hexo(540, 90, 26, '#7F77DD');
+    hexo(150, 860, 22, '#7F77DD');
+    hexo(590, 400, 18, '#378ADD');
+    hexo(60, 620, 16, '#378ADD');
+
+    // 5 Checkpoints coordinates & labels
+    const N = [
+      { x: 300, y: 880, l: 'Mốc 1.1: Khái niệm CSDL', sub: 'Khái niệm CSDL & Các Mức Trừu Tượng Dữ Liệu' },
+      { x: 400, y: 760, l: 'Mốc 1.2: Hệ Quản Trị CSDL', sub: 'Kiến trúc Client-Server & Các Mô Hình Dữ Liệu' },
+      { x: 280, y: 630, l: 'Mốc 1.3: Ngôn ngữ SQL', sub: 'Các nhóm lệnh DDL, DML, DQL & Thao tác Bảng' },
+      { x: 400, y: 500, l: 'Mốc 1.4: Ràng buộc toàn vẹn', sub: 'Khóa chính, Khóa ngoại & Chuẩn hóa 1NF-3NF' },
+      { x: 340, y: 330, l: 'Mốc 1.5: Thử thách Boss Chương 1', sub: 'Đại chiến Tổng hợp Kiến thức Cột Mốc Chương 1' }
+    ];
+    const GATE = { x: 340, y: 150 };
+
+    let cur = 2; // Default active at Mốc 1.3 (index 2)
+    let segs = [], cum = [0], dragD = 0, busy = false;
+
+    // Star polygon generator
+    function star(cx, cy, R, col) {
+      const p = [];
+      for (let i = 0; i < 10; i++) {
+        const r = i % 2 ? R * 0.45 : R;
+        const a = -Math.PI / 2 + Math.PI / 5 * i;
+        p.push((cx + r * Math.cos(a)).toFixed(1) + ',' + (cy + r * Math.sin(a)).toFixed(1));
+      }
+      return el('polygon', { points: p.join(' '), fill: col }, gNodes);
+    }
+
+    // Pet Companion Group
+    const dg = el('g', {}, gDr);
+    const bub = el('g', { transform: 'translate(-34,-34)' }, dg);
+    const bw = el('rect', { x: 0, y: 0, width: 110, height: 26, rx: 13, fill: '#0b1020', stroke: '#1D9E75', 'stroke-width': 1.5 }, bub);
+    const bt = el('text', { x: 55, y: 17, 'text-anchor': 'middle', 'font-size': 12, fill: '#5DCAA5', 'font-weight': 600 }, bub);
+    const body = el('g', { class: 'bob' }, dg);
+
+    // Pixel Dragon Sparky Palette & Matrix
+    const pal = {
+      P: '#a37fe8', // Main purple
+      D: '#6b46c1', // Dark shadow
+      B: '#f6e7a8', // Belly yellow
+      E: '#1a1a2e', // Eye
+      H: '#f6c453', // Horn gold
+      W: '#c9b0f5', // Wings
+      T: '#8a63d2'  // Tail
+    };
+    const rows = [
+      '..H....H....',
+      '..PP..PP....',
+      '.PPPPPPPP...',
+      '.PEPPPPEP...',
+      '.PPPPPPPP...',
+      '..PPPPPP....',
+      'WW.PBBP.WW..',
+      'WWWPBBPWWW..',
+      '.WWPBBPWW..T',
+      '...PBBP...TT',
+      '...PPPP..TT.',
+      '..DD..DD.T..'
+    ];
+    rows.forEach((r, y) => {
+      for (let x = 0; x < r.length; x++) {
+        const c = r[x];
+        if (c !== '.') {
+          el('rect', { x: x * 4, y: y * 4, width: 4, height: 4, fill: pal[c] }, body);
+        }
+      }
+    });
+
+    function say(t) {
+      bt.textContent = t;
+      const textWidth = Math.max(80, t.length * 7 + 22);
+      bw.setAttribute('width', textWidth);
+      bt.setAttribute('x', textWidth / 2);
+      bw.setAttribute('x', 0);
+    }
+
+    function pointAt(d) {
+      let i = 0;
+      while (i < segs.length - 1 && d > cum[i + 1]) i++;
+      const L = segs[i].getTotalLength();
+      const p = segs[i].getPointAtLength(Math.min(Math.max(d - cum[i], 0), L));
+      return p;
+    }
+
+    function place(d) {
+      const p = pointAt(d);
+      dg.setAttribute('transform', 'translate(' + (p.x - 24) + ',' + (p.y - 82) + ')');
+    }
+
+    // Render nodes & curves
+    function render() {
+      gPath.innerHTML = '';
+      gNodes.innerHTML = '';
+      segs = [];
+      cum = [0];
+
+      // Draw Bezier curved path
+      for (let i = 0; i < N.length - 1; i++) {
+        const a = N[i], b = N[i + 1], m = (a.y + b.y) / 2;
+        const d = 'M' + a.x + ' ' + a.y + ' C' + a.x + ' ' + m + ' ' + b.x + ' ' + m + ' ' + b.x + ' ' + b.y;
+
+        // Wide underlay track
+        el('path', { d: d, fill: 'none', stroke: '#1a2342', 'stroke-width': 20, 'stroke-linecap': 'round' }, gPath);
+
+        // Progress line
+        const reached = i + 1 <= cur;
+        const s = el('path', {
+          d: d,
+          fill: 'none',
+          stroke: reached ? '#1D9E75' : '#3a4766',
+          'stroke-width': reached ? 10 : 6,
+          'stroke-linecap': 'round',
+          'stroke-dasharray': reached ? 'none' : '2 14'
+        }, gPath);
+
+        segs.push(s);
+        cum.push(cum[cum.length - 1] + s.getTotalLength());
+      }
+
+      // Connecting path to Chapter 2 Gate
+      const last = N[4];
+      el('path', {
+        d: 'M' + last.x + ' ' + (last.y - 55) + ' L' + GATE.x + ' ' + (GATE.y + 40),
+        stroke: '#3a4766',
+        'stroke-width': 5,
+        'stroke-dasharray': '2 12',
+        'stroke-linecap': 'round',
+        fill: 'none'
+      }, gPath);
+
+      // Chapter 2 Gate Badge
+      const gt = el('g', { class: 'cursor-pointer' }, gPath);
+      el('rect', { x: GATE.x - 70, y: GATE.y - 20, width: 140, height: 44, rx: 22, fill: '#1a2342', stroke: '#7F77DD', 'stroke-width': 2 }, gt);
+      el('text', { x: GATE.x, y: GATE.y + 8, 'text-anchor': 'middle', 'font-size': 16, 'font-weight': 600, fill: '#CECBF6' }, gt).textContent = 'Chương 2';
+      el('line', { x1: GATE.x - 70, y1: GATE.y + 24, x2: GATE.x - 70, y2: GATE.y + 60, stroke: '#7F77DD', 'stroke-width': 3 }, gt);
+      el('line', { x1: GATE.x + 70, y1: GATE.y + 24, x2: GATE.x + 70, y2: GATE.y + 60, stroke: '#7F77DD', 'stroke-width': 3 }, gt);
+      gt.onclick = () => {
+        say('Hãy hạ gục Boss 1.5 để mở cổng Chương 2!');
+      };
+
+      // Draw Checkpoint Nodes
+      N.forEach((n, i) => {
+        const st = i < cur ? 'done' : i === cur ? 'cur' : 'lock';
+        const g = el('g', { class: 'nd' }, gNodes);
+        g.dataset.i = i;
+
+        if (i === 4) {
+          // Boss Node: Hexagonal Crown Badge
+          const hp = (r, cy) => {
+            const p = [];
+            for (let k = 0; k < 6; k++) {
+              const a = Math.PI / 3 * k + Math.PI / 6;
+              p.push((n.x + r * Math.cos(a)).toFixed(1) + ',' + (cy + r * Math.sin(a)).toFixed(1));
+            }
+            return p.join(' ');
+          };
+          const dim = st === 'lock';
+          el('polygon', { points: hp(54, n.y + 8), fill: dim ? '#2a2412' : '#8a5a0b' }, g);
+          el('polygon', { points: hp(54, n.y), fill: dim ? '#3a3016' : '#d89a1b', stroke: dim ? '#5a4a1c' : '#fac775', 'stroke-width': 4 }, g);
+          el('polygon', { points: hp(40, n.y), fill: dim ? '#241d0e' : '#412402' }, g);
+          const c = el('g', { opacity: dim ? 0.5 : 1 }, g);
+          el('polygon', {
+            points: (n.x - 22) + ',' + (n.y + 14) + ' ' + (n.x - 26) + ',' + (n.y - 14) + ' ' + (n.x - 11) + ',' + (n.y - 2) + ' ' + n.x + ',' + (n.y - 20) + ' ' + (n.x + 11) + ',' + (n.y - 2) + ' ' + (n.x + 26) + ',' + (n.y - 14) + ' ' + (n.x + 22) + ',' + (n.y + 14),
+            fill: '#fac775',
+            stroke: '#ef9f27',
+            'stroke-width': 2
+          }, c);
+          [[n.x - 26, n.y - 14], [n.x, n.y - 20], [n.x + 26, n.y - 14]].forEach(q => {
+            el('circle', { cx: q[0], cy: q[1], r: 4, fill: '#fcebeb' }, c);
+          });
+          el('text', { x: n.x, y: n.y + 84, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 600, fill: dim ? '#7a6528' : '#fac775' }, g).textContent = n.l;
+        } else {
+          // Regular Nodes (1.1 - 1.4)
+          const r = st === 'cur' ? 38 : 30;
+
+          // Pulsing Radar Rings on active current node
+          if (st === 'cur') {
+            const ring = el('circle', { cx: n.x, cy: n.y, r: r + 6, fill: 'none', stroke: '#5DCAA5', 'stroke-width': 3 }, g);
+            el('animate', { attributeName: 'r', values: (r + 4) + ';' + (r + 18) + ';' + (r + 4), dur: '1.6s', repeatCount: 'indefinite' }, ring);
+            el('animate', { attributeName: 'opacity', values: '0.9;0;0.9', dur: '1.6s', repeatCount: 'indefinite' }, ring);
+          }
+
+          const top = st === 'lock' ? '#2a3350' : '#22c08a';
+          const base = st === 'lock' ? '#171d33' : '#0F6E56';
+
+          // 3D base depth circle + top circle
+          el('circle', { cx: n.x, cy: n.y + 6, r: r, fill: base }, g);
+          el('circle', { cx: n.x, cy: n.y, r: r, fill: top }, g);
+
+          // Done Checkmark
+          if (st === 'done') {
+            el('path', {
+              d: 'M' + (n.x - 10) + ' ' + n.y + ' L' + (n.x - 3) + ' ' + (n.y + 8) + ' L' + (n.x + 11) + ' ' + (n.y - 9),
+              fill: 'none',
+              stroke: '#fff',
+              'stroke-width': 5,
+              'stroke-linecap': 'round',
+              'stroke-linejoin': 'round'
+            }, g);
+          }
+
+          // Current Play Arrow
+          if (st === 'cur') {
+            el('polygon', {
+              points: (n.x - 8) + ',' + (n.y - 12) + ' ' + (n.x + 13) + ',' + n.y + ' ' + (n.x - 8) + ',' + (n.y + 12),
+              fill: '#fff'
+            }, g);
+          }
+
+          // Locked Padlock
+          if (st === 'lock') {
+            el('rect', { x: n.x - 8, y: n.y - 3, width: 16, height: 13, rx: 2, fill: '#7a8199' }, g);
+            el('path', {
+              d: 'M' + (n.x - 5) + ' ' + (n.y - 3) + ' V' + (n.y - 8) + ' A5 5 0 0 1 ' + (n.x + 5) + ' ' + (n.y - 8) + ' V' + (n.y - 3),
+              fill: 'none',
+              stroke: '#7a8199',
+              'stroke-width': 3
+            }, g);
+          }
+
+          // 3 Gold Stars on completed node
+          if (st === 'done') {
+            [-18, 0, 18].forEach((dx, k) => {
+              star(n.x + dx, n.y + r + 16, k === 1 ? 9 : 7, '#fac775');
+            });
+          }
+
+          // Text Label
+          el('text', {
+            x: n.x,
+            y: n.y + r + 38,
+            'text-anchor': 'middle',
+            'font-size': 13,
+            'font-weight': 600,
+            fill: st === 'cur' ? '#5DCAA5' : st === 'done' ? '#b9c2dd' : '#5d6785'
+          }, g).textContent = n.l.split(':')[0];
+        }
+
+        g.addEventListener('click', () => onNode(i, g));
+      });
+
+      // Bottom Start Marker
+      const sx = el('text', {
+        x: 340,
+        y: 985,
+        'text-anchor': 'middle',
+        'font-size': 12,
+        fill: '#7a8199',
+        'letter-spacing': 1.5,
+        'font-weight': 600
+      }, gNodes);
+      sx.textContent = '▲ XUẤT PHÁT TỪ ĐÂY ▲';
+
+      updateCardInfo(cur);
+    }
+
+    // Node click handler with ease interpolation
+    function onNode(i, g) {
+      if (busy) return;
+      if (i > cur) {
+        g.classList.remove('shake');
+        void g.getBoundingClientRect(); // trigger reflow
+        g.classList.add('shake');
+        say('Hoàn thành mốc trước đã!');
+        document.getElementById('demo-status-text').textContent = N[i].l + ' đang khóa';
+        setTimeout(() => say(cur === i ? 'Học tiếp nào!' : 'Học tiếp nào!'), 1600);
+        return;
+      }
+
+      const target = cum[i];
+      busy = true;
+      const from = dragD, t0 = performance.now(), dur = 400 + Math.abs(target - from) * 2.2;
+      document.getElementById('demo-status-text').textContent = (i < cur ? 'Ôn lại ' : 'Đang học ') + N[i].l;
+      say('Đi thôi!');
+
+      updateCardInfo(i);
+
+      function f(t) {
+        let k = Math.min((t - t0) / dur, 1);
+        k = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        dragD = from + (target - from) * k;
+        place(dragD);
+        if (k < 1) {
+          requestAnimationFrame(f);
+        } else {
+          busy = false;
+          say(i < cur ? 'Ôn lại nhé!' : 'Học tiếp nào!');
+        }
+      }
+      requestAnimationFrame(f);
+    }
+
+    function atNode(i) {
+      render();
+      dragD = cum[Math.min(i, N.length - 1)];
+      place(dragD);
+      updateCardInfo(i);
+    }
+
+    function updateCardInfo(idx) {
+      const item = N[idx];
+      if (!item) return;
+      const isBoss = (idx === 4);
+      const isDone = (idx < cur);
+      const isCurrent = (idx === cur);
+
+      const badge = document.getElementById('card-badge');
+      if (badge) {
+        if (isBoss) {
+          badge.className = 'px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30';
+          badge.textContent = 'THỬ THÁCH BOSS';
+        } else if (isDone) {
+          badge.className = 'px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30';
+          badge.textContent = 'ĐÃ HOÀN THÀNH';
+        } else if (isCurrent) {
+          badge.className = 'px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+          badge.textContent = 'ĐANG HỌC';
+        } else {
+          badge.className = 'px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-700 text-slate-400 border border-slate-600';
+          badge.textContent = 'ĐANG KHÓA';
+        }
+      }
+
+      const title = document.getElementById('card-title');
+      if (title) title.textContent = item.l;
+      const desc = document.getElementById('card-desc');
+      if (desc) desc.textContent = item.sub;
+
+      const topProg = document.getElementById('demo-top-progress');
+      if (topProg) topProg.textContent = `Tiến độ: Mốc 1.${cur + 1} / 1.5`;
+
+      const btnAction = document.getElementById('btn_demo_start_quiz');
+      if (btnAction) {
+        btnAction.textContent = isDone ? '🔄 Ôn tập mốc này' : isBoss ? '👑 Khiêu chiến Boss' : '▶ Bắt đầu học mốc này';
+      }
+    }
+
+    // Complete Current Checkpoint Simulation Button
+    document.getElementById('btn_demo_done').onclick = () => {
+      if (busy || cur >= 4) {
+        if (cur >= 4) say('Bạn đã hoàn thành toàn bộ Chương 1!');
+        return;
+      }
+      const from = dragD;
+      cur++;
+      render();
+      const target = cum[cur];
+      busy = true;
+      const t0 = performance.now(), dur = 900;
+      say(cur === 4 ? 'Boss rồi, cố lên! 🔥' : 'Giỏi lắm! Mốc mới mở ⭐');
+      document.getElementById('demo-status-text').textContent = 'Đã mở ' + N[cur].l;
+
+      function f(t) {
+        let k = Math.min((t - t0) / dur, 1);
+        k = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        dragD = from + (target - from) * k;
+        place(dragD);
+        if (k < 1) {
+          requestAnimationFrame(f);
+        } else {
+          busy = false;
+          setTimeout(() => say('Học tiếp nào!'), 1200);
+        }
+      }
+      requestAnimationFrame(f);
+    };
+
+    // Reset Demo Button
+    document.getElementById('btn_demo_reset').onclick = () => {
+      if (busy) return;
+      cur = 2; // Reset back to checkpoint 1.3
+      atNode(cur);
+      say('Học tiếp nào!');
+      document.getElementById('demo-status-text').textContent = 'Bấm vào một mốc để rồng chạy tới';
+    };
+
+    function simulateQuizAction() {
+      say('Đang mở bài tập mốc...');
+      document.getElementById('demo-status-text').textContent = 'Mở bài tập ' + N[cur].l;
+      setTimeout(() => {
+        window.location.href = '/#saga';
+      }, 700);
+    }
+
+    // Initialize
+    atNode(cur);
+    say('Học tiếp nào!');
+  </script>
+</body>
+</html>
