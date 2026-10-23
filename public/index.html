@@ -518,6 +518,27 @@
         </div>
       </div>
 
+      <!-- Thẻ Thử Thách Thi Đấu Cực Hạn (Endless Survival Mode Banner) -->
+      <div id="hub-extreme-card" class="bg-linear-to-r from-rose-950/40 via-[var(--card)] to-amber-950/30 border border-rose-500/30 hover:border-rose-500/60 rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition">
+        <div class="flex items-center gap-3.5">
+          <div class="w-12 h-12 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-2xl shrink-0">
+            🔥
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white uppercase tracking-wider">CHẾ ĐỘ MỚI</span>
+              <span class="text-sm font-bold text-[var(--foreground)]">Thi Đấu Cực Hạn (Endless Survival)</span>
+            </div>
+            <p class="text-xs text-[var(--muted-foreground)] mt-0.5 max-w-xl">5 sinh mạng ❤️, dòng câu hỏi ngẫu nhiên vô hạn từ kho câu hỏi, chuỗi 10 hồi 1 ❤️, thưởng Xu & EXP siêu khủng!</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button id="btn_hub_start_extreme" onclick="openExtremeSetupModal()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold text-xs shadow-md transition cursor-pointer flex items-center gap-1.5 shrink-0">
+            <span>⚡ Thử Thách Ngay</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Banner Hướng dẫn Tân thủ cùng Pet (Tự động hiển thị nếu chưa hoàn thành) -->
       <div id="hub-newbie-guide-banner" class="hidden bg-linear-to-r from-emerald-500/15 via-teal-500/10 to-transparent border border-emerald-500/30 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
         <div class="flex items-center gap-3">
@@ -720,20 +741,18 @@
           </div>
         </div>
 
-        <!-- Chế độ 3: Sảnh Mini Game Giải Trí -->
-        <div id="card-mode-arcade" onclick="selectArenaMode('arcade')" class="cursor-pointer rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-purple-500/50 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs">
+        <!-- Chế độ 3: Thi Đấu Cực Hạn (Endless Survival Mode) -->
+        <div id="card-mode-arcade" onclick="openExtremeSetupModal()" class="cursor-pointer rounded-2xl border border-rose-500/40 bg-[var(--card)] hover:border-rose-500/70 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs">
           <div class="flex items-center justify-between">
-            <span class="text-2xl">🎪</span>
-            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 uppercase tracking-wider">Sắp Mở Khóa</span>
+            <span class="text-2xl">🔥</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white uppercase tracking-wider animate-pulse">CỰC HẠN • MỚI</span>
           </div>
           <div>
-            <h3 class="text-sm font-bold text-[var(--foreground)] group-hover:text-purple-400 transition">Mini Game Trí Tuệ</h3>
-            <p class="text-[11px] text-[var(--muted-foreground)] leading-snug mt-0.5">Nhiều tựa game giải trí đồng đội & đố vui phản xạ nhanh</p>
+            <h3 class="text-sm font-bold text-[var(--foreground)] group-hover:text-rose-500 transition">Thi Đấu Cực Hạn</h3>
+            <p class="text-[11px] text-[var(--muted-foreground)] leading-snug mt-0.5">5 sinh mạng, dòng câu hỏi vô tận, chuỗi 10 hồi 1 ❤️, thưởng Xu & EXP</p>
           </div>
-          <div id="card-status-arcade" class="flex flex-wrap gap-1 pt-1">
-            <span class="text-[9px] px-1.5 py-0.5 rounded bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--border)]">⚡ Đố Siêu Tốc</span>
-            <span class="text-[9px] px-1.5 py-0.5 rounded bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--border)]">🐉 Săn Boss</span>
-            <span class="text-[9px] px-1.5 py-0.5 rounded bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--border)]">🃏 Lật Thẻ</span>
+          <div id="card-status-arcade" class="text-[10px] font-semibold text-rose-500 flex items-center gap-1 pt-1">
+            <span>Bấm để bắt đầu sinh tồn →</span>
           </div>
         </div>
       </div>
@@ -952,11 +971,16 @@
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div class="p-4 rounded-2xl border border-[var(--border)] bg-[var(--background)]/60 space-y-2 text-center">
-              <span class="text-3xl block">⚡</span>
-              <h4 class="text-xs font-bold text-[var(--foreground)]">Đố Vui Siêu Tốc</h4>
-              <p class="text-[10px] text-[var(--muted-foreground)]">5 giây mỗi câu hỏi, duy trì chuỗi trả lời đúng để nhân x3 điểm thưởng</p>
-              <span class="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500">Sắp ra mắt</span>
+            <div class="p-4 rounded-2xl border border-rose-500/30 bg-rose-500/5 space-y-2 text-center flex flex-col justify-between">
+              <div class="space-y-1.5">
+                <span class="text-3xl block">🔥</span>
+                <h4 class="text-xs font-bold text-[var(--foreground)]">Thi Đấu Cực Hạn</h4>
+                <p class="text-[10px] text-[var(--muted-foreground)]">5 sinh mạng, dòng câu hỏi ngẫu nhiên vô tận, chuỗi 10 hồi 1 ❤️, thưởng Xu & EXP</p>
+                <span class="inline-block text-[9px] font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white animate-pulse">ĐANG MỞ</span>
+              </div>
+              <button id="btn_arcade_start_extreme" onclick="openExtremeSetupModal()" class="w-full mt-2 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-[11px] transition cursor-pointer shadow-xs">
+                Chơi ngay →
+              </button>
             </div>
             <div class="p-4 rounded-2xl border border-[var(--border)] bg-[var(--background)]/60 space-y-2 text-center">
               <span class="text-3xl block">🐉</span>
@@ -1127,9 +1151,84 @@
             </button>
           </div>
 
-          
-
         </div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 10: THI ĐẤU CỰC HẠN (ENDLESS SURVIVAL MODE) ================= -->
+    <section id="view-extreme" class="hidden flex-1 flex flex-col justify-between max-w-2xl w-full mx-auto p-4 sm:p-8 min-h-[550px]">
+      <div>
+        <!-- Top Bar: Exit button, Hearts, Mode tag -->
+        <div class="flex items-center justify-between gap-3 text-xs mb-3">
+          <button id="btn_extreme_quit" onclick="openExtremeQuitConfirmModal()" class="hover:text-[var(--foreground)] border border-[var(--border)] px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer shrink-0 flex items-center gap-1">
+            <span>✕</span> <span>Dừng trận</span>
+          </button>
+
+          <!-- 5 Hearts Container -->
+          <div id="extreme-hearts-container" class="flex items-center gap-1.5 bg-[var(--card)] px-3 py-1.5 rounded-xl border border-[var(--border)] shadow-xs select-none">
+            <span id="extreme-heart-1" class="text-lg transition-transform duration-200">❤️</span>
+            <span id="extreme-heart-2" class="text-lg transition-transform duration-200">❤️</span>
+            <span id="extreme-heart-3" class="text-lg transition-transform duration-200">❤️</span>
+            <span id="extreme-heart-4" class="text-lg transition-transform duration-200">❤️</span>
+            <span id="extreme-heart-5" class="text-lg transition-transform duration-200">❤️</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span id="extreme-course-tag" class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 font-mono truncate max-w-[140px]">CSDL</span>
+          </div>
+        </div>
+
+        <!-- Metric Bar: Question counter, Loop badge, Streak/Combo, Score -->
+        <div class="flex items-center justify-between text-xs py-2 border-b border-[var(--border)]/60">
+          <div class="flex items-center gap-2">
+            <span id="extreme-q-counter" class="font-bold text-sm text-[var(--foreground)] font-mono">Câu 1</span>
+            <span id="extreme-loop-badge" class="hidden text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/30 font-mono">Vòng 2 (x1.5)</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <span id="extreme-combo-badge" class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-500 border border-orange-500/30 font-mono">🔥 Chuỗi: 0</span>
+            <span id="extreme-score-display" class="font-bold text-amber-500 font-mono text-sm">0 điểm</span>
+          </div>
+        </div>
+
+        <!-- Question Timer Bar -->
+        <div class="w-full h-1.5 bg-[var(--border)] rounded-full overflow-hidden mt-3 relative">
+          <div id="extreme-timer-bar" class="h-full bg-rose-500 transition-all duration-100 ease-linear" style="width: 100%;"></div>
+        </div>
+        <div class="flex justify-between items-center text-[10px] text-[var(--muted-foreground)] font-mono mt-1">
+          <span id="extreme-timer-label">Thời gian suy nghĩ</span>
+          <span id="extreme-timer-text">25s</span>
+        </div>
+      </div>
+
+      <!-- Question Practice Body -->
+      <div id="extreme-q-body" class="py-6 space-y-6 flex-1 flex flex-col justify-center">
+        <div class="flex items-center justify-between">
+          <span id="extreme-q-bloom" class="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-md bg-rose-500/10 text-rose-500 font-mono">
+            🎯 CÂU HỎI SINH TỒN
+          </span>
+          <span id="extreme-heart-heal-notice" class="hidden text-[11px] font-bold text-emerald-500 animate-bounce">
+            +1 ❤️ Hồi Sinh Mạng!
+          </span>
+        </div>
+
+        <h2 id="extreme-q-prompt" class="text-base sm:text-lg font-semibold leading-relaxed">
+          Đang chuẩn bị câu hỏi...
+        </h2>
+
+        <!-- Interactive Question Options Container -->
+        <div id="extreme-options-container" class="space-y-3"></div>
+
+        <!-- Feedback Box -->
+        <div id="extreme-feedback-box" class="hidden rounded-2xl p-4 border text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div class="flex items-center gap-2 font-bold text-xs" id="extreme-feedback-title"></div>
+          <p id="extreme-feedback-desc" class="text-[var(--foreground)]/90 leading-relaxed font-sans"></p>
+        </div>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="pt-3 border-t border-[var(--border)]/60 flex justify-between items-center text-[11px] text-[var(--muted-foreground)]">
+        <span>💡 Trả lời đúng 10 câu liên tiếp để hồi lại 1 ❤️ sinh mạng</span>
+        <span class="font-mono">Chuỗi tối đa: <strong id="extreme-max-streak-label" class="text-[var(--foreground)]">0</strong></span>
       </div>
     </section>
 
@@ -2414,6 +2513,151 @@
       </div>
     </div>
 
+    <!-- ================= MODAL CẤU HÌNH THI ĐẤU CỰC HẠN ================= -->
+    <div id="modal-extreme-setup" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onclick="if(event.target===this)closeExtremeSetupModal()">
+      <div class="bg-[var(--card)] border border-rose-500/40 rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-5 shadow-2xl relative animate-in zoom-in-95 duration-200">
+        <button id="btn_close_extreme_setup" onclick="closeExtremeSetupModal()" class="absolute top-4 right-4 text-[var(--muted-foreground)] hover:text-[var(--foreground)] text-lg cursor-pointer">✕</button>
+
+        <div class="text-center space-y-1.5">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-rose-500/15 border-2 border-rose-500/40 text-rose-500 flex items-center justify-center text-3xl shadow-inner animate-pulse">
+            🔥
+          </div>
+          <h3 class="font-bold text-lg text-[var(--foreground)]">Thi Đấu Cực Hạn (Endless Survival)</h3>
+          <p class="text-xs text-[var(--muted-foreground)]">Thử thách kiến thức vô hạn, kiểm tra phản xạ và sự bền bỉ của bạn</p>
+        </div>
+
+        <!-- Rules Highlights -->
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--background)]/60 space-y-1">
+            <span class="text-base block">❤️ 5 Sinh Mạng</span>
+            <p class="text-[10px] text-[var(--muted-foreground)] leading-tight">Mỗi câu sai trừ 1 ❤️. Hết sinh mạng thì trận đấu kết thúc.</p>
+          </div>
+          <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--background)]/60 space-y-1">
+            <span class="text-base block">⚡ Chuỗi 10 Hồi Máu</span>
+            <p class="text-[10px] text-[var(--muted-foreground)] leading-tight">Đạt chuỗi 10, 20, 30 câu đúng liên tiếp được hồi +1 ❤️ (tối đa 5).</p>
+          </div>
+          <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--background)]/60 space-y-1">
+            <span class="text-base block">♾️ Vô Hạn Không Ngừng</span>
+            <p class="text-[10px] text-[var(--muted-foreground)] leading-tight">Tải ngầm liên tục câu hỏi. Làm hết kho sẽ lặp vòng thưởng thêm điểm!</p>
+          </div>
+          <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--background)]/60 space-y-1">
+            <span class="text-base block">🎁 Xu & EXP Khủng</span>
+            <p class="text-[10px] text-[var(--muted-foreground)] leading-tight">Càng sống sót lâu và chuỗi càng cao, phần thưởng nhận được càng lớn.</p>
+          </div>
+        </div>
+
+        <!-- Course Selector -->
+        <div class="space-y-1.5 text-left">
+          <label for="extreme-subject-select" class="text-xs font-semibold text-[var(--foreground)] block">Chọn môn học thử thách:</label>
+          <select id="extreme-subject-select" class="w-full text-xs font-semibold bg-[var(--background)] border border-[var(--border)] rounded-xl px-3.5 py-2.5 cursor-pointer text-[var(--foreground)]">
+            <option value="mon_csdl">Cơ sở Dữ liệu (Kho hơn 100 câu)</option>
+          </select>
+        </div>
+
+        <div class="pt-2">
+          <button id="btn_start_extreme_play" onclick="startExtremeSurvival(document.getElementById('extreme-subject-select').value)" class="w-full py-3 rounded-2xl bg-gradient-to-r from-rose-600 via-red-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold text-sm transition cursor-pointer shadow-lg flex items-center justify-center gap-2">
+            <span>🔥</span>
+            <span>BẮT ĐẦU SINH TỒN NGAY</span>
+            <span>→</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= MODAL XÁC NHẬN DỪNG THI ĐẤU CỰC HẠN ================= -->
+    <div id="modal-extreme-quit-confirm" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onclick="if(event.target===this)closeExtremeQuitConfirmModal()">
+      <div class="bg-[var(--card)] border border-amber-500/40 rounded-3xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-200">
+        <div class="w-16 h-16 mx-auto rounded-full bg-amber-500/15 border-2 border-amber-500/40 text-amber-500 flex items-center justify-center text-3xl shadow-inner">
+          ⏸️
+        </div>
+        <div class="space-y-1.5">
+          <h3 class="font-bold text-base text-[var(--foreground)]">Dừng Trận Thi Đấu Cực Hạn?</h3>
+          <p class="text-xs text-[var(--muted-foreground)] leading-relaxed">
+            Bạn đã giải được <span id="extreme-quit-count" class="font-bold text-amber-500">0</span> câu hỏi. Nếu dừng bây giờ, kết quả của bạn vẫn được ghi nhận và bạn sẽ nhận Xu & EXP tương ứng!
+          </p>
+        </div>
+        <div class="space-y-2 pt-2">
+          <button id="btn_cancel_extreme_quit" onclick="closeExtremeQuitConfirmModal()" class="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center justify-center gap-1.5">
+            <span>⚔️</span> Tiếp tục chiến đấu
+          </button>
+          <button id="btn_confirm_extreme_quit" onclick="confirmExtremeQuitAndFinish()" class="w-full py-2.5 rounded-xl border border-rose-500/40 hover:bg-rose-500/10 text-rose-500 font-semibold text-xs transition cursor-pointer">
+            ✕ Dừng trận & Nhận thưởng
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= MODAL TỔNG KẾT THI ĐẤU CỰC HẠN ================= -->
+    <div id="modal-extreme-summary" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm transition-opacity duration-200">
+      <div class="bg-[var(--card)] border border-rose-500/50 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl space-y-5 text-center relative animate-in fade-in zoom-in-95 duration-200">
+        <div id="extreme-summary-icon" class="w-20 h-20 mx-auto rounded-full bg-rose-500/15 border-2 border-rose-500 flex items-center justify-center text-4xl shadow-inner animate-bounce">
+          🏆
+        </div>
+
+        <div class="space-y-1">
+          <span id="extreme-summary-badge" class="text-[10px] uppercase font-bold tracking-widest text-rose-500 font-mono px-2.5 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20">
+            CHIẾN BINH SINH TỒN
+          </span>
+          <h3 id="extreme-summary-title" class="font-bold text-lg sm:text-xl text-[var(--foreground)]">Tổng Kết Thi Đấu Cực Hạn</h3>
+          <p id="extreme-summary-subtitle" class="text-xs text-[var(--muted-foreground)]">Thành tích chiến đấu kiên cường tại Đấu trường Sinh tồn</p>
+        </div>
+
+        <!-- 4 Stats Grid -->
+        <div class="grid grid-cols-2 gap-2 text-center text-xs">
+          <div class="bg-[var(--background)] p-3 rounded-2xl border border-[var(--border)]">
+            <span class="text-base block mb-0.5">🎯</span>
+            <span id="extreme-summary-answered" class="font-mono font-bold text-sm text-[var(--foreground)]">0 câu</span>
+            <span class="text-[10px] text-[var(--muted-foreground)] block">Số câu đã vượt qua</span>
+          </div>
+          <div class="bg-[var(--background)] p-3 rounded-2xl border border-[var(--border)]">
+            <span class="text-base block mb-0.5">🔥</span>
+            <span id="extreme-summary-max-streak" class="font-mono font-bold text-sm text-orange-500">0 câu</span>
+            <span class="text-[10px] text-[var(--muted-foreground)] block">Chuỗi đúng kỷ lục</span>
+          </div>
+          <div class="bg-[var(--background)] p-3 rounded-2xl border border-[var(--border)]">
+            <span class="text-base block mb-0.5">⭐</span>
+            <span id="extreme-summary-score" class="font-mono font-bold text-sm text-amber-500">0</span>
+            <span class="text-[10px] text-[var(--muted-foreground)] block">Tổng điểm sinh tồn</span>
+          </div>
+          <div class="bg-[var(--background)] p-3 rounded-2xl border border-[var(--border)]">
+            <span class="text-base block mb-0.5">🔄</span>
+            <span id="extreme-summary-loops" class="font-mono font-bold text-sm text-cyan-500">Vòng 1</span>
+            <span class="text-[10px] text-[var(--muted-foreground)] block">Vòng lặp kho</span>
+          </div>
+        </div>
+
+        <!-- Rewards Box -->
+        <div class="bg-linear-to-r from-amber-500/10 via-emerald-500/10 to-amber-500/10 p-3.5 rounded-2xl border border-amber-500/30 flex items-center justify-around text-xs">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">🪙</span>
+            <div class="text-left">
+              <span class="text-[10px] text-[var(--muted-foreground)] block">Xu thưởng</span>
+              <span id="extreme-summary-coins" class="font-bold text-amber-500 font-mono text-sm">+0</span>
+            </div>
+          </div>
+          <div class="h-8 w-px bg-[var(--border)]"></div>
+          <div class="flex items-center gap-2">
+            <span class="text-xl">⭐</span>
+            <div class="text-left">
+              <span class="text-[10px] text-[var(--muted-foreground)] block">Kinh nghiệm</span>
+              <span id="extreme-summary-exp" class="font-bold text-emerald-500 font-mono text-sm">+0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="space-y-2 pt-1">
+          <button id="btn_extreme_replay" onclick="restartExtremeSurvival()" class="w-full py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-amber-600 text-white font-bold text-xs hover:brightness-110 transition shadow-lg cursor-pointer flex items-center justify-center gap-2">
+            <span>🔄</span>
+            <span>Chơi Lại Trận Mới</span>
+          </button>
+          <button id="btn_extreme_back_arena" onclick="closeExtremeSummaryModal()" class="w-full py-2.5 rounded-xl border border-[var(--border)] text-xs font-semibold hover:bg-[var(--background)] transition cursor-pointer">
+            ⚔️ Về Đấu Trường
+          </button>
+        </div>
+      </div>
+    </div>
+
     </main>
   </div>
 
@@ -2484,6 +2728,11 @@
         breadcrumb: '<button id="btn_play_header_close" onclick="closePlay()" class="hover:text-[var(--foreground)] transition cursor-pointer">✕ Dừng</button>',
         title: 'Luyện tập',
         showProgress: false
+      },
+      extreme: {
+        breadcrumb: '<button id="btn_extreme_header_quit" onclick="openExtremeQuitConfirmModal()" class="hover:text-rose-400 text-rose-500 font-bold transition cursor-pointer">✕ Dừng trận</button>',
+        title: 'Sinh Tồn Cực Hạn',
+        showProgress: false
       }
     };
 
@@ -2521,13 +2770,18 @@
         return;
       }
 
+      if (typeof extremeSession !== 'undefined' && extremeSession && extremeSession.active && viewName !== 'extreme') {
+        openExtremeQuitConfirmModal(viewName);
+        return;
+      }
+
       if (typeof currentQuizSession !== 'undefined' && currentQuizSession && checkCoItNhatMotCau(currentQuizSession) && viewName !== 'play') {
         // Mặc định tự động lưu kết quả khi rời trang theo yêu cầu người dùng
         autoSaveQuizAndNavigate(viewName);
         return;
       }
 
-      const views = ['hub', 'enrolled', 'saga', 'catalog', 'minigame', 'battle', 'pet', 'shop', 'play'];
+      const views = ['hub', 'enrolled', 'saga', 'catalog', 'minigame', 'battle', 'pet', 'shop', 'play', 'extreme'];
       views.forEach(v => {
         const el = document.getElementById(`view-${v}`);
         if (el) el.classList.add('hidden');
@@ -2537,7 +2791,7 @@
       navIds.forEach(id => {
         const btn = document.getElementById(`nav-${id}`);
         if (!btn) return;
-        if (id === (viewName === 'battle' ? 'minigame' : viewName)) {
+        if (id === (viewName === 'battle' || viewName === 'extreme' ? 'minigame' : viewName)) {
           btn.className = "w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold bg-[var(--background)] border border-[var(--border)] flex items-center justify-between shadow-xs";
         } else {
           btn.className = "w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between";
@@ -9932,6 +10186,751 @@
 
       // Launch companion onboarding tour
       startPetOnboardingTour();
+    }
+
+    // =========================================================================
+    // ============= TÍNH NĂNG: THI ĐẤU CỰC HẠN (ENDLESS SURVIVAL MODE) ========
+    // =========================================================================
+
+    let extremeSession = null;
+    let extremeTimerInterval = null;
+    let pendingExtremeNavView = null;
+
+    /**
+     * Helper gọi API chuẩn cho Thi Đấu Cực Hạn (có Bearer Token)
+     */
+    async function fetchExtremeApi(endpoint, body = {}) {
+      try {
+        const token = localStorage.getItem('tok_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+
+        const resp = await fetch(endpoint, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(body)
+        });
+        const json = await resp.json();
+        return {
+          ok: resp.ok && json.success !== false,
+          data: json.data !== undefined ? json.data : json
+        };
+      } catch (err) {
+        console.error('fetchExtremeApi network error:', err);
+        return { ok: false, data: null, error: err.message };
+      }
+    }
+
+    /**
+     * Mở modal thiết lập trận đấu cực hạn
+     */
+    async function openExtremeSetupModal(preferredMaMon) {
+      const modal = document.getElementById('modal-extreme-setup');
+      if (!modal) return;
+
+      const select = document.getElementById('extreme-subject-select');
+      if (select) {
+        select.innerHTML = '';
+        // Ưu tiên danh sách môn học đã đăng ký hoặc từ catalog
+        let coursesToUse = [];
+        if (typeof enrolledCourses !== 'undefined' && Array.isArray(enrolledCourses) && enrolledCourses.length > 0) {
+          coursesToUse = enrolledCourses;
+        } else if (typeof catalogCourses !== 'undefined' && Array.isArray(catalogCourses) && catalogCourses.length > 0) {
+          coursesToUse = catalogCourses;
+        }
+
+        if (coursesToUse.length > 0) {
+          coursesToUse.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.ma_mon;
+            opt.textContent = `${c.ten_mon} (Toàn bộ kho câu hỏi)`;
+            select.appendChild(opt);
+          });
+        } else {
+          const opt = document.createElement('option');
+          opt.value = 'mon_csdl';
+          opt.textContent = 'Cơ sở Dữ liệu (Kho hơn 100 câu)';
+          select.appendChild(opt);
+        }
+
+        if (preferredMaMon) {
+          select.value = preferredMaMon;
+        }
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    /**
+     * Đóng modal thiết lập
+     */
+    function closeExtremeSetupModal() {
+      const modal = document.getElementById('modal-extreme-setup');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    /**
+     * Bắt đầu phiên Thi đấu Cực hạn
+     */
+    async function startExtremeSurvival(maMon) {
+      try {
+        const resolvedMon = maMon || (document.getElementById('extreme-subject-select') ? document.getElementById('extreme-subject-select').value : 'mon_csdl');
+        closeExtremeSetupModal();
+        showToast('Đang kết nối kho dữ liệu cực hạn...', 'info');
+
+        const res = await fetchExtremeApi('/api/extreme/start', { ma_mon: resolvedMon });
+
+        if (!res.ok) {
+          showToast(res.data?.message || 'Không thể khởi động chế độ cực hạn', 'error');
+          return;
+        }
+
+        const data = res.data;
+        const initialQuestions = data.danh_sach_cau_hoi || [];
+
+        if (initialQuestions.length === 0) {
+          showToast('Môn học này chưa có câu hỏi trong kho!', 'warning');
+          return;
+        }
+
+        const fetchedIds = new Set();
+        initialQuestions.forEach(q => fetchedIds.add(q.ma_cau_hoi));
+
+        extremeSession = {
+          active: true,
+          maMon: data.ma_mon || resolvedMon,
+          tenMon: data.ten_mon || 'Cơ sở Dữ liệu',
+          tongSoCauKho: data.tong_so_cau_trong_kho || 108,
+          thoiGianMoiCau: data.thoi_gian_moi_cau || 25,
+          hp: data.max_sinh_mang || 5,
+          maxHp: 5,
+          soCauDaLam: 0,
+          soCauDung: 0,
+          soCauSai: 0,
+          streak: 0,
+          maxStreak: 0,
+          score: 0,
+          vongLap: 1,
+          fetchedIds: fetchedIds,
+          cachedPool: [...initialQuestions], // Giữ toàn bộ câu đã tải trên trình duyệt
+          bufferQueue: [...initialQuestions], // Hàng đợi câu hỏi chuẩn bị hiển thị
+          currentQuestion: null,
+          currentQuestionStartTime: null,
+          isPrefetching: false,
+          isGrading: false,
+          timeRemaining: 25,
+          startTime: Date.now()
+        };
+
+        // Chuyển sang View Thi đấu cực hạn
+        navTo('extreme');
+        updateExtremeHeartsUI();
+        updateExtremeHeaderUI();
+
+        // Hiển thị câu hỏi đầu tiên
+        renderNextExtremeQuestion();
+      } catch (err) {
+        console.error('startExtremeSurvival error:', err);
+        showToast('Lỗi khi bắt đầu thi đấu cực hạn: ' + err.message, 'error');
+      }
+    }
+
+    /**
+     * Cập nhật UI hiển thị 5 tim
+     */
+    function updateExtremeHeartsUI() {
+      if (!extremeSession) return;
+      const currentHp = Math.max(0, Math.min(5, extremeSession.hp));
+      for (let i = 1; i <= 5; i++) {
+        const heartEl = document.getElementById(`extreme-heart-${i}`);
+        if (heartEl) {
+          if (i <= currentHp) {
+            heartEl.textContent = '❤️';
+            heartEl.className = 'text-lg transition-transform duration-200 scale-100 opacity-100';
+          } else {
+            heartEl.textContent = '💔';
+            heartEl.className = 'text-lg transition-transform duration-200 scale-90 opacity-40 grayscale';
+          }
+        }
+      }
+    }
+
+    /**
+     * Cập nhật các thông số trên thanh Header
+     */
+    function updateExtremeHeaderUI() {
+      if (!extremeSession) return;
+
+      const qCounter = document.getElementById('extreme-q-counter');
+      if (qCounter) {
+        qCounter.textContent = `Câu ${extremeSession.currentQuestionIndex || 1}`;
+      }
+
+      const loopBadge = document.getElementById('extreme-loop-badge');
+      if (loopBadge) {
+        if (extremeSession.vongLap > 1) {
+          const bonusMult = (1 + (extremeSession.vongLap - 1) * 0.5).toFixed(1);
+          loopBadge.textContent = `Vòng ${extremeSession.vongLap} (x${bonusMult})`;
+          loopBadge.classList.remove('hidden');
+        } else {
+          loopBadge.classList.add('hidden');
+        }
+      }
+
+      const comboBadge = document.getElementById('extreme-combo-badge');
+      if (comboBadge) {
+        let mult = 1.0;
+        if (extremeSession.streak >= 10) mult = 3.0;
+        else if (extremeSession.streak >= 6) mult = 2.0;
+        else if (extremeSession.streak >= 3) mult = 1.5;
+
+        comboBadge.textContent = `🔥 Chuỗi: ${extremeSession.streak} (x${mult})`;
+        if (extremeSession.streak >= 10) {
+          comboBadge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-500 border border-rose-500/40 font-mono animate-pulse';
+        } else if (extremeSession.streak >= 3) {
+          comboBadge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/40 font-mono';
+        } else {
+          comboBadge.className = 'text-[11px] font-bold px-2 py-0.5 rounded-full bg-orange-500/15 text-orange-500 border border-orange-500/30 font-mono';
+        }
+      }
+
+      const scoreDisplay = document.getElementById('extreme-score-display');
+      if (scoreDisplay) {
+        scoreDisplay.textContent = `${extremeSession.score.toLocaleString()} điểm`;
+      }
+
+      const courseTag = document.getElementById('extreme-course-tag');
+      if (courseTag) {
+        courseTag.textContent = extremeSession.tenMon || 'CSDL';
+      }
+
+      const maxStreakLabel = document.getElementById('extreme-max-streak-label');
+      if (maxStreakLabel) {
+        maxStreakLabel.textContent = `${extremeSession.maxStreak} câu`;
+      }
+    }
+
+    /**
+     * Bộ đếm thời gian cho mỗi câu hỏi (25 giây)
+     */
+    function startExtremeQuestionTimer() {
+      stopExtremeQuestionTimer();
+      if (!extremeSession || !extremeSession.active) return;
+
+      const totalTime = extremeSession.thoiGianMoiCau || 25;
+      extremeSession.timeRemaining = totalTime;
+
+      const timerBar = document.getElementById('extreme-timer-bar');
+      const timerText = document.getElementById('extreme-timer-text');
+
+      if (timerBar) timerBar.style.width = '100%';
+      if (timerText) timerText.textContent = `${totalTime}s`;
+
+      const startTime = Date.now();
+      extremeTimerInterval = setInterval(() => {
+        if (!extremeSession || !extremeSession.active) {
+          stopExtremeQuestionTimer();
+          return;
+        }
+
+        const elapsed = (Date.now() - startTime) / 1000;
+        const remain = Math.max(0, totalTime - elapsed);
+        extremeSession.timeRemaining = remain;
+
+        const pct = Math.max(0, Math.min(100, (remain / totalTime) * 100));
+        if (timerBar) {
+          timerBar.style.width = `${pct}%`;
+          if (pct < 25) {
+            timerBar.className = 'h-full bg-rose-600 transition-all duration-100 ease-linear animate-pulse';
+          } else if (pct < 50) {
+            timerBar.className = 'h-full bg-amber-500 transition-all duration-100 ease-linear';
+          } else {
+            timerBar.className = 'h-full bg-rose-500 transition-all duration-100 ease-linear';
+          }
+        }
+
+        if (timerText) {
+          timerText.textContent = `${Math.ceil(remain)}s`;
+        }
+
+        if (remain <= 0) {
+          stopExtremeQuestionTimer();
+          handleExtremeAnswer(null, true); // Hết giờ = tính là trả lời sai
+        }
+      }, 100);
+    }
+
+    function stopExtremeQuestionTimer() {
+      if (extremeTimerInterval) {
+        clearInterval(extremeTimerInterval);
+        extremeTimerInterval = null;
+      }
+    }
+
+    /**
+     * Tự động lấy ngầm 10 câu hỏi tiếp theo ở background khi buffer còn <= 2 câu
+     */
+    async function checkAndPrefetchExtremeQuestions() {
+      if (!extremeSession || !extremeSession.active || extremeSession.isPrefetching) return;
+
+      // Nếu còn nhiều hơn 2 câu trong hàng đợi, chưa cần fetch
+      if (extremeSession.bufferQueue.length > 2) return;
+
+      // Nếu số câu đã tải đã bằng hoặc vượt tổng số câu trong CSDL, không cần gọi API nữa
+      if (extremeSession.fetchedIds.size >= extremeSession.tongSoCauKho) return;
+
+      extremeSession.isPrefetching = true;
+      try {
+        const excludeArray = Array.from(extremeSession.fetchedIds);
+        const res = await fetchExtremeApi('/api/extreme/next-batch', {
+          ma_mon: extremeSession.maMon,
+          excludeIds: excludeArray
+        });
+
+        if (res.ok && res.data && Array.isArray(res.data.questions)) {
+          const newQuestions = res.data.questions;
+          newQuestions.forEach(q => {
+            if (!extremeSession.fetchedIds.has(q.ma_cau_hoi)) {
+              extremeSession.fetchedIds.add(q.ma_cau_hoi);
+              extremeSession.cachedPool.push(q);
+              extremeSession.bufferQueue.push(q);
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('Lỗi khi nạp ngầm câu hỏi cực hạn (không ảnh hưởng trải nghiệm):', err);
+      } finally {
+        if (extremeSession) extremeSession.isPrefetching = false;
+      }
+    }
+
+    /**
+     * Trộn ngẫu nhiên mảng câu hỏi (Fisher-Yates) khi hoàn thành 1 vòng kho câu hỏi
+     */
+    function shuffleArray(array) {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    /**
+     * Hiển thị câu hỏi cực hạn tiếp theo
+     */
+    function renderNextExtremeQuestion() {
+      if (!extremeSession || !extremeSession.active) return;
+
+      // Nếu người chơi "quá pro" và giải hết sạch câu trong buffer:
+      if (extremeSession.bufferQueue.length === 0) {
+        if (extremeSession.cachedPool.length > 0) {
+          // Kích hoạt Vòng lặp mới (Loop 2, 3...)
+          extremeSession.vongLap++;
+          extremeSession.bufferQueue = shuffleArray(extremeSession.cachedPool);
+          showToast(`🔥 Huyền thoại! Bạn đã chinh phục toàn bộ kho câu hỏi! Bắt đầu Vòng lặp ${extremeSession.vongLap} (Điểm x${(1 + (extremeSession.vongLap - 1) * 0.5).toFixed(1)})!`, 'success');
+        } else {
+          // Không còn câu nào trong pool
+          finishExtremeGame(false);
+          return;
+        }
+      }
+
+      // Lấy câu hỏi kế tiếp từ buffer
+      const q = extremeSession.bufferQueue.shift();
+      extremeSession.currentQuestion = q;
+      extremeSession.currentQuestionStartTime = Date.now();
+      extremeSession.isGrading = false;
+      extremeSession.currentQuestionIndex = (extremeSession.currentQuestionIndex || 0) + 1;
+
+      // Kích hoạt kiểm tra prefetch ngầm trong background
+      checkAndPrefetchExtremeQuestions();
+
+      // Cập nhật UI
+      updateExtremeHeaderUI();
+
+      const bloomTag = document.getElementById('extreme-q-bloom');
+      if (bloomTag) {
+        bloomTag.textContent = `🎯 CÂU HỎI SINH TỒN · [${q.muc_bloom || 'HIỂU'}]`;
+      }
+
+      const promptEl = document.getElementById('extreme-q-prompt');
+      if (promptEl) {
+        promptEl.textContent = q.noi_dung || 'Nội dung câu hỏi...';
+      }
+
+      const fbBox = document.getElementById('extreme-feedback-box');
+      if (fbBox) {
+        fbBox.classList.add('hidden');
+      }
+
+      const healNotice = document.getElementById('extreme-heart-heal-notice');
+      if (healNotice) {
+        healNotice.classList.add('hidden');
+      }
+
+      const optionsContainer = document.getElementById('extreme-options-container');
+      if (!optionsContainer) return;
+      optionsContainer.innerHTML = '';
+
+      const letters = ['A', 'B', 'C', 'D'];
+      const opts = q.dap_an || [];
+
+      if (opts.length === 0 && q.loai_cau_hoi !== 'TRAC_NGHIEM_4') {
+        // Fallback an toàn nếu có câu dạng khác
+        const notice = document.createElement('div');
+        notice.className = 'p-4 rounded-xl border border-[var(--border)] text-xs text-[var(--muted-foreground)] text-center';
+        notice.textContent = 'Câu hỏi này đang được chuẩn hóa. Bấm tiếp tục để làm câu kế tiếp.';
+        optionsContainer.appendChild(notice);
+
+        const skipBtn = document.createElement('button');
+        skipBtn.id = 'btn_extreme_skip_fallback';
+        skipBtn.className = 'w-full py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs cursor-pointer';
+        skipBtn.textContent = 'Câu tiếp theo →';
+        skipBtn.onclick = () => renderNextExtremeQuestion();
+        optionsContainer.appendChild(skipBtn);
+        return;
+      }
+
+      opts.forEach((optText, idx) => {
+        const btn = document.createElement('button');
+        btn.id = `btn_extreme_opt_${idx}`;
+        btn.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border border-[var(--border)] hover:border-rose-500/60 hover:bg-rose-500/5 transition flex items-center justify-between cursor-pointer group";
+        btn.innerHTML = `
+          <span class="text-xs sm:text-sm text-[var(--foreground)] group-hover:text-rose-500 font-medium leading-relaxed">${escapeHtml(optText)}</span>
+          <span class="w-7 h-7 rounded-xl border border-[var(--border)] flex items-center justify-center text-xs font-mono text-[var(--muted-foreground)] group-hover:border-rose-500 group-hover:text-rose-500 shrink-0 ml-3">${letters[idx]}</span>
+        `;
+        btn.onclick = () => handleExtremeAnswer(idx, false);
+        optionsContainer.appendChild(btn);
+      });
+
+      // Bắt đầu đếm ngược thời gian suy nghĩ
+      startExtremeQuestionTimer();
+    }
+
+    /**
+     * Xử lý chấm điểm và phản hồi câu hỏi
+     */
+    async function handleExtremeAnswer(choiceIdx, isTimeout = false) {
+      if (!extremeSession || !extremeSession.active || extremeSession.isGrading) return;
+      extremeSession.isGrading = true;
+      stopExtremeQuestionTimer();
+
+      const q = extremeSession.currentQuestion;
+      if (!q) return;
+
+      // Vô hiệu hóa toàn bộ tùy chọn để tránh bấm 2 lần
+      const container = document.getElementById('extreme-options-container');
+      if (container) {
+        container.querySelectorAll('button').forEach(b => {
+          b.disabled = true;
+          b.classList.remove('cursor-pointer', 'hover:border-rose-500/60', 'hover:bg-rose-500/5', 'group');
+          b.classList.add('cursor-default');
+        });
+      }
+
+      try {
+        let isCorrect = false;
+        let correctIdx = null;
+        let explanation = q.giai_thich || 'Khái niệm trọng tâm giúp củng cố kiến thức vững chắc.';
+
+        if (isTimeout) {
+          isCorrect = false;
+          // Gọi API để lấy đáp án đúng
+          const checkRes = await fetchExtremeApi('/api/extreme/check-answer', { ma_cau_hoi: q.ma_cau_hoi, tra_loi: -1 });
+          if (checkRes.ok && checkRes.data) {
+            correctIdx = checkRes.data.vi_tri_dap_an_dung;
+            if (checkRes.data.giai_thich) explanation = checkRes.data.giai_thich;
+          }
+        } else {
+          // Gửi câu trả lời lên server chấm điểm
+          const checkRes = await fetchExtremeApi('/api/extreme/check-answer', { ma_cau_hoi: q.ma_cau_hoi, tra_loi: choiceIdx });
+
+          if (checkRes.ok && checkRes.data) {
+            isCorrect = Boolean(checkRes.data.is_correct);
+            correctIdx = checkRes.data.vi_tri_dap_an_dung;
+            if (checkRes.data.giai_thich) explanation = checkRes.data.giai_thich;
+          } else {
+            // Dự phòng offline nếu lỗi mạng
+            isCorrect = false;
+          }
+        }
+
+        // Cập nhật giao diện các nút đáp án
+        if (container) {
+          container.querySelectorAll('button').forEach((b, idx) => {
+            const optText = (q.dap_an && q.dap_an[idx]) || b.innerText;
+            if (idx === choiceIdx) {
+              if (isCorrect) {
+                b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-500/15 text-emerald-600 transition flex items-center justify-between font-bold shadow-sm";
+                b.innerHTML = `
+                  <span class="text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 font-bold leading-relaxed">${escapeHtml(optText)}</span>
+                  <span class="px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-600 text-xs font-bold shrink-0 ml-3">✓ Chính xác</span>
+                `;
+              } else {
+                b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 border-rose-500 bg-rose-500/15 text-rose-600 transition flex items-center justify-between font-bold shadow-sm pair-shake-error";
+                b.innerHTML = `
+                  <span class="text-xs sm:text-sm text-rose-600 dark:text-rose-400 font-bold leading-relaxed">${escapeHtml(optText)}</span>
+                  <span class="px-2.5 py-1 rounded-xl bg-rose-500/20 text-rose-600 text-xs font-bold shrink-0 ml-3">✕ Sai</span>
+                `;
+              }
+            } else if (correctIdx !== null && idx === Number(correctIdx)) {
+              b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 border-emerald-500/80 bg-emerald-500/10 text-emerald-600 transition flex items-center justify-between font-semibold shadow-xs";
+              b.innerHTML = `
+                <span class="text-xs sm:text-sm text-emerald-600 dark:text-emerald-400 font-semibold leading-relaxed">${escapeHtml(optText)}</span>
+                <span class="px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-600 text-xs font-bold shrink-0 ml-3">✓ Đáp án đúng</span>
+              `;
+            } else {
+              b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border border-[var(--border)] opacity-35 transition flex items-center justify-between";
+            }
+          });
+        }
+
+        // Cập nhật trạng thái người chơi
+        if (isCorrect) {
+          extremeSession.soCauDung++;
+          extremeSession.streak++;
+          if (extremeSession.streak > extremeSession.maxStreak) {
+            extremeSession.maxStreak = extremeSession.streak;
+          }
+
+          // Tính điểm với hệ số chuỗi và hệ số vòng lặp
+          let streakMultiplier = 1.0;
+          if (extremeSession.streak >= 10) streakMultiplier = 3.0;
+          else if (extremeSession.streak >= 6) streakMultiplier = 2.0;
+          else if (extremeSession.streak >= 3) streakMultiplier = 1.5;
+
+          const loopMultiplier = 1 + (extremeSession.vongLap - 1) * 0.5;
+          const pointsEarned = Math.round(10 * streakMultiplier * loopMultiplier);
+          extremeSession.score += pointsEarned;
+
+          if (audioSettings && audioSettings.quiz) {
+            playAdvancedSound('quiz-correct');
+          }
+
+          // HỒI MÁU: Mỗi chuỗi 10 câu đúng liên tiếp hồi 1 ❤️
+          if (extremeSession.streak > 0 && extremeSession.streak % 10 === 0 && extremeSession.hp < extremeSession.maxHp) {
+            extremeSession.hp++;
+            updateExtremeHeartsUI();
+
+            const healNotice = document.getElementById('extreme-heart-heal-notice');
+            if (healNotice) {
+              healNotice.textContent = `+1 ❤️ Hồi Sinh Mạng (Chuỗi ${extremeSession.streak})!`;
+              healNotice.classList.remove('hidden');
+            }
+            showToast(`❤️ Xuất sắc! Chuỗi ${extremeSession.streak} câu đúng giúp bạn hồi phục +1 Sinh Mạng!`, 'success');
+          }
+
+          updateExtremeHeaderUI();
+
+          // Chuyển câu mượt mà sau 700ms
+          setTimeout(() => {
+            renderNextExtremeQuestion();
+          }, 700);
+
+        } else {
+          // Trả lời sai hoặc hết giờ
+          extremeSession.soCauSai++;
+          extremeSession.streak = 0;
+          extremeSession.hp--;
+
+          if (audioSettings && audioSettings.quiz) {
+            playAdvancedSound('quiz-wrong');
+          }
+
+          updateExtremeHeartsUI();
+          updateExtremeHeaderUI();
+
+          // Hiển thị giải thích
+          const fbBox = document.getElementById('extreme-feedback-box');
+          const fbTitle = document.getElementById('extreme-feedback-title');
+          const fbDesc = document.getElementById('extreme-feedback-desc');
+          if (fbBox && fbTitle && fbDesc) {
+            fbTitle.innerHTML = isTimeout
+              ? `<span class="text-rose-500 font-bold">⏱️ Hết thời gian! (-1 ❤️ Sinh Mạng)</span>`
+              : `<span class="text-rose-500 font-bold">❌ Chưa chính xác! (-1 ❤️ Sinh Mạng)</span>`;
+            fbDesc.textContent = explanation;
+            fbBox.className = "rounded-2xl p-4 border border-rose-500/40 bg-rose-500/10 text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200";
+            fbBox.classList.remove('hidden');
+          }
+
+          if (extremeSession.hp <= 0) {
+            // HẾT SINH MẠNG => GAME OVER
+            setTimeout(() => {
+              finishExtremeGame(true);
+            }, 1200);
+          } else {
+            // Còn sinh mạng => Cho xem đáp án và giải thích rồi sang câu mới
+            setTimeout(() => {
+              renderNextExtremeQuestion();
+            }, 1400);
+          }
+        }
+
+      } catch (err) {
+        console.error('handleExtremeAnswer error:', err);
+        // Fallback chuyển câu
+        setTimeout(() => {
+          renderNextExtremeQuestion();
+        }, 1000);
+      }
+    }
+
+    /**
+     * Mở modal xác nhận dừng trận đấu cực hạn
+     */
+    function openExtremeQuitConfirmModal(targetNavView) {
+      stopExtremeQuestionTimer();
+      pendingExtremeNavView = targetNavView || null;
+
+      const modal = document.getElementById('modal-extreme-quit-confirm');
+      const countEl = document.getElementById('extreme-quit-count');
+      if (countEl && extremeSession) {
+        countEl.textContent = `${(extremeSession.soCauDung || 0) + (extremeSession.soCauSai || 0)}`;
+      }
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    /**
+     * Đóng modal xác nhận dừng và tiếp tục chơi
+     */
+    function closeExtremeQuitConfirmModal() {
+      const modal = document.getElementById('modal-extreme-quit-confirm');
+      if (modal) modal.classList.add('hidden');
+      pendingExtremeNavView = null;
+
+      if (extremeSession && extremeSession.active && !extremeSession.isGrading) {
+        startExtremeQuestionTimer();
+      }
+    }
+
+    /**
+     * Xác nhận dừng trận và nhận thưởng
+     */
+    async function confirmExtremeQuitAndFinish() {
+      const modal = document.getElementById('modal-extreme-quit-confirm');
+      if (modal) modal.classList.add('hidden');
+      await finishExtremeGame(false);
+    }
+
+    /**
+     * Kết thúc phiên thi đấu cực hạn, gửi telemetry và hiển thị bảng tổng kết
+     */
+    async function finishExtremeGame(isDead = false) {
+      if (!extremeSession) return;
+      stopExtremeQuestionTimer();
+      extremeSession.active = false;
+
+      extremeSession.soCauDaLam = (extremeSession.soCauDung || 0) + (extremeSession.soCauSai || 0);
+
+      const durationSec = Math.max(1, Math.round((Date.now() - (extremeSession.startTime || Date.now())) / 1000));
+      const sessionPayload = {
+        ma_mon: extremeSession.maMon,
+        tong_so_cau_lam: extremeSession.soCauDaLam,
+        total_answered: extremeSession.soCauDaLam,
+        tong_so_cau_dung: extremeSession.soCauDung,
+        correct_count: extremeSession.soCauDung,
+        wrong_count: extremeSession.soCauSai,
+        chuoi_dung_cao_nhat: extremeSession.maxStreak,
+        max_streak: extremeSession.maxStreak,
+        tong_diem: extremeSession.score,
+        total_score: extremeSession.score,
+        thoi_gian_giay: durationSec,
+        vong_lap: extremeSession.vongLap,
+        loops_completed: extremeSession.vongLap
+      };
+
+      try {
+        const res = await fetchExtremeApi('/api/extreme/finish', sessionPayload);
+
+        const answeredCount = extremeSession.soCauDaLam || 0;
+        const correctCount = extremeSession.soCauDung || 0;
+        const streakCount = extremeSession.maxStreak || 0;
+        const totalScore = extremeSession.score || 0;
+        const loopCount = extremeSession.vongLap || 1;
+
+        let badge = isDead ? 'Chiến Binh Sinh Tồn' : 'Đấu Sĩ Dũng Cảm';
+        let coins = Math.round(totalScore * 0.1);
+        let exp = Math.round(totalScore * 0.25);
+
+        if (res.ok && res.data) {
+          if (res.data.badgeTitle) badge = res.data.badgeTitle;
+          if (res.data.summary?.badge) badge = res.data.summary.badge;
+          if (res.data.earnedCoins !== undefined) coins = res.data.earnedCoins;
+          else if (res.data.rewards?.coins !== undefined) coins = res.data.rewards.coins;
+          if (res.data.earnedExp !== undefined) exp = res.data.earnedExp;
+          else if (res.data.rewards?.exp !== undefined) exp = res.data.rewards.exp;
+
+          if (res.data.wallet && currentUser) {
+            currentUser.so_du_xu = res.data.wallet.so_du_xu;
+            currentUser.diem_kinh_nghiem = res.data.wallet.diem_kinh_nghiem;
+            currentUser.cap_do = res.data.wallet.cap_do;
+            if (typeof updateUserDisplay === 'function') updateUserDisplay();
+          }
+        }
+
+        // Cập nhật modal tổng kết
+        const sumModal = document.getElementById('modal-extreme-summary');
+        const badgeEl = document.getElementById('extreme-summary-badge');
+        const answeredEl = document.getElementById('extreme-summary-answered');
+        const maxStreakEl = document.getElementById('extreme-summary-max-streak');
+        const scoreEl = document.getElementById('extreme-summary-score');
+        const loopsEl = document.getElementById('extreme-summary-loops');
+        const coinsEl = document.getElementById('extreme-summary-coins');
+        const expEl = document.getElementById('extreme-summary-exp');
+        const iconEl = document.getElementById('extreme-summary-icon');
+
+        if (badgeEl) badgeEl.textContent = badge;
+        if (answeredEl) answeredEl.textContent = `${correctCount}/${answeredCount} câu`;
+        if (maxStreakEl) maxStreakEl.textContent = `🔥 ${streakCount} câu`;
+        if (scoreEl) scoreEl.textContent = `${totalScore.toLocaleString()} PTS`;
+        if (loopsEl) loopsEl.textContent = `Vòng ${loopCount}`;
+        if (coinsEl) coinsEl.textContent = `+${coins} 🪙`;
+        if (expEl) expEl.textContent = `+${exp} ⭐`;
+
+        if (iconEl) {
+          iconEl.textContent = isDead ? '💀' : '🏆';
+        }
+
+        if (sumModal) sumModal.classList.remove('hidden');
+
+        if (audioSettings && audioSettings.quiz) {
+          playAdvancedSound(isDead ? 'quiz-wrong' : 'win-fanfare');
+        }
+
+        if (typeof trackDailyQuestAction === 'function') {
+          trackDailyQuestAction('dau_truong');
+        }
+      } catch (err) {
+        console.error('finishExtremeGame error:', err);
+        const sumModal = document.getElementById('modal-extreme-summary');
+        if (sumModal) sumModal.classList.remove('hidden');
+      }
+    }
+
+    /**
+     * Đóng bảng tổng kết và về sảnh đấu
+     */
+    function closeExtremeSummaryModal() {
+      const sumModal = document.getElementById('modal-extreme-summary');
+      if (sumModal) sumModal.classList.add('hidden');
+
+      const targetView = pendingExtremeNavView || 'minigame';
+      pendingExtremeNavView = null;
+      extremeSession = null;
+      navTo(targetView);
+    }
+
+    /**
+     * Chơi lại trận cực hạn mới
+     */
+    function restartExtremeSurvival() {
+      const sumModal = document.getElementById('modal-extreme-summary');
+      if (sumModal) sumModal.classList.add('hidden');
+
+      const lastMon = extremeSession ? extremeSession.maMon : 'mon_csdl';
+      extremeSession = null;
+      startExtremeSurvival(lastMon);
     }
 
 </script>
