@@ -34,6 +34,10 @@ function formatSafeQuestion(q) {
         const targetPair = parsed.pairs[0];
         noiDung = `Khái niệm / Định nghĩa nào tương ứng chính xác với "${targetPair.left}"?`;
         dapAn = parsed.pairs.map(p => p.right);
+      } else if (parsed && Array.isArray(parsed.left_items) && Array.isArray(parsed.right_items) && parsed.matches) {
+        const targetLeft = parsed.left_items[0];
+        noiDung = `Khái niệm / Định nghĩa nào tương ứng chính xác với "${targetLeft.text}"?`;
+        dapAn = parsed.right_items.map(r => r.text);
       }
     } catch (e) {}
   } else if (q.loai_cau_hoi === 'SAP_XEP_CAU') {
@@ -193,9 +197,19 @@ async function checkAnswer(ma_cau_hoi, tra_loi) {
   } else if (q.loai_cau_hoi === 'NOI_CAP') {
     try {
       const parsed = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : q.du_lieu_cau_hoi;
-      viTriDapAnDung = 0; // Cặp đầu tiên được ghép chính xác với right[0]
-      dapAnDungText = parsed.pairs[0].right;
-      isCorrect = (choiceIdx === 0 || tra_loi === dapAnDungText);
+      if (parsed.pairs && parsed.pairs[0]) {
+        viTriDapAnDung = 0; // Cặp đầu tiên được ghép chính xác với right[0]
+        dapAnDungText = parsed.pairs[0].right;
+        isCorrect = (choiceIdx === 0 || tra_loi === dapAnDungText);
+      } else if (parsed.left_items && parsed.right_items && parsed.matches) {
+        const targetLeftId = parsed.left_items[0].id;
+        const targetRightId = parsed.matches[targetLeftId];
+        const rightItem = parsed.right_items.find(r => r.id === targetRightId) || parsed.right_items[0];
+        const correctIndex = parsed.right_items.findIndex(r => r.id === targetRightId);
+        viTriDapAnDung = correctIndex >= 0 ? correctIndex : 0;
+        dapAnDungText = rightItem.text;
+        isCorrect = (choiceIdx === viTriDapAnDung || tra_loi === dapAnDungText);
+      }
     } catch (e) {
       isCorrect = false;
     }

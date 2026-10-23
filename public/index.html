@@ -6572,15 +6572,27 @@
       if (currentFocusMoc && currentFocusMoc.ma_moc) {
         startMocLearning(currentFocusMoc.ma_moc);
       } else {
-        openCourseRoadmap('co-so-du-lieu');
+        openCourseRoadmap(currentActiveCourseSlug || 'co-so-du-lieu');
       }
     }
 
-    async function loadCourseRoadmap(preferredChapterId = null) {
+    async function loadCourseRoadmap(preferredChapterIdOrSlug = null) {
       const token = localStorage.getItem('tok_token');
       try {
+        let preferredChapterId = null;
+        if (preferredChapterIdOrSlug) {
+          if (typeof preferredChapterIdOrSlug === 'string' && (preferredChapterIdOrSlug.startsWith('ch_') || preferredChapterIdOrSlug.startsWith('chuong_'))) {
+            preferredChapterId = preferredChapterIdOrSlug;
+          } else if (typeof preferredChapterIdOrSlug === 'string') {
+            if (currentActiveCourseSlug !== preferredChapterIdOrSlug) {
+              currentActiveCourseSlug = preferredChapterIdOrSlug;
+              userManuallyNavigatedChapter = false;
+            }
+          }
+        }
+        const activeSlug = currentActiveCourseSlug || 'co-so-du-lieu';
         const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
-        const resp = await fetch('/api/courses/co-so-du-lieu', { headers });
+        const resp = await fetch('/api/courses/' + encodeURIComponent(activeSlug), { headers });
         const res = await resp.json();
         if (res.success && res.data) {
           liveCourseData = res.data;
@@ -10237,7 +10249,11 @@
         select.innerHTML = '';
         // Ưu tiên danh sách môn học đã đăng ký hoặc từ catalog
         let coursesToUse = [];
-        if (typeof enrolledCourses !== 'undefined' && Array.isArray(enrolledCourses) && enrolledCourses.length > 0) {
+        if (Array.isArray(myEnrolledCourses) && myEnrolledCourses.length > 0) {
+          coursesToUse = myEnrolledCourses;
+        } else if (Array.isArray(allSystemCourses) && allSystemCourses.length > 0) {
+          coursesToUse = allSystemCourses;
+        } else if (typeof enrolledCourses !== 'undefined' && Array.isArray(enrolledCourses) && enrolledCourses.length > 0) {
           coursesToUse = enrolledCourses;
         } else if (typeof catalogCourses !== 'undefined' && Array.isArray(catalogCourses) && catalogCourses.length > 0) {
           coursesToUse = catalogCourses;

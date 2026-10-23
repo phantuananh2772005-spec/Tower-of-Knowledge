@@ -238,7 +238,7 @@ async function main() {
   });
 
   await runAsyncTest('db: verifies question bank (expanded question bank with 60+ questions)', async () => {
-    const questions = await adminService.listQuestions({ limit: 100 });
+    const questions = await adminService.listQuestions({ ma_mon: 'mon_csdl', limit: 500 });
     assert.ok(questions.length >= 60, `Expected at least 60 questions, got ${questions.length}`);
     const q1 = questions.find(q => q.ma_cau_hoi === 'q_csdl_01_01_01');
     assert.ok(q1, 'q_csdl_01_01_01 must exist in question bank');
@@ -246,6 +246,35 @@ async function main() {
     assert.ok(q1.dap_an_a.length > 0);
     assert.ok(q1.dap_an_b.length > 0);
     assert.strictEqual(q1.vi_tri_dap_an_dung, 0);
+  });
+
+  await runAsyncTest('db: verifies new curriculum "Chuyển đổi số & Kinh tế số" (6 chapters, 18 checkpoints, 174 questions, 34-34-34-34 balanced answers)', async () => {
+    const course = await courseService.getCourseDetails('chuyen-doi-so', 'usr_admin_001');
+    assert.strictEqual(course.mon_hoc.slug, 'chuyen-doi-so');
+    assert.strictEqual(course.cac_chuong.length, 6, 'Must have 6 complete chapters');
+
+    let totalCheckpoints = 0;
+    course.cac_chuong.forEach(ch => {
+      totalCheckpoints += ch.cac_moc.length;
+    });
+    assert.strictEqual(totalCheckpoints, 18, 'Must have 18 progression checkpoints');
+
+    const cdsQuestions = await adminService.listQuestions({ ma_mon: 'mon_cds', limit: 500 });
+    assert.strictEqual(cdsQuestions.length, 174, `Expected 174 questions for mon_cds, got ${cdsQuestions.length}`);
+
+    const counts = { A: 0, B: 0, C: 0, D: 0, Interactive: 0 };
+    cdsQuestions.forEach(q => {
+      if (q.vi_tri_dap_an_dung === 0) counts.A++;
+      else if (q.vi_tri_dap_an_dung === 1) counts.B++;
+      else if (q.vi_tri_dap_an_dung === 2) counts.C++;
+      else if (q.vi_tri_dap_an_dung === 3) counts.D++;
+      else counts.Interactive++;
+    });
+    assert.strictEqual(counts.A, 34, `Expected 34 A, got ${counts.A}`);
+    assert.strictEqual(counts.B, 34, `Expected 34 B, got ${counts.B}`);
+    assert.strictEqual(counts.C, 34, `Expected 34 C, got ${counts.C}`);
+    assert.strictEqual(counts.D, 34, `Expected 34 D, got ${counts.D}`);
+    assert.strictEqual(counts.Interactive, 38, `Expected 38 interactive, got ${counts.Interactive}`);
   });
 
   await runAsyncTest('service: tests pet catalog and active equipment', async () => {
