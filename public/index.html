@@ -649,7 +649,7 @@
       <!-- Thanh Chọn Chế Độ Chơi (Game Mode Cards) -->
       <div id="arena-modes-bar" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- Chế độ 1: Đấu Hạng 1v1 (Đang mở) -->
-        <div id="card-mode-ranked" onclick="selectArenaMode('ranked')" class="cursor-pointer rounded-2xl border-2 border-emerald-500 bg-emerald-500/5 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs">
+        <div id="card-mode-ranked" onclick="selectArenaMode('ranked')" class="cursor-pointer rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-emerald-500/50 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs">
           <div class="flex items-center justify-between">
             <span class="text-2xl">🏆</span>
             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white uppercase tracking-wider">Đang Mở</span>
@@ -658,23 +658,23 @@
             <h3 class="text-sm font-bold text-[var(--foreground)] group-hover:text-emerald-500 transition">Đấu Hạng 1v1</h3>
             <p class="text-[11px] text-[var(--muted-foreground)] leading-snug mt-0.5">So tài đối kháng thời gian thực, tính điểm xếp hạng mùa giải</p>
           </div>
-          <div class="text-[10px] font-semibold text-emerald-600 flex items-center gap-1 pt-1">
-            <span>✓ Đang chọn</span>
+          <div id="card-status-ranked" class="text-[10px] font-semibold text-emerald-600 flex items-center gap-1 pt-1">
+            <span>Bấm để vào phòng rank →</span>
           </div>
         </div>
 
-        <!-- Chế độ 2: Đấu Thường & Tập Luyện -->
+        <!-- Chế độ 2: Đấu Thường & Giao Hữu -->
         <div id="card-mode-casual" onclick="selectArenaMode('casual')" class="cursor-pointer rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-cyan-500/50 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs">
           <div class="flex items-center justify-between">
             <span class="text-2xl">🥊</span>
-            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 uppercase tracking-wider">Luyện Tập</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 uppercase tracking-wider">Giao Hữu & Bot</span>
           </div>
           <div>
-            <h3 class="text-sm font-bold text-[var(--foreground)] group-hover:text-cyan-500 transition">Đấu Thường & Bot</h3>
-            <p class="text-[11px] text-[var(--muted-foreground)] leading-snug mt-0.5">Thử thách cùng Bot AI tự do, không trừ điểm xếp hạng Rank</p>
+            <h3 class="text-sm font-bold text-[var(--foreground)] group-hover:text-cyan-500 transition">Đấu Thường & Bạn Bè</h3>
+            <p class="text-[11px] text-[var(--muted-foreground)] leading-snug mt-0.5">Mời bạn qua mã phòng/QR hoặc luyện tập cùng Bot AI</p>
           </div>
-          <div class="text-[10px] font-semibold text-cyan-600 flex items-center gap-1 pt-1">
-            <span>Tập luyện ngay →</span>
+          <div id="card-status-casual" class="text-[10px] font-semibold text-cyan-600 flex items-center gap-1 pt-1">
+            <span>Bấm để vào phòng giao hữu →</span>
           </div>
         </div>
 
@@ -688,7 +688,7 @@
             <h3 class="text-sm font-bold text-[var(--foreground)] group-hover:text-purple-400 transition">Mini Game Trí Tuệ</h3>
             <p class="text-[11px] text-[var(--muted-foreground)] leading-snug mt-0.5">Nhiều tựa game giải trí đồng đội & đố vui phản xạ nhanh</p>
           </div>
-          <div class="flex flex-wrap gap-1 pt-1">
+          <div id="card-status-arcade" class="flex flex-wrap gap-1 pt-1">
             <span class="text-[9px] px-1.5 py-0.5 rounded bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--border)]">⚡ Đố Siêu Tốc</span>
             <span class="text-[9px] px-1.5 py-0.5 rounded bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--border)]">🐉 Săn Boss</span>
             <span class="text-[9px] px-1.5 py-0.5 rounded bg-[var(--background)] text-[var(--muted-foreground)] border border-[var(--border)]">🃏 Lật Thẻ</span>
@@ -697,8 +697,23 @@
       </div>
 
       <!-- Tab Đấu Hạng 1v1 -->
-      <div id="arena-fight" class="space-y-4">
-        <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 text-center space-y-5 relative shadow-xs">
+      <div id="arena-fight" class="hidden space-y-4">
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 sm:p-8 text-center space-y-5 relative shadow-xs">
+          
+          <!-- Thanh Tiêu Đề & Quay Lại Sảnh Chế Độ -->
+          <div class="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">🏆</span>
+              <div class="text-left">
+                <h3 class="text-sm font-bold text-[var(--foreground)]">Sảnh Đấu Hạng 1v1</h3>
+                <p class="text-[11px] text-[var(--muted-foreground)]">So tài đối kháng thời gian thực, leo rank mùa giải</p>
+              </div>
+            </div>
+            <button id="btn_back_modes_ranked" onclick="selectArenaMode(null)" class="px-3 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition cursor-pointer flex items-center gap-1 shadow-2xs">
+              <span>←</span>
+              <span>Đổi chế độ</span>
+            </button>
+          </div>
           <div class="flex items-center justify-center gap-10 text-7xl select-none">
             <div onclick="navTo('pet')" title="Đổi linh vật ra trận" class="cursor-pointer group flex flex-col items-center">
               <div id="arena-lobby-pet" class="w-24 h-24 flex items-center justify-center select-none group-hover:scale-105 transition">
@@ -747,30 +762,137 @@
         </div>
       </div>
 
-      <!-- Tab Đấu Thường & Bot (Casual Mode Panel) -->
+      <!-- Tab Đấu Thường & Giao Hữu (Casual / Friend Match Panel) -->
       <div id="arena-casual" class="hidden space-y-4">
-        <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 text-center space-y-5 relative shadow-xs">
-          <div class="w-16 h-16 rounded-2xl bg-cyan-500/10 text-cyan-600 text-3xl flex items-center justify-center mx-auto border border-cyan-500/20">
-            🥊
-          </div>
-          <div class="max-w-md mx-auto space-y-2">
-            <h3 class="text-base font-bold text-[var(--foreground)]">Phòng Luyện Tập Tự Do cùng Bot AI</h3>
-            <p class="text-xs text-[var(--muted-foreground)] leading-relaxed">
-              Thử thách phản xạ câu hỏi và thử nghiệm kỹ năng của Linh thú mà không tính điểm thắng thua vào Bảng xếp hạng. Thích hợp để khởi động trước khi bước vào đấu trường xếp hạng!
-            </p>
-          </div>
-          <div class="pt-2">
-            <button id="btn_dauthuong_bot" onclick="startBotPractice()" class="px-8 py-3 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-sm transition shadow-md flex items-center justify-center gap-2 mx-auto cursor-pointer hover:scale-105 active:scale-95 duration-150">
-              <span>🥊</span>
-              <span>Bắt đầu đấu tập với Bot ngay</span>
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 sm:p-8 text-center space-y-5 relative shadow-xs">
+          
+          <!-- Thanh Tiêu Đề & Quay Lại Sảnh Chế Độ -->
+          <div class="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">🥊</span>
+              <div class="text-left">
+                <h3 class="text-sm font-bold text-[var(--foreground)]">Sảnh Đấu Thường & Giao Hữu</h3>
+                <p class="text-[11px] text-[var(--muted-foreground)]">Đấu tự do cùng bạn bè hoặc luyện tập với Bot AI</p>
+              </div>
+            </div>
+            <button id="btn_back_modes_casual" onclick="selectArenaMode(null)" class="px-3 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition cursor-pointer flex items-center gap-1 shadow-2xs">
+              <span>←</span>
+              <span>Đổi chế độ</span>
             </button>
           </div>
+
+          <!-- Thanh Công Cụ Nhập Mã Phòng & Tạo Mã (Top Bar) -->
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pb-4 border-b border-[var(--border)]">
+            <!-- Nhập mã phòng từ bạn bè (Góc trái) -->
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+              <span class="text-xs font-bold text-[var(--muted-foreground)] whitespace-nowrap">🔑 Vào phòng:</span>
+              <input type="text" id="input_casual_room_code" placeholder="Nhập mã phòng (VD: TOK-8842)..." class="w-full sm:w-56 px-3 py-1.5 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs font-mono uppercase focus:outline-hidden focus:border-cyan-500">
+              <button id="btn_casual_join_room" onclick="joinCasualFriendRoom()" class="px-3.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs transition cursor-pointer shrink-0 shadow-2xs">
+                Tham gia
+              </button>
+            </div>
+
+            <!-- Nút tạo mã phòng mới (Góc phải) -->
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <button id="btn_casual_create_code" onclick="createCasualRoomCode()" class="px-3 py-1.5 rounded-xl border border-cyan-500/40 hover:bg-cyan-500/10 text-cyan-500 font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-2xs">
+                <span>🔄</span>
+                <span>Tạo mã mới</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Khối Giao Diện Ghép Đấu Tương Tự Đấu Hạng (VS Matchmaking Layout) -->
+          <div class="flex items-center justify-center gap-6 sm:gap-12 text-7xl select-none py-2">
+            <!-- Player 1 (Bạn) -->
+            <div onclick="navTo('pet')" title="Đổi linh vật ra trận" class="cursor-pointer group flex flex-col items-center">
+              <div id="casual-lobby-pet" class="w-24 h-24 flex items-center justify-center select-none group-hover:scale-105 transition">
+                <span class="pet-animated">🦉</span>
+              </div>
+              <div class="text-center mt-1 space-y-0.5">
+                <span class="user-display-name text-xs font-bold text-[var(--foreground)] block">Bạn</span>
+                <span id="casual-lobby-pet-name" class="text-[10px] font-semibold text-cyan-600 block">🐾 Rồng Nhỏ Sparky</span>
+              </div>
+            </div>
+
+            <!-- VS Badge -->
+            <div class="flex flex-col items-center">
+              <span class="text-3xl text-[var(--muted-foreground)] font-black">VS</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 font-bold uppercase mt-1">Giao hữu</span>
+            </div>
+
+            <!-- Player 2 (Ô tròn có dấu + để mời bạn) -->
+            <div onclick="copyCasualRoomCode()" title="Bấm để sao chép mã mời bạn bè" class="cursor-pointer group flex flex-col items-center">
+              <div class="w-24 h-24 rounded-full border-2 border-dashed border-cyan-500/60 hover:border-cyan-500 bg-cyan-500/5 hover:bg-cyan-500/10 flex items-center justify-center select-none group-hover:scale-105 transition transform">
+                <span class="text-4xl text-cyan-500 font-bold group-hover:rotate-90 transition-transform duration-300">➕</span>
+              </div>
+              <div class="text-center mt-1 space-y-0.5">
+                <span class="text-xs font-bold text-cyan-600 group-hover:underline block">Mời bạn bè</span>
+                <span class="text-[10px] font-semibold text-[var(--muted-foreground)] block">Chia sẻ mã phòng</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Huy hiệu mã phòng & QR Code -->
+          <div class="max-w-md mx-auto p-3.5 rounded-2xl bg-[var(--background)] border border-cyan-500/30 flex items-center justify-between gap-3 shadow-2xs">
+            <div class="text-left">
+              <span class="text-[10px] uppercase font-bold text-[var(--muted-foreground)] block">Mã phòng giao hữu của bạn:</span>
+              <span id="casual-room-code-display" class="font-mono text-base font-black text-cyan-500 tracking-wider">TOK-7294</span>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button id="btn_copy_room_code" onclick="copyCasualRoomCode()" class="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs transition cursor-pointer shadow-2xs flex items-center gap-1">
+                <span>📋</span>
+                <span>Sao chép mã</span>
+              </button>
+              <button id="btn_show_room_qr" onclick="showRoomQRModal()" class="px-2.5 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card)] text-xs text-[var(--foreground)] transition cursor-pointer" title="Hiện mã QR">
+                <span>📱 QR</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tùy chọn môn và linh thú -->
+          <div class="flex flex-wrap items-center justify-center gap-3">
+            <select id="casual-subject" class="text-xs font-semibold bg-[var(--background)] border border-[var(--border)] rounded-xl px-3 py-2 cursor-pointer">
+              <option value="csdl">Cơ sở dữ liệu</option>
+            </select>
+            <select id="casual-pet-select" onchange="quickSwitchPet(this.value)" class="text-xs font-semibold bg-[var(--background)] border border-[var(--border)] rounded-xl px-3 py-2 text-cyan-600 cursor-pointer" title="Chọn linh vật ra trận">
+              <!-- Cập nhật tự động từ danh sách sở hữu -->
+            </select>
+          </div>
+
+          <!-- Nút hành động -->
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button id="btn_casual_start_friend" onclick="startCasualFriendMatch()" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs transition shadow-md flex items-center justify-center gap-2 cursor-pointer hover:scale-105 active:scale-95 duration-150">
+              <span>⚔️</span>
+              <span>Bắt đầu đấu giao hữu</span>
+            </button>
+            <button id="btn_dauthuong_bot" onclick="startBotPractice()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-[var(--border)] hover:border-cyan-500/50 hover:bg-[var(--background)] text-[var(--foreground)] font-semibold text-xs transition flex items-center justify-center gap-2 cursor-pointer">
+              <span>🤖</span>
+              <span>Hoặc đấu tập cùng Bot AI</span>
+            </button>
+          </div>
+
         </div>
       </div>
 
       <!-- Tab Sảnh Mini Game Giải Trí (Arcade Panel) -->
       <div id="arena-arcade" class="hidden space-y-4">
-        <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-8 space-y-6 shadow-xs">
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
+          
+          <!-- Thanh Tiêu Đề & Quay Lại Sảnh Chế Độ -->
+          <div class="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">🎪</span>
+              <div class="text-left">
+                <h3 class="text-sm font-bold text-[var(--foreground)]">Sảnh Mini Game Trí Tuệ</h3>
+                <p class="text-[11px] text-[var(--muted-foreground)]">Các tựa game giải trí xả stress và rèn phản xạ</p>
+              </div>
+            </div>
+            <button id="btn_back_modes_arcade" onclick="selectArenaMode(null)" class="px-3 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition cursor-pointer flex items-center gap-1 shadow-2xs">
+              <span>←</span>
+              <span>Đổi chế độ</span>
+            </button>
+          </div>
+
           <div class="text-center max-w-md mx-auto space-y-1.5">
             <div class="w-16 h-16 rounded-2xl bg-purple-500/10 text-purple-400 text-3xl flex items-center justify-center mx-auto border border-purple-500/20">
               🎪
@@ -2216,6 +2338,34 @@
 
     </div>
 
+    <!-- ================= MODAL QR CODE PHÒNG ĐẤU GIAO HỮU ================= -->
+    <div id="modal-room-qr" class="hidden fixed inset-0 z-[80] flex items-center justify-center bg-black/75 backdrop-blur-xs p-4">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 max-w-sm w-full text-center space-y-4 shadow-2xl relative">
+        <button id="btn_close_room_qr" onclick="closeRoomQRModal()" class="absolute top-4 right-4 text-[var(--muted-foreground)] hover:text-[var(--foreground)] text-lg cursor-pointer">✕</button>
+        <div class="space-y-1">
+          <span class="text-3xl">📱</span>
+          <h3 class="text-base font-bold text-[var(--foreground)]">Mã QR Phòng Đấu Giao Hữu</h3>
+          <p class="text-xs text-[var(--muted-foreground)]">Bạn bè có thể quét QR hoặc nhập mã bên dưới để vào phòng</p>
+        </div>
+        
+        <!-- Generated visual QR container -->
+        <div class="p-4 bg-white rounded-2xl inline-block shadow-inner mx-auto border-2 border-cyan-500/40">
+          <div id="room-qr-svg" class="w-44 h-44 flex items-center justify-center">
+            <!-- SVG QR visual -->
+          </div>
+        </div>
+
+        <div class="space-y-1">
+          <span class="text-xs text-[var(--muted-foreground)] block">Mã phòng:</span>
+          <span id="qr-modal-code-display" class="font-mono text-xl font-black text-cyan-600 tracking-widest">TOK-7294</span>
+        </div>
+
+        <button id="btn_qr_copy_code" onclick="copyCasualRoomCode()" class="w-full py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center justify-center gap-2">
+          <span>📋 Sao chép mã phòng</span>
+        </button>
+      </div>
+    </div>
+
     </main>
   </div>
 
@@ -2619,6 +2769,26 @@
           .join('');
       }
 
+      // 5b. Sảnh Đấu thường (view-minigame Casual VS)
+      const casualLobbyPet = document.getElementById('casual-lobby-pet');
+      if (casualLobbyPet) {
+        if (image) {
+          casualLobbyPet.innerHTML = `<img src="${image}" alt="${name}" class="w-24 h-24 object-contain pixel-art select-none filter drop-shadow-md" />`;
+        } else {
+          casualLobbyPet.innerHTML = `<span class="text-7xl pet-animated select-none">${icon}</span>`;
+        }
+      }
+      const casualLobbyName = document.getElementById('casual-lobby-pet-name');
+      if (casualLobbyName) casualLobbyName.textContent = '🐾 ' + name;
+
+      const casualPetSelect = document.getElementById('casual-pet-select');
+      if (casualPetSelect) {
+        casualPetSelect.innerHTML = allPets
+          .filter(p => ownedPets[p.id])
+          .map(p => `<option value="${p.id}" ${p.id === id ? 'selected' : ''}>${p.icon} ${p.name}</option>`)
+          .join('');
+      }
+
       // 6. Trận đấu pet (view-battle)
       const battlePet = document.getElementById('my-pet');
       if (battlePet) {
@@ -2844,9 +3014,13 @@
     } else {
       document.getElementById('arena-rank').classList.add('hidden');
       if (typeof selectArenaMode === 'function') {
-        selectArenaMode('ranked');
+        if (typeof currentArenaMode !== 'undefined' && currentArenaMode) {
+          selectArenaMode(currentArenaMode);
+        } else {
+          selectArenaMode(null);
+        }
       } else {
-        document.getElementById('arena-fight').classList.remove('hidden');
+        document.getElementById('arena-fight').classList.add('hidden');
       }
       renderLobby();
       syncAllPetDisplays();
@@ -8155,10 +8329,177 @@
     }
 
     // =========================================================================
-    // QUẢN LÝ SẢNH ĐẤU TRƯỜNG MINI GAME: CÁC CHẾ ĐỘ CHƠI (GAME MODE CARDS)
+    // QUẢN LÝ SẢNH ĐẤU TRƯỜNG MINI GAME: CÁC CHẾ ĐỘ CHƠI & ĐẤU GIAO HỮU BẠN BÈ
     // =========================================================================
 
+    let currentArenaMode = null;
+    let currentCasualRoomCode = 'TOK-' + Math.floor(1000 + Math.random() * 9000);
+
+    function createCasualRoomCode() {
+      currentCasualRoomCode = 'TOK-' + Math.floor(1000 + Math.random() * 9000);
+      const codeEl = document.getElementById('casual-room-code-display');
+      if (codeEl) codeEl.textContent = currentCasualRoomCode;
+      const modalCodeEl = document.getElementById('qr-modal-code-display');
+      if (modalCodeEl) modalCodeEl.textContent = currentCasualRoomCode;
+      const qrSvgContainer = document.getElementById('room-qr-svg');
+      if (qrSvgContainer) qrSvgContainer.innerHTML = generateQRSvg(currentCasualRoomCode);
+      showToast('🔄 Đã tạo mã phòng mới: ' + currentCasualRoomCode, 'info');
+    }
+
+    function copyCasualRoomCode() {
+      if (!currentCasualRoomCode) {
+        currentCasualRoomCode = 'TOK-' + Math.floor(1000 + Math.random() * 9000);
+      }
+      if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(currentCasualRoomCode).then(() => {
+          showToast('📋 Đã sao chép mã phòng: ' + currentCasualRoomCode + ' vào bộ nhớ tạm! Gửi cho bạn bè để cùng vào đấu nhé.', 'success');
+        }).catch(() => {
+          showToast('Mã phòng: ' + currentCasualRoomCode, 'info');
+        });
+      } else {
+        showToast('Mã phòng: ' + currentCasualRoomCode, 'info');
+      }
+    }
+
+    function generateQRSvg(text) {
+      const size = 21;
+      const grid = [];
+      for (let i = 0; i < size; i++) grid.push(new Array(size).fill(0));
+      function setFinder(r0, c0) {
+        for (let r = 0; r < 7; r++) {
+          for (let c = 0; c < 7; c++) {
+            if (r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4)) {
+              grid[r0 + r][c0 + c] = 1;
+            }
+          }
+        }
+      }
+      setFinder(0, 0);
+      setFinder(0, 14);
+      setFinder(14, 0);
+      for (let i = 8; i < 13; i++) {
+        grid[6][i] = (i % 2 === 0) ? 1 : 0;
+        grid[i][6] = (i % 2 === 0) ? 1 : 0;
+      }
+      let hash = 0;
+      for (let i = 0; i < text.length; i++) {
+        hash = ((hash << 5) - hash) + text.charCodeAt(i);
+        hash |= 0;
+      }
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if ((r < 7 && c < 7) || (r < 7 && c >= 14) || (r >= 14 && c < 7) || r === 6 || c === 6) continue;
+          const bit = Math.abs((hash ^ (r * 31 + c * 17)) % 100);
+          grid[r][c] = (bit > 45) ? 1 : 0;
+        }
+      }
+      let rects = '';
+      for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+          if (grid[r][c] === 1) {
+            rects += `<rect x="${c}" y="${r}" width="1" height="1" fill="#0f172a" />`;
+          }
+        }
+      }
+      return `<svg viewBox="0 0 ${size} ${size}" class="w-full h-full" shape-rendering="crispEdges">${rects}</svg>`;
+    }
+
+    function showRoomQRModal() {
+      const modal = document.getElementById('modal-room-qr');
+      if (!modal) return;
+      const modalCodeEl = document.getElementById('qr-modal-code-display');
+      if (modalCodeEl) modalCodeEl.textContent = currentCasualRoomCode;
+      const qrSvgContainer = document.getElementById('room-qr-svg');
+      if (qrSvgContainer) qrSvgContainer.innerHTML = generateQRSvg(currentCasualRoomCode);
+      modal.classList.remove('hidden');
+    }
+
+    function closeRoomQRModal() {
+      const modal = document.getElementById('modal-room-qr');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function joinCasualFriendRoom() {
+      const input = document.getElementById('input_casual_room_code');
+      const code = input ? input.value.trim().toUpperCase() : '';
+      if (!code) {
+        showToast('Vui lòng nhập mã phòng hợp lệ từ bạn bè (VD: TOK-8842)', 'warning');
+        return;
+      }
+      showToast('⚔️ Đang kết nối vào phòng ' + code + '...', 'info');
+      setTimeout(() => {
+        showToast('🎉 Đã kết nối thành công với phòng của bạn bè! Sẵn sàng vào trận!', 'success');
+        startCasualFriendMatch(code);
+      }, 700);
+    }
+
+    async function startCasualFriendMatch(roomCode) {
+      clearBattleTimers();
+      trackDailyQuestAction('dau_truong');
+      const mmModal = document.getElementById('modal-matchmaking');
+      if (mmModal) mmModal.classList.add('hidden');
+      const targetRoom = roomCode || currentCasualRoomCode;
+      const subCode = document.getElementById('casual-subject') ? document.getElementById('casual-subject').value : 'csdl';
+      const maMon = subCode.startsWith('mon_') ? subCode : ('mon_' + subCode);
+      const token = localStorage.getItem('tok_token');
+
+      const friendOpponent = {
+        id: 'usr_friend_' + targetRoom.replace(/[^a-zA-Z0-9]/g, '').toLowerCase(),
+        name: 'Bạn Giao Hữu (' + targetRoom + ')',
+        petIcon: '🦊',
+        petName: 'Hồ Ly Kitsune',
+        tier: '🌱 Khởi nguyên II'
+      };
+
+      let liveMatchData = null;
+      try {
+        const resp = await fetch('/api/arena/create-match', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
+          },
+          body: JSON.stringify({
+            doi_thu_id: friendOpponent.id,
+            ma_mon: maMon
+          })
+        });
+        const res = await resp.json();
+        if (res.success && res.data) {
+          liveMatchData = res.data;
+          currentLiveMatch = res.data;
+        }
+      } catch (e) {
+        console.warn('Friend match fallback:', e);
+      }
+
+      showToast('⚔️ Đang khởi tạo trận giao hữu phòng ' + targetRoom + '!', 'success');
+      showVersusScreen(friendOpponent, liveMatchData);
+    }
+
+    function renderCasualLobby() {
+      const codeEl = document.getElementById('casual-room-code-display');
+      if (codeEl) codeEl.textContent = currentCasualRoomCode;
+      const modalCodeEl = document.getElementById('qr-modal-code-display');
+      if (modalCodeEl) modalCodeEl.textContent = currentCasualRoomCode;
+      const qrSvgContainer = document.getElementById('room-qr-svg');
+      if (qrSvgContainer && !qrSvgContainer.innerHTML) {
+        qrSvgContainer.innerHTML = generateQRSvg(currentCasualRoomCode);
+      }
+
+      // Sync subjects
+      const casualSub = document.getElementById('casual-subject');
+      const lobbySub = document.getElementById('lobby-subject');
+      if (casualSub && lobbySub) {
+        casualSub.innerHTML = lobbySub.innerHTML;
+        casualSub.value = lobbySub.value;
+      }
+
+      syncAllPetDisplays();
+    }
+
     function selectArenaMode(mode) {
+      currentArenaMode = mode;
       const rankedCard = document.getElementById('card-mode-ranked');
       const casualCard = document.getElementById('card-mode-casual');
       const arcadeCard = document.getElementById('card-mode-arcade');
@@ -8166,27 +8507,62 @@
       const casualPanel = document.getElementById('arena-casual');
       const arcadePanel = document.getElementById('arena-arcade');
 
+      const rankedStatus = document.getElementById('card-status-ranked');
+      const casualStatus = document.getElementById('card-status-casual');
+      const arcadeStatus = document.getElementById('card-status-arcade');
+
+      // Update card visual styles
       if (rankedCard) {
         rankedCard.className = (mode === 'ranked')
-          ? 'cursor-pointer rounded-2xl border-2 border-emerald-500 bg-emerald-500/5 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs'
+          ? 'cursor-pointer rounded-2xl border-2 border-emerald-500 bg-emerald-500/10 p-4 space-y-2.5 transition relative overflow-hidden group shadow-md'
           : 'cursor-pointer rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-emerald-500/50 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs';
+      }
+      if (rankedStatus) {
+        rankedStatus.innerHTML = (mode === 'ranked')
+          ? '<span class="text-emerald-600 font-bold">✓ Đang mở phòng rank</span>'
+          : '<span class="text-emerald-600">Bấm để vào phòng rank →</span>';
       }
 
       if (casualCard) {
         casualCard.className = (mode === 'casual')
-          ? 'cursor-pointer rounded-2xl border-2 border-cyan-500 bg-cyan-500/5 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs'
+          ? 'cursor-pointer rounded-2xl border-2 border-cyan-500 bg-cyan-500/10 p-4 space-y-2.5 transition relative overflow-hidden group shadow-md'
           : 'cursor-pointer rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-cyan-500/50 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs';
+      }
+      if (casualStatus) {
+        casualStatus.innerHTML = (mode === 'casual')
+          ? '<span class="text-cyan-600 font-bold">✓ Đang mở phòng giao hữu</span>'
+          : '<span class="text-cyan-600">Bấm để vào phòng giao hữu →</span>';
       }
 
       if (arcadeCard) {
         arcadeCard.className = (mode === 'arcade')
-          ? 'cursor-pointer rounded-2xl border-2 border-purple-500 bg-purple-500/5 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs'
+          ? 'cursor-pointer rounded-2xl border-2 border-purple-500 bg-purple-500/10 p-4 space-y-2.5 transition relative overflow-hidden group shadow-md'
           : 'cursor-pointer rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-purple-500/50 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs';
       }
+      if (arcadeStatus) {
+        arcadeStatus.innerHTML = (mode === 'arcade')
+          ? '<span class="text-purple-400 font-bold">✓ Đang xem sảnh mini game</span>'
+          : '<span class="text-purple-400">Bấm để khám phá sảnh →</span>';
+      }
 
+      // Show/Hide Panels
       if (fightPanel) fightPanel.classList.toggle('hidden', mode !== 'ranked');
       if (casualPanel) casualPanel.classList.toggle('hidden', mode !== 'casual');
       if (arcadePanel) arcadePanel.classList.toggle('hidden', mode !== 'arcade');
+
+      if (mode === 'ranked') {
+        renderLobby();
+        syncAllPetDisplays();
+        fightPanel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } else if (mode === 'casual') {
+        renderCasualLobby();
+        casualPanel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } else if (mode === 'arcade') {
+        arcadePanel?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } else {
+        // mode === null: Folded back to mode cards
+        document.getElementById('arena-modes-bar')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     }
 
     async function startBotPractice() {
@@ -8242,35 +8618,46 @@
     let currentPetTourStep = 0;
     const PET_TOUR_STEPS = [
       {
-        target: null,
-        title: 'Chào mừng bạn đến với Tháp Tri Thức! 👋',
-        text: 'Tớ là Linh Thú đồng hành của bạn! Tớ sẽ cùng bạn học tập, rèn luyện tư duy và vượt qua các thử thách tri thức. Hãy cùng tớ khám phá nhanh nhé!',
-        view: 'hub'
-      },
-      {
-        target: '#nav-saga',
-        title: 'Bản Đồ Tháp Mốc Học 🗺️',
-        text: 'Mỗi môn học gồm nhiều mốc thử thách với đa dạng dạng bài: Trắc nghiệm, Điền từ, Nối cặp, Sắp xếp câu. Vượt qua mốc để mở khóa tầng cao hơn và tích lũy Xu thưởng!',
-        view: 'hub'
-      },
-      {
-        target: '#arena-modes-bar',
-        title: 'Sảnh Đấu Trường Mini Game ⚔️',
-        text: 'Trung tâm tranh tài và giải trí! Bạn có thể đem tớ vào Đấu Hạng 1v1 theo thời gian thực hoặc Đấu Thường luyện tập cùng Bot AI. Sắp tới sảnh sẽ mở thêm rất nhiều mini game thú vị khác!',
-        view: 'minigame'
-      },
-      {
         target: '#hub-daily-quests',
-        title: 'Nhiệm Vụ Ngày & Chuỗi Streak 🔥',
-        text: 'Mỗi ngày hãy vào học ít nhất 1 bài để duy trì Chuỗi Streak nhận thưởng Xu nhân đôi, và hoàn thành 3 Nhiệm Vụ Ngày để rinh thêm nhiều phần thưởng hấp dẫn!',
+        fallbackTarget: '#hub-hero-banner',
+        title: 'Chào mừng bạn đến với Tháp Tri Thức! 👋',
+        text: 'Đây là Trang Chủ - trung tâm học tập của bạn. Tại đây bạn có thể theo dõi chuỗi ngày Streak, tích lũy điểm EXP, số dư Xu và hoàn thành các Nhiệm Vụ Ngày để nhận thưởng mỗi ngày!',
         view: 'hub'
+      },
+      {
+        target: '#catalog-courses-grid',
+        fallbackTarget: '#nav-catalog',
+        title: 'Kho Thư Viện Môn Học 📚',
+        text: 'Khám phá kho tri thức phong phú: Cơ sở Dữ liệu, Lập trình Web, Thuật toán, Tiếng Anh... Bạn có thể tự do bấm vào môn học để xem thông tin chi tiết và đăng ký tham gia bất cứ lúc nào!',
+        view: 'catalog'
+      },
+      {
+        target: '#enrolled-courses-grid',
+        fallbackTarget: '#nav-enrolled',
+        title: 'Môn Học Đang Theo Học 🎓',
+        text: 'Nơi quản lý toàn bộ các môn bạn đã đăng ký. Bạn có thể theo dõi tiến độ hoàn thành mốc học từng môn, đổi môn học chính và tiếp tục làm bài tập chỉ với một cú chạm!',
+        view: 'enrolled'
+      },
+      {
+        target: '#saga-roadmap-track',
+        fallbackTarget: '#nav-saga',
+        title: 'Bản Đồ Tháp Mốc Học (Saga Path) 🗺️',
+        text: 'Mỗi môn học là một hành trình leo tháp qua các mốc kiến thức với đa dạng dạng bài: Trắc nghiệm, Nối cặp, Điền từ, Sắp xếp câu. Vượt qua mốc để mở khóa tầng cao hơn và nhận Xu thưởng!',
+        view: 'saga'
       },
       {
         target: '#current-pet-icon-large',
         fallbackTarget: '#nav-pet',
-        title: 'Chăm Sóc Linh Thú & Quà Khởi Hành 🎁',
-        text: 'Đừng quên ghé phòng Linh Thú và Cửa Hàng để cho tớ ăn, nâng cấp kỹ năng chiến đấu. Giờ thì nhận ngay 20 Xu tân thủ và bắt đầu thôi nào!',
+        title: 'Linh Vật Đồng Hành Cùng Bạn 🐉',
+        text: 'Tớ chính là người bạn đồng hành trung thành của bạn trên con đường chinh phục Tháp Tri Thức! Bạn hãy thường xuyên ghé thăm phòng Linh Thú, cho tớ ăn, trò chuyện và nâng cấp chỉ số để tớ sát cánh cùng bạn nhé!',
         view: 'pet'
+      },
+      {
+        target: '#arena-modes-bar',
+        fallbackTarget: '#arena-header-banner',
+        title: 'Sảnh Đấu Trường & Mini Game ⚔️',
+        text: 'Trung tâm tranh tài và giải trí đỉnh cao! Bạn có thể chọn Đấu Hạng 1v1 leo rank mùa giải, Đấu Thường tạo mã phòng giao hữu cùng bạn bè hoặc luyện tập với AI Bot, và khám phá nhiều mini game trí tuệ sắp ra mắt!',
+        view: 'minigame'
       }
     ];
 
@@ -8389,8 +8776,8 @@
       const isClaimed = hasClaimedOnboardingGift();
       if (currentPetTourStep === PET_TOUR_STEPS.length - 1) {
         if (isClaimed) {
-          if (titleEl) titleEl.textContent = 'Chăm Sóc Linh Thú & Hành Trình Tri Thức 🌟';
-          if (textEl) textEl.textContent = 'Đừng quên ghé phòng Linh Thú và Cửa Hàng mỗi ngày để tương tác và nâng cấp sức mạnh chiến đấu cùng tớ nhé! Chúc bạn học tập thật tốt!';
+          if (titleEl) titleEl.textContent = 'Khám Phá Sảnh Đấu Trường & Mini Game 🌟';
+          if (textEl) textEl.textContent = 'Đừng quên ghé phòng Linh Thú, làm Nhiệm Vụ Ngày và tham gia Đấu Trường mỗi ngày nhé! Chúc bạn có những trải nghiệm học tập và tranh tài thật tuyệt vời!';
           if (finishBtn) {
             finishBtn.innerHTML = '<span>✓ Hoàn thành hướng dẫn</span>';
             finishBtn.className = 'shrink-0 whitespace-nowrap px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5';
