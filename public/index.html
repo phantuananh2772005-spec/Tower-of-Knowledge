@@ -6428,8 +6428,11 @@
       // Responsive dual-mode: Horizontal (PC Widescreen) vs Vertical (Mobile Portrait)
       const isH = isSagaHorizontal();
 
-      const svgW = isH ? 1150 : 680;
-      const svgH = isH ? 480 : 1010;
+      // Đảm bảo khoảng cách an toàn giữa các mốc không bao giờ bị dồn nén khi Admin thêm mốc
+      const stepDistX = 210;
+      const stepDistY = 160;
+      const svgW = isH ? (mocs.length <= 5 ? 1150 : Math.max(1150, 160 + (mocs.length - 1) * stepDistX + 220)) : 680;
+      const svgH = isH ? 480 : (mocs.length <= 5 ? 1010 : Math.max(1010, 200 + (mocs.length - 1) * stepDistY + 200));
 
       let coords = [];
       let gateCoord = isH ? { x: 1000, y: 220 } : { x: 340, y: 160 };
@@ -6472,20 +6475,20 @@
           ];
           gateCoord = { x: 1065, y: 220 };
         } else {
-          prevGateCoord = { x: 100, y: 360 };
-          const startX = 140, endX = 940;
+          // Khi Admin thêm > 5 mốc: Khung bản đồ tự mở rộng theo chiều ngang kèm thanh cuộn mượt mà
+          prevGateCoord = { x: 100, y: 310 };
+          const startX = 140;
           const yOffsets = [310, 190, 320, 190, 270];
-          const stepX = (endX - startX) / Math.max(1, mocs.length - 1);
           for (let i = 0; i < mocs.length; i++) {
             coords.push({
-              x: Math.round(startX + i * stepX),
+              x: Math.round(startX + i * stepDistX),
               y: yOffsets[i % yOffsets.length]
             });
           }
-          gateCoord = { x: 1065, y: 220 };
+          gateCoord = { x: Math.round(startX + (mocs.length - 1) * stepDistX + 130), y: 220 };
         }
       } else {
-        // Màn hình dọc Mobile: 5 mốc uốn lượn zigzag từ Dưới lên Trên, thích ứng cân đối cho N < 5
+        // Màn hình dọc Mobile: Uốn lượn zigzag từ Dưới lên Trên, thích ứng cân đối cho N < 5 và co giãn cho N > 5
         if (mocs.length === 2) {
           prevGateCoord = { x: 340, y: 840 };
           coords = [
@@ -6521,31 +6524,32 @@
           ];
           gateCoord = { x: 340, y: 150 };
         } else {
-          prevGateCoord = { x: 340, y: 950 };
-          const startY = 820, endY = 360;
+          // Khi Admin thêm > 5 mốc trên Mobile: Tự động mở rộng chiều cao bản đồ leo tháp
+          prevGateCoord = { x: 340, y: svgH - 60 };
+          const startY = svgH - 180;
           const xOffsets = [300, 410, 270, 410, 340];
-          const stepY = (startY - endY) / Math.max(1, mocs.length - 1);
           for (let i = 0; i < mocs.length; i++) {
             coords.push({
               x: xOffsets[i % xOffsets.length],
-              y: Math.round(startY - i * stepY)
+              y: Math.round(startY - i * stepDistY)
             });
           }
-          gateCoord = { x: 340, y: 160 };
+          gateCoord = { x: 340, y: 150 };
         }
       }
 
+      const activeChNumber = activeChapter ? (activeChapter.thu_tu || actualChIdx + 1) : (actualChIdx + 1);
       const N = mocs.map((m, i) => ({
         x: coords[i].x,
         y: coords[i].y,
-        l: m.tieu_de ? m.tieu_de.split(':')[0] : `Mốc 1.${i + 1}`,
+        l: m.tieu_de ? m.tieu_de.split(':')[0] : `Mốc ${activeChNumber}.${i + 1}`,
         raw: m
       }));
 
-      // Render SVG Roadmap container
+      // Render SVG Roadmap container (Hỗ trợ cuộn ngang tự nhiên khi N > 5)
       container.innerHTML = `
-        <div class="w-full bg-[#0b1020] rounded-3xl overflow-hidden border border-indigo-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.6)] relative">
-          <svg id="saga-map-svg" width="100%" viewBox="0 0 ${svgW} ${svgH}" role="img" class="block touch-manipulation select-none">
+        <div class="w-full bg-[#0b1020] rounded-3xl overflow-x-auto scrollbar-thin border border-indigo-500/30 shadow-[0_20px_50px_rgba(0,0,0,0.6)] relative">
+          <svg id="saga-map-svg" width="${isH ? (svgW > 1150 ? svgW + 'px' : '100%') : '100%'}" height="${isH ? '100%' : (svgH > 1010 ? svgH + 'px' : 'auto')}" viewBox="0 0 ${svgW} ${svgH}" role="img" class="block touch-manipulation select-none" style="${isH && svgW > 1150 ? `min-width: ${svgW}px;` : ''}">
             <title>Bản đồ học tập - Tháp Tri Thức</title>
             <desc>Bản đồ các mốc học uốn lượn Bezier ${isH ? 'ngang chuẩn PC' : 'dọc chuẩn Mobile'}, bầu trời đêm công nghệ và linh vật Pet</desc>
           </svg>
