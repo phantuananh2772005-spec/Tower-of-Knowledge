@@ -16,6 +16,8 @@ const botTimers = new Map();
 // Active ongoing matches mapped by userId and socketId for disconnect protection
 const userActiveMatchMap = new Map();
 const socketActiveMatchMap = new Map();
+// Casual / Friend room lobbies mapped by roomCode
+const casualRoomsMap = new Map();
 
 /**
  * Dynamic Adaptive Bot Formula
@@ -271,8 +273,255 @@ function initArenaSocket(io) {
       }
     });
 
+    // ----------------------------------------------------
+    // SẢNH ĐẤU THƯỜNG / GIAO HỮU BẠN BÈ THEO MÃ PHÒNG (CASUAL LOBBY)
+    // ----------------------------------------------------
+
+    // 1. Tạo hoặc cập nhật sảnh phòng giao hữu của Host
+    socket.on('casual_create_or_update_room', ({ roomCode, playerInfo = {}, ma_mon = 'mon_csdl' }) => {
+      if (!roomCode) return;
+      const normCode = roomCode.trim().toUpperCase();
+      const existing = casualRoomsMap.get(normCode);
+
+      // Nếu phòng chưa tồn tại hoặc chính user này là host
+      if (!existing || existing.host.userId === userId) {
+        const guestData = (existing && existing.guest && existing.guest.userId !== userId) ? existing.guest : null;
+        const roomData = {
+          roomCode: normCode,
+          host: {
+            userId,
+            socketId: socket.id,
+            name: playerInfo.name || socket.user.ten_dang_nhap || 'Chủ phòng',
+            petIcon: playerInfo.petIcon || '🦉',
+            petName: playerInfo.petName || 'Linh Thú',
+            tier: playerInfo.tier || '🌱 Khởi nguyên I'
+          },
+          guest: guestData,
+          ma_mon,
+          status: guestData ? 'READY' : 'WAITING',
+          updatedAt: Date.now()
+        };
+
+        casualRoomsMap.set(normCode, roomData);
+        socket.join(`casual_${normCode}`);
+
+        // Gửi cập nhật trạng thái phòng cho người tham gia
+        io.to(`casual_${normCode}`).emit('casual_room_updated', {
+          roomCode: normCode,
+          host: roomData.host,
+          guest: roomData.guest,
+          ma_mon: roomData.ma_mon,
+          status: roomData.status
+        });
+      }
+    });
+
+    // 2. Bạn bè nhập mã phòng để vào đội
+    socket.on('casual_join_room', ({ roomCode, playerInfo = {} }) => {
+      if (!roomCode) {
+        socket.emit('casual_error', 'Vui lòng nhập mã phòng hợp lệ!');
+        return;
+      }
+      const normCode = roomCode.trim().toUpperCase();
+      const room = casualRoomsMap.get(normCode);
+
+      if (!room) {
+        // Kiểm tra xem có phải mã Bot tập luyện không (hỗ trợ nhập BOT, AI hoặc khi test offline)
+        if (normCode.includes('BOT') || normCode === 'AI') {
+          const botGuest = {
+            userId: 'usr_bot_001',
+            socketId: null,
+            name: 'Đấu Sĩ Tập Sự (AI)',
+            petIcon: '🦊',
+            petName: 'Hồ Ly Kitsune',
+            tier: '🌱 Khởi nguyên II',
+            isBot: true
+          };
+          socket.emit('casual_room_updated', {
+            roomCode: normCode,
+            host: {
+              userId,
+              socketId: socket.id,
+              name: playerInfo.name || socket.user.ten_dang_nhap || 'Bạn',
+              petIcon: playerInfo.petIcon || '🦉',
+              petName: playerInfo.petName || 'Linh Thú',
+              tier: playerInfo.tier || '🌱 Khởi nguyên I'
+            },
+            guest: botGuest,
+            status: 'READY'
+          });
+          return;
+        }
+
+        socket.emit('casual_error', `Không tìm thấy phòng "${normCode}". Hãy đảm bảo chủ phòng đang mở sảnh giao hữu!`);
+        return;
+      }
+
+      // Kiểm tra nếu phòng đã có đủ 2 người và không phải là chính user này
+      if (room.guest && room.guest.userId !== userId && room.host.userId !== userId) {
+        socket.emit('casual_error', `Phòng "${normCode}" đã đủ 2 người chơi!`);
+        return;
+      }
+
+      // Đăng ký làm Guest
+      room.guest = {
+        userId,
+        socketId: socket.id,
+        name: playerInfo.name || socket.user.ten_dang_nhap || 'Bạn Giao Hữu',
+        petIcon: playerInfo.petIcon || '🦊',
+        petName: playerInfo.petName || 'Hồ Ly Kitsune',
+        tier: playerInfo.tier || '🌱 Khởi nguyên II'
+      };
+      room.status = 'READY';
+      room.updatedAt = Date.now();
+
+      socket.join(`casual_${normCode}`);
+
+      // Phát thông báo cho CẢ HAI người chơi: slot + lập tức hiện Pet và tên bạn bè!
+      io.to(`casual_${normCode}`).emit('casual_room_updated', {
+        roomCode: normCode,
+        host: room.host,
+        guest: room.guest,
+        ma_mon: room.ma_mon,
+        status: 'READY'
+      });
+    });
+
+    // 3. Rời phòng hoặc hủy đội
+    socket.on('casual_leave_room', ({ roomCode }) => {
+      if (!roomCode) return;
+      const normCode = roomCode.trim().toUpperCase();
+      const room = casualRoomsMap.get(normCode);
+      if (!room) return;
+
+      if (room.host && room.host.userId === userId) {
+        // Chủ phòng giải tán phòng
+        io.to(`casual_${normCode}`).emit('casual_room_closed', {
+          message: 'Chủ phòng đã rời khỏi sảnh giao hữu.'
+        });
+        casualRoomsMap.delete(normCode);
+      } else if (room.guest && room.guest.userId === userId) {
+        // Khách rời phòng -> Trả slot 2 về ô dấu [+]
+        room.guest = null;
+        room.status = 'WAITING';
+        socket.leave(`casual_${normCode}`);
+        io.to(`casual_${normCode}`).emit('casual_room_updated', {
+          roomCode: normCode,
+          host: room.host,
+          guest: null,
+          ma_mon: room.ma_mon,
+          status: 'WAITING'
+        });
+      }
+    });
+
+    // 4. Chủ phòng bấm Bắt Đầu Trận Đấu Giao Hữu
+    socket.on('casual_start_match', async ({ roomCode }) => {
+      if (!roomCode) return;
+      const normCode = roomCode.trim().toUpperCase();
+      const room = casualRoomsMap.get(normCode);
+
+      if (!room) {
+        socket.emit('casual_error', 'Phòng không tồn tại hoặc đã kết thúc!');
+        return;
+      }
+
+      if (!room.guest) {
+        socket.emit('casual_error', 'Chưa có bạn bè vào đội để bắt đầu trận đấu!');
+        return;
+      }
+
+      if (room.host.userId !== userId) {
+        socket.emit('casual_error', 'Chỉ có Chủ phòng mới có quyền bắt đầu trận đấu!');
+        return;
+      }
+
+      try {
+        const p1Id = room.host.userId;
+        const p2Id = room.guest.userId;
+        const isGuestBot = Boolean(room.guest.isBot);
+
+        const matchState = await arenaService.createMatch(p1Id, p2Id, room.ma_mon || 'mon_csdl');
+        const roomName = `room_${matchState.ma_tran}`;
+
+        userActiveMatchMap.set(p1Id, matchState.ma_tran);
+        socketActiveMatchMap.set(room.host.socketId, matchState.ma_tran);
+
+        if (!isGuestBot && room.guest.socketId) {
+          userActiveMatchMap.set(p2Id, matchState.ma_tran);
+          socketActiveMatchMap.set(room.guest.socketId, matchState.ma_tran);
+        }
+
+        // Host socket
+        socket.join(roomName);
+
+        // Guest socket
+        if (!isGuestBot && room.guest.socketId) {
+          const guestSocket = io.sockets.sockets.get(room.guest.socketId);
+          if (guestSocket) guestSocket.join(roomName);
+        }
+
+        // Gửi match_found cho Host
+        socket.emit('match_found', {
+          ma_tran: matchState.ma_tran,
+          nguoi_choi: matchState.nguoi_choi,
+          thoi_gian_bat_dau_sau_giay: 2.0,
+          doi_thu_la_bot: isGuestBot,
+          my_user_id: p1Id,
+          matchState,
+          isCasual: true,
+          isFriendMatch: true
+        });
+
+        // Gửi match_found cho Guest nếu là người thật
+        if (!isGuestBot && room.guest.socketId) {
+          const guestSocket = io.sockets.sockets.get(room.guest.socketId);
+          if (guestSocket) {
+            guestSocket.emit('match_found', {
+              ma_tran: matchState.ma_tran,
+              nguoi_choi: matchState.nguoi_choi,
+              thoi_gian_bat_dau_sau_giay: 2.0,
+              doi_thu_la_bot: false,
+              my_user_id: p2Id,
+              matchState,
+              isCasual: true,
+              isFriendMatch: true
+            });
+          }
+        } else if (isGuestBot) {
+          // Khởi tạo bot turns nếu đấu cùng bot
+          setupSmartBotTurns(io, roomName, matchState.ma_tran, p1Id, p2Id);
+        }
+
+        // Xóa phòng casual vì trận đấu đã bắt đầu
+        casualRoomsMap.delete(normCode);
+      } catch (err) {
+        socket.emit('casual_error', 'Lỗi khởi tạo trận giao hữu: ' + err.message);
+      }
+    });
+
     socket.on('disconnect', async (reason) => {
       console.log(`[SOCKET] Disconnect: socket ${socket.id}, user ${userId}, reason: ${reason}`);
+
+      // Dọn dẹp phòng casual nếu socket là Host hoặc Guest
+      for (const [code, r] of casualRoomsMap.entries()) {
+        if (r.host && r.host.socketId === socket.id) {
+          io.to(`casual_${code}`).emit('casual_room_closed', {
+            message: 'Chủ phòng đã rời khỏi hoặc mất kết nối.'
+          });
+          casualRoomsMap.delete(code);
+        } else if (r.guest && r.guest.socketId === socket.id) {
+          r.guest = null;
+          r.status = 'WAITING';
+          io.to(`casual_${code}`).emit('casual_room_updated', {
+            roomCode: code,
+            host: r.host,
+            guest: null,
+            ma_mon: r.ma_mon,
+            status: 'WAITING'
+          });
+        }
+      }
       const idx = matchmakingQueue.findIndex(q => q.userId === userId);
       if (idx !== -1) {
         if (matchmakingQueue[idx].timer) clearTimeout(matchmakingQueue[idx].timer);

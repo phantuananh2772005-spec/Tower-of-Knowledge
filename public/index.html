@@ -870,31 +870,52 @@
 
           <!-- Khối Giao Diện Ghép Đấu Tương Tự Đấu Hạng (VS Matchmaking Layout) -->
           <div class="flex items-center justify-center gap-6 sm:gap-12 text-7xl select-none py-2">
-            <!-- Player 1 (Bạn) -->
+            <!-- Player 1 (Bạn / Chủ phòng) -->
             <div onclick="navTo('pet')" title="Đổi linh vật ra trận" class="cursor-pointer group flex flex-col items-center">
               <div id="casual-lobby-pet" class="w-24 h-24 flex items-center justify-center select-none group-hover:scale-105 transition">
                 <span class="pet-animated">🦉</span>
               </div>
               <div class="text-center mt-1 space-y-0.5">
-                <span class="user-display-name text-xs font-bold text-[var(--foreground)] block">Bạn</span>
+                <span id="casual-lobby-p1-name" class="user-display-name text-xs font-bold text-[var(--foreground)] block">Bạn</span>
                 <span id="casual-lobby-pet-name" class="text-[10px] font-semibold text-cyan-600 block">🐾 Rồng Nhỏ Sparky</span>
+                <span id="casual-lobby-p1-role" class="text-[9px] font-bold text-amber-500 font-mono">👑 CHỦ PHÒNG</span>
               </div>
             </div>
 
             <!-- VS Badge -->
-            <div class="flex flex-col items-center">
-              <span class="text-3xl text-[var(--muted-foreground)] font-black">VS</span>
-              <span class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 font-bold uppercase mt-1">Giao hữu</span>
+            <div id="casual-lobby-vs-container" class="flex flex-col items-center">
+              <span id="casual-lobby-vs-icon" class="text-3xl text-[var(--muted-foreground)] font-black transition-all">VS</span>
+              <span id="casual-lobby-vs-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 font-bold uppercase mt-1">Giao hữu</span>
             </div>
 
-            <!-- Player 2 (Ô tròn có dấu + để mời bạn) -->
-            <div onclick="copyCasualRoomCode()" title="Bấm để sao chép mã mời bạn bè" class="cursor-pointer group flex flex-col items-center">
-              <div class="w-24 h-24 rounded-full border-2 border-dashed border-cyan-500/60 hover:border-cyan-500 bg-cyan-500/5 hover:bg-cyan-500/10 flex items-center justify-center select-none group-hover:scale-105 transition transform">
-                <span class="text-4xl text-cyan-500 font-bold group-hover:rotate-90 transition-transform duration-300">➕</span>
+            <!-- Player 2 (Ô tròn có dấu + để mời bạn hoặc hiển thị Pet bạn bè) -->
+            <div id="casual-lobby-p2-slot" class="flex flex-col items-center">
+              <!-- Trạng thái 1: Chưa có bạn (Ô dấu + mời bạn bè) -->
+              <div id="casual-p2-empty" onclick="copyCasualRoomCode()" title="Bấm để sao chép mã mời bạn bè" class="cursor-pointer group flex flex-col items-center">
+                <div class="w-24 h-24 rounded-full border-2 border-dashed border-cyan-500/60 hover:border-cyan-500 bg-cyan-500/5 hover:bg-cyan-500/10 flex items-center justify-center select-none group-hover:scale-105 transition transform">
+                  <span class="text-4xl text-cyan-500 font-bold group-hover:rotate-90 transition-transform duration-300">➕</span>
+                </div>
+                <div class="text-center mt-1 space-y-0.5">
+                  <span class="text-xs font-bold text-cyan-600 group-hover:underline block">Mời bạn bè</span>
+                  <span class="text-[10px] font-semibold text-[var(--muted-foreground)] block">Chia sẻ mã phòng</span>
+                </div>
               </div>
-              <div class="text-center mt-1 space-y-0.5">
-                <span class="text-xs font-bold text-cyan-600 group-hover:underline block">Mời bạn bè</span>
-                <span class="text-[10px] font-semibold text-[var(--muted-foreground)] block">Chia sẻ mã phòng</span>
+
+              <!-- Trạng thái 2: Đã có bạn bè trong đội (Hiển thị Pet + Tên bạn bè) -->
+              <div id="casual-p2-occupied" class="hidden flex flex-col items-center animate-in zoom-in-95 duration-200">
+                <div id="casual-lobby-p2-pet" class="w-24 h-24 flex items-center justify-center select-none text-7xl">
+                  <span class="pet-animated">🦊</span>
+                </div>
+                <div class="text-center mt-1 space-y-0.5">
+                  <span id="casual-lobby-p2-name" class="text-xs font-bold text-[var(--foreground)] block">Bạn Giao Hữu</span>
+                  <span id="casual-lobby-p2-pet-name" class="text-[10px] font-semibold text-cyan-600 block">🐾 Hồ Ly Kitsune</span>
+                  <div class="flex items-center justify-center gap-1.5 pt-0.5">
+                    <span id="casual-lobby-p2-badge" class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-mono">
+                      ● ĐÃ VÀO ĐỘI
+                    </span>
+                    <button id="btn_casual_leave_party" onclick="leaveCasualParty()" class="text-[10px] text-rose-500 hover:text-rose-600 hover:underline cursor-pointer" title="Rời đội hoặc xóa bạn">✕</button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -928,13 +949,13 @@
 
           <!-- Nút hành động -->
           <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <button id="btn_casual_start_friend" onclick="startCasualFriendMatch()" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs transition shadow-md flex items-center justify-center gap-2 cursor-pointer hover:scale-105 active:scale-95 duration-150">
+            <button id="btn_casual_start_friend" onclick="handleCasualStartClick()" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs transition shadow-md flex items-center justify-center gap-2 cursor-pointer hover:scale-105 active:scale-95 duration-150">
               <span>⚔️</span>
-              <span>Bắt đầu đấu giao hữu</span>
+              <span id="casual-start-btn-label">Bắt đầu đấu giao hữu</span>
             </button>
-            <button id="btn_dauthuong_bot" onclick="startBotPractice()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-[var(--border)] hover:border-cyan-500/50 hover:bg-[var(--background)] text-[var(--foreground)] font-semibold text-xs transition flex items-center justify-center gap-2 cursor-pointer">
+            <button id="btn_dauthuong_bot" onclick="addBotToCasualParty()" class="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-[var(--border)] hover:border-cyan-500/50 hover:bg-[var(--background)] text-[var(--foreground)] font-semibold text-xs transition flex items-center justify-center gap-2 cursor-pointer">
               <span>🤖</span>
-              <span>Hoặc đấu tập cùng Bot AI</span>
+              <span>Đấu tập cùng Bot AI</span>
             </button>
           </div>
 
@@ -9387,6 +9408,20 @@
             console.log('⚡ Nhận sự kiện bảng xếp hạng cập nhật thời gian thực');
             loadRealLeaderboard();
           });
+          liveSocket.on('casual_room_updated', (data) => {
+            handleCasualRoomUpdated(data);
+          });
+          liveSocket.on('casual_room_closed', (data) => {
+            handleCasualRoomClosed(data);
+          });
+          liveSocket.on('casual_error', (msg) => {
+            showToast('⚠️ ' + msg, 'warning');
+          });
+          liveSocket.on('match_found', (data) => {
+            if (data && data.isCasual) {
+              handleCasualMatchFound(data);
+            }
+          });
         } catch (e) {
           console.warn('Socket.IO offline fallback:', e);
         }
@@ -9603,14 +9638,49 @@
     let currentArenaMode = null;
     let currentCasualRoomCode = 'TOK-' + Math.floor(1000 + Math.random() * 9000);
 
+    let currentCasualParty = {
+      roomCode: null,
+      isHost: true,
+      partner: null // { name, petIcon, petName, tier, isBot, userId, socketId }
+    };
+
+    function getMyCasualPlayerInfo() {
+      const pet = (typeof currentEquippedPet !== 'undefined' && currentEquippedPet) ? currentEquippedPet : { name: 'Rồng Nhỏ Sparky', icon: '🦉' };
+      const petIcon = pet.icon || '🦉';
+      const petName = pet.name || 'Rồng Nhỏ Sparky';
+      return {
+        userId: currentUserAccount?.userId || ('usr_guest_' + Date.now().toString(36)),
+        name: currentUserAccount?.displayName || 'Bạn',
+        petIcon,
+        petName,
+        tier: currentUserAccount?.rankTitle || '🌱 Khởi nguyên I'
+      };
+    }
+
     function createCasualRoomCode() {
       currentCasualRoomCode = 'TOK-' + Math.floor(1000 + Math.random() * 9000);
+      currentCasualParty.roomCode = currentCasualRoomCode;
+      currentCasualParty.isHost = true;
+      clearCasualPartner();
+
       const codeEl = document.getElementById('casual-room-code-display');
       if (codeEl) codeEl.textContent = currentCasualRoomCode;
       const modalCodeEl = document.getElementById('qr-modal-code-display');
       if (modalCodeEl) modalCodeEl.textContent = currentCasualRoomCode;
       const qrSvgContainer = document.getElementById('room-qr-svg');
       if (qrSvgContainer) qrSvgContainer.innerHTML = generateQRSvg(currentCasualRoomCode);
+
+      // Đồng bộ thông tin phòng lên Socket.IO
+      if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected) {
+        const sub = document.getElementById('casual-subject') ? document.getElementById('casual-subject').value : 'csdl';
+        const maMon = sub.startsWith('mon_') ? sub : ('mon_' + sub);
+        liveSocket.emit('casual_create_or_update_room', {
+          roomCode: currentCasualRoomCode,
+          playerInfo: getMyCasualPlayerInfo(),
+          ma_mon: maMon
+        });
+      }
+
       showToast('🔄 Đã tạo mã phòng mới: ' + currentCasualRoomCode, 'info');
     }
 
@@ -9687,6 +9757,114 @@
       if (modal) modal.classList.add('hidden');
     }
 
+    // Cập nhật linh thú và đối thủ vào ô [+] của Đội / Sảnh giao hữu
+    function setCasualPartner(partner, isHost = true) {
+      currentCasualParty.partner = partner;
+      currentCasualParty.isHost = isHost;
+
+      const p2Empty = document.getElementById('casual-p2-empty');
+      const p2Occupied = document.getElementById('casual-p2-occupied');
+      if (p2Empty) p2Empty.classList.add('hidden');
+      if (p2Occupied) p2Occupied.classList.remove('hidden');
+
+      // Điền Pet và thông tin bạn bè vào ô slot 2
+      const p2Pet = document.getElementById('casual-lobby-p2-pet');
+      if (p2Pet) {
+        p2Pet.innerHTML = `<span class="pet-animated text-7xl select-none inline-block">${partner.petIcon || '🦊'}</span>`;
+      }
+      const p2Name = document.getElementById('casual-lobby-p2-name');
+      if (p2Name) p2Name.textContent = partner.name || 'Bạn Giao Hữu';
+      const p2PetName = document.getElementById('casual-lobby-p2-pet-name');
+      if (p2PetName) p2PetName.textContent = '🐾 ' + (partner.petName || 'Hồ Ly Kitsune');
+      const p2Badge = document.getElementById('casual-lobby-p2-badge');
+      if (p2Badge) {
+        p2Badge.textContent = partner.isBot ? '● BOT SẴN SÀNG' : '● ĐÃ VÀO ĐỘI';
+      }
+
+      // Huy hiệu VS ở giữa chuyển thành trạng thái Đã kết đội
+      const vsIcon = document.getElementById('casual-lobby-vs-icon');
+      const vsBadge = document.getElementById('casual-lobby-vs-badge');
+      if (vsIcon) {
+        vsIcon.textContent = '⚔️';
+        vsIcon.className = 'text-3xl text-emerald-500 font-black animate-pulse';
+      }
+      if (vsBadge) {
+        vsBadge.textContent = 'Đã kết đội!';
+        vsBadge.className = 'text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold uppercase mt-1 ring-1 ring-emerald-500/30';
+      }
+
+      // Nút hành động Bắt đầu
+      const startBtn = document.getElementById('btn_casual_start_friend');
+      const startLabel = document.getElementById('casual-start-btn-label');
+      if (startBtn && startLabel) {
+        if (isHost) {
+          startLabel.textContent = `Khai chiến cùng ${partner.name}! ⚔️`;
+          startBtn.disabled = false;
+          startBtn.className = "w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-emerald-600 hover:from-cyan-500 hover:to-emerald-500 text-white font-bold text-xs transition shadow-md flex items-center justify-center gap-2 cursor-pointer hover:scale-105 active:scale-95 duration-150 animate-pulse";
+        } else {
+          startLabel.textContent = `⏳ Đã vào đội! Chờ chủ phòng bắt đầu...`;
+          startBtn.disabled = true;
+          startBtn.className = "w-full sm:w-auto px-6 py-2.5 rounded-xl bg-cyan-700/60 text-white/80 font-bold text-xs transition shadow-md flex items-center justify-center gap-2 cursor-not-allowed opacity-80";
+        }
+      }
+    }
+
+    // Đưa ô slot 2 về trạng thái dấu [+] mời bạn
+    function clearCasualPartner() {
+      currentCasualParty.partner = null;
+
+      const p2Empty = document.getElementById('casual-p2-empty');
+      const p2Occupied = document.getElementById('casual-p2-occupied');
+      if (p2Empty) p2Empty.classList.remove('hidden');
+      if (p2Occupied) p2Occupied.classList.add('hidden');
+
+      // Reset huy hiệu VS
+      const vsIcon = document.getElementById('casual-lobby-vs-icon');
+      const vsBadge = document.getElementById('casual-lobby-vs-badge');
+      if (vsIcon) {
+        vsIcon.textContent = 'VS';
+        vsIcon.className = 'text-3xl text-[var(--muted-foreground)] font-black transition-all';
+      }
+      if (vsBadge) {
+        vsBadge.textContent = 'Giao hữu';
+        vsBadge.className = 'text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 font-bold uppercase mt-1';
+      }
+
+      // Reset nút bắt đầu
+      const startBtn = document.getElementById('btn_casual_start_friend');
+      const startLabel = document.getElementById('casual-start-btn-label');
+      if (startBtn && startLabel) {
+        startLabel.textContent = 'Bắt đầu đấu giao hữu';
+        startBtn.disabled = false;
+        startBtn.className = "w-full sm:w-auto px-6 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs transition shadow-md flex items-center justify-center gap-2 cursor-pointer hover:scale-105 active:scale-95 duration-150";
+      }
+    }
+
+    function leaveCasualParty() {
+      if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected && currentCasualParty.roomCode) {
+        liveSocket.emit('casual_leave_room', { roomCode: currentCasualParty.roomCode });
+      }
+      clearCasualPartner();
+      currentCasualParty.isHost = true;
+      currentCasualParty.roomCode = currentCasualRoomCode;
+      syncAllPetDisplays();
+      showToast('Đã rời đội / làm mới sảnh.', 'info');
+    }
+
+    function addBotToCasualParty() {
+      const chosenBot = {
+        userId: 'usr_bot_001',
+        name: 'Đấu Sĩ Tập Sự (Bot AI)',
+        petIcon: '🦊',
+        petName: 'Hồ Ly Kitsune',
+        tier: '🌱 Khởi nguyên II',
+        isBot: true
+      };
+      setCasualPartner(chosenBot, true);
+      if (audioSettings && audioSettings.battle) playAdvancedSound('click');
+      showToast('🤖 Đã mời Đấu Sĩ Tập Sự (Bot AI) vào đội! Bấm [Khai chiến] để bắt đầu trận đấu!', 'success');
+    }
+
     function joinCasualFriendRoom() {
       const input = document.getElementById('input_casual_room_code');
       const code = input ? input.value.trim().toUpperCase() : '';
@@ -9694,24 +9872,149 @@
         showToast('Vui lòng nhập mã phòng hợp lệ từ bạn bè (VD: TOK-8842)', 'warning');
         return;
       }
+
+      if (code === currentCasualRoomCode) {
+        showToast('⚠️ Đây là mã phòng của chính bạn! Hãy gửi mã này cho bạn bè hoặc nhập mã từ bạn bè nhé.', 'warning');
+        return;
+      }
+
+      // Nếu người dùng nhập mã Bot/AI để đấu thử
+      if (code.includes('BOT') || code === 'AI') {
+        addBotToCasualParty();
+        return;
+      }
+
       showToast('⚔️ Đang kết nối vào phòng ' + code + '...', 'info');
-      setTimeout(() => {
-        showToast('🎉 Đã kết nối thành công với phòng của bạn bè! Sẵn sàng vào trận!', 'success');
-        startCasualFriendMatch(code);
-      }, 700);
+
+      if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected) {
+        liveSocket.emit('casual_join_room', {
+          roomCode: code,
+          playerInfo: getMyCasualPlayerInfo()
+        });
+      } else {
+        // Fallback mô phỏng nếu mất mạng
+        showToast('⚠️ Chưa kết nối Socket! Tự động kết nối đối thủ phòng ' + code, 'info');
+        const simulatedFriend = {
+          userId: 'usr_friend_' + code.toLowerCase().replace(/[^a-z0-9]/g, ''),
+          name: 'Bạn Giao Hữu (' + code + ')',
+          petIcon: '🦊',
+          petName: 'Hồ Ly Kitsune',
+          tier: '🌱 Khởi nguyên II',
+          isBot: true
+        };
+        setCasualPartner(simulatedFriend, true);
+      }
     }
 
-    async function startCasualFriendMatch(roomCode) {
+    function handleCasualRoomUpdated(data) {
+      if (!data) return;
+      const myId = currentUserAccount?.userId;
+
+      if (data.host && data.host.userId === myId) {
+        // Bản thân là Chủ phòng
+        currentCasualParty.isHost = true;
+        currentCasualParty.roomCode = data.roomCode;
+        if (data.guest) {
+          setCasualPartner(data.guest, true);
+          if (audioSettings && audioSettings.battle) playAdvancedSound('pair-match');
+          showToast(`🎉 ${data.guest.name} đã vào đội cùng bạn! Bấm [Khai chiến] để bắt đầu!`, 'success');
+        } else {
+          clearCasualPartner();
+          showToast('Bạn bè đã rời khỏi đội.', 'info');
+        }
+      } else if (data.guest && data.guest.userId === myId) {
+        // Bản thân là Khách vào phòng bạn bè
+        currentCasualParty.isHost = false;
+        currentCasualParty.roomCode = data.roomCode;
+        setCasualPartner(data.host, false);
+        if (audioSettings && audioSettings.battle) playAdvancedSound('pair-match');
+        showToast(`🎉 Đã tham gia vào đội của ${data.host.name}! Chờ chủ phòng bắt đầu trận...`, 'success');
+      }
+    }
+
+    function handleCasualRoomClosed(data) {
+      clearCasualPartner();
+      currentCasualParty.isHost = true;
+      currentCasualParty.roomCode = currentCasualRoomCode;
+      showToast(data?.message || 'Chủ phòng đã giải tán phòng.', 'warning');
+    }
+
+    function handleCasualMatchFound(data) {
+      clearBattleTimers();
+      trackDailyQuestAction('dau_truong');
+      if (audioSettings && audioSettings.battle) playAdvancedSound('click');
+
+      if (data.my_user_id) {
+        B.myUserId = data.my_user_id;
+        if (!currentUserAccount.userId) {
+          currentUserAccount.userId = data.my_user_id;
+        }
+      }
+      B.isBot = Boolean(data.doi_thu_la_bot);
+      B.isCasual = true;
+      B.isFriendMatch = true;
+
+      const myId = B.myUserId || currentUserAccount?.userId;
+      const opUser = (data.nguoi_choi || []).find(p => p.ma_nguoi_dung !== myId) || (data.nguoi_choi || [])[1] || (data.nguoi_choi || [])[0] || {};
+      const opponent = {
+        id: opUser.ma_nguoi_dung || 'usr_friend',
+        name: opUser.ten_hien_thi || 'Bạn Giao Hữu',
+        petIcon: opUser.thu_cung?.ten_thu_cung?.includes('Hồ Ly') ? '🦊' : (opUser.thu_cung?.ten_thu_cung?.includes('Thạch') ? '🗿' : '🦉'),
+        petName: opUser.thu_cung?.ten_thu_cung || 'Linh Thú Đối Thủ',
+        tier: opUser.danh_hieu || '🌱 Khởi nguyên I',
+        isBot: Boolean(data.doi_thu_la_bot),
+        isCasual: true,
+        isFriendMatch: true
+      };
+
+      const mData = data.matchState || data;
+      mData.my_user_id = B.myUserId;
+      mData.doi_thu_la_bot = Boolean(data.doi_thu_la_bot);
+      mData.isCasual = true;
+      mData.isFriendMatch = true;
+
+      showVersusScreen(opponent, mData);
+    }
+
+    function handleCasualStartClick() {
+      if (!currentCasualParty.partner) {
+        showToast('💡 Chưa có bạn trong đội! Hãy chia sẻ mã phòng cho bạn bè nhập, hoặc bấm [Đấu tập cùng Bot AI] bên cạnh nhé.', 'info');
+        return;
+      }
+
+      if (!currentCasualParty.isHost) {
+        showToast('⏳ Bạn đã vào đội sẵn sàng! Vui lòng chờ Chủ phòng bấm bắt đầu trận đấu nhé.', 'info');
+        return;
+      }
+
+      const partner = currentCasualParty.partner;
+      const targetRoom = currentCasualParty.roomCode || currentCasualRoomCode;
+
+      if (partner.isBot) {
+        // Đấu cùng Bot AI
+        startCasualFriendMatch(targetRoom, partner);
+      } else {
+        // Đấu người thật qua Socket
+        if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected) {
+          showToast('⚔️ Đang kích hoạt trận đấu giao hữu cho cả hai người chơi...', 'info');
+          liveSocket.emit('casual_start_match', { roomCode: targetRoom });
+        } else {
+          startCasualFriendMatch(targetRoom, partner);
+        }
+      }
+    }
+
+    async function startCasualFriendMatch(roomCode, customPartner) {
       clearBattleTimers();
       trackDailyQuestAction('dau_truong');
       const mmModal = document.getElementById('modal-matchmaking');
       if (mmModal) mmModal.classList.add('hidden');
-      const targetRoom = roomCode || currentCasualRoomCode;
+      const targetRoom = roomCode || currentCasualParty.roomCode || currentCasualRoomCode;
       const subCode = document.getElementById('casual-subject') ? document.getElementById('casual-subject').value : 'csdl';
       const maMon = subCode.startsWith('mon_') ? subCode : ('mon_' + subCode);
       const token = localStorage.getItem('tok_token');
 
-      const friendOpponent = {
+      const opponent = customPartner || currentCasualParty.partner || {
         id: 'usr_friend_' + targetRoom.replace(/[^a-zA-Z0-9]/g, '').toLowerCase(),
         name: 'Bạn Giao Hữu (' + targetRoom + ')',
         petIcon: '🦊',
@@ -9722,6 +10025,9 @@
         isFriendMatch: true
       };
 
+      opponent.isCasual = true;
+      opponent.isFriendMatch = true;
+
       let liveMatchData = null;
       try {
         const resp = await fetch('/api/arena/create-match', {
@@ -9731,7 +10037,7 @@
             ...(token ? { 'Authorization': 'Bearer ' + token } : {})
           },
           body: JSON.stringify({
-            doi_thu_id: friendOpponent.id,
+            doi_thu_id: opponent.userId || opponent.id || 'usr_bot_001',
             ma_mon: maMon
           })
         });
@@ -9745,7 +10051,7 @@
       }
 
       showToast('⚔️ Đang khởi tạo trận giao hữu phòng ' + targetRoom + '!', 'success');
-      showVersusScreen(friendOpponent, liveMatchData);
+      showVersusScreen(opponent, liveMatchData);
     }
 
     function renderCasualLobby() {
@@ -9766,7 +10072,26 @@
         casualSub.value = lobbySub.value;
       }
 
+      // Sync Left player (Player 1)
       syncAllPetDisplays();
+
+      // Nếu đã có bạn bè trong đội, tiếp tục render; nếu chưa, giữ ô dấu [+]
+      if (currentCasualParty && currentCasualParty.partner) {
+        setCasualPartner(currentCasualParty.partner, currentCasualParty.isHost);
+      } else {
+        clearCasualPartner();
+      }
+
+      // Đăng ký phòng lên Socket.IO nếu là Host
+      if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected && currentCasualParty.isHost) {
+        const sub = casualSub ? casualSub.value : 'csdl';
+        const maMon = sub.startsWith('mon_') ? sub : ('mon_' + sub);
+        liveSocket.emit('casual_create_or_update_room', {
+          roomCode: currentCasualRoomCode,
+          playerInfo: getMyCasualPlayerInfo(),
+          ma_mon: maMon
+        });
+      }
     }
 
     function selectArenaMode(mode) {
