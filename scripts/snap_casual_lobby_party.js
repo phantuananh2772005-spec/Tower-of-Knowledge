@@ -8,64 +8,59 @@ async function testCasualLobbyParty() {
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1200,800']
   });
 
-  const page = await browser.newPage();
-  await page.setViewport({ width: 1200, height: 800 });
+  const artifactDir = path.resolve('C:/Users/phant/.gemini/antigravity/brain/1749ee9f-cdb1-4857-9457-40771305fd29');
 
+  // 1. Desktop test (1200 x 750)
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1200, height: 750 });
   await page.goto('http://localhost:3000/', { waitUntil: 'networkidle0' });
 
-  // Open casual arena lobby
   await page.evaluate(() => {
-    // Hide modals
     document.querySelectorAll('.fixed, [id^="modal-"]').forEach(m => m.classList.add('hidden'));
-
-    // Switch to view-minigame
-    if (typeof navTo === 'function') {
-      navTo('minigame');
-    } else {
-      document.querySelectorAll('section[id^="view-"]').forEach(s => s.classList.add('hidden'));
-      const mgView = document.getElementById('view-minigame');
-      if (mgView) mgView.classList.remove('hidden');
-    }
-
-    // Select casual mode
-    if (typeof selectArenaMode === 'function') {
-      selectArenaMode('casual');
-    }
+    navTo('minigame');
+    selectArenaMode('casual');
   });
+  await new Promise(r => setTimeout(r, 500));
 
-  await new Promise(r => setTimeout(r, 600));
-
-  const artifactDir = path.resolve('C:/Users/phant/.gemini/antigravity/brain/1749ee9f-cdb1-4857-9457-40771305fd29');
-  const snap1 = path.join(artifactDir, 'snap_casual_lobby_empty.png');
+  const snap1 = path.join(artifactDir, 'snap_casual_lobby_desktop_fixed.png');
   await page.screenshot({ path: snap1 });
-  console.log('Saved empty casual lobby screenshot:', snap1);
+  console.log('Saved snap1:', snap1);
 
-  // Now trigger inviting bot/friend into the [+] slot
+  // Invite bot / friend into lobby
   await page.evaluate(() => {
     if (typeof addBotToCasualParty === 'function') {
       addBotToCasualParty();
     }
   });
+  await new Promise(r => setTimeout(r, 400));
 
-  await new Promise(r => setTimeout(r, 500));
-
-  const snap2 = path.join(artifactDir, 'snap_casual_lobby_partner_ready.png');
+  const snap2 = path.join(artifactDir, 'snap_casual_lobby_desktop_partner.png');
   await page.screenshot({ path: snap2 });
-  console.log('Saved partner ready screenshot:', snap2);
+  console.log('Saved snap2:', snap2);
 
-  // Also test typing code into input and submitting
-  await page.evaluate(() => {
-    const input = document.getElementById('input_casual_room_code');
-    if (input) input.value = 'TOK-8842';
-    if (typeof joinCasualFriendRoom === 'function') {
-      joinCasualFriendRoom();
-    }
+  // 2. Mobile view (390 x 844)
+  const mobilePage = await browser.newPage();
+  await mobilePage.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+  await mobilePage.goto('http://localhost:3000/', { waitUntil: 'networkidle0' });
+  await mobilePage.evaluate(() => {
+    document.querySelectorAll('.fixed, [id^="modal-"]').forEach(m => m.classList.add('hidden'));
+    navTo('minigame');
+    selectArenaMode('casual');
   });
-
   await new Promise(r => setTimeout(r, 500));
-  const snap3 = path.join(artifactDir, 'snap_casual_lobby_joined_code.png');
-  await page.screenshot({ path: snap3 });
-  console.log('Saved joined code screenshot:', snap3);
+
+  const snap3 = path.join(artifactDir, 'snap_casual_lobby_mobile.png');
+  await mobilePage.screenshot({ path: snap3 });
+  console.log('Saved snap3:', snap3);
+
+  // Ranked mode test
+  await page.evaluate(() => {
+    selectArenaMode('ranked');
+  });
+  await new Promise(r => setTimeout(r, 400));
+  const snap4 = path.join(artifactDir, 'snap_ranked_lobby_desktop.png');
+  await page.screenshot({ path: snap4 });
+  console.log('Saved snap4:', snap4);
 
   await browser.close();
 }

@@ -369,7 +369,7 @@
     </header>
 
     <!-- NỘI DUNG CUỘN (SCROLLABLE VIEWS) -->
-    <main id="app-main-scroll" class="flex-1 overflow-y-auto">
+    <main id="app-main-scroll" class="flex-1 overflow-y-auto flex flex-col">
 
       <!-- ================= VIEW 1: BẢN ĐỒ LỘ TRÌNH LEO THÁP (CHUYỂN VÀO KHI HỌC MÔN) ================= -->
       <section id="view-saga" class="hidden px-2 sm:px-4 max-w-2xl lg:max-w-6xl xl:max-w-7xl w-full mx-auto pt-4 pb-8 transition-all duration-300">
@@ -690,7 +690,7 @@
     </section>
 
     <!-- ================= VIEW 6: ĐẤU TRƯỜNG MINI GAME (SẢNH CHẾ ĐỘ + BXH) ================= -->
-    <section id="view-minigame" class="hidden p-6 sm:p-10 max-w-5xl w-full mx-auto space-y-6">
+    <section id="view-minigame" class="hidden p-3 sm:p-5 max-w-5xl lg:max-w-6xl w-full mx-auto flex-1 flex flex-col justify-center min-h-0 space-y-4">
       <!-- Tiêu đề Sảnh Đấu Trường Mini Game -->
       <div id="arena-header-banner" class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border)] pb-4">
         <div>
@@ -758,11 +758,11 @@
       </div>
 
       <!-- Tab Đấu Hạng 1v1 -->
-      <div id="arena-fight" class="hidden space-y-4">
-        <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 sm:p-8 text-center space-y-5 relative shadow-xs">
+      <div id="arena-fight" class="hidden flex-1 flex flex-col justify-center min-h-0 w-full py-1">
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-4 sm:p-6 text-center flex-1 flex flex-col justify-between relative shadow-xs min-h-0">
           
           <!-- Thanh Tiêu Đề & Quay Lại Sảnh Chế Độ -->
-          <div class="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+          <div class="flex items-center justify-between pb-2 sm:pb-3 border-b border-[var(--border)] shrink-0">
             <div class="flex items-center gap-2">
               <span class="text-xl">🏆</span>
               <div class="text-left">
@@ -781,9 +781,9 @@
               </button>
             </div>
           </div>
-          <div class="flex items-center justify-center gap-10 text-7xl select-none">
+          <div class="flex items-center justify-center gap-6 sm:gap-10 text-6xl sm:text-7xl select-none py-2 my-auto shrink-0">
             <div onclick="navTo('pet')" title="Đổi linh vật ra trận" class="cursor-pointer group flex flex-col items-center">
-              <div id="arena-lobby-pet" class="w-24 h-24 flex items-center justify-center select-none group-hover:scale-105 transition">
+              <div id="arena-lobby-pet" class="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center select-none group-hover:scale-105 transition">
                 <span class="pet-animated">🦉</span>
               </div>
               <div class="text-center mt-1 space-y-0.5">
@@ -791,10 +791,10 @@
                 <span id="arena-lobby-pet-name" class="text-[10px] font-semibold text-emerald-500 block">🐾 Rồng Nhỏ Sparky</span>
               </div>
             </div>
-            <span class="text-3xl text-[var(--muted-foreground)]">VS</span>
+            <span class="text-2xl sm:text-3xl text-[var(--muted-foreground)]">VS</span>
             <div class="flex flex-col items-center">
-              <div class="w-24 h-24 flex items-center justify-center select-none">
-                <span class="pet-animated text-7xl" style="animation-delay:.5s">❓</span>
+              <div class="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center select-none">
+                <span class="pet-animated text-6xl sm:text-7xl" style="animation-delay:.5s">❓</span>
               </div>
               <div class="text-center mt-1 space-y-0.5">
                 <span class="text-xs font-bold text-[var(--foreground)] block">Đối thủ</span>
@@ -802,7 +802,7 @@
               </div>
             </div>
           </div>
-          <div class="flex flex-wrap items-center justify-center gap-3">
+          <div class="flex flex-wrap items-center justify-center gap-3 shrink-0 py-1">
             <select id="lobby-subject" onchange="renderLobby()" class="text-xs font-semibold bg-[var(--background)] border border-[var(--border)] rounded-xl px-3 py-2 cursor-pointer">
               <option value="csdl">Cơ sở dữ liệu</option>
             </select>
@@ -810,7 +810,7 @@
               <!-- Cập nhật tự động từ danh sách sở hữu -->
             </select>
           </div>
-          <div class="grid grid-cols-2 gap-3 max-w-sm mx-auto text-xs">
+          <div class="grid grid-cols-2 gap-3 max-w-sm mx-auto text-xs shrink-0">
             <div class="rounded-xl border border-[var(--border)] p-3 space-y-1">
               <p class="text-[10px] uppercase tracking-wider text-[var(--muted-foreground)] font-semibold">Hạng môn</p>
               <p id="lobby-sub-tier" class="font-bold text-amber-600">🌱 Khởi nguyên I</p>
@@ -822,19 +822,21 @@
               <p id="lobby-all-pts" class="font-mono font-bold text-base">0 điểm</p>
             </div>
           </div>
-          <button id="btn_timtran_1v1" onclick="startMatchmaking()" class="px-8 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition shadow-md flex items-center justify-center gap-2 mx-auto cursor-pointer hover:scale-105 active:scale-95 duration-150">
-            <span>⚔️</span>
-            <span>Tìm trận đấu 1v1</span>
-          </button>
+          <div class="shrink-0 pt-1">
+            <button id="btn_timtran_1v1" onclick="startMatchmaking()" class="px-8 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm transition shadow-md flex items-center justify-center gap-2 mx-auto cursor-pointer hover:scale-105 active:scale-95 duration-150">
+              <span>⚔️</span>
+              <span>Tìm trận đấu 1v1</span>
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- Tab Đấu Thường & Giao Hữu (Casual / Friend Match Panel) -->
-      <div id="arena-casual" class="hidden space-y-4">
-        <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 sm:p-8 text-center space-y-5 relative shadow-xs">
+      <div id="arena-casual" class="hidden flex-1 flex flex-col justify-center min-h-0 w-full py-1">
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-4 sm:p-6 text-center flex-1 flex flex-col justify-between relative shadow-xs min-h-0">
           
           <!-- Thanh Tiêu Đề & Quay Lại Sảnh Chế Độ -->
-          <div class="flex items-center justify-between pb-3 border-b border-[var(--border)]">
+          <div class="flex items-center justify-between pb-2 sm:pb-3 border-b border-[var(--border)] shrink-0">
             <div class="flex items-center gap-2">
               <span class="text-xl">🥊</span>
               <div class="text-left">
@@ -849,18 +851,25 @@
           </div>
 
           <!-- Thanh Công Cụ Nhập Mã Phòng & Tạo Mã (Top Bar) -->
-          <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pb-4 border-b border-[var(--border)]">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3 py-2 sm:py-2.5 border-b border-[var(--border)] shrink-0">
             <!-- Nhập mã phòng từ bạn bè (Góc trái) -->
             <div class="flex items-center gap-2 w-full sm:w-auto">
               <span class="text-xs font-bold text-[var(--muted-foreground)] whitespace-nowrap">🔑 Vào phòng:</span>
-              <input type="text" id="input_casual_room_code" placeholder="Nhập mã phòng (VD: TOK-8842)..." class="w-full sm:w-56 px-3 py-1.5 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs font-mono uppercase focus:outline-hidden focus:border-cyan-500">
+              <input type="text" id="input_casual_room_code" placeholder="Nhập mã phòng (VD: TOK-8842)..." class="w-full sm:w-52 px-3 py-1.5 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs font-mono uppercase focus:outline-hidden focus:border-cyan-500">
               <button id="btn_casual_join_room" onclick="joinCasualFriendRoom()" class="px-3.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs transition cursor-pointer shrink-0 shadow-2xs">
                 Tham gia
               </button>
             </div>
 
-            <!-- Nút tạo mã phòng mới (Góc phải) -->
-            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <!-- Mã phòng và Nút tạo mã phòng mới (Góc phải) -->
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+              <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[var(--background)] border border-cyan-500/30 text-xs shadow-2xs">
+                <span class="font-bold text-[var(--muted-foreground)] text-[11px]">MP:</span>
+                <span id="casual-room-code-display" onclick="copyCasualRoomCode()" title="Bấm để sao chép mã phòng" class="font-mono font-black text-cyan-500 tracking-wider cursor-pointer hover:underline">TOK-7294</span>
+                <button id="btn_show_room_qr" onclick="showRoomQRModal()" class="ml-0.5 px-1.5 py-0.5 hover:bg-cyan-500/10 rounded-md text-[11px] font-semibold text-[var(--foreground)] transition cursor-pointer border border-[var(--border)]" title="Xem mã QR">
+                  📱 QR
+                </button>
+              </div>
               <button id="btn_casual_create_code" onclick="createCasualRoomCode()" class="px-3 py-1.5 rounded-xl border border-cyan-500/40 hover:bg-cyan-500/10 text-cyan-500 font-bold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-2xs">
                 <span>🔄</span>
                 <span>Tạo mã mới</span>
@@ -869,10 +878,10 @@
           </div>
 
           <!-- Khối Giao Diện Ghép Đấu Tương Tự Đấu Hạng (VS Matchmaking Layout) -->
-          <div class="flex items-center justify-center gap-6 sm:gap-12 text-7xl select-none py-2">
+          <div class="flex items-center justify-center gap-6 sm:gap-14 text-6xl sm:text-7xl select-none py-2 sm:py-3 my-auto shrink-0">
             <!-- Player 1 (Bạn / Chủ phòng) -->
             <div onclick="navTo('pet')" title="Đổi linh vật ra trận" class="cursor-pointer group flex flex-col items-center">
-              <div id="casual-lobby-pet" class="w-24 h-24 flex items-center justify-center select-none group-hover:scale-105 transition">
+              <div id="casual-lobby-pet" class="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center select-none group-hover:scale-105 transition">
                 <span class="pet-animated">🦉</span>
               </div>
               <div class="text-center mt-1 space-y-0.5">
@@ -884,7 +893,7 @@
 
             <!-- VS Badge -->
             <div id="casual-lobby-vs-container" class="flex flex-col items-center">
-              <span id="casual-lobby-vs-icon" class="text-3xl text-[var(--muted-foreground)] font-black transition-all">VS</span>
+              <span id="casual-lobby-vs-icon" class="text-2xl sm:text-3xl text-[var(--muted-foreground)] font-black transition-all">VS</span>
               <span id="casual-lobby-vs-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 font-bold uppercase mt-1">Giao hữu</span>
             </div>
 
@@ -892,8 +901,8 @@
             <div id="casual-lobby-p2-slot" class="flex flex-col items-center">
               <!-- Trạng thái 1: Chưa có bạn (Ô dấu + mời bạn bè) -->
               <div id="casual-p2-empty" onclick="copyCasualRoomCode()" title="Bấm để sao chép mã mời bạn bè" class="cursor-pointer group flex flex-col items-center">
-                <div class="w-24 h-24 rounded-full border-2 border-dashed border-cyan-500/60 hover:border-cyan-500 bg-cyan-500/5 hover:bg-cyan-500/10 flex items-center justify-center select-none group-hover:scale-105 transition transform">
-                  <span class="text-4xl text-cyan-500 font-bold group-hover:rotate-90 transition-transform duration-300">➕</span>
+                <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 border-dashed border-cyan-500/60 hover:border-cyan-500 bg-cyan-500/5 hover:bg-cyan-500/10 flex items-center justify-center select-none group-hover:scale-105 transition transform">
+                  <span class="text-3xl sm:text-4xl text-cyan-500 font-bold group-hover:rotate-90 transition-transform duration-300">➕</span>
                 </div>
                 <div class="text-center mt-1 space-y-0.5">
                   <span class="text-xs font-bold text-cyan-600 group-hover:underline block">Mời bạn bè</span>
@@ -903,7 +912,7 @@
 
               <!-- Trạng thái 2: Đã có bạn bè trong đội (Hiển thị Pet + Tên bạn bè) -->
               <div id="casual-p2-occupied" class="hidden flex flex-col items-center animate-in zoom-in-95 duration-200">
-                <div id="casual-lobby-p2-pet" class="w-24 h-24 flex items-center justify-center select-none text-7xl">
+                <div id="casual-lobby-p2-pet" class="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center select-none text-6xl sm:text-7xl">
                   <span class="pet-animated">🦊</span>
                 </div>
                 <div class="text-center mt-1 space-y-0.5">
@@ -920,25 +929,8 @@
             </div>
           </div>
 
-          <!-- Huy hiệu mã phòng & QR Code -->
-          <div class="max-w-md mx-auto p-3.5 rounded-2xl bg-[var(--background)] border border-cyan-500/30 flex items-center justify-between gap-3 shadow-2xs">
-            <div class="text-left">
-              <span class="text-[10px] uppercase font-bold text-[var(--muted-foreground)] block">Mã phòng giao hữu của bạn:</span>
-              <span id="casual-room-code-display" class="font-mono text-base font-black text-cyan-500 tracking-wider">TOK-7294</span>
-            </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <button id="btn_copy_room_code" onclick="copyCasualRoomCode()" class="px-3 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs transition cursor-pointer shadow-2xs flex items-center gap-1">
-                <span>📋</span>
-                <span>Sao chép mã</span>
-              </button>
-              <button id="btn_show_room_qr" onclick="showRoomQRModal()" class="px-2.5 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card)] text-xs text-[var(--foreground)] transition cursor-pointer" title="Hiện mã QR">
-                <span>📱 QR</span>
-              </button>
-            </div>
-          </div>
-
           <!-- Tùy chọn môn và linh thú -->
-          <div class="flex flex-wrap items-center justify-center gap-3">
+          <div class="flex flex-wrap items-center justify-center gap-3 shrink-0 py-1">
             <select id="casual-subject" class="text-xs font-semibold bg-[var(--background)] border border-[var(--border)] rounded-xl px-3 py-2 cursor-pointer">
               <option value="csdl">Cơ sở dữ liệu</option>
             </select>
@@ -948,7 +940,7 @@
           </div>
 
           <!-- Nút hành động -->
-          <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1 shrink-0">
             <button id="btn_casual_start_friend" onclick="handleCasualStartClick()" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs transition shadow-md flex items-center justify-center gap-2 cursor-pointer hover:scale-105 active:scale-95 duration-150">
               <span>⚔️</span>
               <span id="casual-start-btn-label">Bắt đầu đấu giao hữu</span>
@@ -10138,7 +10130,8 @@
           arcadeStatus.innerHTML = '<span class="text-purple-400">Bấm để khám phá sảnh →</span>';
         }
 
-        modesBar?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const scrollContainer = document.getElementById('app-main-scroll');
+        if (scrollContainer) scrollContainer.scrollTop = 0;
         return;
       }
 
@@ -10150,15 +10143,14 @@
       if (casualPanel) casualPanel.classList.toggle('hidden', mode !== 'casual');
       if (arcadePanel) arcadePanel.classList.toggle('hidden', mode !== 'arcade');
 
+      const scrollContainer = document.getElementById('app-main-scroll');
+      if (scrollContainer) scrollContainer.scrollTop = 0;
+
       if (mode === 'ranked') {
         renderLobby();
         syncAllPetDisplays();
-        fightPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else if (mode === 'casual') {
         renderCasualLobby();
-        casualPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } else if (mode === 'arcade') {
-        arcadePanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }
 
