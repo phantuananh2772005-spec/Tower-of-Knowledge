@@ -415,6 +415,30 @@ async function concludeMatch(ma_tran, winnerUserId, reason = 'KO_VICTORY') {
       const note = isWinner ? 'Chiến thắng Đấu trường Tri thức 1v1' : 'Tham gia Đấu trường Tri thức 1v1';
       await mutateCoins(p.ma_nguoi_dung, xuThuong, rewardType, note);
       await addExperience(p.ma_nguoi_dung, expThuong);
+
+      // Cập nhật Chuỗi thắng Đấu Trường (Arena Win Streak)
+      try {
+        if (isWinner) {
+          await db.execute(`
+            UPDATE nguoi_dung 
+            SET chuoi_thang_arena = COALESCE(chuoi_thang_arena, 0) + 1,
+                chuoi_thang_cao_nhat_arena = CASE 
+                  WHEN COALESCE(chuoi_thang_arena, 0) + 1 > COALESCE(chuoi_thang_cao_nhat_arena, 0) 
+                  THEN COALESCE(chuoi_thang_arena, 0) + 1 
+                  ELSE COALESCE(chuoi_thang_cao_nhat_arena, 0) 
+                END
+            WHERE ma_nguoi_dung = $1
+          `, [p.ma_nguoi_dung]);
+        } else {
+          await db.execute(`
+            UPDATE nguoi_dung 
+            SET chuoi_thang_arena = 0 
+            WHERE ma_nguoi_dung = $1
+          `, [p.ma_nguoi_dung]);
+        }
+      } catch (streakErr) {
+        console.warn('⚠️ Could not update arena win streak for user:', p.ma_nguoi_dung, streakErr.message);
+      }
     }
   }
 }

@@ -47,10 +47,12 @@ async function ensureBotUsers() {
         INSERT INTO nguoi_dung (
           ma_nguoi_dung, ten_dang_nhap, email, mat_khau_hash, ten_hien_thi,
           khung_avatar, vai_tro, tong_diem_kinh_nghiem, xu_tri_thuc, chuoi_streak_ngay,
+          chuoi_thang_arena, chuoi_thang_cao_nhat_arena,
           ngay_hoat_dong_cuoi, che_do_giao_dien, bat_am_thanh
         ) VALUES (
           $1, $2, $3, $4, $5,
           $6, 'NGUOI_HOC', $7, $8, $9,
+          $9, $9,
           CAST(SYSDATETIME() AS DATE), 'TOI', 1
         )
       `, [b.id, b.username, b.email, b.hash, b.name, b.frame, b.exp, b.coins, b.streak]);

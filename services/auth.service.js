@@ -51,6 +51,8 @@ async function formatUserResponse(user) {
     cap_do: deriveUserLevel(user.tong_diem_kinh_nghiem),
     xu_tri_thuc: user.xu_tri_thuc,
     chuoi_streak_ngay: user.chuoi_streak_ngay,
+    chuoi_thang_arena: typeof user.chuoi_thang_arena === 'number' ? user.chuoi_thang_arena : 0,
+    chuoi_thang_cao_nhat_arena: typeof user.chuoi_thang_cao_nhat_arena === 'number' ? user.chuoi_thang_cao_nhat_arena : 0,
     ngay_hoat_dong_cuoi: user.ngay_hoat_dong_cuoi,
     che_do_giao_dien: user.che_do_giao_dien,
     bat_am_thanh: Boolean(user.bat_am_thanh),

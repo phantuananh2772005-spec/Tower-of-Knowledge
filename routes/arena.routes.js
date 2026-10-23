@@ -25,6 +25,8 @@ router.get('/leaderboard', async (req, res) => {
     const { deriveRankTitle } = require('../core/rules/economy.rules');
     const users = await db.query(`
       SELECT u.ma_nguoi_dung, u.ten_dang_nhap, u.ten_hien_thi, u.tong_diem_kinh_nghiem, u.chuoi_streak_ngay,
+             COALESCE(u.chuoi_thang_arena, 0) as chuoi_thang_arena,
+             COALESCE(u.chuoi_thang_cao_nhat_arena, 0) as chuoi_thang_cao_nhat_arena,
              p.ten_thu_cung, p.anh_dai_dien
       FROM nguoi_dung u
       LEFT JOIN thu_cung_so_huu tcsh ON u.ma_nguoi_dung = tcsh.ma_nguoi_dung AND tcsh.dang_kich_hoat = 1
@@ -50,7 +52,9 @@ router.get('/leaderboard', async (req, res) => {
 
     const enriched = uniqueUsers.map(u => ({
       ...u,
-      danh_hieu: deriveRankTitle(u.tong_diem_kinh_nghiem)
+      danh_hieu: deriveRankTitle(u.tong_diem_kinh_nghiem),
+      chuoi_thang_arena: typeof u.chuoi_thang_arena === 'number' ? u.chuoi_thang_arena : 0,
+      chuoi_thang_cao_nhat_arena: typeof u.chuoi_thang_cao_nhat_arena === 'number' ? u.chuoi_thang_cao_nhat_arena : 0
     }));
     return res.apiSuccess(enriched);
   } catch (err) {

@@ -69,6 +69,20 @@ async function initTelemetrySchema() {
         END IF; 
       END $$;
     `);
+
+    // 5. Ensure chuoi_thang_arena in nguoi_dung (PostgreSQL)
+    await db.execute(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name='nguoi_dung' AND column_name='chuoi_thang_arena'
+        ) THEN 
+          ALTER TABLE nguoi_dung ADD COLUMN chuoi_thang_arena INT NOT NULL DEFAULT 0; 
+          ALTER TABLE nguoi_dung ADD COLUMN chuoi_thang_cao_nhat_arena INT NOT NULL DEFAULT 0; 
+        END IF; 
+      END $$;
+    `);
   } else {
     // MSSQL
     await db.execute(`
@@ -105,12 +119,25 @@ async function initTelemetrySchema() {
         );
       END
     `);
+
+    await db.execute(`
+      IF COL_LENGTH('nguoi_dung', 'chuoi_thang_arena') IS NULL
+      BEGIN
+        ALTER TABLE nguoi_dung ADD chuoi_thang_arena INT NOT NULL DEFAULT 0;
+        ALTER TABLE nguoi_dung ADD chuoi_thang_cao_nhat_arena INT NOT NULL DEFAULT 0;
+      END
+    `);
   }
 
   // 4. Ensure canonical bot opponents exist for 1v1 Arena
   try {
     const { ensureBotUsers } = require('../scripts/seed_bots');
     await ensureBotUsers();
+    await db.execute(`
+      UPDATE nguoi_dung SET chuoi_thang_arena = 2, chuoi_thang_cao_nhat_arena = 2 WHERE ma_nguoi_dung = 'usr_bot_001' AND (chuoi_thang_arena = 0 OR chuoi_thang_arena IS NULL);
+      UPDATE nguoi_dung SET chuoi_thang_arena = 5, chuoi_thang_cao_nhat_arena = 5 WHERE ma_nguoi_dung = 'usr_bot_002' AND (chuoi_thang_arena = 0 OR chuoi_thang_arena IS NULL);
+      UPDATE nguoi_dung SET chuoi_thang_arena = 9, chuoi_thang_cao_nhat_arena = 9 WHERE ma_nguoi_dung = 'usr_bot_003' AND (chuoi_thang_arena = 0 OR chuoi_thang_arena IS NULL);
+    `);
   } catch (botErr) {
     console.warn('⚠️ Could not ensure bot users in initTelemetrySchema:', botErr.message);
   }

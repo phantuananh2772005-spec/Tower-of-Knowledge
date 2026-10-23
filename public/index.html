@@ -3471,6 +3471,7 @@
 
   // ===== BXH =====
   let rankType = 'hang';
+  let userArenaWinStreak = 0;
   const ME = 'Bạn';
   const RANK_DATA = {
     all: { hang: [], speed: [], acc: [], streak: [] },
@@ -3503,6 +3504,15 @@
         if (type === 'hang') {
           const myPts = (typeof overallPts === 'function' ? overallPts() : (currentUserAccount?.exp || 0));
           r[3] = String(myPts);
+          r[2] = tierOf(+r[3], s === 'all');
+        } else if (type === 'streak') {
+          const myStreak = typeof currentUserAccount?.arenaWinStreak === 'number'
+            ? currentUserAccount.arenaWinStreak
+            : (typeof userArenaWinStreak === 'number' ? userArenaWinStreak : 0);
+          r[3] = String(myStreak);
+          r[2] = typeof tierOf === 'function' ? tierOf(currentUserAccount?.exp || 0, s === 'all') : (currentUserAccount?.rankTitle || '🌱 Khởi nguyên I');
+        } else if (type === 'speed' || type === 'acc') {
+          r[2] = typeof tierOf === 'function' ? tierOf(currentUserAccount?.exp || 0, s === 'all') : (currentUserAccount?.rankTitle || '🌱 Khởi nguyên I');
         }
       } else if (r[0] === ME) {
         // Tránh trùng lặp từ mock template cũ
@@ -3515,6 +3525,12 @@
     });
 
     if (type === 'hang') {
+      rows.sort((a, b) => parseFloat(b[3]) - parseFloat(a[3]));
+    } else if (type === 'streak') {
+      rows.sort((a, b) => parseInt(b[3], 10) - parseInt(a[3], 10));
+    } else if (type === 'speed') {
+      rows.sort((a, b) => parseFloat(a[3]) - parseFloat(b[3]));
+    } else if (type === 'acc') {
       rows.sort((a, b) => parseFloat(b[3]) - parseFloat(a[3]));
     }
     return rows;
@@ -3564,7 +3580,7 @@
     const sub = document.getElementById('rank-subject').value;
     ['hang','speed','acc','streak'].forEach(k => {
       document.getElementById('rk-' + k).className = "px-3 py-1.5 rounded-lg " +
-        (k === rankType ? "bg-[var(--foreground)] text-[var(--background)]" : "text-[var(--muted-foreground)]");
+        (k === rankType ? "bg-[var(--foreground)] text-[var(--background)] font-bold shadow-xs" : "text-[var(--muted-foreground)]");
     });
     const medals = ['🥇','🥈','🥉'];
     document.getElementById('rank-list').innerHTML = rowsFor(sub, rankType).map((r, i) => {
@@ -3572,12 +3588,18 @@
       const petThumb = me 
         ? (currentEquippedPet.image ? `<img src="${currentEquippedPet.image}" class="w-6 h-6 object-contain pixel-art inline-block select-none" />` : currentEquippedPet.icon)
         : r[1];
+      let valDisplay = r[3];
+      if (rankType === 'streak') {
+        valDisplay = `<span class="text-amber-500 font-extrabold">🔥 ${r[3]}</span> <span class="text-[10px] text-[var(--muted-foreground)]">trận</span>`;
+      } else if (rankType === 'hang') {
+        valDisplay = `<span>${r[3]}</span> <span class="text-[10px] text-[var(--muted-foreground)]">đ</span>`;
+      }
       return `<div class="flex items-center gap-3 px-4 py-3 text-xs ${me ? 'bg-emerald-500/10' : ''}">
         <span class="w-6 text-center font-bold ${i < 3 ? 'text-base' : 'text-[var(--muted-foreground)]'}">${i < 3 ? medals[i] : i + 1}</span>
         <span class="w-7 h-7 flex items-center justify-center text-2xl shrink-0">${petThumb}</span>
-        <span class="flex-1 font-semibold ${me ? 'text-emerald-600' : ''}">${r[0]}</span>
+        <span class="flex-1 font-semibold ${me ? 'text-emerald-600 dark:text-emerald-400' : ''}">${r[0]}</span>
         <span class="text-[var(--muted-foreground)]">${r[2]}</span>
-        <span class="font-mono font-bold w-14 text-right">${r[3]}</span>
+        <span class="font-mono font-bold min-w-16 text-right">${valDisplay}</span>
       </div>`;
     }).join('');
   }
@@ -4994,6 +5016,16 @@
     const isSurrender = specialReason === 'DAU_HANG';
     const isOpSurrender = specialReason === 'OP_SURRENDER';
     const win = isOpSurrender || (!isSurrender && ((B.op <= 0 && B.my > 0) || (B.my > B.op)));
+
+    // Cập nhật chuỗi thắng Đấu Trường của người chơi
+    if (win) {
+      userArenaWinStreak = (userArenaWinStreak || 0) + 1;
+    } else {
+      userArenaWinStreak = 0;
+    }
+    if (currentUserAccount) {
+      currentUserAccount.arenaWinStreak = userArenaWinStreak;
+    }
 
     // Đồng bộ kết quả lên Backend CSDL thật
     if (currentLiveMatch && currentLiveMatch.ma_tran && !isSurrender) {
@@ -6533,6 +6565,8 @@
       currentUserAccount.rankTitle = typeof tierOf === 'function' ? tierOf(currentUserAccount.exp, true) : '🌱 Khởi nguyên I';
       userCoins = typeof user.xu_tri_thuc === 'number' ? user.xu_tri_thuc : 0;
       userStreak = typeof user.chuoi_streak_ngay === 'number' ? user.chuoi_streak_ngay : 0;
+      userArenaWinStreak = typeof user.chuoi_thang_arena === 'number' ? user.chuoi_thang_arena : 0;
+      currentUserAccount.arenaWinStreak = userArenaWinStreak;
 
       // Xác định trạng thái liên kết tài khoản Google thực tế
       const savedGoogle = user.ma_nguoi_dung ? localStorage.getItem('tok_google_email_' + user.ma_nguoi_dung) : null;
@@ -9368,27 +9402,37 @@
             const isFox = (u.ten_thu_cung || '').includes('Kitsune') || (u.ten_thu_cung || '').includes('Cáo');
             const isDragon = (u.ten_thu_cung || '').includes('Sparky') || (u.ten_thu_cung || '').includes('Rồng');
             const icon = isFox ? '🦊' : (isDragon ? '🐉' : '🛡️');
-            return [u.ten_hien_thi, icon, u.danh_hieu || 'TẬP SỰ', String(u.tong_diem_kinh_nghiem || 0), u.ma_nguoi_dung, u.ten_dang_nhap];
+            const tierName = typeof tierOf === 'function' ? tierOf(u.tong_diem_kinh_nghiem || 0, true) : (u.danh_hieu || '🌱 Khởi nguyên I');
+            return [u.ten_hien_thi, icon, tierName, String(u.tong_diem_kinh_nghiem || 0), u.ma_nguoi_dung, u.ten_dang_nhap];
           });
 
           const speedRows = res.data.map((u, i) => {
             const isFox = (u.ten_thu_cung || '').includes('Kitsune') || (u.ten_thu_cung || '').includes('Cáo');
-            const icon = isFox ? '🦊' : '🐉';
+            const isDragon = (u.ten_thu_cung || '').includes('Sparky') || (u.ten_thu_cung || '').includes('Rồng');
+            const icon = isFox ? '🦊' : (isDragon ? '🐉' : '🛡️');
             const speed = (2.2 + (i * 0.4)).toFixed(1) + 's';
-            return [u.ten_hien_thi, icon, '', speed, u.ma_nguoi_dung, u.ten_dang_nhap];
+            const tierName = typeof tierOf === 'function' ? tierOf(u.tong_diem_kinh_nghiem || 0, true) : (u.danh_hieu || '🌱 Khởi nguyên I');
+            return [u.ten_hien_thi, icon, tierName, speed, u.ma_nguoi_dung, u.ten_dang_nhap];
           });
 
           const accRows = res.data.map((u, i) => {
             const isFox = (u.ten_thu_cung || '').includes('Kitsune') || (u.ten_thu_cung || '').includes('Cáo');
-            const icon = isFox ? '🦊' : '🐉';
+            const isDragon = (u.ten_thu_cung || '').includes('Sparky') || (u.ten_thu_cung || '').includes('Rồng');
+            const icon = isFox ? '🦊' : (isDragon ? '🐉' : '🛡️');
             const acc = Math.max(65, 96 - (i * 3)) + '%';
-            return [u.ten_hien_thi, icon, '', acc, u.ma_nguoi_dung, u.ten_dang_nhap];
+            const tierName = typeof tierOf === 'function' ? tierOf(u.tong_diem_kinh_nghiem || 0, true) : (u.danh_hieu || '🌱 Khởi nguyên I');
+            return [u.ten_hien_thi, icon, tierName, acc, u.ma_nguoi_dung, u.ten_dang_nhap];
           });
 
           const streakRows = res.data.map(u => {
             const isFox = (u.ten_thu_cung || '').includes('Kitsune') || (u.ten_thu_cung || '').includes('Cáo');
-            const icon = isFox ? '🦊' : '🐉';
-            return [u.ten_hien_thi, icon, '', String(u.chuoi_streak_ngay || 1), u.ma_nguoi_dung, u.ten_dang_nhap];
+            const isDragon = (u.ten_thu_cung || '').includes('Sparky') || (u.ten_thu_cung || '').includes('Rồng');
+            const icon = isFox ? '🦊' : (isDragon ? '🐉' : '🛡️');
+            const winStreak = typeof u.chuoi_thang_arena === 'number'
+              ? u.chuoi_thang_arena
+              : (typeof u.chuoi_streak_ngay === 'number' ? u.chuoi_streak_ngay : 0);
+            const tierName = typeof tierOf === 'function' ? tierOf(u.tong_diem_kinh_nghiem || 0, true) : (u.danh_hieu || '🌱 Khởi nguyên I');
+            return [u.ten_hien_thi, icon, tierName, String(winStreak), u.ma_nguoi_dung, u.ten_dang_nhap];
           });
 
           RANK_DATA.all.hang = hangRows;
@@ -9400,6 +9444,20 @@
           RANK_DATA.csdl.speed = speedRows;
           RANK_DATA.csdl.acc = accRows;
           RANK_DATA.csdl.streak = streakRows;
+
+          if (Array.isArray(allSystemCourses)) {
+            allSystemCourses.forEach(c => {
+              const code = (c.ma_mon || 'mon_csdl').replace('mon_', '');
+              if (!RANK_DATA[code]) {
+                RANK_DATA[code] = { hang: hangRows, speed: speedRows, acc: accRows, streak: streakRows };
+              } else {
+                RANK_DATA[code].hang = hangRows;
+                RANK_DATA[code].speed = speedRows;
+                RANK_DATA[code].acc = accRows;
+                RANK_DATA[code].streak = streakRows;
+              }
+            });
+          }
 
           renderRank();
           renderLobby();
