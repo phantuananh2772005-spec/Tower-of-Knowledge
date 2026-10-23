@@ -712,7 +712,7 @@
     </section>
 
     <!-- ================= VIEW 6: ĐẤU TRƯỜNG MINI GAME (SẢNH CHẾ ĐỘ + BXH) ================= -->
-    <section id="view-minigame" class="hidden p-3 sm:p-5 max-w-5xl lg:max-w-6xl w-full mx-auto flex-1 flex flex-col justify-center min-h-0 space-y-4">
+    <section id="view-minigame" class="hidden p-3 sm:p-5 max-w-5xl lg:max-w-6xl w-full mx-auto flex-1 flex flex-col justify-start min-h-0 space-y-4">
       <!-- Tiêu đề Sảnh Đấu Trường Mini Game -->
       <div id="arena-header-banner" class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border)] pb-4">
         <div>
@@ -1046,11 +1046,13 @@
 
       <!-- Tab BXH -->
       <div id="arena-rank" class="hidden space-y-4">
-        <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
-          <button id="btn_ve_sanh_dau" onclick="arenaTab('fight')" class="px-3 py-1.5 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--background)] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
-            <span>←</span> <span>Trở về sảnh đấu</span>
+        <div class="sticky top-0 z-20 bg-[var(--background)]/95 backdrop-blur-md pt-1 pb-3 border-b border-[var(--border)] flex items-center justify-between gap-3">
+          <button id="btn_ve_sanh_dau" onclick="arenaTab('fight')" class="px-3.5 py-2 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:border-emerald-500/50 hover:bg-emerald-500/10 text-xs font-bold text-[var(--foreground)] flex items-center gap-2 transition cursor-pointer shadow-xs">
+            <span class="text-sm">←</span> <span>Quay lại chế độ đấu</span>
           </button>
-          <span class="text-xs font-bold text-amber-500 flex items-center gap-1">🏆 Bảng xếp hạng thi đấu</span>
+          <span class="text-xs font-bold text-amber-500 flex items-center gap-1.5 shrink-0">
+            <span>🏆</span> <span>Bảng xếp hạng thi đấu</span>
+          </span>
         </div>
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center p-1 bg-[var(--card)] border border-[var(--border)] rounded-xl text-xs font-semibold">
@@ -1068,6 +1070,11 @@
         <div class="flex items-center justify-between text-[11px] text-[var(--muted-foreground)] px-1">
           <span>Mùa giải kết thúc sau 4 ngày</span>
           <span>Số trận mùa này: <b class="text-[var(--foreground)]">7</b> / tối thiểu 5 ✓</span>
+        </div>
+        <div class="pt-2 pb-6 flex items-center justify-center">
+          <button id="btn_ve_sanh_dau_bottom" onclick="arenaTab('fight')" class="px-5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--background)] hover:border-emerald-500/40 text-xs font-bold text-[var(--foreground)] flex items-center gap-2 transition cursor-pointer shadow-xs">
+            <span>←</span> <span>Quay lại chế độ đấu</span>
+          </button>
         </div>
       </div>
     </section>
@@ -2866,6 +2873,9 @@
       if (viewName === 'pet' && typeof trackDailyQuestAction === 'function') {
         trackDailyQuestAction('cham_pet');
       }
+      if (viewName === 'minigame') {
+        if (typeof arenaTab === 'function') arenaTab('fight');
+      }
       if (viewName === 'saga') {
         scrollToActiveNode(true);
       }
@@ -3396,6 +3406,12 @@
     const rankPanel = document.getElementById('arena-rank');
     const modesBar = document.getElementById('arena-modes-bar');
     const headerBanner = document.getElementById('arena-header-banner');
+    const topBreadcrumb = document.getElementById('topbar-breadcrumb');
+    const topTitle = document.getElementById('topbar-title');
+
+    // Luôn đưa thanh cuộn về đỉnh đầu để không bị che khuất nút quay lại
+    const scrollContainer = document.getElementById('app-main-scroll');
+    if (scrollContainer) scrollContainer.scrollTop = 0;
 
     if (t === 'rank') {
       if (modesBar) modesBar.classList.add('hidden');
@@ -3404,10 +3420,27 @@
       if (arcadePanel) arcadePanel.classList.add('hidden');
       if (fightPanel) fightPanel.classList.add('hidden');
       if (rankPanel) rankPanel.classList.remove('hidden');
+
+      // Cập nhật Topbar cố định giúp người dùng luôn có nút quay lại dù cuộn tới đâu
+      if (topBreadcrumb) {
+        topBreadcrumb.innerHTML = `<button id="btn_topbar_back_arena" onclick="arenaTab('fight')" class="hover:text-[var(--foreground)] text-emerald-500 font-bold flex items-center gap-1 transition cursor-pointer"><span>←</span> <span>Sảnh chế độ đấu</span></button> <span>/</span> <span class="text-amber-500 font-semibold">Bảng xếp hạng</span>`;
+      }
+      if (topTitle) {
+        topTitle.textContent = '🏆 Bảng Xếp Hạng Đấu Trường';
+      }
+
       renderRank();
       if (typeof loadRealLeaderboard === 'function') loadRealLeaderboard();
     } else {
       if (rankPanel) rankPanel.classList.add('hidden');
+
+      if (topBreadcrumb) {
+        topBreadcrumb.innerHTML = '<span>⚔️ Đấu trí</span>';
+      }
+      if (topTitle) {
+        topTitle.textContent = 'Đấu trường Minigame';
+      }
+
       if (typeof selectArenaMode === 'function') {
         if (typeof currentArenaMode !== 'undefined' && currentArenaMode) {
           selectArenaMode(currentArenaMode);
