@@ -470,25 +470,6 @@
     <!-- ================= VIEW 3: TRANG CHỦ CHÍNH (COMMAND CENTER ACTION HUB) ================= -->
     <section id="view-hub" class="p-3 sm:p-5 max-w-6xl w-full mx-auto space-y-4 sm:space-y-5">
 
-      <!-- BANNER TÂN THỦ CÙNG LINH THÚ (Hiển thị nếu chưa hoàn thành) -->
-      <div id="hub-newbie-guide-banner" class="hidden bg-linear-to-r from-emerald-500/15 via-teal-500/10 to-transparent border border-emerald-500/30 rounded-2xl p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs">
-        <div class="flex items-center gap-2.5 min-w-0">
-          <span class="text-2xl pet-animated shrink-0">🦉</span>
-          <div class="min-w-0 flex-1">
-            <h4 class="text-xs font-bold text-emerald-500 truncate">Linh Thú muốn dạo quanh cùng bạn!</h4>
-            <p class="text-[11px] text-[var(--muted-foreground)] truncate">Khám phá nhanh các tính năng và nhận ngay 20 Xu tân thủ.</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 shrink-0">
-          <button id="btn_hub_start_tour" onclick="startPetOnboardingTour()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-xs">
-            Khám phá 🚀
-          </button>
-          <button id="btn_hub_dismiss_tour" onclick="dismissNewbieGuideBanner()" class="px-2.5 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs text-[var(--muted-foreground)] transition cursor-pointer">
-            ✕
-          </button>
-        </div>
-      </div>
-
       <!-- ================= MAIN COMMAND GRID: 2 CỘT CÂN ĐỐI (MOBILE: TỰ ĐỘNG XẾP DỌC) ================= -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-stretch">
 
@@ -10553,22 +10534,7 @@
       }
     }
 
-    function dismissNewbieGuideBanner() {
-      const banner = document.getElementById('hub-newbie-guide-banner');
-      if (banner) banner.classList.add('hidden');
-      localStorage.setItem('tok_onboarding_completed', 'true');
-    }
-
     function initNewbieGuideAndQuests() {
-      const isCompleted = localStorage.getItem('tok_onboarding_completed');
-      const banner = document.getElementById('hub-newbie-guide-banner');
-      if (banner) {
-        if (!isCompleted) {
-          banner.classList.remove('hidden');
-        } else {
-          banner.classList.add('hidden');
-        }
-      }
       loadDailyQuests();
     }
 
