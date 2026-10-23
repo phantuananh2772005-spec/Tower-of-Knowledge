@@ -2495,8 +2495,8 @@
       }
 
       if (typeof currentQuizSession !== 'undefined' && currentQuizSession && currentQuizSession.submissions && currentQuizSession.submissions.length > 0 && viewName !== 'play') {
-        pendingQuizNavView = viewName;
-        openQuitQuizModal();
+        // Mặc định tự động lưu kết quả khi rời trang theo yêu cầu người dùng
+        autoSaveQuizAndNavigate(viewName);
         return;
       }
 
@@ -2563,8 +2563,8 @@
 
     function closePlay() {
       if (typeof currentQuizSession !== 'undefined' && currentQuizSession && currentQuizSession.submissions && currentQuizSession.submissions.length > 0) {
-        pendingQuizNavView = 'saga';
-        openQuitQuizModal();
+        // Mặc định tự động lưu kết quả và quay về bản đồ theo yêu cầu người dùng
+        autoSaveQuizAndNavigate('saga');
         return;
       }
       currentQuizSession = null;
@@ -2598,42 +2598,33 @@
       }, 100);
     }
 
-    // ================= XỬ LÝ TẠM DỪNG BÀI HỌC VÀ LƯU LỊCH SỬ DỞ (PARTIAL SESSION SAVE) =================
+    // ================= XỬ LÝ TỰ ĐỘNG LƯU BÀI HỌC KHI RỜI ĐI (DEFAULT AUTO-SAVE ON EXIT) =================
     let pendingQuizNavView = null;
 
-    function openQuitQuizModal() {
-      const modal = document.getElementById('modal-confirm-quit-quiz');
-      const countEl = document.getElementById('quit-quiz-count');
-      const count = currentQuizSession?.submissions?.length || 0;
-      if (countEl) countEl.textContent = count;
-      if (modal) modal.classList.remove('hidden');
-    }
-
-    function closeQuitQuizModal() {
-      const modal = document.getElementById('modal-confirm-quit-quiz');
-      if (modal) modal.classList.add('hidden');
-      pendingQuizNavView = null;
-    }
-
-    async function confirmQuitQuizAndSave() {
+    async function autoSaveQuizAndNavigate(targetView = 'saga') {
+      const target = targetView || pendingQuizNavView || 'saga';
       if (!currentQuizSession || !currentQuizSession.submissions || currentQuizSession.submissions.length === 0) {
         closeQuitQuizModal();
         currentQuizSession = null;
-        const target = pendingQuizNavView || 'saga';
         pendingQuizNavView = null;
         navTo(target);
+        if (target === 'saga') scrollToActiveNode(true);
         return;
       }
 
       const mocId = currentQuizSession.mocId;
       const step = currentQuizSession.step || 1;
-      const subs = currentQuizSession.submissions;
+      const subs = [...currentQuizSession.submissions];
       const count = subs.length;
-      const target = pendingQuizNavView || 'saga';
 
+      // Đóng modal phòng trường hợp và dọn state ngay để chuyển view lập tức không trễ
       closeQuitQuizModal();
       currentQuizSession = null;
+      pendingQuizNavView = null;
+      navTo(target);
+      if (target === 'saga') scrollToActiveNode(true);
 
+      // Lưu ngầm lên server và hiển thị Toast thông báo nhẹ nhàng
       try {
         const token = localStorage.getItem('tok_token');
         const resp = await fetch(`/api/checkpoints/${mocId}/abandon-step`, {
@@ -2648,17 +2639,30 @@
           })
         });
         const res = await resp.json();
-        if (res.success) {
-          showToast(`💾 Đã lưu thành công ${count} câu đã giải vào Hồ sơ học tập!`, 'success');
+        if (res && res.success) {
+          showToast(`💾 Đã tự động lưu ${count} câu đã giải vào Hồ sơ học tập!`, 'success');
         } else {
-          showToast(`⚠️ Không thể lưu phiên: ${res.error?.message || 'Lỗi server'}`, 'error');
+          showToast(`⚠️ Không thể lưu phiên: ${res?.error?.message || 'Lỗi server'}`, 'error');
         }
       } catch (err) {
-        console.warn('Lỗi lưu phiên làm dở:', err);
-      } finally {
-        pendingQuizNavView = null;
-        navTo(target);
+        console.warn('Lỗi tự động lưu phiên làm dở:', err);
       }
+    }
+
+    window.openQuitQuizModal = openQuitQuizModal;
+    function openQuitQuizModal() {
+      // Yêu cầu người dùng: Cứ mặc định lưu luôn, không hiển thị popup làm phiền
+      autoSaveQuizAndNavigate(pendingQuizNavView || 'saga');
+    }
+
+    function closeQuitQuizModal() {
+      const modal = document.getElementById('modal-confirm-quit-quiz');
+      if (modal) modal.classList.add('hidden');
+      pendingQuizNavView = null;
+    }
+
+    async function confirmQuitQuizAndSave() {
+      return autoSaveQuizAndNavigate(pendingQuizNavView || 'saga');
     }
 
     function quitQuizWithoutSaving() {
@@ -2667,6 +2671,7 @@
       const target = pendingQuizNavView || 'saga';
       pendingQuizNavView = null;
       navTo(target);
+      if (target === 'saga') scrollToActiveNode(true);
     }
 
     // ================= BẢO VỆ ĐÓNG TAB HOẶC TẢI LẠI TRANG (BEFOREUNLOAD GUARD) =================

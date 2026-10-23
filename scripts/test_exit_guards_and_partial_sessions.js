@@ -112,17 +112,13 @@ async function run() {
     await page.click('#btn_play_ve_bando');
     await new Promise(r => setTimeout(r, 600));
 
-    // Kiểm tra modal tạm dừng học xuất hiện
+    // Kiểm tra hệ thống tự động lưu luôn mà KHÔNG làm phiền người dùng bằng modal
     const isQuitModalVisible = await page.evaluate(() => {
       const m = document.getElementById('modal-confirm-quit-quiz');
       return m && !m.classList.contains('hidden');
     });
-    console.log('✓ Modal xác nhận tạm dừng học hiển thị:', isQuitModalVisible);
-    assert(isQuitModalVisible, 'Modal tạm dừng học phải hiển thị');
-
-    // Bấm nút "💾 Lưu kết quả & Về bản đồ"
-    console.log('Bấm "💾 Lưu kết quả & Về bản đồ"...');
-    await page.click('#btn_confirm_quit_save');
+    console.log('✓ Modal tạm dừng không hiển thị (mặc định tự động lưu luôn):', !isQuitModalVisible);
+    assert(!isQuitModalVisible, 'Modal tạm dừng không được chặn người dùng (cứ mặc định lưu luôn)');
 
     // Chờ lưu vào CSDL (polling)
     let savedPartialLog = null;

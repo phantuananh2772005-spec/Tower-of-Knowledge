@@ -132,7 +132,7 @@ async function run() {
     console.log('Bấm ✕ Về bản đồ và xác nhận lưu kết quả...');
     await page.click('#btn_play_ve_bando');
     await new Promise(r => setTimeout(r, 400));
-    await page.click('#btn_confirm_quit_save');
+    // Đã tự động lưu theo mặc định khi bấm Về bản đồ
     await new Promise(r => setTimeout(r, 1500));
 
     // 3. Kiểm tra CSDL bảng lich_su_phien_hoc
