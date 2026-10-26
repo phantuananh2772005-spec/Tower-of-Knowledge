@@ -274,11 +274,11 @@
           </div>
         </button>
 
-        <!-- 5. Đấu trường Minigame -->
-        <button onclick="navTo('minigame')" id="nav-minigame" title="Đấu trường Minigame" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
+        <!-- 5. Minigame -->
+        <button onclick="navTo('minigame')" id="nav-minigame" title="Minigame" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
           <div class="flex items-center gap-3">
             <span class="text-base shrink-0">🎮</span>
-            <span class="sidebar-text font-medium">Đấu trường Minigame</span>
+            <span class="sidebar-text font-medium">Minigame</span>
           </div>
         </button>
 
@@ -2773,10 +2773,10 @@
       <span class="text-[10px] mt-0.5">Lộ trình</span>
     </button>
 
-    <!-- 3. Đấu trường Minigame -->
+    <!-- 3. Minigame -->
     <button id="btn_m_nav_minigame" onclick="navTo('minigame')" class="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer">
-      <span class="text-xl">⚔️</span>
-      <span class="text-[10px] mt-0.5">Đấu trường</span>
+      <span class="text-xl">🎮</span>
+      <span class="text-[10px] mt-0.5">Minigame</span>
     </button>
 
     <!-- 4. Linh vật Pet -->
@@ -2803,6 +2803,19 @@
       </div>
 
       <div class="grid grid-cols-1 gap-2 pt-1">
+        <!-- 0. Nhiệm vụ hàng ngày (Quests) -->
+        <button id="btn_m_more_quests" onclick="closeMobileMoreSheet(); openDailyQuestsModal()" class="w-full text-left p-3 rounded-2xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent hover:bg-amber-500/15 border border-amber-500/30 flex items-center gap-3.5 transition cursor-pointer group">
+          <span class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center text-lg shrink-0">📜</span>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between">
+              <p class="font-bold text-xs text-[var(--foreground)] group-hover:text-amber-500 transition">Nhiệm vụ hôm nay</p>
+              <span id="more-sheet-quest-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 font-mono">0/3 Xong</span>
+            </div>
+            <p class="text-[10px] text-[var(--muted-foreground)]">Hoàn thành thử thách kiếm thêm Xu & EXP</p>
+          </div>
+          <span class="text-xs text-amber-500 shrink-0 font-bold">→</span>
+        </button>
+
         <!-- 1. Hồ sơ cá nhân -->
         <button id="btn_m_more_profile" onclick="closeMobileMoreSheet(); openProfileModal()" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
           <span class="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-500 flex items-center justify-center text-lg shrink-0">👤</span>
@@ -2886,6 +2899,81 @@
     </div>
   </div>
 
+  <!-- ================= MODAL POPUP NHIỆM VỤ HÀNG NGÀY CHO MOBILE & DESKTOP ================= -->
+  <div id="modal-daily-quests" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-5 sm:p-6 max-w-md w-full space-y-4 shadow-2xl animate-in zoom-in-95 duration-200">
+      <div class="flex items-center justify-between pb-2 border-b border-[var(--border)]">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">📜</span>
+          <div>
+            <h3 class="font-bold text-sm text-[var(--foreground)]">Nhiệm vụ hôm nay</h3>
+            <p class="text-[10px] text-[var(--muted-foreground)]">Hoàn thành nhiệm vụ nhận thêm Xu & EXP</p>
+          </div>
+        </div>
+        <button id="btn_close_daily_quests_modal" onclick="closeDailyQuestsModal()" class="w-8 h-8 rounded-full border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] flex items-center justify-center text-xs font-bold cursor-pointer">✕</button>
+      </div>
+
+      <div class="space-y-2.5">
+        <!-- Quest Modal Item 1 -->
+        <div class="p-3 rounded-2xl border border-[var(--border)] bg-[var(--background)]/60 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="text-lg shrink-0">📖</span>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5">
+                <p class="font-bold text-xs text-[var(--foreground)] truncate">Học 1 bài</p>
+                <span class="text-[9px] text-amber-500 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded-md shrink-0">+15🪙</span>
+              </div>
+              <p class="text-[10px] text-[var(--muted-foreground)]">Hoàn thành ít nhất 1 mốc bài học</p>
+            </div>
+          </div>
+          <button id="btn_modal_quest_hoc_tap" onclick="claimDailyQuest('hoc_tap'); closeDailyQuestsModal();" class="shrink-0 px-3 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card)] text-xs font-bold transition cursor-pointer">
+            Làm bài
+          </button>
+        </div>
+
+        <!-- Quest Modal Item 2 -->
+        <div class="p-3 rounded-2xl border border-[var(--border)] bg-[var(--background)]/60 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="text-lg shrink-0">🎮</span>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5">
+                <p class="font-bold text-xs text-[var(--foreground)] truncate">Chơi 1 minigame</p>
+                <span class="text-[9px] text-amber-500 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded-md shrink-0">+15🪙</span>
+              </div>
+              <p class="text-[10px] text-[var(--muted-foreground)]">Tham gia Đấu trí hoặc Sinh tồn</p>
+            </div>
+          </div>
+          <button id="btn_modal_quest_dau_truong" onclick="claimDailyQuest('dau_truong'); closeDailyQuestsModal(); navTo('minigame');" class="shrink-0 px-3 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card)] text-xs font-bold transition cursor-pointer">
+            Chơi ngay
+          </button>
+        </div>
+
+        <!-- Quest Modal Item 3 -->
+        <div class="p-3 rounded-2xl border border-[var(--border)] bg-[var(--background)]/60 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="text-lg shrink-0">🐾</span>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5">
+                <p class="font-bold text-xs text-[var(--foreground)] truncate">Chăm sóc Pet</p>
+                <span class="text-[9px] text-amber-500 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded-md shrink-0">+10🪙</span>
+              </div>
+              <p class="text-[10px] text-[var(--muted-foreground)]">Tương tác và ghé thăm Linh vật</p>
+            </div>
+          </div>
+          <button id="btn_modal_quest_cham_pet" onclick="claimDailyQuest('cham_pet'); closeDailyQuestsModal(); navTo('pet');" class="shrink-0 px-3 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card)] text-xs font-bold transition cursor-pointer">
+            Ghé Pet
+          </button>
+        </div>
+      </div>
+
+      <div class="pt-2 text-center">
+        <button id="btn_close_daily_quests_bottom" onclick="closeDailyQuestsModal()" class="w-full py-2.5 rounded-xl bg-[var(--background)] border border-[var(--border)] text-xs font-semibold hover:bg-[var(--card)] transition cursor-pointer">
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     document.querySelectorAll('aside nav button').forEach(b => {
       const t = b.querySelector('span:not(.text-base)');
@@ -2930,8 +3018,8 @@
         showProgress: false
       },
       minigame: {
-        breadcrumb: '<span class="font-semibold text-emerald-600">⚔️ Đấu trí</span>',
-        title: 'Đấu trường Minigame',
+        breadcrumb: '<span class="font-semibold text-emerald-600">🎮 Minigame</span>',
+        title: 'Khu Minigame',
         showProgress: false
       },
       battle: {
@@ -3023,6 +3111,7 @@
       const sheet = document.getElementById('modal-mobile-more');
       if (sheet) {
         sheet.classList.remove('hidden');
+        if (typeof renderDailyQuests === 'function') renderDailyQuests();
         const adminBtn = document.getElementById('btn_m_more_admin');
         if (adminBtn) {
           if (typeof currentUser !== 'undefined' && currentUser && currentUser.vai_tro === 'QUAN_TRI_VIEN') {
@@ -3039,6 +3128,17 @@
     function closeMobileMoreSheet() {
       const sheet = document.getElementById('modal-mobile-more');
       if (sheet) sheet.classList.add('hidden');
+    }
+
+    function openDailyQuestsModal() {
+      const m = document.getElementById('modal-daily-quests');
+      if (m) m.classList.remove('hidden');
+      if (typeof renderDailyQuests === 'function') renderDailyQuests();
+    }
+
+    function closeDailyQuestsModal() {
+      const m = document.getElementById('modal-daily-quests');
+      if (m) m.classList.add('hidden');
     }
 
     function navTo(viewName) {
@@ -9981,11 +10081,37 @@
             btn.className = 'w-full sm:w-auto px-3 py-1.5 rounded-lg border border-[var(--border)] hover:bg-[var(--card)] text-xs font-semibold transition cursor-pointer text-center';
           }
         }
+
+        const modalBtn = document.getElementById(`btn_modal_quest_${q.id}`);
+        if (modalBtn) {
+          if (isClaimed) {
+            modalBtn.innerHTML = '<span>✓ Đã nhận</span>';
+            modalBtn.disabled = true;
+            modalBtn.className = 'shrink-0 px-3 py-1.5 rounded-xl border border-transparent bg-emerald-500/10 text-emerald-600 text-xs font-semibold cursor-default text-center';
+          } else if (isDone) {
+            modalBtn.innerHTML = '<span>Nhận 🎁</span>';
+            modalBtn.disabled = false;
+            modalBtn.className = 'shrink-0 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-600 hover:opacity-90 text-white text-xs font-bold shadow-md cursor-pointer transition text-center animate-pulse';
+          } else {
+            modalBtn.disabled = false;
+            modalBtn.className = 'shrink-0 px-3 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--card)] text-xs font-bold transition cursor-pointer text-center';
+          }
+        }
       });
 
       const summary = document.getElementById('daily-quest-summary');
       if (summary) {
         summary.textContent = `${completedCount}/3 hoàn thành`;
+      }
+
+      const moreBadge = document.getElementById('more-sheet-quest-badge');
+      if (moreBadge) {
+        moreBadge.textContent = `${completedCount}/3 Xong`;
+        if (completedCount === 3) {
+          moreBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-500 font-mono';
+        } else {
+          moreBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 font-mono';
+        }
       }
     }
 

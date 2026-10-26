@@ -55,9 +55,19 @@ async function verifyMobileUX() {
     await page.screenshot({ path: snapSheet });
     console.log('✓ Snapshot 2 (Bottom Sheet):', snapSheet);
 
-    // 3. Snapshot Mobile Saga
+    // 2b. Snapshot Mobile Daily Quests Modal
     await page.evaluate(() => {
       closeMobileMoreSheet();
+      openDailyQuestsModal();
+    });
+    await new Promise(r => setTimeout(r, 500));
+    const snapQuests = path.join(artifactDir, 'snap_duolingo_daily_quests_modal.png');
+    await page.screenshot({ path: snapQuests });
+    console.log('✓ Snapshot 2b (Daily Quests Modal):', snapQuests);
+
+    // 3. Snapshot Mobile Saga
+    await page.evaluate(() => {
+      closeDailyQuestsModal();
       navTo('saga');
     });
     await new Promise(r => setTimeout(r, 600));
