@@ -20,6 +20,8 @@
     .do-lunge { animation: lunge .45s ease-out; }
     .do-lungeL { animation: lungeL .45s ease-out; }
     .do-shake { animation: shake .35s; filter: drop-shadow(0 0 8px rgba(244,63,94,.8)); }
+    @keyframes shakeLight { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-3px)} 75%{transform:translateX(3px)} }
+    .do-shake-light { animation: shakeLight .3s ease-in-out; filter: drop-shadow(0 0 6px rgba(245,158,11,.6)); }
     .do-float { animation: floatUp .9s ease-out forwards; }
     @keyframes bounceGently {
       0%, 100% { transform: translateY(0); }
@@ -1114,50 +1116,68 @@
     </section>
 
     <!-- ================= VIEW 6b: TRẬN ĐẤU PET ================= -->
-    <section id="view-battle" class="hidden flex-1 flex flex-col max-w-3xl w-full mx-auto p-6 sm:p-10 gap-6 relative">
-      <!-- Arena: hai pet + HP -->
-      <div class="grid grid-cols-2 gap-6 items-start">
-        <div class="space-y-2">
-          <div class="flex items-center justify-between text-xs font-semibold"><span class="user-display-name">Bạn</span><span id="my-hp-txt" class="font-mono">100</span></div>
-          <div class="w-full h-3 bg-[var(--border)] rounded-full overflow-hidden"><div id="my-hp" class="h-full bg-emerald-500 transition-all duration-500" style="width:100%"></div></div>
-          <div class="relative h-24 flex items-center justify-center">
-            <div id="my-pet" class="w-24 h-24 flex items-center justify-center select-none text-7xl">🦉</div>
-            <span id="my-shield" class="hidden absolute text-5xl opacity-70">🛡️</span>
-            <span id="my-float" class="absolute -top-1 text-lg font-extrabold text-rose-500 opacity-0"></span>
+    <section id="view-battle" class="hidden flex-1 flex flex-col max-w-2xl w-full mx-auto p-3 sm:p-6 gap-3 sm:gap-4 relative select-none">
+      <!-- 1. Thanh điều khiển trên cùng: Nút Đầu hàng (X) · Hiệp/Thời gian · Kỹ năng Khiên -->
+      <div class="flex items-center gap-3 w-full shrink-0">
+        <!-- Nút rời trận / Đầu hàng (X) -->
+        <button id="b-surrender" onclick="openSurrenderModal()" class="w-8 h-8 rounded-full border border-[var(--border)] text-[var(--muted-foreground)] hover:text-rose-500 hover:border-rose-500/40 flex items-center justify-center font-bold text-sm transition cursor-pointer shrink-0" title="Đầu hàng / Rời trận">✕</button>
+        
+        <!-- Tiến độ Hiệp & Thanh đếm ngược thời gian cam -->
+        <div class="flex-1 flex items-center gap-2.5 min-w-0">
+          <span id="b-round-badge" class="text-xs font-bold text-amber-500 font-mono shrink-0 whitespace-nowrap">Hiệp 1/10</span>
+          <div class="flex-1 h-2 bg-[var(--border)] rounded-full overflow-hidden">
+            <div id="b-timer" class="h-full bg-amber-500 transition-all duration-100 rounded-full" style="width:100%"></div>
           </div>
-          <div id="my-battle-pet-name" class="text-[10px] text-center font-semibold text-emerald-500 mt-1">🐾 Rồng Nhỏ Sparky</div>
         </div>
-        <div class="space-y-2">
-          <div class="flex items-center justify-between text-xs font-semibold"><span id="op-name">Đối thủ</span><span id="op-hp-txt" class="font-mono">100</span></div>
-          <div class="w-full h-3 bg-[var(--border)] rounded-full overflow-hidden"><div id="op-hp" class="h-full bg-rose-500 transition-all duration-500 ml-auto" style="width:100%"></div></div>
-          <div class="relative h-24 flex items-center justify-center">
-            <span id="op-pet" class="text-7xl select-none" style="transform:scaleX(-1)">🐺</span>
-            <span id="op-float" class="absolute -top-1 text-lg font-extrabold text-rose-500 opacity-0"></span>
+
+        <!-- Nút Khiên bảo vệ tròn gọn gàng -->
+        <button id="b-skill" onclick="useShield()" class="w-8 h-8 rounded-full border border-cyan-500/40 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 flex items-center justify-center text-sm font-bold transition cursor-pointer shrink-0 shadow-xs" title="Sử dụng Khiên hộ thể">🛡️</button>
+      </div>
+
+      <!-- 2. Sân khấu đối đầu 2 Pet & Thanh Máu (Thu gọn ~110px) -->
+      <div class="grid grid-cols-2 gap-4 items-start shrink-0 border-b border-[var(--border)]/60 pb-3">
+        <!-- Cột Bên Trái: Học Viên / Bạn -->
+        <div class="space-y-1">
+          <div class="flex items-center justify-between text-xs font-bold">
+            <span class="user-display-name truncate text-[var(--foreground)]">Bạn</span>
+            <span id="my-hp-txt" class="font-mono text-emerald-500">100</span>
           </div>
-          <div id="op-battle-pet-name" class="text-[10px] text-center font-semibold text-rose-400 mt-1">🐾 Sói Băng Tuyết</div>
+          <div class="w-full h-2.5 bg-[var(--border)] rounded-full overflow-hidden">
+            <div id="my-hp" class="h-full bg-emerald-500 transition-all duration-500 rounded-full" style="width:100%"></div>
+          </div>
+          <div class="relative h-16 flex items-center justify-center mt-1">
+            <div id="my-pet" class="w-16 h-16 flex items-center justify-center select-none text-5xl">🦉</div>
+            <span id="my-shield" class="hidden absolute text-4xl opacity-80">🛡️</span>
+            <span id="my-float" class="absolute -top-2 text-base font-extrabold text-rose-500 opacity-0 pointer-events-none"></span>
+            <!-- Huy hiệu Combo x5 cạnh linh vật -->
+            <span id="b-combo" class="hidden absolute -right-1 top-0 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-rose-500 text-white font-black text-[10px] shadow-md animate-bounce pointer-events-none whitespace-nowrap">🔥x2</span>
+          </div>
+          <div id="my-battle-pet-name" class="text-[10.5px] text-center font-semibold text-emerald-500 truncate">🐾 Rồng Nhỏ Sparky</div>
+        </div>
+
+        <!-- Cột Bên Phải: Đối Thủ / Bot -->
+        <div class="space-y-1">
+          <div class="flex items-center justify-between text-xs font-bold">
+            <span id="op-name" class="truncate text-[var(--foreground)]">Đối thủ</span>
+            <span id="op-hp-txt" class="font-mono text-rose-400">100</span>
+          </div>
+          <div class="w-full h-2.5 bg-[var(--border)] rounded-full overflow-hidden">
+            <div id="op-hp" class="h-full bg-rose-500 transition-all duration-500 ml-auto rounded-full" style="width:100%"></div>
+          </div>
+          <div class="relative h-16 flex items-center justify-center mt-1">
+            <div id="op-pet" class="w-16 h-16 flex items-center justify-center select-none text-5xl" style="transform:scaleX(-1)">🐺</div>
+            <span id="op-float" class="absolute -top-2 text-base font-extrabold text-rose-500 opacity-0 pointer-events-none"></span>
+          </div>
+          <div id="op-battle-pet-name" class="text-[10.5px] text-center font-semibold text-rose-400 truncate">🐾 Sói Băng Tuyết</div>
+          <!-- Dòng trạng thái đối thủ nhỏ gọn ngay dưới tên Pet -->
+          <div id="b-bot-status" class="text-[9.5px] text-center font-medium text-[var(--muted-foreground)] transition-all truncate">💭 đang suy nghĩ...</div>
         </div>
       </div>
 
-      <!-- Timer + combo -->
-      <div class="space-y-2">
-        <div class="w-full h-1.5 bg-[var(--border)] rounded-full overflow-hidden"><div id="b-timer" class="h-full bg-amber-500" style="width:100%"></div></div>
-        <div class="flex items-center justify-between text-[11px] text-[var(--muted-foreground)]">
-          <div class="flex items-center gap-2">
-            <span id="b-round-badge" class="px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-500 font-bold border border-amber-500/20 text-[10px]">Hiệp 1/10</span>
-            <span id="b-combo" class="font-bold text-amber-500"></span>
-          </div>
-          <span id="b-bot-status" class="text-[11px] font-medium text-[var(--muted-foreground)] transition-all">💭 Đối thủ đang đọc câu hỏi...</span>
-          <div class="flex items-center gap-1.5 shrink-0">
-            <button id="b-skill" onclick="useShield()" class="px-2.5 py-1 rounded-lg border border-[var(--border)] font-semibold hover:bg-[var(--card)] transition cursor-pointer text-xs">🛡️ Khiên</button>
-            <button id="b-surrender" onclick="openSurrenderModal()" class="px-2.5 py-1 rounded-lg border border-rose-500/40 text-rose-400 font-bold hover:bg-rose-500/10 transition cursor-pointer text-xs" title="Đầu hàng trận đấu">🏳️ Đầu hàng</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Câu hỏi -->
-      <div class="flex-1 space-y-4">
-        <h2 id="b-prompt" class="text-base sm:text-lg font-semibold leading-relaxed"></h2>
-        <div id="b-options" class="grid grid-cols-1 gap-2.5"></div>
+      <!-- 3. Khu vực Câu hỏi & Các Đáp án (Đẩy lên cao hơn, thấy trọn 4 đáp án không cần cuộn) -->
+      <div class="flex-1 space-y-3 pt-1 min-h-0">
+        <h2 id="b-prompt" class="text-sm sm:text-base font-semibold leading-relaxed"></h2>
+        <div id="b-options" class="grid grid-cols-1 gap-2"></div>
       </div>
 
       <!-- Kết quả (2 Cột Song Song: Rank Môn & Rank Tổng) -->
@@ -3551,9 +3571,9 @@
       const battlePet = document.getElementById('my-pet');
       if (battlePet) {
         if (image) {
-          battlePet.innerHTML = `<img src="${image}" alt="${name}" class="w-24 h-24 object-contain pixel-art select-none filter drop-shadow-md" />`;
+          battlePet.innerHTML = `<img src="${image}" alt="${name}" class="w-16 h-16 object-contain pixel-art select-none" />`;
         } else {
-          battlePet.innerHTML = `<span class="text-7xl select-none">${icon}</span>`;
+          battlePet.innerHTML = `<span class="text-5xl select-none">${icon}</span>`;
         }
       }
 
@@ -4758,13 +4778,13 @@
               checkEnd();
             }, 200);
             if (botStatus) {
-              botStatus.textContent = `⚔️ Bạn đã đánh trúng và gây ${d} sát thương!`;
-              botStatus.className = 'text-[11px] font-semibold text-emerald-400';
+              botStatus.textContent = `⚡ Đánh trúng (-${d} HP)`;
+              botStatus.className = 'text-[9.5px] text-center font-bold text-emerald-400 transition-all truncate';
             }
           } else {
             if (botStatus) {
-              botStatus.textContent = '❌ Bạn đã chọn sai đáp án!';
-              botStatus.className = 'text-[11px] font-medium text-rose-400';
+              botStatus.textContent = '❌ Chọn chưa đúng';
+              botStatus.className = 'text-[9.5px] text-center font-medium text-rose-400 transition-all truncate';
             }
           }
           roundCheck();
@@ -4778,8 +4798,8 @@
               if (shieldEl) shieldEl.classList.add('hidden');
               popFloat('my-float', '🛡️ Chặn!');
               if (botStatus) {
-                botStatus.textContent = '🛡️ Khiên Hộ Thể đã triệt tiêu đòn đánh!';
-                botStatus.className = 'text-[11px] font-medium text-cyan-400';
+                botStatus.textContent = '🛡️ Khiên đã chặn đòn!';
+                botStatus.className = 'text-[9.5px] text-center font-semibold text-cyan-400 transition-all truncate';
               }
             } else {
               anim('op-pet', 'do-lungeL');
@@ -4797,14 +4817,14 @@
                 checkEnd();
               }, 200);
               if (botStatus) {
-                botStatus.textContent = `⚡ Đối thủ tấn công trúng bạn (-${d} HP)!`;
-                botStatus.className = 'text-[11px] font-medium text-amber-400 animate-pulse';
+                botStatus.textContent = `⚡ Bị đánh trúng (-${d} HP)`;
+                botStatus.className = 'text-[9.5px] text-center font-bold text-rose-400 animate-pulse transition-all truncate';
               }
             }
           } else {
             if (botStatus) {
-              botStatus.textContent = '🛡️ Đối thủ đã chọn sai đáp án!';
-              botStatus.className = 'text-[11px] font-medium text-slate-400';
+              botStatus.textContent = '🛡️ Đối thủ đánh trượt';
+              botStatus.className = 'text-[9.5px] text-center font-medium text-slate-400 transition-all truncate';
             }
           }
           roundCheck();
@@ -4836,7 +4856,14 @@
     const opIcon = opponent ? (opponent.petIcon || opponent[1]) : '🤖';
 
     document.getElementById('op-name').textContent = opName;
-    document.getElementById('op-pet').textContent = opIcon;
+    const opPetEl = document.getElementById('op-pet');
+    if (opPetEl) {
+      if (opponent && opponent.image) {
+        opPetEl.innerHTML = `<img src="${opponent.image}" alt="${opName}" class="w-16 h-16 object-contain pixel-art select-none" />`;
+      } else {
+        opPetEl.innerHTML = `<span class="text-5xl select-none" style="transform:scaleX(-1)">${opIcon}</span>`;
+      }
+    }
     const myBattlePetName = document.getElementById('my-battle-pet-name');
     if (myBattlePetName) myBattlePetName.textContent = '🐾 ' + (currentEquippedPet?.name || 'Linh vật đồng hành');
     const opBattlePetName = document.getElementById('op-battle-pet-name');
@@ -4851,8 +4878,8 @@
 
     const botStatus = document.getElementById('b-bot-status');
     if (botStatus) {
-      botStatus.textContent = '💭 Đối thủ đang đọc câu hỏi...';
-      botStatus.className = 'text-[11px] font-medium text-[var(--muted-foreground)] transition-all';
+      botStatus.textContent = '💭 đang suy nghĩ...';
+      botStatus.className = 'text-[9.5px] text-center font-medium text-[var(--muted-foreground)] transition-all truncate';
     }
 
     syncAllPetDisplays();
@@ -4884,7 +4911,17 @@
     if (myTxt) myTxt.textContent = B.my;
     if (opTxt) opTxt.textContent = B.op;
     const comboEl = document.getElementById('b-combo');
-    if (comboEl) comboEl.textContent = B.combo >= 2 ? '🔥 Combo x' + B.combo : '';
+    if (comboEl) {
+      if (B.combo >= 2) {
+        comboEl.textContent = '🔥x' + B.combo;
+        comboEl.classList.remove('hidden');
+        comboEl.classList.remove('animate-bounce');
+        void comboEl.offsetWidth;
+        comboEl.classList.add('animate-bounce');
+      } else {
+        comboEl.classList.add('hidden');
+      }
+    }
   }
 
   function useShield() {
@@ -4929,7 +4966,7 @@
 
     const roundBadge = document.getElementById('b-round-badge');
     if (roundBadge) {
-      roundBadge.innerHTML = `Hiệp ${B.qi}/${totalQ} · <span class="text-cyan-400 font-bold">${typeLabels[q.loai] || 'Trắc nghiệm'}</span> (${bloomIcons[q.bloom] || 'Tiêu chuẩn'})`;
+      roundBadge.textContent = `Hiệp ${B.qi}/${totalQ}`;
     }
 
     const promptEl = document.getElementById('b-prompt');
@@ -5175,14 +5212,15 @@
 
       if (botStatus) {
         if (botParams.isAggressive) {
-          botStatus.textContent = '⚡ Đối thủ đang phản xạ dồn dập!';
-          botStatus.className = 'text-[11px] font-bold text-amber-500 animate-pulse';
+          botStatus.textContent = '⚡ đang ra chiêu!';
+          botStatus.className = 'text-[9.5px] text-center font-bold text-amber-500 animate-pulse transition-all truncate';
+          anim('op-pet', 'do-shake-light');
         } else if (B.my <= 35) {
-          botStatus.textContent = '🤔 Đối thủ đang do dự cân nhắc...';
-          botStatus.className = 'text-[11px] font-medium text-emerald-400';
+          botStatus.textContent = '🤔 đang đắn đo...';
+          botStatus.className = 'text-[9.5px] text-center font-medium text-emerald-400 transition-all truncate';
         } else {
-          botStatus.textContent = '💭 Đối thủ đang suy nghĩ...';
-          botStatus.className = 'text-[11px] font-medium text-[var(--muted-foreground)]';
+          botStatus.textContent = '💭 đang suy nghĩ...';
+          botStatus.className = 'text-[9.5px] text-center font-medium text-[var(--muted-foreground)] transition-all truncate';
         }
       }
 
@@ -5190,16 +5228,16 @@
       const botDelay = q.loai === 'TRAC_NGHIEM_4' ? botParams.delayMs : Math.min(roundDurationMs - 1500, botParams.delayMs + 2000);
       B.botT = setTimeout(() => {
         if (botStatus) {
-          botStatus.textContent = '🎯 Đối thủ đã chốt đáp án!';
-          botStatus.className = 'text-[11px] font-semibold text-cyan-400';
+          botStatus.textContent = '🎯 đã chốt đáp án!';
+          botStatus.className = 'text-[9.5px] text-center font-semibold text-cyan-400 transition-all truncate';
         }
         botAnswer(botParams.willAnswerCorrectly, botDelay);
       }, botDelay);
     } else {
       // Đối thủ là NGƯỜI CHƠI THỰC (PvP): hoàn toàn đợi sự kiện Socket từ đối phương
       if (botStatus) {
-        botStatus.textContent = '⚔️ Đối thủ đang đọc và chọn đáp án...';
-        botStatus.className = 'text-[11px] font-medium text-[var(--muted-foreground)]';
+        botStatus.textContent = '⚔️ đang suy nghĩ...';
+        botStatus.className = 'text-[9.5px] text-center font-medium text-[var(--muted-foreground)] transition-all truncate';
       }
     }
   }
