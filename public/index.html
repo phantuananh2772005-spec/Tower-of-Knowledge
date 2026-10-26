@@ -2,7 +2,13 @@
 <html lang="vi" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Tháp Tri Thức">
+  <meta name="theme-color" content="#10b981">
   <title>Tháp Tri Thức - Nền Tảng Học Tập Gamification & Đấu Trường 1v1</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
@@ -150,7 +156,19 @@
       flex-shrink: 0 !important;
     }
 
-    /* Sidebar co giãn linh hoạt */
+    /* Mobile-first: Ẩn hoàn toàn sidebar trên màn hình di động (< 768px) để giải phóng 100% không gian */
+    @media (max-width: 767px) {
+      #app-sidebar {
+        display: none !important;
+      }
+    }
+    @media (min-width: 768px) {
+      #mobile-bottom-bar {
+        display: none !important;
+      }
+    }
+
+    /* Sidebar co giãn linh hoạt trên desktop */
     #app-sidebar {
       transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
@@ -196,8 +214,8 @@
 </head>
 <body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen flex font-sans">
 
-  <!-- ================= 1. SIDEBAR ĐIỀU HƯỚNG CHUẨN CŨ (TASKBAR BÊN TRÁI) ================= -->
-  <aside id="app-sidebar" class="w-64 border-r border-[var(--border)] bg-[var(--card)] flex flex-col justify-between shrink-0 h-screen sticky top-0 z-30">
+  <!-- ================= 1. SIDEBAR ĐIỀU HƯỚNG CHUẨN CŨ (TASKBAR BÊN TRÁI - ẨN TRÊN MOBILE ĐỂ GIẢI PHÓNG KHÔNG GIAN) ================= -->
+  <aside id="app-sidebar" class="hidden md:flex w-64 border-r border-[var(--border)] bg-[var(--card)] flex-col justify-between shrink-0 h-screen sticky top-0 z-30">
     <div class="p-3 pt-4 space-y-6">
       
       <!-- User Profile Slot & Nút Toggle Thu gọn/Mở rộng -->
@@ -317,49 +335,49 @@
     </div>
 
     <!-- ================= THANH BỐ CỤC CHUNG TRÊN CÙNG (KHÓA LẠI KHÔNG BỊ CUỘN) ================= -->
-    <header id="app-topbar" class="shrink-0 z-20 bg-[var(--background)]/95 backdrop-blur-md border-b border-[var(--border)] px-4 sm:px-8 h-16 flex items-center justify-between">
-      <div class="min-w-0 flex-1 pr-4">
+    <header id="app-topbar" class="shrink-0 z-20 bg-[var(--background)]/95 backdrop-blur-md border-b border-[var(--border)] px-3 sm:px-8 h-14 sm:h-16 flex items-center justify-between">
+      <div class="min-w-0 flex-1 pr-2 sm:pr-4">
         <!-- Breadcrumb vị trí phân cấp -->
-        <div id="topbar-breadcrumb" class="flex items-center gap-1.5 text-[11px] text-[var(--muted-foreground)] mb-0.5">
-          <button id="btn_topbar_doimon" onclick="navTo('enrolled')" class="hover:text-[var(--foreground)] flex items-center gap-1 font-medium transition cursor-pointer truncate">
-            ← Đổi môn học
+        <div id="topbar-breadcrumb" class="flex items-center gap-1.5 text-[11px] text-[var(--muted-foreground)] mb-0.5 min-w-0">
+          <button id="btn_topbar_doimon" onclick="navTo('enrolled')" class="hover:text-[var(--foreground)] flex items-center gap-1 font-medium transition cursor-pointer truncate shrink-0">
+            ← Đổi môn
           </button>
-          <span>/</span>
+          <span class="text-[var(--border)] shrink-0">•</span>
           <span id="topbar-breadcrumb-course" class="font-semibold text-emerald-600 truncate">Cơ sở dữ liệu</span>
         </div>
         <!-- Tiêu đề lớn -->
-        <h1 id="topbar-title" class="font-bold tracking-tight text-base sm:text-lg leading-tight truncate">Chương 1: Tổng quan CSDL</h1>
+        <h1 id="topbar-title" class="font-bold tracking-tight text-sm sm:text-base md:text-lg leading-tight truncate">Chương 1: Tổng quan CSDL</h1>
       </div>
 
       <!-- Khu vực bên phải: Tiến độ học + Nút Cài đặt tài khoản -->
-      <div id="topbar-right" class="shrink-0 flex items-center gap-3">
+      <div id="topbar-right" class="shrink-0 flex items-center gap-2 sm:gap-3">
         <!-- Huy hiệu số sao chương (chỉ hiển thị khi mở Bản đồ leo tháp) -->
-        <div id="saga-chapter-stars-badge" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-500 text-xs font-bold font-mono shrink-0" title="Số sao đạt được trong chương này">
+        <div id="saga-chapter-stars-badge" class="hidden items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-500 text-[11px] sm:text-xs font-bold font-mono shrink-0" title="Số sao đạt được trong chương này">
           <span>⭐</span>
           <span id="saga-chapter-stars-count">0/15 sao</span>
         </div>
 
-        <div id="topbar-progress" class="text-right">
+        <div id="topbar-progress" class="text-right hidden sm:block">
           <span id="topbar-progress-text" class="text-xs font-bold text-emerald-600 font-mono">Đang tải tiến độ...</span>
-          <div class="w-24 sm:w-28 h-1.5 bg-[var(--border)] rounded-full mt-1 overflow-hidden ml-auto">
+          <div class="w-20 sm:w-28 h-1.5 bg-[var(--border)] rounded-full mt-1 overflow-hidden ml-auto">
             <div id="topbar-progress-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
           </div>
         </div>
 
         <!-- Nút Cổng Quản Trị (chỉ hiện khi vai_tro === 'QUAN_TRI_VIEN') -->
-        <a href="/admin/" id="btn-topbar-admin-portal" title="Chuyển sang Cổng Quản Trị" class="hidden px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/30 hover:bg-amber-500/20 text-xs font-bold transition flex items-center gap-1.5 shrink-0">
+        <a href="/admin/" id="btn-topbar-admin-portal" title="Chuyển sang Cổng Quản Trị" class="hidden px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/30 hover:bg-amber-500/20 text-xs font-bold transition md:flex items-center gap-1.5 shrink-0">
           <span>🛡️</span>
           <span class="hidden sm:inline">Quản Trị</span>
         </a>
 
-        <!-- Nút Bật/Tắt Sáng Tối (2 Icon Mặt Trăng 🌙 / Mặt Trời ☀️) -->
-        <button onclick="toggleTheme()" id="btn-theme-toggle" title="Chuyển chế độ Sáng (☀️) / Tối (🌙)" class="h-8 px-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:border-amber-500/50 flex items-center gap-0.5 transition cursor-pointer shadow-2xs shrink-0 select-none">
+        <!-- Nút Bật/Tắt Sáng Tối (chỉ hiện trên desktop md trở lên, trên mobile có trong menu Thêm) -->
+        <button onclick="toggleTheme()" id="btn-theme-toggle" title="Chuyển chế độ Sáng (☀️) / Tối (🌙)" class="hidden md:flex h-8 px-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:border-amber-500/50 items-center gap-0.5 transition cursor-pointer shadow-2xs shrink-0 select-none">
           <span id="theme-icon-sun" class="w-6 h-6 rounded flex items-center justify-center text-xs opacity-35 grayscale transition-all">☀️</span>
           <span id="theme-icon-moon" class="w-6 h-6 rounded bg-amber-500/20 flex items-center justify-center text-xs opacity-100 shadow-xs scale-105 transition-all">🌙</span>
         </button>
 
-        <!-- Nút Cài đặt (Settings) - Thu nhỏ gọn gàng -->
-        <button onclick="openSettingsModal()" id="btn-topbar-settings" title="Cài đặt" class="w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--border)]/40 hover:border-emerald-500/50 text-[var(--muted-foreground)] hover:text-[var(--foreground)] flex items-center justify-center transition cursor-pointer shadow-2xs shrink-0">
+        <!-- Nút Cài đặt (chỉ hiện trên desktop md trở lên, trên mobile có trong menu Thêm) -->
+        <button onclick="openSettingsModal()" id="btn-topbar-settings" title="Cài đặt" class="hidden md:flex w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--border)]/40 hover:border-emerald-500/50 text-[var(--muted-foreground)] hover:text-[var(--foreground)] items-center justify-center transition cursor-pointer shadow-2xs shrink-0">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -368,8 +386,8 @@
       </div>
     </header>
 
-    <!-- NỘI DUNG CUỘN (SCROLLABLE VIEWS) -->
-    <main id="app-main-scroll" class="flex-1 overflow-y-auto flex flex-col">
+    <!-- NỘI DUNG CUỘN (SCROLLABLE VIEWS - THÊM PB-20 TRÊN MOBILE ĐỂ TRÁNH BỊ BOTTOM BAR CHE) -->
+    <main id="app-main-scroll" class="flex-1 overflow-y-auto flex flex-col pb-20 md:pb-6">
 
       <!-- ================= VIEW 1: BẢN ĐỒ LỘ TRÌNH LEO THÁP (CHUYỂN VÀO KHI HỌC MÔN) ================= -->
       <section id="view-saga" class="hidden px-2 sm:px-4 max-w-2xl lg:max-w-6xl xl:max-w-7xl w-full mx-auto pt-4 pb-8 transition-all duration-300">
@@ -385,68 +403,82 @@
       </section>
 
     <!-- ================= VIEW 2: MÀN HÌNH BÀI HỌC THEO MỐC (THẺ GHI NHỚ LÝ THUYẾT + LUYỆN TẬP DUOLINGO) ================= -->
-    <section id="view-play" class="hidden flex-1 flex flex-col justify-between max-w-2xl w-full mx-auto p-6 sm:p-10">
-      <div>
-        <div class="flex items-center justify-between text-xs text-[var(--muted-foreground)] mb-3">
-          <div class="flex items-center gap-2 min-w-0">
-            <span id="play-title" class="font-bold text-sm text-[var(--foreground)] truncate">Mốc 1.1</span>
-            <span id="play-step-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 font-mono shrink-0">📖 Thẻ ghi nhớ</span>
-          </div>
-          <button id="btn_play_ve_bando" onclick="closePlay()" class="hover:text-[var(--foreground)] border border-[var(--border)] px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer shrink-0">
-            ✕ Về bản đồ
+    <section id="view-play" class="hidden flex-1 flex flex-col justify-between max-w-2xl w-full mx-auto p-4 sm:p-8 min-h-[calc(100vh-1rem)]">
+      <!-- 1. DUOLINGO TOP FOCUS HEADER: [ ✕ ] ━━━━━━━━━░░░░░ ❤️ 5 -->
+      <div class="w-full shrink-0">
+        <div class="flex items-center gap-3 w-full py-2">
+          <!-- Nút X thoát bài học (gộp "Dừng" và "Về bản đồ") -->
+          <button id="btn_play_ve_bando" onclick="closePlay()" title="Đóng bài học và về bản đồ" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl hover:bg-[var(--card)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] border border-transparent hover:border-[var(--border)] flex items-center justify-center text-lg sm:text-xl font-bold transition cursor-pointer shrink-0 active:scale-90">
+            ✕
           </button>
-        </div>
-        <div class="w-full h-2 bg-[var(--border)] rounded-full overflow-hidden">
-          <div id="play-progress" class="h-full bg-emerald-500 transition-all duration-300" style="width: 0%"></div>
+
+          <!-- Hidden legacy elements so JS setters do not throw error -->
+          <span id="play-title" class="hidden"></span>
+          <span id="play-step-badge" class="hidden"></span>
+
+          <!-- Thanh tiến độ bài học Duolingo -->
+          <div class="flex-1 h-3 sm:h-3.5 bg-[var(--border)]/80 rounded-full overflow-hidden p-0.5 shadow-inner">
+            <div id="play-progress" class="h-full bg-emerald-500 rounded-full transition-all duration-300 shadow-sm" style="width: 0%"></div>
+          </div>
+
+          <!-- Sinh mạng / Chuỗi tim Duolingo -->
+          <div id="play-hearts-badge" class="flex items-center gap-1 font-bold text-xs sm:text-sm text-rose-500 shrink-0 font-mono px-2.5 py-1 rounded-xl bg-rose-500/10 border border-rose-500/20 shadow-2xs select-none">
+            <span class="animate-pulse">❤️</span>
+            <span id="play-hearts-count">5</span>
+          </div>
         </div>
       </div>
 
       <!-- MAIN CONTAINER: PHASE 1 (THẺ GHI NHỚ LÝ THUYẾT) -->
-      <div id="play-theory-container" class="py-6 space-y-5 flex-1 flex flex-col justify-center">
-        <div class="flex items-center justify-between">
-          <span class="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 font-mono">
-            💡 THẺ GHI NHỚ NGUYÊN TỬ
+      <div id="play-theory-container" class="py-4 sm:py-6 space-y-4 flex-1 flex flex-col justify-center">
+        <!-- Header mốc & số thứ tự thẻ tinh gọn -->
+        <div class="flex items-center justify-between px-1">
+          <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+            <span>💡</span>
+            <span id="theory-topic-badge">Thẻ ghi nhớ bài học</span>
           </span>
-          <span id="card-counter" class="text-xs text-[var(--muted-foreground)] font-mono font-bold">Thẻ 1/3</span>
+          <span id="card-counter" class="text-xs font-bold font-mono text-[var(--muted-foreground)] px-2.5 py-0.5 rounded-full bg-[var(--card)] border border-[var(--border)]">Thẻ 1/3</span>
         </div>
 
         <!-- Animated Flashcard Box -->
-        <div class="bg-[var(--card)] border-2 border-emerald-500/30 rounded-3xl p-6 sm:p-8 shadow-xl space-y-4 relative animate-in fade-in zoom-in-95 duration-200">
-          <div class="flex items-center gap-2.5 pb-2 border-b border-[var(--border)]">
-            <span class="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center font-bold text-sm shrink-0">💡</span>
+        <div class="bg-[var(--card)] border-2 border-emerald-500/30 rounded-3xl p-5 sm:p-7 shadow-xl space-y-3.5 relative animate-in fade-in zoom-in-95 duration-200">
+          <div class="flex items-center gap-2.5 pb-2.5 border-b border-[var(--border)]">
+            <span class="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center font-bold text-sm shrink-0">📖</span>
             <h3 id="card-title" class="text-base sm:text-lg font-bold text-[var(--foreground)] leading-tight">Khái niệm cốt lõi</h3>
           </div>
-          <div id="card-content" class="text-xs sm:text-sm text-[var(--foreground)]/90 leading-relaxed space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
+          <div id="card-content" class="text-xs sm:text-sm text-[var(--foreground)]/90 leading-relaxed space-y-2.5 max-h-[340px] overflow-y-auto pr-1">
             <!-- Dynamic Flashcard Body -->
           </div>
         </div>
 
-        <div class="flex items-center justify-between pt-2">
-          <button id="btn-skip-theory" onclick="startPracticePhase()" class="text-xs text-[var(--muted-foreground)] hover:text-emerald-600 transition underline cursor-pointer">
-            Bỏ qua bài giảng, vào làm bài ngay ⚡
-          </button>
-          <button id="btn-next-card" onclick="nextTheoryCard()" class="px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5">
+        <!-- Action Footer Phase 1: Full-width button ghim đáy, link bỏ qua mờ ở dưới -->
+        <div class="pt-3 space-y-2 text-center">
+          <button id="btn-next-card" onclick="nextTheoryCard()" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md hover:shadow-lg transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]">
             <span>Tiếp tục</span> <span>→</span>
           </button>
+          <div>
+            <button id="btn-skip-theory" onclick="startPracticePhase()" class="text-xs text-[var(--muted-foreground)] hover:text-emerald-600 transition cursor-pointer py-1">
+              Bỏ qua bài giảng, vào làm bài ngay ⚡
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- MAIN CONTAINER: PHASE 2 (BÀI TẬP DUOLINGO VỚI HÀNG ĐỢI LÀM SAI ĐẨY RA CUỐI) -->
-      <div id="play-practice-container" class="hidden py-6 space-y-6 flex-1 flex flex-col justify-center">
-        <!-- Question Header info -->
-        <div class="flex items-center justify-between">
-          <span id="q-bloom-tag" class="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 font-mono">
-            🎯 CÂU HỎI LUYỆN TẬP
-          </span>
-          <span id="q-counter" class="text-xs text-[var(--muted-foreground)] font-mono font-bold">Câu 1/10</span>
+      <div id="play-practice-container" class="hidden py-4 sm:py-6 space-y-4 flex-1 flex flex-col justify-between">
+        <!-- Hidden legacy tags to preserve compatibility with existing JS updates -->
+        <span id="q-bloom-tag" class="hidden"></span>
+        <span id="q-counter" class="hidden"></span>
+
+        <!-- Question Prompt: Gọn gàng, nổi bật, không trùng lặp -->
+        <div class="space-y-1 pt-1">
+          <h2 id="q-prompt" class="text-base sm:text-lg font-bold text-[var(--foreground)] leading-snug">
+            Đang tải câu hỏi...
+          </h2>
         </div>
 
-        <h2 id="q-prompt" class="text-base sm:text-lg font-semibold leading-relaxed">
-          Đang tải câu hỏi...
-        </h2>
-
         <!-- Interactive Question Container (supports TRAC_NGHIEM_4, NOI_CAP, DIEN_TU, SAP_XEP_CAU) -->
-        <div id="q-options-container" class="space-y-4"></div>
+        <div id="q-options-container" class="space-y-3 flex-1 flex flex-col justify-center py-2"></div>
 
         <!-- Pedagogical Feedback Box -->
         <div id="q-feedback-box" class="hidden rounded-2xl p-4 border text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200">
@@ -454,14 +486,16 @@
           <p id="q-feedback-desc" class="text-[var(--foreground)]/90 leading-relaxed font-sans"></p>
         </div>
 
-        <!-- Action Footer -->
-        <div class="pt-4 border-t border-[var(--border)] flex justify-between items-center">
-          <button id="btn-quiz-theory-hint" onclick="handleTheoryHintClick()" class="text-xs font-semibold text-[var(--muted-foreground)] hover:text-[var(--foreground)] flex items-center gap-1.5 cursor-pointer transition">
-            <span>📖</span> <span class="underline">Xem lại thẻ bài giảng</span>
-          </button>
-          <button id="btn-next-step" onclick="handleMocPracticeAction()" class="px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5">
+        <!-- Action Footer Duolingo: Nút chính full-width ở đáy + link xem gợi ý bài giảng nhẹ nhàng -->
+        <div class="pt-3 border-t border-[var(--border)]/70 space-y-2">
+          <button id="btn-next-step" onclick="handleMocPracticeAction()" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md hover:shadow-lg transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]">
             <span>Kiểm tra</span> <span>✓</span>
           </button>
+          <div class="text-center">
+            <button id="btn-quiz-theory-hint" onclick="handleTheoryHintClick()" class="text-xs font-medium text-[var(--muted-foreground)] hover:text-emerald-600 inline-flex items-center gap-1.5 cursor-pointer transition py-1">
+              <span>📖</span> <span>Xem lại thẻ bài giảng</span>
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -502,7 +536,7 @@
               </div>
               <div class="min-w-0 flex-1">
                 <span id="hub-focus-chapter-tag" class="text-[10px] sm:text-[11px] font-bold text-emerald-600 font-mono uppercase tracking-wide block truncate">Chương 1: Tổng quan CSDL</span>
-                <span id="hub-focus-title" class="text-xs sm:text-sm font-bold text-[var(--foreground)] block truncate mt-0.5">Mốc 1.1: Giới thiệu CSDL</span>
+                <span id="hub-focus-title" class="text-sm sm:text-base font-bold text-[var(--foreground)] block break-words mt-0.5">Mốc 1.1: Giới thiệu CSDL</span>
                 <p id="hub-focus-desc" class="text-[11px] text-[var(--muted-foreground)] mt-0.5 line-clamp-1">Tiếp tục hành trình học tập tương tác cùng Linh vật Pet.</p>
               </div>
             </div>
@@ -511,7 +545,7 @@
                 <span class="text-[10px] text-[var(--muted-foreground)] uppercase font-semibold">Phần thưởng:</span>
                 <span id="hub-focus-reward" class="text-xs font-bold text-amber-500 font-mono">+150 EXP • +30 Xu</span>
               </div>
-              <button id="btn_hub_start_focus_moc" onclick="startFocusMocLearning()" class="w-full sm:w-auto px-4 py-2 sm:px-5 sm:py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md transition cursor-pointer flex items-center justify-center gap-1.5 hover:scale-105 active:scale-95 duration-150">
+              <button id="btn_hub_start_focus_moc" onclick="startFocusMocLearning()" class="w-full sm:w-auto py-3 sm:py-2.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 duration-150">
                 <span>🚀</span>
                 <span>Bắt đầu học ngay</span>
                 <span>→</span>
@@ -525,9 +559,9 @@
               Chinh phục các mốc kiến thức tương tác để nhận Xu & EXP thăng hạng.
             </p>
             <div class="flex items-center gap-2 w-full sm:w-auto">
-              <button id="btn_hub_tieptuc_csdl" onclick="handleHubMainAction()" class="flex-1 sm:flex-none px-3.5 py-2 sm:py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs">
+              <button id="btn_hub_tieptuc_csdl" onclick="handleHubMainAction()" class="flex-1 sm:flex-none px-3.5 py-2 sm:py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap">
                 <span>🔍</span>
-                <span class="truncate">Khám phá Kho môn</span>
+                <span>Khám phá Kho môn</span>
                 <span>→</span>
               </button>
               <button id="btn_hub_khampha_kho_mon" onclick="navTo('catalog')" class="hidden flex-1 sm:flex-none px-3 py-2 sm:py-1.5 rounded-xl border border-dashed border-[var(--border)] hover:border-emerald-500/50 hover:bg-emerald-500/5 text-xs font-semibold text-[var(--muted-foreground)] hover:text-emerald-600 transition cursor-pointer flex items-center justify-center gap-1 shrink-0">
@@ -2422,8 +2456,8 @@
       </div>
     </div>
 
-    <!-- ================= NÚT HỎI TRỢ GIÚP / PET TOUR NẰM GÓC DƯỚI BÊN PHẢI ================= -->
-    <button id="btn_floating_help_tour" onclick="startPetOnboardingTour()" title="Hướng dẫn cùng Pet" class="fixed bottom-4 right-4 z-40 w-10 h-10 rounded-full bg-linear-to-tr from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-xl hover:shadow-2xl flex items-center justify-center font-black text-sm transition-all duration-200 transform hover:scale-110 active:scale-95 cursor-pointer border border-white/30 backdrop-blur-xs group">
+    <!-- ================= NÚT HỎI TRỢ GIÚP / PET TOUR NẰM GÓC DƯỚI BÊN PHẢI (CHỈ HIỆN TRÊN DESKTOP, TRÊN MOBILE ĐƯA VÀO MENU THÊM) ================= -->
+    <button id="btn_floating_help_tour" onclick="startPetOnboardingTour()" title="Hướng dẫn cùng Pet" class="hidden md:flex fixed bottom-6 right-6 z-40 w-10 h-10 rounded-full bg-linear-to-tr from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-xl hover:shadow-2xl items-center justify-center font-black text-sm transition-all duration-200 transform hover:scale-110 active:scale-95 cursor-pointer border border-white/30 backdrop-blur-xs group">
       <span class="select-none">❓</span>
       <span class="absolute right-12 bottom-1/2 translate-y-1/2 whitespace-nowrap px-2.5 py-1 rounded-lg bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] text-xs font-semibold shadow-lg opacity-0 group-hover:opacity-100 transition pointer-events-none">
         Hướng dẫn cùng Pet 🦉
@@ -2725,6 +2759,133 @@
     </main>
   </div>
 
+  <!-- ================= THANH ĐIỀU HƯỚNG ĐÁY MÀN HÌNH CHUẨN DUOLINGO (MOBILE ONLY) ================= -->
+  <nav id="mobile-bottom-bar" class="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-[var(--card)]/95 backdrop-blur-md border-t border-[var(--border)] px-1 py-1.5 flex items-center justify-around shadow-lg select-none">
+    <!-- 1. Học / Trang chủ -->
+    <button id="btn_m_nav_hub" onclick="navTo('hub')" class="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-emerald-600 dark:text-emerald-400 font-bold active:scale-95 cursor-pointer">
+      <span class="text-xl">🏠</span>
+      <span class="text-[10px] mt-0.5">Học</span>
+    </button>
+
+    <!-- 2. Bản đồ Lộ trình -->
+    <button id="btn_m_nav_saga" onclick="navTo('saga')" class="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer">
+      <span class="text-xl">🗺️</span>
+      <span class="text-[10px] mt-0.5">Lộ trình</span>
+    </button>
+
+    <!-- 3. Đấu trường Minigame -->
+    <button id="btn_m_nav_minigame" onclick="navTo('minigame')" class="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer">
+      <span class="text-xl">⚔️</span>
+      <span class="text-[10px] mt-0.5">Đấu trường</span>
+    </button>
+
+    <!-- 4. Linh vật Pet -->
+    <button id="btn_m_nav_pet" onclick="navTo('pet')" class="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer">
+      <span class="text-xl">🐾</span>
+      <span class="text-[10px] mt-0.5">Linh vật</span>
+    </button>
+
+    <!-- 5. Thêm (...) Duolingo-style Bottom Sheet -->
+    <button id="btn_m_nav_more" onclick="openMobileMoreSheet()" class="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer">
+      <span class="text-xl">☰</span>
+      <span class="text-[10px] mt-0.5">Thêm</span>
+    </button>
+  </nav>
+
+  <!-- ================= BOTTOM SHEET DUOLINGO: MENU "THÊM" DÀNH CHO MOBILE ================= -->
+  <div id="modal-mobile-more" class="fixed inset-0 z-50 hidden bg-black/60 backdrop-blur-xs flex flex-col justify-end transition-opacity duration-300">
+    <div onclick="closeMobileMoreSheet()" class="flex-1"></div>
+    <div class="bg-[var(--card)] border-t border-[var(--border)] rounded-t-3xl p-5 pb-8 space-y-3 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-200 shadow-2xl">
+      <div class="w-12 h-1.5 bg-[var(--border)] rounded-full mx-auto mb-2"></div>
+      <div class="flex items-center justify-between pb-2 border-b border-[var(--border)]">
+        <h3 class="font-bold text-sm text-[var(--foreground)]">Tính năng mở rộng</h3>
+        <button id="btn_close_mobile_more" onclick="closeMobileMoreSheet()" class="w-8 h-8 rounded-full border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] flex items-center justify-center text-xs font-bold cursor-pointer">✕</button>
+      </div>
+
+      <div class="grid grid-cols-1 gap-2 pt-1">
+        <!-- 1. Hồ sơ cá nhân -->
+        <button id="btn_m_more_profile" onclick="closeMobileMoreSheet(); openProfileModal()" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
+          <span class="w-10 h-10 rounded-xl bg-blue-500/15 text-blue-500 flex items-center justify-center text-lg shrink-0">👤</span>
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-xs text-[var(--foreground)]">Hồ sơ cá nhân</p>
+            <p class="text-[10px] text-[var(--muted-foreground)]">Cấp bậc, danh hiệu, thành tích</p>
+          </div>
+          <span class="text-xs text-[var(--muted-foreground)] shrink-0">→</span>
+        </button>
+
+        <!-- 2. Kho môn học -->
+        <button id="btn_m_more_catalog" onclick="closeMobileMoreSheet(); navTo('catalog')" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
+          <span class="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center text-lg shrink-0">📚</span>
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-xs text-[var(--foreground)]">Kho môn học</p>
+            <p class="text-[10px] text-[var(--muted-foreground)]">Khám phá và đăng ký môn học mới</p>
+          </div>
+          <span class="text-xs text-[var(--muted-foreground)] shrink-0">→</span>
+        </button>
+
+        <!-- 3. Môn đang học -->
+        <button id="btn_m_more_enrolled" onclick="closeMobileMoreSheet(); navTo('enrolled')" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
+          <span class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center text-lg shrink-0">🎯</span>
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-xs text-[var(--foreground)]">Môn đang theo học</p>
+            <p class="text-[10px] text-[var(--muted-foreground)]">Quản lý và chuyển đổi môn học</p>
+          </div>
+          <span class="text-xs text-[var(--muted-foreground)] shrink-0">→</span>
+        </button>
+
+        <!-- 4. Cửa hàng Shop -->
+        <button id="btn_m_more_shop" onclick="closeMobileMoreSheet(); navTo('shop')" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
+          <span class="w-10 h-10 rounded-xl bg-purple-500/15 text-purple-500 flex items-center justify-center text-lg shrink-0">🛍️</span>
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-xs text-[var(--foreground)]">Cửa hàng Shop</p>
+            <p class="text-[10px] text-[var(--muted-foreground)]">Trang bị, thức ăn linh vật, hiệu ứng</p>
+          </div>
+          <span class="text-xs text-[var(--muted-foreground)] shrink-0">→</span>
+        </button>
+
+        <!-- 5. Chuyển đổi giao diện Sáng / Tối -->
+        <button id="btn_m_more_theme" onclick="toggleTheme()" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
+          <span class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center text-lg shrink-0">🌓</span>
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-xs text-[var(--foreground)]">Chế độ giao diện</p>
+            <p class="text-[10px] text-[var(--muted-foreground)]">Chuyển đổi giao diện Sáng / Tối</p>
+          </div>
+          <span class="text-xs text-[var(--muted-foreground)] shrink-0">☀️/🌙</span>
+        </button>
+
+        <!-- 6. Cài đặt hệ thống & Âm thanh -->
+        <button id="btn_m_more_settings" onclick="closeMobileMoreSheet(); openSettingsModal()" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
+          <span class="w-10 h-10 rounded-xl bg-slate-500/15 text-[var(--foreground)] flex items-center justify-center text-lg shrink-0">⚙️</span>
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-xs text-[var(--foreground)]">Cài đặt & Âm thanh</p>
+            <p class="text-[10px] text-[var(--muted-foreground)]">Tùy chỉnh nhạc nền, hiệu ứng, thông báo</p>
+          </div>
+          <span class="text-xs text-[var(--muted-foreground)] shrink-0">→</span>
+        </button>
+
+        <!-- 7. Hướng dẫn cùng Pet -->
+        <button id="btn_m_more_help_tour" onclick="closeMobileMoreSheet(); startPetOnboardingTour()" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
+          <span class="w-10 h-10 rounded-xl bg-teal-500/15 text-teal-500 flex items-center justify-center text-lg shrink-0">❓</span>
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-xs text-[var(--foreground)]">Hướng dẫn sử dụng</p>
+            <p class="text-[10px] text-[var(--muted-foreground)]">Tìm hiểu tính năng cùng Pet đồng hành</p>
+          </div>
+          <span class="text-xs text-[var(--muted-foreground)] shrink-0">→</span>
+        </button>
+
+        <!-- 8. Cổng Quản trị (chỉ hiện khi vai_tro === QUAN_TRI_VIEN) -->
+        <a href="/admin/" id="btn_m_more_admin" class="hidden w-full text-left p-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 flex items-center gap-3.5 transition cursor-pointer">
+          <span class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center text-lg shrink-0">🛡️</span>
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-xs text-amber-500">Cổng Quản Trị Hệ Thống</p>
+            <p class="text-[10px] text-amber-600/80">Quản lý môn học, mốc bài tập, tài khoản</p>
+          </div>
+          <span class="text-xs text-amber-500 shrink-0">→</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
   <script>
     document.querySelectorAll('aside nav button').forEach(b => {
       const t = b.querySelector('span:not(.text-base)');
@@ -2749,27 +2910,27 @@
 
     const TOPBAR_CONFIG = {
       saga: {
-        breadcrumb: '<button id="btn_topbar_nav_doimon" onclick="navTo(\'enrolled\')" class="hover:text-[var(--foreground)] flex items-center gap-1 font-medium transition cursor-pointer truncate">← Đổi môn</button><span>/</span><span id="topbar-breadcrumb-course" class="font-semibold text-emerald-600 truncate">Cơ sở dữ liệu</span>',
+        breadcrumb: '<button id="btn_topbar_nav_doimon" onclick="navTo(\'enrolled\')" class="hover:text-[var(--foreground)] flex items-center gap-1 font-medium transition cursor-pointer truncate shrink-0">← Đổi môn</button><span class="text-[var(--border)] shrink-0">•</span><span id="topbar-breadcrumb-course" class="font-semibold text-emerald-600 truncate">Cơ sở dữ liệu</span>',
         title: 'Chương 1: CSDL',
         showProgress: true
       },
       hub: {
-        breadcrumb: '<span>🏠 Trang chủ</span>',
+        breadcrumb: '<span class="font-semibold text-emerald-600">🏠 Trang chủ</span>',
         title: 'Tổng quan',
         showProgress: false
       },
       enrolled: {
-        breadcrumb: '<button id="btn_topbar_nav_trangchu" onclick="navTo(\'hub\')" class="hover:text-[var(--foreground)] transition cursor-pointer">Trang chủ</button><span>/</span><span>Môn học</span>',
+        breadcrumb: '<button id="btn_topbar_nav_trangchu" onclick="navTo(\'hub\')" class="hover:text-[var(--foreground)] transition cursor-pointer shrink-0">Trang chủ</button><span class="text-[var(--border)] shrink-0">•</span><span class="truncate">Môn học</span>',
         title: 'Môn đang học',
         showProgress: false
       },
       catalog: {
-        breadcrumb: '<button id="btn_nav_trangchu_crumb" onclick="navTo(\'hub\')" class="hover:text-[var(--foreground)] transition cursor-pointer">Trang chủ</button><span>/</span><span>Kho môn</span>',
+        breadcrumb: '<button id="btn_nav_trangchu_crumb" onclick="navTo(\'hub\')" class="hover:text-[var(--foreground)] transition cursor-pointer shrink-0">Trang chủ</button><span class="text-[var(--border)] shrink-0">•</span><span class="truncate">Kho môn</span>',
         title: 'Kho môn học',
         showProgress: false
       },
       minigame: {
-        breadcrumb: '<span>⚔️ Đấu trí</span>',
+        breadcrumb: '<span class="font-semibold text-emerald-600">⚔️ Đấu trí</span>',
         title: 'Đấu trường Minigame',
         showProgress: false
       },
@@ -2779,22 +2940,22 @@
         showProgress: false
       },
       pet: {
-        breadcrumb: '<span>🐾 Đồng hành</span>',
+        breadcrumb: '<span class="font-semibold text-emerald-600">🐾 Đồng hành</span>',
         title: 'Linh vật',
         showProgress: false
       },
       shop: {
-        breadcrumb: '<span>🛍️ Cửa hàng</span>',
+        breadcrumb: '<span class="font-semibold text-emerald-600">🛍️ Cửa hàng</span>',
         title: 'Shop',
         showProgress: false
       },
       play: {
-        breadcrumb: '<button id="btn_play_header_close" onclick="closePlay()" class="hover:text-[var(--foreground)] transition cursor-pointer">✕ Dừng</button>',
+        breadcrumb: '<button id="btn_play_header_close" onclick="closePlay()" class="hover:text-[var(--foreground)] transition cursor-pointer">✕ Đóng</button>',
         title: 'Luyện tập',
         showProgress: false
       },
       extreme: {
-        breadcrumb: '<button id="btn_extreme_header_quit" onclick="openExtremeQuitConfirmModal()" class="hover:text-rose-400 text-rose-500 font-bold transition cursor-pointer flex items-center gap-1">← Rời trận</button><span>/</span><span>Cực Hạn</span>',
+        breadcrumb: '<button id="btn_extreme_header_quit" onclick="openExtremeQuitConfirmModal()" class="hover:text-rose-400 text-rose-500 font-bold transition cursor-pointer flex items-center gap-1">← Rời trận</button><span class="text-[var(--border)] shrink-0">•</span><span>Cực Hạn</span>',
         title: 'Sinh Tồn Vô Tận',
         showProgress: false
       }
@@ -2808,7 +2969,7 @@
           const currentCourseName = (liveCourseData && liveCourseData.mon_hoc && liveCourseData.mon_hoc.ten_mon) 
             ? liveCourseData.mon_hoc.ten_mon 
             : (currentActiveCourseSlug === 'chuyen-doi-so' ? 'Chuyển đổi số & Kinh tế số' : 'Cơ sở dữ liệu');
-          bcEl.innerHTML = `<button id="btn_topbar_nav_doimon" onclick="navTo('enrolled')" class="hover:text-[var(--foreground)] flex items-center gap-1 font-medium transition cursor-pointer truncate">← Đổi môn</button><span>/</span><span id="topbar-breadcrumb-course" class="font-semibold text-emerald-600 truncate">${currentCourseName}</span>`;
+          bcEl.innerHTML = `<button id="btn_topbar_nav_doimon" onclick="navTo('enrolled')" class="hover:text-[var(--foreground)] flex items-center gap-1 font-medium transition cursor-pointer truncate shrink-0">← Đổi môn</button><span class="text-[var(--border)] shrink-0">•</span><span id="topbar-breadcrumb-course" class="font-semibold text-emerald-600 truncate">${currentCourseName}</span>`;
         } else {
           bcEl.innerHTML = cfg.breadcrumb;
         }
@@ -2836,6 +2997,50 @@
       }
     }
 
+    function updateMobileBottomBar(viewName) {
+      const tabs = {
+        hub: 'btn_m_nav_hub',
+        saga: 'btn_m_nav_saga',
+        minigame: 'btn_m_nav_minigame',
+        battle: 'btn_m_nav_minigame',
+        extreme: 'btn_m_nav_minigame',
+        pet: 'btn_m_nav_pet'
+      };
+      const activeBtnId = tabs[viewName];
+      const buttons = ['btn_m_nav_hub', 'btn_m_nav_saga', 'btn_m_nav_minigame', 'btn_m_nav_pet', 'btn_m_nav_more'];
+      buttons.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (id === activeBtnId) {
+          el.className = "flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-emerald-600 dark:text-emerald-400 font-bold active:scale-95 cursor-pointer";
+        } else {
+          el.className = "flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer";
+        }
+      });
+    }
+
+    function openMobileMoreSheet() {
+      const sheet = document.getElementById('modal-mobile-more');
+      if (sheet) {
+        sheet.classList.remove('hidden');
+        const adminBtn = document.getElementById('btn_m_more_admin');
+        if (adminBtn) {
+          if (typeof currentUser !== 'undefined' && currentUser && currentUser.vai_tro === 'QUAN_TRI_VIEN') {
+            adminBtn.classList.remove('hidden');
+            adminBtn.classList.add('flex');
+          } else {
+            adminBtn.classList.add('hidden');
+            adminBtn.classList.remove('flex');
+          }
+        }
+      }
+    }
+
+    function closeMobileMoreSheet() {
+      const sheet = document.getElementById('modal-mobile-more');
+      if (sheet) sheet.classList.add('hidden');
+    }
+
     function navTo(viewName) {
       if (typeof currentLiveMatch !== 'undefined' && currentLiveMatch && typeof B !== 'undefined' && B && !B.over && viewName !== 'battle') {
         pendingBattleNavView = viewName;
@@ -2852,6 +3057,25 @@
         // Mặc định tự động lưu kết quả khi rời trang theo yêu cầu người dùng
         autoSaveQuizAndNavigate(viewName);
         return;
+      }
+
+      // FULL FOCUS MODE IN PLAY / BATTLE / EXTREME: Ẩn sidebar, topbar, mobile bottom bar, và nút trợ giúp nổi
+      const isFocusMode = ['play', 'battle', 'extreme'].includes(viewName);
+      const topbarEl = document.getElementById('app-topbar');
+      const sidebarEl = document.getElementById('app-sidebar');
+      const mobileBarEl = document.getElementById('mobile-bottom-bar');
+      const floatingHelpEl = document.getElementById('btn_floating_help_tour');
+
+      if (isFocusMode) {
+        if (topbarEl) topbarEl.classList.add('hidden');
+        if (sidebarEl) sidebarEl.classList.add('hidden');
+        if (mobileBarEl) mobileBarEl.classList.add('hidden');
+        if (floatingHelpEl) floatingHelpEl.classList.add('hidden');
+      } else {
+        if (topbarEl) topbarEl.classList.remove('hidden');
+        if (sidebarEl) sidebarEl.classList.remove('hidden');
+        if (mobileBarEl) mobileBarEl.classList.remove('hidden');
+        if (floatingHelpEl) floatingHelpEl.classList.remove('hidden');
       }
 
       const views = ['hub', 'enrolled', 'saga', 'catalog', 'minigame', 'battle', 'pet', 'shop', 'play', 'extreme'];
@@ -2894,6 +3118,7 @@
         scrollToActiveNode(true);
       }
       updateTopbarUI(viewName);
+      updateMobileBottomBar(viewName);
       syncAllPetDisplays();
     }
 
@@ -7846,7 +8071,13 @@
       }
 
       const qPrompt = document.getElementById('q-prompt');
-      if (qPrompt) qPrompt.textContent = q.noi_dung;
+      if (qPrompt) {
+        if (q.loai_cau_hoi === 'NOI_CAP') {
+          qPrompt.textContent = 'Ghép thuật ngữ với định nghĩa tương ứng';
+        } else {
+          qPrompt.textContent = q.noi_dung;
+        }
+      }
 
       const fbBox = document.getElementById('q-feedback-box');
       if (fbBox) fbBox.classList.add('hidden');
@@ -7856,14 +8087,12 @@
       if (nextBtn) {
         if (isAutoAdvanceType) {
           nextBtn.disabled = true;
-          nextBtn.classList.add('opacity-0', 'pointer-events-none');
+          nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] opacity-0 pointer-events-none";
           nextBtn.innerHTML = '<span>Tiếp tục</span> <span>→</span>';
-          nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5 opacity-0 pointer-events-none";
         } else {
           nextBtn.disabled = false;
-          nextBtn.classList.remove('opacity-0', 'pointer-events-none');
+          nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]";
           nextBtn.innerHTML = '<span>Kiểm tra</span> <span>✓</span>';
-          nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5";
         }
       }
 
@@ -7955,10 +8184,10 @@
           if (nextBtn) {
             if (isCorrect) {
               nextBtn.innerHTML = '<span>Tiếp tục</span> <span>→</span>';
-              nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5";
+              nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]";
             } else {
               nextBtn.innerHTML = '<span>Đã hiểu · Luyện lại ở cuối</span> <span>↺</span>';
-              nextBtn.className = "px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5";
+              nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]";
             }
           }
           return;
@@ -8019,10 +8248,10 @@
           if (nextBtn) {
             if (isCorrect) {
               nextBtn.innerHTML = '<span>Tiếp tục</span> <span>→</span>';
-              nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5";
+              nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]";
             } else {
               nextBtn.innerHTML = '<span>Đã hiểu · Luyện lại ở cuối</span> <span>↺</span>';
-              nextBtn.className = "px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5";
+              nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]";
             }
           }
           return;
@@ -8431,7 +8660,13 @@
       if (qCounter) qCounter.textContent = `Câu ${qIndex + 1}/${questions.length} · Chặng ${step}/${totalSteps}`;
 
       const qPrompt = document.getElementById('q-prompt');
-      if (qPrompt) qPrompt.textContent = q.noi_dung;
+      if (qPrompt) {
+        if (q.loai_cau_hoi === 'NOI_CAP') {
+          qPrompt.textContent = 'Ghép thuật ngữ với định nghĩa tương ứng';
+        } else {
+          qPrompt.textContent = q.noi_dung;
+        }
+      }
 
       const fbBox = document.getElementById('q-feedback-box');
       if (fbBox) fbBox.classList.add('hidden');
@@ -8441,14 +8676,12 @@
       if (nextBtn) {
         if (isAutoAdvanceType) {
           nextBtn.disabled = true;
-          nextBtn.classList.add('opacity-0', 'pointer-events-none');
+          nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] opacity-0 pointer-events-none";
           nextBtn.innerHTML = '<span>Tiếp tục</span> <span>→</span>';
-          nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5 opacity-0 pointer-events-none";
         } else {
           nextBtn.disabled = false;
-          nextBtn.classList.remove('opacity-0', 'pointer-events-none');
+          nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]";
           nextBtn.innerHTML = '<span>Kiểm tra</span> <span>✓</span>';
-          nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-md flex items-center gap-1.5";
         }
       }
 
@@ -8592,10 +8825,10 @@
         const isLastInStep = s.questions && s.qIndex === (s.questions.length - 1);
         if (isCorrect) {
           nextBtn.innerHTML = isLastInStep ? '<span>Hoàn thành & Tiếp tục</span> <span>✓</span>' : '<span>Tiếp tục</span> <span>→</span>';
-          nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-150";
+          nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] animate-in fade-in zoom-in-95 duration-150";
         } else {
           nextBtn.innerHTML = '<span>Đã hiểu · Luyện lại ở cuối</span> <span>↺</span>';
-          nextBtn.className = "px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-150";
+          nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] animate-in fade-in zoom-in-95 duration-150";
         }
       }
     }
@@ -8625,18 +8858,12 @@
       const wrapper = document.createElement('div');
       wrapper.className = "space-y-3";
 
-      const hintText = document.createElement('div');
-      hintText.className = "text-xs text-[var(--muted-foreground)] flex items-center justify-between gap-1.5 px-0.5";
-      hintText.innerHTML = `
-        <span class="flex items-center gap-1.5 font-medium">
-          <span>👆</span>
-          <span>Chạm 1 mục <b>Trái</b> rồi chạm mục tương ứng <b>Phải</b>:</span>
-        </span>
-        <span id="noicap-counter-badge" class="text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono shrink-0">
-          0/${totalPairs} cặp
-        </span>
-      `;
-      wrapper.appendChild(hintText);
+      // Subtle counter badge kept hidden to avoid UI clutter
+      const counterBadge = document.createElement('span');
+      counterBadge.id = "noicap-counter-badge";
+      counterBadge.className = "hidden";
+      counterBadge.textContent = `0/${totalPairs} cặp`;
+      wrapper.appendChild(counterBadge);
 
       // CỐ ĐỊNH 2 CỘT SONG SONG TRÊN CẢ MOBILE VÀ DESKTOP (KHÔNG BAO GIỜ CO THÀNH 1 CỘT)
       const cols = document.createElement('div');
@@ -8850,7 +9077,7 @@
               nextBtn.classList.remove('opacity-0', 'pointer-events-none');
               const isLastInStep = s && s.questions && s.qIndex === (s.questions.length - 1);
               nextBtn.innerHTML = isLastInStep ? '<span>Hoàn thành & Tiếp tục</span> <span>✓</span>' : '<span>Tiếp tục</span> <span>→</span>';
-              nextBtn.className = "px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-150";
+              nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] animate-in fade-in zoom-in-95 duration-150";
             }
           }
         } else {
