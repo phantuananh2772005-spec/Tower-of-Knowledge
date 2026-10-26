@@ -2760,35 +2760,42 @@
   </div>
 
   <!-- ================= THANH ĐIỀU HƯỚNG ĐÁY MÀN HÌNH CHUẨN DUOLINGO (MOBILE ONLY) ================= -->
-  <nav id="mobile-bottom-bar" class="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-[var(--card)]/95 backdrop-blur-md border-t border-[var(--border)] px-1 py-1.5 flex items-center justify-around shadow-lg select-none">
+  <nav id="mobile-bottom-bar" class="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-[var(--card)]/95 backdrop-blur-md border-t border-[var(--border)] px-1 py-1 flex items-center justify-around shadow-lg select-none">
     <!-- 1. Học / Trang chủ -->
-    <button id="btn_m_nav_hub" onclick="navTo('hub')" class="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-emerald-600 dark:text-emerald-400 font-bold active:scale-95 cursor-pointer">
+    <button id="btn_m_nav_hub" onclick="navTo('hub')" class="flex-1 max-w-[62px] flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition text-emerald-600 dark:text-emerald-400 font-bold active:scale-95 cursor-pointer text-center relative">
       <span class="text-xl">🏠</span>
-      <span class="text-[10px] mt-0.5">Học</span>
+      <span class="text-[9.5px] mt-0.5 whitespace-nowrap leading-tight">Học</span>
     </button>
 
     <!-- 2. Bản đồ Lộ trình -->
-    <button id="btn_m_nav_saga" onclick="navTo('saga')" class="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer">
+    <button id="btn_m_nav_saga" onclick="navTo('saga')" class="flex-1 max-w-[62px] flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer text-center relative">
       <span class="text-xl">🗺️</span>
-      <span class="text-[10px] mt-0.5">Lộ trình</span>
+      <span class="text-[9.5px] mt-0.5 whitespace-nowrap leading-tight">Lộ trình</span>
     </button>
 
     <!-- 3. Minigame -->
-    <button id="btn_m_nav_minigame" onclick="navTo('minigame')" class="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer">
+    <button id="btn_m_nav_minigame" onclick="navTo('minigame')" class="flex-1 max-w-[62px] flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer text-center relative">
       <span class="text-xl">🎮</span>
-      <span class="text-[10px] mt-0.5">Minigame</span>
+      <span class="text-[9.5px] mt-0.5 whitespace-nowrap leading-tight">Minigame</span>
     </button>
 
-    <!-- 4. Linh vật Pet -->
-    <button id="btn_m_nav_pet" onclick="navTo('pet')" class="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer">
+    <!-- 4. Nhiệm vụ (Quests) -->
+    <button id="btn_m_nav_quests" onclick="openDailyQuestsModal()" class="flex-1 max-w-[62px] flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer text-center relative">
+      <span class="text-xl">📜</span>
+      <span class="text-[9.5px] mt-0.5 whitespace-nowrap leading-tight">Nhiệm vụ</span>
+      <span id="bottom-bar-quest-badge" class="absolute top-1 right-2 w-2 h-2 rounded-full bg-amber-500 hidden animate-pulse"></span>
+    </button>
+
+    <!-- 5. Linh vật Pet -->
+    <button id="btn_m_nav_pet" onclick="navTo('pet')" class="flex-1 max-w-[62px] flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer text-center relative">
       <span class="text-xl">🐾</span>
-      <span class="text-[10px] mt-0.5">Linh vật</span>
+      <span class="text-[9.5px] mt-0.5 whitespace-nowrap leading-tight">Linh vật</span>
     </button>
 
-    <!-- 5. Thêm (...) Duolingo-style Bottom Sheet -->
-    <button id="btn_m_nav_more" onclick="openMobileMoreSheet()" class="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer">
+    <!-- 6. Thêm (...) Duolingo-style Bottom Sheet -->
+    <button id="btn_m_nav_more" onclick="openMobileMoreSheet()" class="flex-1 max-w-[62px] flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer text-center relative">
       <span class="text-xl">☰</span>
-      <span class="text-[10px] mt-0.5">Thêm</span>
+      <span class="text-[9.5px] mt-0.5 whitespace-nowrap leading-tight">Thêm</span>
     </button>
   </nav>
 
@@ -3085,6 +3092,8 @@
       }
     }
 
+    let currentAppView = 'hub';
+
     function updateMobileBottomBar(viewName) {
       const tabs = {
         hub: 'btn_m_nav_hub',
@@ -3092,17 +3101,19 @@
         minigame: 'btn_m_nav_minigame',
         battle: 'btn_m_nav_minigame',
         extreme: 'btn_m_nav_minigame',
-        pet: 'btn_m_nav_pet'
+        quests: 'btn_m_nav_quests',
+        pet: 'btn_m_nav_pet',
+        more: 'btn_m_nav_more'
       };
       const activeBtnId = tabs[viewName];
-      const buttons = ['btn_m_nav_hub', 'btn_m_nav_saga', 'btn_m_nav_minigame', 'btn_m_nav_pet', 'btn_m_nav_more'];
+      const buttons = ['btn_m_nav_hub', 'btn_m_nav_saga', 'btn_m_nav_minigame', 'btn_m_nav_quests', 'btn_m_nav_pet', 'btn_m_nav_more'];
       buttons.forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
         if (id === activeBtnId) {
-          el.className = "flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-emerald-600 dark:text-emerald-400 font-bold active:scale-95 cursor-pointer";
+          el.className = "flex-1 max-w-[62px] flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition text-emerald-600 dark:text-emerald-400 font-bold active:scale-95 cursor-pointer text-center relative";
         } else {
-          el.className = "flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer";
+          el.className = "flex-1 max-w-[62px] flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer text-center relative";
         }
       });
     }
@@ -3111,6 +3122,7 @@
       const sheet = document.getElementById('modal-mobile-more');
       if (sheet) {
         sheet.classList.remove('hidden');
+        updateMobileBottomBar('more');
         if (typeof renderDailyQuests === 'function') renderDailyQuests();
         const adminBtn = document.getElementById('btn_m_more_admin');
         if (adminBtn) {
@@ -3128,20 +3140,24 @@
     function closeMobileMoreSheet() {
       const sheet = document.getElementById('modal-mobile-more');
       if (sheet) sheet.classList.add('hidden');
+      updateMobileBottomBar(currentAppView || 'hub');
     }
 
     function openDailyQuestsModal() {
       const m = document.getElementById('modal-daily-quests');
       if (m) m.classList.remove('hidden');
+      updateMobileBottomBar('quests');
       if (typeof renderDailyQuests === 'function') renderDailyQuests();
     }
 
     function closeDailyQuestsModal() {
       const m = document.getElementById('modal-daily-quests');
       if (m) m.classList.add('hidden');
+      updateMobileBottomBar(currentAppView || 'hub');
     }
 
     function navTo(viewName) {
+      currentAppView = viewName;
       if (typeof currentLiveMatch !== 'undefined' && currentLiveMatch && typeof B !== 'undefined' && B && !B.over && viewName !== 'battle') {
         pendingBattleNavView = viewName;
         openLeaveBattleWarningModal();
@@ -10111,6 +10127,20 @@
           moreBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-500 font-mono';
         } else {
           moreBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-500 font-mono';
+        }
+      }
+
+      const bottomQuestBadge = document.getElementById('bottom-bar-quest-badge');
+      if (bottomQuestBadge) {
+        const hasClaimable = quests.some(q => dailyQuestsState.progress[q.id] && !dailyQuestsState.claimed[q.id]);
+        if (hasClaimable) {
+          bottomQuestBadge.classList.remove('hidden');
+          bottomQuestBadge.className = 'absolute top-1 right-2 w-2 h-2 rounded-full bg-amber-500 animate-pulse';
+        } else if (completedCount < 3) {
+          bottomQuestBadge.classList.remove('hidden');
+          bottomQuestBadge.className = 'absolute top-1 right-2 w-2 h-2 rounded-full bg-blue-500/80';
+        } else {
+          bottomQuestBadge.classList.add('hidden');
         }
       }
     }

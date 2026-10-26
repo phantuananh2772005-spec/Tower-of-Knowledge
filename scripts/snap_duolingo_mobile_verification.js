@@ -55,15 +55,16 @@ async function verifyMobileUX() {
     await page.screenshot({ path: snapSheet });
     console.log('✓ Snapshot 2 (Bottom Sheet):', snapSheet);
 
-    // 2b. Snapshot Mobile Daily Quests Modal
+    // 2b. Snapshot Mobile Daily Quests Modal by clicking 4th bottom nav tab (#btn_m_nav_quests) directly!
     await page.evaluate(() => {
       closeMobileMoreSheet();
-      openDailyQuestsModal();
+      const qBtn = document.getElementById('btn_m_nav_quests');
+      if (qBtn) qBtn.click();
     });
     await new Promise(r => setTimeout(r, 500));
     const snapQuests = path.join(artifactDir, 'snap_duolingo_daily_quests_modal.png');
     await page.screenshot({ path: snapQuests });
-    console.log('✓ Snapshot 2b (Daily Quests Modal):', snapQuests);
+    console.log('✓ Snapshot 2b (Daily Quests Modal via bottom nav):', snapQuests);
 
     // 3. Snapshot Mobile Saga
     await page.evaluate(() => {
