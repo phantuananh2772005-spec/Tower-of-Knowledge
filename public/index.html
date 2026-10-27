@@ -9681,6 +9681,7 @@
     }
 
     async function initLiveBackend() {
+      updateTopbarUI(currentAppView);
       // 1. Check user authentication
       const token = localStorage.getItem('tok_token');
       const urlParams = new URLSearchParams(window.location.search);

@@ -20,6 +20,7 @@ async function main(){
       await page.evaluateOnNewDocument(token=>{localStorage.setItem('tok_token',token);localStorage.setItem('tok_admin_token','stale-admin-token');},result.data.token);
       await page.evaluateOnNewDocument(()=>{window.tourClickLog=[];document.addEventListener('click',e=>window.tourClickLog.push({id:e.target.closest('button')?.id||e.target.id||e.target.className,step:window.GuidedTour?.step}),true);});
       await page.goto(base,{waitUntil:'networkidle2'});await page.waitForFunction(()=>typeof GuidedTour!=='undefined'&&currentUserAccount?.userId);
+      assert.strictEqual(await page.$eval('#topbar-title',el=>el.textContent),'Tổng quan','Initial home header incorrectly shows course chapter');
       assert(await page.$eval('#btn-topbar-admin-portal',el=>getComputedStyle(el).display==='none'),'Learner sees desktop Admin link');
       assert(await page.$eval('#btn_m_more_admin',el=>getComputedStyle(el).display==='none'),'Learner sees mobile Admin link');
       assert(await page.evaluate(()=>!ownedPets.admin_aurum&&!ownedPets.admin_nguyet),'Learner owns Admin pets');
