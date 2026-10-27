@@ -1,0 +1,32 @@
+{
+  "pet_id": "admin_aurum",
+  "name_vi": "Kim Long Aurum",
+  "icon": "🐉",
+  "role": "admin",
+  "tier": "Quản trị viên",
+  "cell_index": 5,
+  "facing": "right",
+  "frame_size": [
+    100,
+    100
+  ],
+  "frame_count": 24,
+  "duration_ms": 70,
+  "idle_loop": {
+    "start_frame": 24,
+    "length": 44
+  },
+  "states": {
+    "idle": {
+      "frame_count": 24,
+      "strip": "admin_aurum_idle_strip.png",
+      "gif": "admin_aurum_idle.gif"
+    },
+    "attack": {
+      "frame_count": 24,
+      "strip": "admin_aurum_attack_strip.png",
+      "gif": "admin_aurum_attack.gif"
+    }
+  },
+  "still": "admin_aurum_still.png"
+}

@@ -1,0 +1,26 @@
+{
+  "pet_id": "byte_robot",
+  "name_vi": "Robot Khối Byte",
+  "icon": "🤖",
+  "cell_index": 1,
+  "frame_size": [
+    100,
+    100
+  ],
+  "frame_count": 24,
+  "fps": 14.3,
+  "duration_ms": 70,
+  "states": {
+    "idle": {
+      "frame_count": 24,
+      "strip": "byte_robot_idle_strip.png",
+      "gif": "byte_robot_idle.gif"
+    },
+    "attack": {
+      "frame_count": 24,
+      "strip": "byte_robot_attack_strip.png",
+      "gif": "byte_robot_attack.gif"
+    }
+  },
+  "still": "byte_robot_still.png"
+}

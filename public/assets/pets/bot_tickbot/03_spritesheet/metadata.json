@@ -1,0 +1,32 @@
+{
+  "pet_id": "bot_tickbot",
+  "name_vi": "Cú Cót Tickbot",
+  "icon": "⚙️",
+  "role": "bot",
+  "tier": "⚡ Tinh thông",
+  "cell_index": 2,
+  "facing": "left",
+  "frame_size": [
+    100,
+    100
+  ],
+  "frame_count": 24,
+  "duration_ms": 70,
+  "idle_loop": {
+    "start_frame": 59,
+    "length": 46
+  },
+  "states": {
+    "idle": {
+      "frame_count": 24,
+      "strip": "bot_tickbot_idle_strip.png",
+      "gif": "bot_tickbot_idle.gif"
+    },
+    "attack": {
+      "frame_count": 24,
+      "strip": "bot_tickbot_attack_strip.png",
+      "gif": "bot_tickbot_attack.gif"
+    }
+  },
+  "still": "bot_tickbot_still.png"
+}

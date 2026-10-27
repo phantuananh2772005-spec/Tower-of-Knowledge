@@ -1,0 +1,26 @@
+{
+  "pet_id": "pyra_phoenix",
+  "name_vi": "Phượng Hoàng Lửa Pyra",
+  "icon": "🔥",
+  "cell_index": 1,
+  "frame_size": [
+    100,
+    100
+  ],
+  "frame_count": 24,
+  "fps": 14.3,
+  "duration_ms": 70,
+  "states": {
+    "idle": {
+      "frame_count": 24,
+      "strip": "pyra_phoenix_idle_strip.png",
+      "gif": "pyra_phoenix_idle.gif"
+    },
+    "attack": {
+      "frame_count": 24,
+      "strip": "pyra_phoenix_attack_strip.png",
+      "gif": "pyra_phoenix_attack.gif"
+    }
+  },
+  "still": "pyra_phoenix_still.png"
+}

@@ -21,6 +21,7 @@ const arenaRoutes = require('./routes/arena.routes');
 const economyRoutes = require('./routes/economy.routes');
 const adminRoutes = require('./routes/admin.routes');
 const extremeRoutes = require('./routes/extreme.routes');
+const petStudioRoutes = require('./routes/petStudioRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -66,6 +67,7 @@ app.use('/api/arena', arenaRoutes);
 app.use('/api/economy', economyRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/extreme', extremeRoutes);
+app.use('/api/pet-studio', petStudioRoutes);
 
 // Fallback 404 handler
 app.use('/api/*', (req, res) => {

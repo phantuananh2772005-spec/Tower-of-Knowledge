@@ -1,0 +1,26 @@
+{
+  "pet_id": "astra_stag",
+  "name_vi": "Hươu Tinh Tú Astra",
+  "icon": "🦌",
+  "cell_index": 2,
+  "frame_size": [
+    100,
+    100
+  ],
+  "frame_count": 24,
+  "fps": 14.3,
+  "duration_ms": 70,
+  "states": {
+    "idle": {
+      "frame_count": 24,
+      "strip": "astra_stag_idle_strip.png",
+      "gif": "astra_stag_idle.gif"
+    },
+    "attack": {
+      "frame_count": 24,
+      "strip": "astra_stag_attack_strip.png",
+      "gif": "astra_stag_attack.gif"
+    }
+  },
+  "still": "astra_stag_still.png"
+}

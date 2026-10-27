@@ -1,0 +1,32 @@
+{
+  "pet_id": "admin_nguyet",
+  "name_vi": "Thỏ Nguyệt Thẩm Phán",
+  "icon": "🐰",
+  "role": "admin",
+  "tier": "Quản trị viên",
+  "cell_index": 6,
+  "facing": "right",
+  "frame_size": [
+    100,
+    100
+  ],
+  "frame_count": 24,
+  "duration_ms": 70,
+  "idle_loop": {
+    "start_frame": 9,
+    "length": 32
+  },
+  "states": {
+    "idle": {
+      "frame_count": 24,
+      "strip": "admin_nguyet_idle_strip.png",
+      "gif": "admin_nguyet_idle.gif"
+    },
+    "attack": {
+      "frame_count": 24,
+      "strip": "admin_nguyet_attack_strip.png",
+      "gif": "admin_nguyet_attack.gif"
+    }
+  },
+  "still": "admin_nguyet_still.png"
+}

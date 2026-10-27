@@ -1,0 +1,26 @@
+{
+  "pet_id": "kim_quy_turtle",
+  "name_vi": "Rùa Thần Kim Quy",
+  "icon": "🐢",
+  "cell_index": 2,
+  "frame_size": [
+    100,
+    100
+  ],
+  "frame_count": 24,
+  "fps": 14.3,
+  "duration_ms": 70,
+  "states": {
+    "idle": {
+      "frame_count": 24,
+      "strip": "kim_quy_turtle_idle_strip.png",
+      "gif": "kim_quy_turtle_idle.gif"
+    },
+    "attack": {
+      "frame_count": 24,
+      "strip": "kim_quy_turtle_attack_strip.png",
+      "gif": "kim_quy_turtle_attack.gif"
+    }
+  },
+  "still": "kim_quy_turtle_still.png"
+}

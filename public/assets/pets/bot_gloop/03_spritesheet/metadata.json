@@ -1,0 +1,32 @@
+{
+  "pet_id": "bot_gloop",
+  "name_vi": "Slime Tập Sự Gloop",
+  "icon": "💧",
+  "role": "bot",
+  "tier": "🌱 Khởi nguyên",
+  "cell_index": 1,
+  "facing": "left",
+  "frame_size": [
+    100,
+    100
+  ],
+  "frame_count": 24,
+  "duration_ms": 70,
+  "idle_loop": {
+    "start_frame": 61,
+    "length": 33
+  },
+  "states": {
+    "idle": {
+      "frame_count": 24,
+      "strip": "bot_gloop_idle_strip.png",
+      "gif": "bot_gloop_idle.gif"
+    },
+    "attack": {
+      "frame_count": 24,
+      "strip": "bot_gloop_attack_strip.png",
+      "gif": "bot_gloop_attack.gif"
+    }
+  },
+  "still": "bot_gloop_still.png"
+}

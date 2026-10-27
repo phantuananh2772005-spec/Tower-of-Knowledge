@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pet Sprite Studio - Bộ Công Cụ Tách Sprite Sheet & Video AI</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    /* Nền caro trong suốt (Transparency Checkerboard) */
+    .bg-checker {
+      background-color: #0b0f19;
+      background-image: 
+        linear-gradient(45deg, #182234 25%, transparent 25%), 
+        linear-gradient(-45deg, #182234 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, #182234 75%), 
+        linear-gradient(-45deg, transparent 75%, #182234 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+    .pixel-crisp {
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 15px rgba(6, 182, 212, 0.4); }
+      50% { box-shadow: 0 0 25px rgba(6, 182, 212, 0.8); }
+    }
+    .cell-selected {
+      border-color: #06b6d4 !important;
+      background-color: rgba(6, 182, 212, 0.15) !important;
+      animation: pulseGlow 2s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="bg-[#07090e] text-slate-100 min-h-screen font-sans flex flex-col antialiased selection:bg-cyan-500 selection:text-black">
+
+  <!-- HEADER -->
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40 px-4 py-3 sm:px-8 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-emerald-400 flex items-center justify-center text-xl shadow-lg shadow-cyan-500/20">
+        🐾
+      </div>
+      <div>
+        <h1 class="text-base sm:text-lg font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400">
+          PET SPRITE STUDIO
+        </h1>
+        <p class="text-[11px] text-slate-400">Tách Video AI 3x2 Grid → Chuẩn Hóa Sprite Sheet & Khử Phông Xanh</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2.5">
+      <a href="/" class="px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 text-xs font-semibold text-slate-300 hover:text-white transition flex items-center gap-1.5">
+        <span>←</span> <span>Về Tháp Tri Thức</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- CỘT TRÁI: ĐIỀU KHIỂN & CHỌN VIDEO (5 CỘT) -->
+    <div class="lg:col-span-5 space-y-5">
+
+      <!-- BƯỚC 1: CHỌN NGUỒN VIDEO -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3.5">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-[10px] font-black">1</span>
+            Chọn Video AI Gemini
+          </h2>
+          <span id="video-status-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono">Đã sẵn sàng</span>
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="text-[11px] text-slate-400 font-medium">Danh sách Video trong máy:</label>
+          <select id="select-video" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:border-cyan-400 focus:outline-none transition cursor-pointer">
+            <option value="">Đang tải danh sách video...</option>
+          </select>
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="text-[11px] text-slate-400 font-medium">Hoặc dán đường dẫn file MP4:</label>
+          <input type="text" id="input-video-path" placeholder="C:\Users\phant\Downloads\ado\gemini_generated_video_507332e9.mp4" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:border-cyan-400 focus:outline-none transition font-mono">
+        </div>
+      </div>
+
+      <!-- BƯỚC 2: CHỌN Ô LINH THÚ TRONG GRID 3x2 -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3.5">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-[10px] font-black">2</span>
+            Chọn Ô Linh Thú (3 Cột x 2 Hàng)
+          </h2>
+          <span id="current-cell-label" class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-mono">Ô 1 (Góc Trái Trên)</span>
+        </div>
+
+        <!-- 6 Clickable Cells -->
+        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+          <!-- Cell 1 -->
+          <button onclick="selectCell(1, 'pyra_phoenix')" id="btn-cell-1" class="cell-btn cell-selected p-2.5 rounded-xl border border-slate-700 bg-slate-950/60 hover:border-cyan-400 transition cursor-pointer flex flex-col items-center gap-1">
+            <span class="text-lg">🔥</span>
+            <span class="text-[11px] font-bold">Ô 1: Phượng Hoàng</span>
+            <span class="text-[9px] text-slate-500">Hàng 1 - Cột 1</span>
+          </button>
+          <!-- Cell 2 -->
+          <button onclick="selectCell(2, 'kimquy_turtle')" id="btn-cell-2" class="cell-btn p-2.5 rounded-xl border border-slate-700 bg-slate-950/60 hover:border-cyan-400 transition cursor-pointer flex flex-col items-center gap-1">
+            <span class="text-lg">🐢</span>
+            <span class="text-[11px] font-bold">Ô 2: Rùa Thần</span>
+            <span class="text-[9px] text-slate-500">Hàng 1 - Cột 2</span>
+          </button>
+          <!-- Cell 3 -->
+          <button onclick="selectCell(3, 'golem_stone')" id="btn-cell-3" class="cell-btn p-2.5 rounded-xl border border-slate-700 bg-slate-950/60 hover:border-cyan-400 transition cursor-pointer flex flex-col items-center gap-1">
+            <span class="text-lg">🗿</span>
+            <span class="text-[11px] font-bold">Ô 3: Golem Đá</span>
+            <span class="text-[9px] text-slate-500">Hàng 1 - Cột 3</span>
+          </button>
+          <!-- Cell 4 -->
+          <button onclick="selectCell(4, 'neko_cat')" id="btn-cell-4" class="cell-btn p-2.5 rounded-xl border border-slate-700 bg-slate-950/60 hover:border-cyan-400 transition cursor-pointer flex flex-col items-center gap-1">
+            <span class="text-lg">🐱</span>
+            <span class="text-[11px] font-bold">Ô 4: Mèo Thần Tài</span>
+            <span class="text-[9px] text-slate-500">Hàng 2 - Cột 1</span>
+          </button>
+          <!-- Cell 5 -->
+          <button onclick="selectCell(5, 'bambo_panda')" id="btn-cell-5" class="cell-btn p-2.5 rounded-xl border border-slate-700 bg-slate-950/60 hover:border-cyan-400 transition cursor-pointer flex flex-col items-center gap-1">
+            <span class="text-lg">🐼</span>
+            <span class="text-[11px] font-bold">Ô 5: Gấu Trúc</span>
+            <span class="text-[9px] text-slate-500">Hàng 2 - Cột 2</span>
+          </button>
+          <!-- Cell 6 -->
+          <button onclick="selectCell(6, 'frostfang_wolf')" id="btn-cell-6" class="cell-btn p-2.5 rounded-xl border border-slate-700 bg-slate-950/60 hover:border-cyan-400 transition cursor-pointer flex flex-col items-center gap-1">
+            <span class="text-lg">🐺</span>
+            <span class="text-[11px] font-bold">Ô 6: Sói Băng</span>
+            <span class="text-[9px] text-amber-400 font-medium">⚡ Khử Logo</span>
+          </button>
+        </div>
+
+        <!-- Cấu hình tên thư mục & Kích thước -->
+        <div class="grid grid-cols-2 gap-3 pt-1">
+          <div>
+            <label class="text-[11px] text-slate-400 font-medium">Tên Thư Mục / Pet:</label>
+            <input type="text" id="input-pet-name" value="pyra_phoenix" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-cyan-300 font-bold focus:border-cyan-400 focus:outline-none transition">
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400 font-medium">Kích Thước Khung Hình:</label>
+            <select id="select-target-size" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:border-cyan-400 focus:outline-none transition">
+              <option value="84" selected>84 x 84 (Chuẩn Rồng Sparky)</option>
+              <option value="100">100 x 100 (Chuẩn Hồ Ly Kitsune)</option>
+              <option value="64">64 x 64 (Chuẩn Pixel Cổ Điển)</option>
+              <option value="128">128 x 128 (Độ phân giải cao)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- BƯỚC 3: THỜI GIAN & SỐ KEYFRAME -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-3.5">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-[10px] font-black">3</span>
+          Khoảng Thời Gian & Số Lượng Frame
+        </h2>
+
+        <div class="grid grid-cols-3 gap-2.5">
+          <div>
+            <label class="text-[11px] text-slate-400">Bắt đầu (giây):</label>
+            <input type="number" id="input-start-sec" value="0.0" step="0.2" min="0" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 text-center font-mono focus:border-cyan-400 focus:outline-none">
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400">Kết thúc (giây):</label>
+            <input type="number" id="input-end-sec" value="4.0" step="0.2" min="0.5" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 text-center font-mono focus:border-cyan-400 focus:outline-none">
+          </div>
+          <div>
+            <label class="text-[11px] text-slate-400">Số Keyframe:</label>
+            <select id="select-frames-count" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2 py-1.5 text-xs text-slate-200 text-center font-mono focus:border-cyan-400 focus:outline-none cursor-pointer">
+              <option value="4">4 frames</option>
+              <option value="6">6 frames</option>
+              <option value="8" selected>8 frames (Chuẩn)</option>
+              <option value="12">12 frames</option>
+              <option value="16">16 frames</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 text-xs text-slate-400 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+          <span>💡</span>
+          <span><b>Gợi ý:</b> Video có 50% đầu là <i>Động tác đứng yên (Idle)</i>, 50% sau là <i>Tung chiêu (Attack)</i>. Đặt 0.0s - 4.0s để lấy bộ Idle đẹp nhất!</span>
+        </div>
+
+        <button onclick="previewCurrentCell()" id="btn-preview-step" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md">
+          <span>🔍</span> <span>Tải Khung Hình Xem Trước</span>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- CỘT PHẢI: WORKSPACE XỬ LÝ ẢNH & CANVAS TÔ BẢO VỆ (7 CỘT) -->
+    <div class="lg:col-span-7 space-y-5">
+
+      <!-- KHU VỰC CANVAS XỬ LÝ & BẢO VỆ MÀU -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-[10px] font-black">4</span>
+            Studio Khử Phông & Vùng Bảo Vệ Màu
+          </h2>
+          <!-- Công cụ cọ vẽ -->
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] text-slate-400">Cọ:</span>
+            <input type="range" id="brush-size" min="5" max="40" value="15" class="w-20 cursor-pointer">
+            <button onclick="clearProtectionMask()" class="px-2 py-1 rounded-lg border border-slate-700 hover:border-rose-500 text-[11px] text-slate-300 hover:text-rose-400 transition cursor-pointer">
+              Xóa Cọ
+            </button>
+          </div>
+        </div>
+
+        <p class="text-[11px] text-slate-400 leading-relaxed">
+          🖌️ <b>Tô vùng bảo vệ:</b> Dùng chuột tô lên phần thân pet (ví dụ cành trúc xanh, mạch điện cyan, đá ngọc). Vùng được tô đỏ sẽ <b>tuyệt đối không bị xóa màu xanh</b>!
+        </p>
+
+        <!-- Khung vẽ Canvas đôi (Gốc & Mask) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Canvas 1: Ảnh gốc + Cọ vẽ mask -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+              <span>ẢNH GỐC & VÙNG TÔ BẢO VỆ</span>
+              <span id="canvas-dim-info" class="font-mono text-cyan-400">420x356</span>
+            </div>
+            <div class="relative bg-slate-950 rounded-xl overflow-hidden border border-slate-700 flex items-center justify-center min-h-[220px]">
+              <canvas id="canvas-source" class="max-w-full max-h-[260px] object-contain cursor-crosshair"></canvas>
+              <div id="loading-source" class="hidden absolute inset-0 bg-slate-950/80 flex items-center justify-center text-xs text-cyan-400 font-medium">
+                Đang trích xuất frame...
+              </div>
+            </div>
+          </div>
+
+          <!-- Canvas 2: Kết quả tách nền xem trước (Nền caro) -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between text-[11px] text-slate-400 font-semibold">
+              <span>KẾT QUẢ ĐÃ TÁCH NỀN TRONG SUỐT</span>
+              <span class="text-emerald-400 font-mono">Trong suốt 100%</span>
+            </div>
+            <div class="relative bg-checker rounded-xl overflow-hidden border border-slate-700 flex items-center justify-center min-h-[220px]">
+              <canvas id="canvas-result" class="max-w-full max-h-[260px] object-contain pixel-crisp"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tùy chỉnh bộ lọc tách phông & Despill -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800 text-xs">
+          <!-- Thanh độ nhạy -->
+          <div>
+            <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+              <span>Độ nhạy phông xanh:</span>
+              <span id="label-green-thresh" class="text-cyan-400 font-mono">40</span>
+            </div>
+            <input type="range" id="slider-green-thresh" min="20" max="75" value="40" class="w-full cursor-pointer" oninput="document.getElementById('label-green-thresh').textContent = this.value">
+          </div>
+          <!-- Khử viền xanh (Despill) -->
+          <div class="flex items-center justify-between px-2">
+            <div>
+              <p class="font-bold text-slate-200">Khử viền xanh (Despill)</p>
+              <p class="text-[10px] text-slate-400">Triệt tiêu ám xanh lục viền</p>
+            </div>
+            <input type="checkbox" id="check-despill" checked class="w-4 h-4 accent-cyan-500 cursor-pointer">
+          </div>
+          <!-- Khử Watermark Gemini -->
+          <div class="flex items-center justify-between px-2">
+            <div>
+              <p class="font-bold text-amber-300">Khử Logo Gemini</p>
+              <p class="text-[10px] text-slate-400">Tẩy ngôi sao 4 cánh</p>
+            </div>
+            <input type="checkbox" id="check-watermark" checked class="w-4 h-4 accent-amber-500 cursor-pointer">
+          </div>
+        </div>
+
+      </div>
+
+      <!-- BƯỚC 5: XEM TRƯỚC ANIMATION & XUẤT SPRITE SET -->
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl space-y-4">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-[10px] font-black">5</span>
+          Xem Trước Hoạt Họa & Xuất Gói Asset
+        </h2>
+
+        <!-- Khung xem trước hoạt họa và ảnh spritesheet -->
+        <div class="flex flex-col sm:flex-row items-center gap-5 bg-slate-950/70 p-4 rounded-xl border border-slate-800">
+          <!-- GIF Preview -->
+          <div class="shrink-0 flex flex-col items-center gap-1.5">
+            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Ảnh GIF Hoạt Họa</span>
+            <div class="w-24 h-24 rounded-2xl bg-checker border-2 border-cyan-500/50 flex items-center justify-center overflow-hidden shadow-lg shadow-cyan-500/10">
+              <img id="preview-anim-gif" src="/assets/pets/pyra_phoenix/03_spritesheet/pyra_phoenix_anim.gif" alt="Pet Anim" class="w-20 h-20 object-contain pixel-crisp">
+            </div>
+          </div>
+
+          <!-- Dãy Spritesheet Strip Preview -->
+          <div class="flex-1 w-full space-y-1.5 overflow-hidden">
+            <div class="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+              <span>Dãy Spritesheet Strip Ngang (Đã cân giữa & Neo chân)</span>
+              <span id="strip-size-txt" class="font-mono text-emerald-400">672 x 84 px</span>
+            </div>
+            <div class="w-full h-20 rounded-xl bg-checker border border-slate-700 p-2 overflow-x-auto flex items-center">
+              <img id="preview-strip-img" src="/assets/pets/pyra_phoenix/03_spritesheet/pyra_phoenix_strip.png" alt="Strip" class="h-16 w-auto object-contain pixel-crisp">
+            </div>
+          </div>
+        </div>
+
+        <!-- Cấu trúc thư mục cam kết -->
+        <div class="text-[11px] text-slate-400 bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1 font-mono">
+          <p class="text-cyan-300 font-bold">📁 Cấu trúc thư mục sẽ xuất tự động:</p>
+          <p class="pl-2">public/assets/pets/<span id="txt-out-name" class="text-amber-400">pyra_phoenix</span>/</p>
+          <p class="pl-5 text-slate-500">├── <b>01_raw_frames/</b> (ảnh thô cắt trực tiếp từ video)</p>
+          <p class="pl-5 text-slate-500">├── <b>02_processed_frames/</b> (ảnh đã tách nền, khử viền xanh, chuẩn hóa)</p>
+          <p class="pl-5 text-slate-500">└── <b>03_spritesheet/</b> (<span class="text-emerald-400">_strip.png</span>, <span class="text-teal-400">_still.png</span>, <span class="text-fuchsia-400">_anim.gif</span>, metadata.json)</p>
+        </div>
+
+        <!-- Nút xuất File Toàn Bộ -->
+        <button onclick="exportPetSpritePack()" id="btn-export-pack" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:brightness-110 text-slate-950 font-black text-sm tracking-wide transition shadow-xl shadow-emerald-500/20 cursor-pointer flex items-center justify-center gap-2">
+          <span>🚀</span> <span>XUẤT GÓI SPRITE SHEET & HOẠT HỌA CHO GAME</span>
+        </button>
+
+        <div id="export-result-box" class="hidden p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium space-y-1">
+          <p class="font-bold flex items-center gap-1.5"><span>✓</span> <span id="export-msg-title">Đã xuất gói asset thành công!</span></p>
+          <p id="export-msg-path" class="font-mono text-[10px] text-slate-300 break-all"></p>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    let selectedCellIndex = 1;
+    let currentRawImage = null;
+    let isDrawing = false;
+
+    const sourceCanvas = document.getElementById('canvas-source');
+    const sourceCtx = sourceCanvas.getContext('2d');
+    const resultCanvas = document.getElementById('canvas-result');
+    const resultCtx = resultCanvas.getContext('2d');
+
+    // Canvas ẩn để lưu Mask bảo vệ (kích thước chuẩn bằng ảnh nguồn)
+    const maskCanvas = document.createElement('canvas');
+    const maskCtx = maskCanvas.getContext('2d');
+
+    // 1. Tải danh sách video ban đầu
+    async function loadVideoList() {
+      try {
+        const resp = await fetch('/api/pet-studio/videos');
+        const json = await resp.json();
+        const select = document.getElementById('select-video');
+        select.innerHTML = '';
+
+        if (json.success && json.data.videos.length > 0) {
+          json.data.videos.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.fullPath;
+            opt.textContent = `${v.filename} (${v.sizeMb} MB)`;
+            select.appendChild(opt);
+          });
+          document.getElementById('input-video-path').value = json.data.videos[0].fullPath;
+        } else {
+          select.innerHTML = '<option value="">Không tìm thấy video trong thư mục ado</option>';
+        }
+      } catch (err) {
+        console.error('Error loading videos:', err);
+      }
+    }
+
+    document.getElementById('select-video').addEventListener('change', (e) => {
+      if (e.target.value) {
+        document.getElementById('input-video-path').value = e.target.value;
+      }
+    });
+
+    document.getElementById('input-pet-name').addEventListener('input', (e) => {
+      document.getElementById('txt-out-name').textContent = e.target.value || 'pet_custom';
+    });
+
+    // 2. Chọn Cell trong Grid 3x2
+    function selectCell(idx, defaultName) {
+      selectedCellIndex = idx;
+      document.querySelectorAll('.cell-btn').forEach(b => b.classList.remove('cell-selected'));
+      const activeBtn = document.getElementById(`btn-cell-${idx}`);
+      if (activeBtn) activeBtn.classList.add('cell-selected');
+
+      const labels = [
+        'Ô 1: Phượng Hoàng (Trái Trên)',
+        'Ô 2: Rùa Thần (Giữa Trên)',
+        'Ô 3: Golem Đá (Phải Trên)',
+        'Ô 4: Mèo Thần Tài (Trái Dưới)',
+        'Ô 5: Gấu Trúc (Giữa Dưới)',
+        'Ô 6: Sói Băng (Phải Dưới - Khử Logo)'
+      ];
+      document.getElementById('current-cell-label').textContent = labels[idx - 1] || `Ô ${idx}`;
+
+      const nameInput = document.getElementById('input-pet-name');
+      if (nameInput) {
+        nameInput.value = defaultName;
+        document.getElementById('txt-out-name').textContent = defaultName;
+      }
+
+      // Tự động bật Khử Logo nếu là Cell 6
+      const wmCheck = document.getElementById('check-watermark');
+      if (wmCheck) wmCheck.checked = (idx === 6);
+
+      clearProtectionMask();
+      previewCurrentCell();
+    }
+
+    function showStudioToast(msg, isError = false) {
+      const banner = document.getElementById('export-result-box');
+      if (banner) {
+        banner.classList.remove('hidden');
+        if (isError) {
+          banner.className = "p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-medium space-y-1";
+          document.getElementById('export-msg-title').textContent = "⚠️ " + msg;
+          document.getElementById('export-msg-path').textContent = "";
+        } else {
+          banner.className = "p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium space-y-1";
+          document.getElementById('export-msg-title').textContent = "✓ " + msg;
+        }
+      }
+    }
+
+    // 3. Tải Frame xem trước của Cell đang chọn
+    async function previewCurrentCell() {
+      const videoPath = document.getElementById('input-video-path').value.trim();
+      const startSec = parseFloat(document.getElementById('input-start-sec').value) || 0.0;
+      const greenThresh = parseInt(document.getElementById('slider-green-thresh').value) || 40;
+      const despill = document.getElementById('check-despill').checked;
+
+      if (!videoPath) {
+        return;
+      }
+
+      document.getElementById('loading-source').classList.remove('hidden');
+
+      try {
+        const resp = await fetch('/api/pet-studio/preview-cell', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            videoPath,
+            cellIndex: selectedCellIndex,
+            timestampSec: startSec,
+            greenThresh,
+            despill
+          })
+        });
+
+        const json = await resp.json();
+        document.getElementById('loading-source').classList.add('hidden');
+
+        if (json.success && json.data) {
+          const img = new Image();
+          img.onload = () => {
+            currentRawImage = img;
+            sourceCanvas.width = img.width;
+            sourceCanvas.height = img.height;
+            resultCanvas.width = img.width;
+            resultCanvas.height = img.height;
+            maskCanvas.width = img.width;
+            maskCanvas.height = img.height;
+
+            document.getElementById('canvas-dim-info').textContent = `${img.width}x${img.height} px`;
+
+            renderSourceAndMask();
+            if (json.data.cleanImage) {
+              const cImg = new Image();
+              cImg.onload = () => {
+                resultCtx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+                resultCtx.drawImage(cImg, 0, 0, resultCanvas.width, resultCanvas.height);
+              };
+              cImg.src = json.data.cleanImage;
+            }
+          };
+          img.src = json.data.rawImage;
+        } else {
+          alert('Không thể trích xuất frame: ' + (json.error || 'Lỗi không xác định'));
+        }
+      } catch (err) {
+        document.getElementById('loading-source').classList.add('hidden');
+        console.error('Preview error:', err);
+      }
+    }
+
+    function renderSourceAndMask() {
+      if (!currentRawImage) return;
+      sourceCtx.clearRect(0, 0, sourceCanvas.width, sourceCanvas.height);
+      sourceCtx.drawImage(currentRawImage, 0, 0);
+
+      // Phủ lớp Mask bảo vệ màu đỏ bán trong suốt
+      sourceCtx.save();
+      sourceCtx.globalAlpha = 0.45;
+      sourceCtx.drawImage(maskCanvas, 0, 0);
+      sourceCtx.restore();
+    }
+
+    function clearProtectionMask() {
+      maskCtx.clearRect(0, 0, maskCanvas.width, maskCanvas.height);
+      renderSourceAndMask();
+    }
+
+    // 4. Vẽ Mask bảo vệ trên Canvas bằng chuột
+    sourceCanvas.addEventListener('mousedown', (e) => {
+      isDrawing = true;
+      drawMaskPoint(e);
+    });
+    window.addEventListener('mouseup', () => { isDrawing = false; });
+    sourceCanvas.addEventListener('mousemove', (e) => {
+      if (!isDrawing) return;
+      drawMaskPoint(e);
+    });
+
+    function drawMaskPoint(e) {
+      if (!currentRawImage) return;
+      const rect = sourceCanvas.getBoundingClientRect();
+      const scaleX = sourceCanvas.width / rect.width;
+      const scaleY = sourceCanvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+
+      const size = parseInt(document.getElementById('brush-size').value) || 15;
+      maskCtx.fillStyle = '#ef4444'; // Đỏ bảo vệ
+      maskCtx.beginPath();
+      maskCtx.arc(x, y, size, 0, Math.PI * 2);
+      maskCtx.fill();
+
+      renderSourceAndMask();
+    }
+
+    // 5. Xuất Gói Sprite Sheet Hoàn Chỉnh
+    async function exportPetSpritePack() {
+      const videoPath = document.getElementById('input-video-path').value.trim();
+      const petName = document.getElementById('input-pet-name').value.trim() || 'pet_custom';
+      const startSec = parseFloat(document.getElementById('input-start-sec').value) || 0.0;
+      const endSec = parseFloat(document.getElementById('input-end-sec').value) || 4.0;
+      const numFrames = parseInt(document.getElementById('select-frames-count').value) || 8;
+      const targetSize = parseInt(document.getElementById('select-target-size').value) || 84;
+      const greenThresh = parseInt(document.getElementById('slider-green-thresh').value) || 40;
+      const despill = document.getElementById('check-despill').checked;
+
+      const btn = document.getElementById('btn-export-pack');
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳</span> <span>Đang xử lý tách phông, căn giữa & ghép strip...</span>';
+
+      // Lấy dữ liệu Mask vẽ nếu có
+      let maskBase64 = null;
+      if (maskCanvas.width > 0 && maskCanvas.height > 0) {
+        maskBase64 = maskCanvas.toDataURL('image/png');
+      }
+
+      try {
+        const resp = await fetch('/api/pet-studio/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            videoPath,
+            cellIndex: selectedCellIndex,
+            petName,
+            startSec,
+            endSec,
+            numFrames,
+            targetSize,
+            greenThresh,
+            despill,
+            protectMaskBase64: maskBase64
+          })
+        });
+
+        const json = await resp.json();
+        btn.disabled = false;
+        btn.innerHTML = '<span>🚀</span> <span>XUẤT GÓI SPRITE SHEET & HOẠT HỌA CHO GAME</span>';
+
+        if (json.success && json.data) {
+          const resBox = document.getElementById('export-result-box');
+          resBox.classList.remove('hidden');
+          document.getElementById('export-msg-title').textContent = `Đã xuất thành công gói asset cho '${json.data.petName}'!`;
+          document.getElementById('export-msg-path').textContent = `Thư mục lưu trữ: ${json.data.petDir}`;
+
+          // Cập nhật preview GIF & Strip
+          if (json.data.webPaths.gif) {
+            document.getElementById('preview-anim-gif').src = json.data.webPaths.gif + '?t=' + Date.now();
+          }
+          if (json.data.webPaths.strip) {
+            document.getElementById('preview-strip-img').src = json.data.webPaths.strip + '?t=' + Date.now();
+          }
+          document.getElementById('strip-size-txt').textContent = `${targetSize * numFrames} x ${targetSize} px (${numFrames} frames)`;
+        } else {
+          showStudioToast('Lỗi xuất file: ' + (json.error || 'Không rõ nguyên nhân'), true);
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>🚀</span> <span>XUẤT GÓI SPRITE SHEET & HOẠT HỌA CHO GAME</span>';
+        showStudioToast('Lỗi kết nối khi xuất asset: ' + err.message, true);
+      }
+    }
+
+    // Khởi chạy khi vào trang
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadVideoList();
+      selectCell(1, 'pyra_phoenix');
+    });
+      loadVideoList();
+      selectCell(1, 'pyra_phoenix');
+    });
+  </script>
+
+</body>
+</html>

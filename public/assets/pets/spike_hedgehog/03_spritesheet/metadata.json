@@ -1,0 +1,26 @@
+{
+  "pet_id": "spike_hedgehog",
+  "name_vi": "Nhím Giấy Ghi Chú Spike",
+  "icon": "🦔",
+  "cell_index": 5,
+  "frame_size": [
+    100,
+    100
+  ],
+  "frame_count": 24,
+  "fps": 14.3,
+  "duration_ms": 70,
+  "states": {
+    "idle": {
+      "frame_count": 24,
+      "strip": "spike_hedgehog_idle_strip.png",
+      "gif": "spike_hedgehog_idle.gif"
+    },
+    "attack": {
+      "frame_count": 24,
+      "strip": "spike_hedgehog_attack_strip.png",
+      "gif": "spike_hedgehog_attack.gif"
+    }
+  },
+  "still": "spike_hedgehog_still.png"
+}

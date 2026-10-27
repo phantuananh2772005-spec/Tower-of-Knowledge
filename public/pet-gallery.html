@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+  <title>Pet Animation Review Studio - 16 Linh Thú Hoàn Chỉnh</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .pixel-art {
+      image-rendering: pixelated;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: crisp-edges;
+    }
+    .checkered-bg {
+      background-color: #1e293b;
+      background-image: 
+        linear-gradient(45deg, #0f172a 25%, transparent 25%), 
+        linear-gradient(-45deg, #0f172a 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, #0f172a 75%), 
+        linear-gradient(-45deg, transparent 75%, #0f172a 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+    .checkered-light {
+      background-color: #ffffff;
+      background-image: 
+        linear-gradient(45deg, #e2e8f0 25%, transparent 25%), 
+        linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, #e2e8f0 75%), 
+        linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 md:p-8">
+
+  <!-- Top Header -->
+  <header class="max-w-7xl mx-auto mb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+    <div>
+      <div class="flex items-center gap-3">
+        <img src="/assets/logo_transparent.png" alt="Tháp Tri Thức Logo" class="w-10 h-10 object-contain shrink-0 drop-shadow select-none" />
+        <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-amber-400 via-rose-400 to-indigo-400 bg-clip-text text-transparent">
+          Phòng Trưng Bày Hoạt Họa 16 Linh Thú (24 Frames Mượt Mà)
+        </h1>
+      </div>
+      <p class="text-xs md:text-sm text-slate-400 mt-1">
+        10 Pet Đồng Hành Người Chơi · 4 Pet Chiến Đấu Dành Riêng Cho BOT · 2 Pet Thần Thoại Dành Riêng Cho ADMIN (Xóa logo Gemini 100%)
+      </p>
+    </div>
+
+    <!-- Controls Bar -->
+    <div class="flex flex-wrap items-center gap-3 bg-slate-900 border border-slate-800 p-2 rounded-xl text-xs">
+      <div class="flex items-center gap-1 bg-slate-800/80 p-1 rounded-lg">
+        <button id="btn-mode-idle" onclick="setMode('idle')" class="px-3 py-1.5 rounded-md font-bold transition bg-indigo-600 text-white shadow">
+          💤 Idle (Nghỉ 24f)
+        </button>
+        <button id="btn-mode-atk" onclick="setMode('attack')" class="px-3 py-1.5 rounded-md font-bold transition text-slate-400 hover:text-white">
+          ⚔️ Attack (Ra chiêu 24f)
+        </button>
+        <button id="btn-mode-both" onclick="setMode('both')" class="px-3 py-1.5 rounded-md font-bold transition text-slate-400 hover:text-white">
+          🔄 Song Song (Cả 2)
+        </button>
+      </div>
+
+      <div class="h-5 w-px bg-slate-800 hidden sm:block"></div>
+
+      <!-- Background Switcher -->
+      <div class="flex items-center gap-1.5">
+        <span class="text-slate-400 text-[11px]">Nền:</span>
+        <button onclick="setTheme('dark')" title="Nền Tối Gaming" class="w-6 h-6 rounded-md bg-slate-900 border border-slate-700 hover:ring-2 hover:ring-indigo-400"></button>
+        <button onclick="setTheme('checkered')" title="Nền Caro Trong Suốt" class="w-6 h-6 rounded-md checkered-bg border border-slate-600 hover:ring-2 hover:ring-indigo-400"></button>
+        <button onclick="setTheme('light')" title="Nền Sáng Caro" class="w-6 h-6 rounded-md checkered-light border border-slate-400 hover:ring-2 hover:ring-indigo-400"></button>
+      </div>
+
+      <div class="h-5 w-px bg-slate-800 hidden sm:block"></div>
+
+      <!-- Zoom -->
+      <div class="flex items-center gap-1">
+        <span class="text-slate-400 text-[11px]">Cỡ:</span>
+        <button onclick="setZoom(1)" class="zoom-btn px-2 py-1 rounded bg-slate-800 text-slate-300 font-mono text-[11px]">1x</button>
+        <button onclick="setZoom(1.5)" class="zoom-btn px-2 py-1 rounded bg-indigo-600 text-white font-mono text-[11px]">1.5x</button>
+        <button onclick="setZoom(2)" class="zoom-btn px-2 py-1 rounded bg-slate-800 text-slate-300 font-mono text-[11px]">2x</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Pet Grid Container -->
+  <main class="max-w-7xl mx-auto">
+    <!-- Batch 1 Section -->
+    <div class="mb-10">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+          ĐỢT 1: LINH THÚ PHƯƠNG ĐÔNG & THẦN THOẠI (5 PET)
+        </span>
+        <div class="h-px bg-slate-800 flex-1"></div>
+      </div>
+      <div id="grid-batch-1" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+
+    <!-- Batch 2 Section -->
+    <div class="mb-10">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+          ĐỢT 2: LINH THÚ TRI THỨC & TINH TÚ (5 PET)
+        </span>
+        <div class="h-px bg-slate-800 flex-1"></div>
+      </div>
+      <div id="grid-batch-2" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    </div>
+
+    <!-- Batch 3 Section: BOT-Exclusive Pets -->
+    <div class="mb-10">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1.5 shadow-sm">
+          🤖 ĐỢT 3: 4 LINH THÚ CHIẾN ĐẤU DÀNH RIÊNG CHO BOT (AI OPPONENTS)
+        </span>
+        <span class="text-[11px] text-slate-400 hidden sm:inline">Chỉ xuất hiện khi ghép đấu với Bot AI · Mặt hướng trái vào người chơi</span>
+        <div class="h-px bg-slate-800 flex-1"></div>
+      </div>
+      <div id="grid-batch-3" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+    </div>
+
+    <!-- Batch 4 Section: ADMIN-Exclusive Pets -->
+    <div class="mb-10">
+      <div class="flex items-center gap-2 mb-4">
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400/20 text-amber-300 border border-amber-400/40 flex items-center gap-1.5 shadow-sm">
+          👑 ĐỢT 4: 2 LINH THÚ THẦN THOẠI DÀNH RIÊNG CHO QUẢN TRỊ VIÊN (ADMIN ONLY)
+        </span>
+        <span class="text-[11px] text-amber-400/80 hidden sm:inline">Quyền năng tối thượng · Xóa sạch 100% logo Gemini bằng thuật toán lọc quang sai không viền</span>
+        <div class="h-px bg-slate-800 flex-1"></div>
+      </div>
+      <div id="grid-batch-4" class="grid grid-cols-1 sm:grid-cols-2 gap-6"></div>
+    </div>
+  </main>
+
+  <script>
+    const PETS = [
+      // Batch 1
+      {
+        id: "pyra_phoenix",
+        name: "Phượng Hoàng Lửa Pyra",
+        tag: "Bất tử · Lửa thần",
+        icon: "🔥",
+        batch: 1,
+        cell: "Ô 1",
+        note: "Chu kỳ 24 frame trọn vẹn: Đôi cánh vỗ mềm mại, đuôi lửa uốn lượn nhịp nhàng, triệt tiêu 100% cảm giác giật/vội."
+      },
+      {
+        id: "kim_quy_turtle",
+        name: "Rùa Thần Kim Quy",
+        tag: "Hộ thể · Mai Bát Quái",
+        icon: "🐢",
+        batch: 1,
+        cell: "Ô 2",
+        note: "24 frame thở sâu và nhún chân, bảo vệ trọn vẹn đầu ngọc lục và quẻ Bát Quái vàng óng."
+      },
+      {
+        id: "stone_golem",
+        name: "Người Đá Golem Cổ Đại",
+        tag: "Cổ thạch · Kháng chấn",
+        icon: "🗿",
+        batch: 1,
+        cell: "Ô 3",
+        note: "Các phiến đá cổ trôi lơ lửng quanh tâm, mắt tím phát sáng ma mị."
+      },
+      {
+        id: "maneki_neko",
+        name: "Mèo Thần Tài Neko",
+        tag: "May mắn · Chuông lục",
+        icon: "🐱",
+        batch: 1,
+        cell: "Ô 4",
+        note: "Tay vẫy tài lộc 24 frame uyển chuyển liên tục, giữ nguyên vẹn chuông xanh ngọc trước cổ."
+      },
+      {
+        id: "bambo_panda",
+        name: "Gấu Trúc Bambo",
+        tag: "Hiền hòa · Trúc trường sinh",
+        icon: "🐼",
+        batch: 1,
+        cell: "Ô 5",
+        note: "Cành tre và lá trúc màu xanh tươi mát được giữ 100%, cử động thở bồng bềnh."
+      },
+
+      // Batch 2
+      {
+        id: "byte_robot",
+        name: "Robot Khối Byte",
+        tag: "Công nghệ · Đệm từ trường",
+        icon: "🤖",
+        batch: 2,
+        cell: "Ô 1",
+        note: "Màn hình LED cảm xúc (^_^), đệm từ trường bay bổng 24 frame êm ái."
+      },
+      {
+        id: "astra_stag",
+        name: "Hươu Tinh Tú Astra",
+        tag: "Thiên hà · Sừng chòm sao",
+        icon: "🦌",
+        batch: 2,
+        cell: "Ô 2",
+        note: "Sừng dạ quang phát ánh sao, bụi tinh vân lấp lánh nhẹ nhàng quanh thân."
+      },
+      {
+        id: "kylin_qilin",
+        name: "Kỳ Lân Mây Kylin",
+        tag: "Cát tường · Vảy ngũ sắc",
+        icon: "🦄",
+        batch: 2,
+        cell: "Ô 3",
+        note: "Vảy cầu vồng rực rỡ, bờm mây và đuôi mây cuộn sóng 24 frame bồng bềnh."
+      },
+      {
+        id: "inky_octopus",
+        name: "Bạch Tuộc Học Giả Inky",
+        tag: "Học thức · Bút thư pháp",
+        icon: "🐙",
+        batch: 2,
+        cell: "Ô 4",
+        note: "Mũ nồi đỏ rượu, xúc tu múa bút lông thư pháp và kính lúp ngọc bích."
+      },
+      {
+        id: "spike_hedgehog",
+        name: "Nhím Giấy Ghi Chú Spike",
+        tag: "Kỷ niệm · Gấp giấy Origami",
+        icon: "🦔",
+        batch: 2,
+        cell: "Ô 5",
+        note: "Các mẩu note dán phấp phới tự nhiên, cuộn tròn phóng gai giấy khi ra chiêu."
+      },
+
+      // Batch 3: 4 Bot-Exclusive Combat Pets
+      {
+        id: "bot_gloop",
+        name: "Slime Mọt Sách Gloop",
+        tag: "Bot Tập Sự · Mực nước xanh",
+        icon: "💧",
+        batch: 3,
+        cell: "Bot Ô 1",
+        note: "Slime nước xanh ngọc đội mũ cử nhân và cầm bút chì gỗ, nảy mầm nhịp nhàng 24 frame. Mắt quay sang trái chuẩn thế thủ Bot."
+      },
+      {
+        id: "bot_tickbot",
+        name: "Cú Cót Tickbot",
+        tag: "Bot Tinh Thông · Cơ khí hơi nước",
+        icon: "⚙️",
+        batch: 3,
+        cell: "Bot Ô 2",
+        note: "Cú máy phong cách steampunk với cót vặn lưng và đôi mắt kính hiển vi, cánh vỗ nhịp tích tắc chuẩn xác. Mắt quay sang trái chuẩn thế thủ Bot."
+      },
+      {
+        id: "bot_glitchy",
+        name: "Bóng Ma Lỗi Glitchy",
+        tag: "Bot Xuất Chúng · Lỗi Byte 8-Bit",
+        icon: "👾",
+        batch: 3,
+        cell: "Bot Ô 3",
+        note: "Bóng ma số với quầng sóng nhiễu hạt neon và đôi mắt vàng bí ẩn, bay bổng ma mị không trọng lượng. Mắt quay sang trái chuẩn thế thủ Bot."
+      },
+      {
+        id: "bot_dracobot",
+        name: "Long Giáp Dracobot",
+        tag: "Boss Đấu Trường · Hợp kim Titan",
+        icon: "🐲",
+        batch: 3,
+        cell: "Bot Ô 4",
+        note: "Rồng máy bọc thép titan hạng nặng với lò phản ứng plasma ngực, vỗ cánh uy nghi. Đã xoay ảnh gốc sang trái chuẩn thế thủ Bot."
+      },
+
+      // Batch 4: 2 Admin-Exclusive Celestial Pets
+      {
+        id: "admin_aurum",
+        name: "Kim Long Aurum 👑",
+        tag: "Admin Chí Tôn · Thần Thú Hoàng Kim",
+        icon: "🐉",
+        batch: 4,
+        cell: "Admin Ô 1",
+        note: "Rồng thần phương Đông toàn thân nạm bạch ngọc vàng kim, đội vương miện sapphire và ôm ngọc rồng tỏa hào quang. Đã xoay sang phải thế công người chơi."
+      },
+      {
+        id: "admin_nguyet",
+        name: "Thỏ Nguyệt Thẩm Phán 👑",
+        tag: "Admin Pháp Đình · Công Lý Mặt Trăng",
+        icon: "🐰",
+        batch: 4,
+        cell: "Admin Ô 2",
+        note: "Thỏ cung trăng khoác áo quan tư pháp cầm búa thẩm phán, vầng trăng khuyết phát sáng sau lưng. Xóa triệt để logo Gemini 100% không tì vết. Đã xoay sang phải thế công người chơi."
+      }
+    ];
+
+    let currentMode = 'idle';
+    let currentTheme = 'checkered';
+    let currentZoom = 1.5;
+
+    function renderCards() {
+      const b1 = document.getElementById('grid-batch-1');
+      const b2 = document.getElementById('grid-batch-2');
+      const b3 = document.getElementById('grid-batch-3');
+      const b4 = document.getElementById('grid-batch-4');
+      if (b1) b1.innerHTML = '';
+      if (b2) b2.innerHTML = '';
+      if (b3) b3.innerHTML = '';
+      if (b4) b4.innerHTML = '';
+
+      PETS.forEach(pet => {
+        const card = document.createElement('div');
+        const isAdmin = pet.batch === 4;
+        const isBot = pet.batch === 3;
+        
+        let borderClass = 'border-slate-800 hover:border-slate-700 bg-slate-900/90';
+        if (isAdmin) {
+          borderClass = 'border-amber-500/50 bg-gradient-to-b from-purple-950/40 via-slate-900/95 to-slate-900 hover:border-amber-400 shadow-xl shadow-purple-950/30';
+        } else if (isBot) {
+          borderClass = 'border-rose-500/40 bg-gradient-to-b from-slate-900 via-slate-900 to-rose-950/20 hover:border-rose-400 shadow-lg';
+        }
+        card.className = `${borderClass} border rounded-2xl p-5 flex flex-col justify-between transition`;
+
+        const sizePx = Math.round(100 * currentZoom);
+
+        let canvasContent = '';
+        if (currentMode === 'idle') {
+          canvasContent = `
+            <div class="flex flex-col items-center justify-center p-4">
+              <img src="/assets/pets/${pet.id}/03_spritesheet/${pet.id}_idle.gif?v=${Date.now()}" 
+                   alt="${pet.name} Idle" 
+                   style="width:${sizePx}px; height:${sizePx}px;"
+                   class="pixel-art drop-shadow-md transition-all" />
+              <span class="text-[11px] font-mono text-emerald-400 mt-2">💤 IDLE (24 frames · 70ms)</span>
+            </div>
+          `;
+        } else if (currentMode === 'attack') {
+          canvasContent = `
+            <div class="flex flex-col items-center justify-center p-4">
+              <img src="/assets/pets/${pet.id}/03_spritesheet/${pet.id}_attack.gif?v=${Date.now()}" 
+                   alt="${pet.name} Attack" 
+                   style="width:${sizePx}px; height:${sizePx}px;"
+                   class="pixel-art drop-shadow-md transition-all" />
+              <span class="text-[11px] font-mono text-rose-400 mt-2">⚔️ ATTACK (24 frames · 70ms)</span>
+            </div>
+          `;
+        } else {
+          const halfPx = Math.round(84 * currentZoom);
+          canvasContent = `
+            <div class="grid grid-cols-2 gap-3 items-center justify-items-center p-3">
+              <div class="flex flex-col items-center">
+                <img src="/assets/pets/${pet.id}/03_spritesheet/${pet.id}_idle.gif?v=${Date.now()}" 
+                     style="width:${halfPx}px; height:${halfPx}px;"
+                     class="pixel-art drop-shadow-md" />
+                <span class="text-[10px] font-mono text-emerald-400 mt-1">💤 Idle (24f)</span>
+              </div>
+              <div class="flex flex-col items-center">
+                <img src="/assets/pets/${pet.id}/03_spritesheet/${pet.id}_attack.gif?v=${Date.now()}" 
+                     style="width:${halfPx}px; height:${halfPx}px;"
+                     class="pixel-art drop-shadow-md" />
+                <span class="text-[10px] font-mono text-rose-400 mt-1">⚔️ Attack (24f)</span>
+              </div>
+            </div>
+          `;
+        }
+
+        const bgClass = currentTheme === 'checkered' ? 'checkered-bg' : (currentTheme === 'light' ? 'checkered-light' : 'bg-slate-950');
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-start justify-between gap-2 mb-3">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">${pet.icon}</span>
+                <div>
+                  <h3 class="font-bold text-sm text-white">${pet.name}</h3>
+                  <span class="text-[11px] text-amber-400/90 font-medium">${pet.tag}</span>
+                </div>
+              </div>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">${pet.cell}</span>
+            </div>
+
+            <div class="${bgClass} rounded-xl border border-slate-800/80 mb-3 min-h-[160px] flex items-center justify-center overflow-hidden">
+              ${canvasContent}
+            </div>
+
+            <p class="text-[11.5px] text-slate-400 leading-relaxed mb-4">
+              ${pet.note}
+            </p>
+          </div>
+
+          <div class="pt-3 border-t border-slate-800/60 flex items-center justify-between text-[11px]">
+            <span class="font-mono text-slate-500">100x100 · 24f (70ms)</span>
+            <div class="flex items-center gap-2">
+              <a href="/assets/pets/${pet.id}/03_spritesheet/${pet.id}_idle_strip.png" target="_blank" class="text-indigo-400 hover:text-indigo-300 font-medium">Strip PNG ↗</a>
+              <span class="text-slate-700">·</span>
+              <a href="/assets/pets/${pet.id}/03_spritesheet/metadata.json" target="_blank" class="text-slate-400 hover:text-white font-mono">meta.json ↗</a>
+            </div>
+          </div>
+        `;
+
+        if (pet.batch === 1 && b1) {
+          b1.appendChild(card);
+        } else if (pet.batch === 2 && b2) {
+          b2.appendChild(card);
+        } else if (pet.batch === 3 && b3) {
+          b3.appendChild(card);
+        } else if (pet.batch === 4 && b4) {
+          b4.appendChild(card);
+        }
+      });
+    }
+
+    function setMode(mode) {
+      currentMode = mode;
+      document.querySelectorAll('#btn-mode-idle, #btn-mode-atk, #btn-mode-both').forEach(b => {
+        b.className = "px-3 py-1.5 rounded-md font-bold transition text-slate-400 hover:text-white";
+      });
+      const activeBtn = mode === 'idle' ? 'btn-mode-idle' : (mode === 'attack' ? 'btn-mode-atk' : 'btn-mode-both');
+      document.getElementById(activeBtn).className = "px-3 py-1.5 rounded-md font-bold transition bg-indigo-600 text-white shadow";
+      renderCards();
+    }
+
+    function setTheme(theme) {
+      currentTheme = theme;
+      renderCards();
+    }
+
+    function setZoom(scale) {
+      currentZoom = scale;
+      document.querySelectorAll('.zoom-btn').forEach(b => {
+        b.className = "zoom-btn px-2 py-1 rounded bg-slate-800 text-slate-300 font-mono text-[11px]";
+      });
+      event.target.className = "zoom-btn px-2 py-1 rounded bg-indigo-600 text-white font-mono text-[11px]";
+      renderCards();
+    }
+
+    renderCards();
+  </script>
+</body>
+</html>

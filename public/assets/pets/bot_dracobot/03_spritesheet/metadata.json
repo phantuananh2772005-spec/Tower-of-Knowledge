@@ -1,0 +1,32 @@
+{
+  "pet_id": "bot_dracobot",
+  "name_vi": "Long Giáp Dracobot",
+  "icon": "🐲",
+  "role": "bot",
+  "tier": "👑 Trùm cuối",
+  "cell_index": 4,
+  "facing": "left",
+  "frame_size": [
+    100,
+    100
+  ],
+  "frame_count": 24,
+  "duration_ms": 70,
+  "idle_loop": {
+    "start_frame": 57,
+    "length": 55
+  },
+  "states": {
+    "idle": {
+      "frame_count": 24,
+      "strip": "bot_dracobot_idle_strip.png",
+      "gif": "bot_dracobot_idle.gif"
+    },
+    "attack": {
+      "frame_count": 24,
+      "strip": "bot_dracobot_attack_strip.png",
+      "gif": "bot_dracobot_attack.gif"
+    }
+  },
+  "still": "bot_dracobot_still.png"
+}
