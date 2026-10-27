@@ -1810,7 +1810,7 @@
           </div>
 
           <!-- Danh sách các loại âm thanh chi tiết -->
-          <div class="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+          <div id="settings-audio-effects" class="space-y-2 max-h-[320px] overflow-y-auto pr-1">
             <!-- 1. Âm thanh Trả lời & Giải đố -->
             <div class="p-3 rounded-2xl bg-[var(--background)] border border-[var(--border)] flex items-center justify-between">
               <div class="flex items-center gap-2.5">
@@ -3587,20 +3587,16 @@
     function renderShopPets() {
       const container = document.getElementById('shop-pets-grid');
       if (!container) return;
-      const isAdminUser = Boolean(currentUserAccount && currentUserAccount.vai_tro === 'QUAN_TRI_VIEN');
-      container.innerHTML = allPets.map(p => {
+      container.innerHTML = allPets.filter(p => p.role !== 'admin').map(p => {
         const isCur = currentEquippedPet && currentEquippedPet.id === p.id;
-        const isAdminPet = p.role === 'admin';
         const isOwned = Boolean(ownedPets[p.id]);
         let btnHtml = '';
         if (isCur) {
           btnHtml = `<button class="shrink-0 py-1.5 px-2.5 rounded-lg bg-emerald-600/20 text-emerald-600 border border-emerald-500/40 font-bold text-[11px] transition select-none">✓ Đang dùng</button>`;
-        } else if (isAdminPet && !isAdminUser) {
-          btnHtml = `<span class="shrink-0 py-1.5 px-2.5 rounded-lg bg-purple-900/30 text-purple-300 border border-purple-500/40 font-bold text-[10px] select-none flex items-center gap-1 shadow-xs tracking-tight">👑 Dành riêng Admin</span>`;
         } else if (!isOwned && Number(p.requiredLevel || 1) > Number(currentUserAccount.level || 1)) {
           btnHtml = `<span class="text-xs font-semibold text-[var(--muted-foreground)]">🔒 Cấp ${p.requiredLevel}</span>`;
         } else if (isOwned) {
-          btnHtml = `<button onclick="equipPet('${p.id}')" class="shrink-0 py-1.5 px-2.5 rounded-lg ${isAdminPet ? 'bg-gradient-to-r from-amber-500 to-purple-600 text-white font-bold text-[11px] hover:brightness-110 shadow-xs' : 'bg-emerald-600 text-white font-bold text-[11px] hover:bg-emerald-700 shadow-xs'} transition cursor-pointer whitespace-nowrap">Đổi sang</button>`;
+          btnHtml = `<button onclick="equipPet('${p.id}')" class="shrink-0 py-1.5 px-2.5 rounded-lg bg-emerald-600 text-white font-bold text-[11px] hover:bg-emerald-700 shadow-xs transition cursor-pointer whitespace-nowrap">Đổi sang</button>`;
         } else {
           btnHtml = `<button id="btn-buy-${p.id}" onclick="buyPet('${p.id}', '${p.name}', '${p.icon}', '${p.buff}', ${p.price})" class="shrink-0 py-1.5 px-2.5 rounded-lg bg-amber-600 text-white font-bold text-[11px] hover:bg-amber-700 transition cursor-pointer shadow-xs whitespace-nowrap">${p.price} 🪙</button>`;
         }
@@ -3611,18 +3607,17 @@
 
         const cardBorderClass = isCur 
           ? 'border-emerald-500 bg-emerald-500/5 shadow-xs' 
-          : (isAdminPet ? 'border-purple-500/40 bg-purple-950/20 hover:border-purple-400' : 'border-[var(--border)] hover:border-emerald-500/40');
+          : 'border-[var(--border)] hover:border-emerald-500/40';
 
         return `
           <div data-pet-id="${p.id}" data-pet-role="${p.role || 'learner'}" class="bg-[var(--card)] border ${cardBorderClass} rounded-xl p-2.5 flex items-center justify-between gap-2 transition">
             <div class="flex items-center gap-2.5 min-w-0">
-              <div class="w-9 h-9 rounded-lg ${isAdminPet ? 'bg-purple-900/30 border-purple-500/40' : 'bg-[var(--background)] border-[var(--border)]'} border flex items-center justify-center shrink-0 select-none overflow-hidden shadow-xs">
+              <div class="w-9 h-9 rounded-lg bg-[var(--background)] border-[var(--border)] border flex items-center justify-center shrink-0 select-none overflow-hidden shadow-xs">
                 ${avatarThumb}
               </div>
               <div class="min-w-0 text-left">
                 <div class="flex items-center gap-1.5">
                   <h4 class="font-bold text-xs truncate leading-tight text-[var(--foreground)]">${p.name}</h4>
-                  ${isAdminPet ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 font-extrabold border border-purple-500/30 shrink-0">ADMIN</span>' : ''}
                 </div>
                 <p class="text-[10px] text-[var(--muted-foreground)] truncate mt-0.5">${p.buff}</p>
               </div>

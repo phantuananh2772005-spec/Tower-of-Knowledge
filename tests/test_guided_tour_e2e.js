@@ -24,6 +24,7 @@ async function main(){
       assert(await page.$eval('#btn-topbar-admin-portal',el=>getComputedStyle(el).display==='none'),'Learner sees desktop Admin link');
       assert(await page.$eval('#btn_m_more_admin',el=>getComputedStyle(el).display==='none'),'Learner sees mobile Admin link');
       assert(await page.evaluate(()=>!ownedPets.admin_aurum&&!ownedPets.admin_nguyet),'Learner owns Admin pets');
+      assert.strictEqual(await page.$$eval('#shop-pets-grid [data-pet-role="admin"]',els=>els.length),0,'Shop exposes Admin pets');
       if(width===(process.env.TEST_WIDTHS||'1280,375').split(',').map(Number)[0]){
         assert(await page.$eval('#btn_auth_google_login',el=>el.disabled),'Unconfigured Google must not sign in with a shared account');
         await page.evaluate(()=>navTo('shop'));page.once('dialog',dialog=>dialog.accept());
@@ -49,6 +50,8 @@ async function main(){
       }
       await page.evaluate(()=>{document.getElementById('modal-unboxing-pet').classList.add('hidden');currentUserAccount.tourProgress=null;localStorage.removeItem('tok_tour_v2_'+currentUserAccount.userId);startPetOnboardingTour();});
       await delay(300);
+      assert.deepStrictEqual(await page.evaluate(()=>GuidedTour.steps.filter(step=>step.id.startsWith('audio-')&&step.id!=='audio-back').map(step=>step.id)),['audio-overview'],'Audio guide should contain one overview only');
+      assert(await page.evaluate(()=>!GuidedTour.steps.some(step=>step.id==='shop-admin')),'Guide introduces Admin pets');
       const missing=[],overlap=[];
       for(let n=0;n<130;n++){
         await page.waitForFunction(()=>GuidedTour.target||!document.getElementById('btn_pet_tour_next').disabled,{timeout:6000});
@@ -63,7 +66,7 @@ async function main(){
         if(!before.target){missing.push(before.step);console.log('MISSING',width,before.step);}
         if(before.overlap>80){overlap.push(before.step);console.log('OVERLAP',width,before.step,JSON.stringify({target:before.rect,dialog:before.dialog}));if(screenshots)await page.screenshot({path:screenshots+`/tour-overlap-${width}-${before.step}.png`});}
         assert(before.dialog.x>=0&&before.dialog.y>=0&&before.dialog.x+before.dialog.w<=width+1&&before.dialog.y+before.dialog.h<=851,`Dialog leaves viewport: ${before.step}`);
-        if(screenshots&&['level','nav-catalog','pet-current','settings-audio'].includes(before.step)){fs.mkdirSync(screenshots,{recursive:true});await page.screenshot({path:screenshots+`/tour-${width}-${before.step}.png`});}
+        if(screenshots&&['level','nav-catalog','pet-current','settings-audio','audio-overview','shop-card'].includes(before.step)){fs.mkdirSync(screenshots,{recursive:true});await page.screenshot({path:screenshots+`/tour-${width}-${before.step}.png`});}
         if(before.action&&before.target){
           const target=before.step==='lesson-answer'?await page.evaluateHandle(()=>{
             const ms=currentQuizSession?.matchingState;

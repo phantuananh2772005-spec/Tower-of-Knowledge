@@ -34,7 +34,7 @@ Tất cả request/response theo envelope `success`, `data`/`error`, `timestamp`
 
 ## Hướng dẫn theo bố cục
 
-PC có 91 bước, mobile có 99 bước. Người học tự bấm thanh điều hướng; mobile đi qua menu Thêm cho các mục không có nút trực tiếp. Mỗi bước đo phần tử thật và đặt panel cạnh/trên/dưới mục tiêu. Bốn vùng phủ tối giữ vùng mục tiêu sáng.
+PC có 87 bước, mobile có 95 bước. Người học tự bấm thanh điều hướng; mobile đi qua menu Thêm cho các mục không có nút trực tiếp. Mỗi bước đo phần tử thật và đặt panel cạnh/trên/dưới mục tiêu. Bốn vùng phủ tối giữ vùng mục tiêu sáng. Phần âm thanh có một bước giới thiệu chung; Pet Admin không xuất hiện trong shop hoặc kịch bản hướng dẫn học viên.
 
 Tour gồm trang chủ, nhiệm vụ, đăng ký môn, danh sách môn đang học, bản đồ, thẻ bài giảng, thao tác câu hỏi và phản hồi, Pet/chăm sóc/cửa hàng/phụ kiện, các chế độ đấu, QR, bảng xếp hạng, hồ sơ/huy hiệu, tên/Username/mật khẩu/Google, âm thanh, theme và đăng xuất. Hành động có phí, đổi mật khẩu và bắt đầu trận thật được giải thích để người học tự quyết định.
 
@@ -51,6 +51,7 @@ node tests/test_inventory_and_google_identity.js
 node tests/test_atomic_match_and_streak.js
 # Chạy server test ở PORT=3002 trước hai bộ trình duyệt:
 node tests/test_lesson_resume_and_invitation.js
+node tests/test_tour_step_compatibility.js
 node tests/test_guided_tour_e2e.js
 ```
 

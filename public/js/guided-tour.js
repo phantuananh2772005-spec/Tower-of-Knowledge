@@ -80,7 +80,6 @@
       read('pet-owned','#owned-pets-list > div','Đổi Pet đã sở hữu','Chỉ Pet đã mở khóa mới nằm trong bộ sưu tập. Bấm một Pet để đổi; thông báo “Đã lưu” xác nhận máy chủ đã nhận lựa chọn của bạn.'),
       click('pet-shop','#btn_pet_to_shop','Đi tới cửa hàng','Bấm “Cửa hàng” ngay trong phần bộ sưu tập để xem Pet có thể mở khóa.',screen('shop')),
       read('shop-card','#shop-pets-grid > div','Giá Xu và điều kiện cấp','Mỗi Pet ghi giá hoặc cấp độ cần đạt. Khi mua, hộp xác nhận ghi số Xu sẽ dùng. Bạn có thể hủy nếu chưa muốn mua.'),
-      read('shop-admin',()=>find('#shop-pets-grid [data-pet-role="admin"]')||find('#shop-pets-grid > div:last-child'),'Pet dành cho quản trị viên','Pet có huy hiệu Admin chỉ được máy chủ cho phép trang bị khi tài khoản hiện tại là quản trị viên. Học viên có thể xem hình nhưng không thể mua hoặc dùng.'),
       read('shop-items','#shop-accessories','Vật phẩm trang trí','Mỗi phụ kiện ghi giá Xu. Bấm Mua, đọc hộp xác nhận rồi đồng ý nếu muốn mua. Sau khi mua, bấm Trang bị để dùng hoặc Tháo để gỡ. Phụ kiện được lưu theo tài khoản và hiện cùng Pet khi đăng nhập lại.',{optional:true}));
 
     section='Đấu trường'; nav('minigame','Minigame');
@@ -131,11 +130,8 @@
       click('password-cancel','#btn_settings_cancel_password','Đóng phần đổi mật khẩu','Bấm Hủy để giữ nguyên thông tin và tiếp tục chuyến hướng dẫn.',gone('#edit-box-password')),
       read('account-google','#auth-google-display-slot','Liên kết Google với đúng tài khoản','Bấm Liên kết bằng Google và chọn tài khoản trong cửa sổ Google để xác minh. Khi đã liên kết, địa chỉ đã xác minh hiện ở đây. Muốn hủy liên kết cần có mật khẩu đăng nhập riêng. Nếu ghi chưa cấu hình thì chức năng chưa sẵn sàng trên máy chủ.'),
       click('account-back','#btn_settings_auth_back','Quay về Cài đặt','Bấm mũi tên quay lại ở đầu bảng.',shown('#settings-view-main')),
-      click('settings-audio','#settings-open-audio','Mở điều chỉnh âm thanh','Bấm Âm thanh hiệu ứng để chỉnh từng nhóm âm.',shown('#settings-view-audio')),
-      read('audio-quiz','#toggle-audio-quiz','Âm khi làm bài','Công tắc này bật hoặc tắt âm của câu hỏi. Nút Nghe thử giúp bạn chọn mức trải nghiệm trước khi học.'),
-      read('audio-reward','#toggle-audio-reward','Âm phần thưởng','Bạn có thể tắt âm nhận thưởng mà vẫn giữ âm trả lời hoặc chiến đấu. Các lựa chọn được lưu theo tài khoản.',{fallback:'#toggle-audio-coin'}),
-      read('audio-battle','#toggle-audio-battle','Âm chiến đấu','Công tắc này điều khiển các hiệu ứng trong đấu trường. Điều chỉnh trước khi bắt đầu trận.'),
-      read('audio-outcome','#toggle-audio-outcome','Âm kết quả và nhạc nền','Bạn có thể tùy chọn âm thắng/thua và nhạc nền riêng. Nhạc nền chỉ phát sau tương tác của bạn theo quy định trình duyệt.',{fallback:'#toggle-audio-bgm'}),
+      click('settings-audio','#settings-open-audio','Mở điều chỉnh âm thanh','Bấm Âm thanh hiệu ứng để xem nơi bật hoặc tắt âm thanh của hệ thống.',shown('#settings-view-audio')),
+      read('audio-overview','#settings-audio-effects','Bật hoặc tắt âm thanh của hệ thống','Đây là nơi bật hoặc tắt các hiệu ứng âm thanh có trong hệ thống. Bạn có thể điều chỉnh theo ý thích; lựa chọn được lưu theo tài khoản.'),
       click('audio-back','#btn_settings_sound_back','Quay về Cài đặt','Bấm quay lại để xem cách mở lại hướng dẫn và đăng xuất.',shown('#settings-view-main')),
       read('settings-guide','#settings-open-guide','Mở lại hoặc tiếp tục hướng dẫn','Mục này mở chuyến hướng dẫn bất cứ lúc nào. Nếu đã tạm dừng, bạn có thể tiếp tục đúng bước; xem lại không nhận quà thêm lần nữa.'),
       read('settings-logout','#btn_dangxuat','Đăng xuất khi dùng máy chung','Bấm Đăng xuất khi bạn muốn kết thúc phiên đăng nhập. Trong chuyến hướng dẫn này, hãy bấm Tiếp tục để xem phần đổi giao diện.'),
@@ -209,7 +205,8 @@
     let saved=currentUserAccount.tourProgress;
     if(!saved){try{saved=JSON.parse(localStorage.getItem('tok_tour_v2_'+currentUserAccount.userId));}catch{}}
     if(saved && !saved.completed && saved.layout===(state.mobile?'mobile':'desktop')) {
-      const index=state.steps.findIndex(step=>step.id===saved.step);
+      const renamedSteps={'shop-admin':'shop-items','audio-quiz':'audio-overview','audio-reward':'audio-overview','audio-battle':'audio-overview','audio-outcome':'audio-overview'};
+      const index=state.steps.findIndex(step=>step.id===(renamedSteps[saved.step]||saved.step));
       if(index>=0 && saved.context){state.index=index;await restoreContext(saved.context);}
     }
     if(state.index===0)navTo('hub');
@@ -245,9 +242,10 @@
       nextBtn.disabled=false;nextBtn.textContent='Tiếp tục →';layout();return;
     }
     state.target=target;
-    if(step.id==='lesson-answer'){
+    if(step.id==='lesson-answer'||(step.id==='audio-overview'&&state.mobile)){
       const oldStyle=target.getAttribute('style');
-      target.style.maxHeight=Math.floor(innerHeight*.36)+'px';target.style.minHeight='0';target.style.overflowY='auto';
+      const heightRatio=step.id==='audio-overview' ? 0.28 : 0.36;
+      target.style.maxHeight=Math.floor(innerHeight*heightRatio)+'px';target.style.minHeight='0';target.style.overflowY='auto';
       state.restoreTargetStyle=()=>{if(oldStyle===null)target.removeAttribute('style');else target.setAttribute('style',oldStyle);};
     }
     target.scrollIntoView({block:state.mobile?'start':'center',inline:'nearest',behavior:'instant'});
@@ -271,7 +269,8 @@
         {left:Math.max(12,Math.min(w-dw-12,r.left)),top:r.top-dh-14,fits:r.top-dh-14>=12}];
       let place=state.mobile?spaces.slice(2).find(p=>p.fits):spaces.find(p=>p.fits);
       if(!place){
-        const above=Math.max(0,r.top-24),below=Math.max(0,h-r.bottom-24);
+        // Reserve the outer margin plus target gap, including subpixel rounding.
+        const above=Math.max(0,r.top-28),below=Math.max(0,h-r.bottom-28);
         const capacity=Math.max(above,below);
         if(capacity>=160 && capacity<dh){
           dialog.style.maxHeight=Math.floor(capacity)+'px';dh=dialog.offsetHeight;
