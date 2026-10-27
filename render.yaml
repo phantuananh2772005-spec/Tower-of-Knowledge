@@ -12,7 +12,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: GOOGLE_CLIENT_ID
-        value: 987310410532-g4r1if1h1040asnf1lj16602s2n81k81.apps.googleusercontent.com
+        value: 596560941998-dbgmv0nh91l184hhk2rjvn64ura1isku.apps.googleusercontent.com
       - key: JWT_SECRET
         generateValue: true
       - key: DATABASE_URL
