@@ -20,7 +20,9 @@ const isPostgres = Boolean(
 
 let pgPool = null;
 if (isPostgres) {
-  const { Pool } = require('pg');
+  const { Pool, types } = require('pg');
+  // A PostgreSQL DATE is a calendar day, not a midnight timestamp in the host timezone.
+  types.setTypeParser(1082, value => value);
   pgPool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
@@ -216,5 +218,6 @@ module.exports = {
   queryOne,
   execute,
   transaction,
+  adaptForPostgres,
   isPostgres
 };

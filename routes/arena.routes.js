@@ -50,8 +50,21 @@ router.get('/leaderboard', async (req, res) => {
       }
     }
 
+    const answerStats = await db.query(`
+      SELECT p.ma_nguoi_dung, t.ma_mon, COUNT(*) AS so_cau,
+        SUM(CASE WHEN a.la_dap_an_dung = $1 THEN 1 ELSE 0 END) AS so_cau_dung,
+        SUM(a.thoi_gian_tra_loi_giay) AS tong_thoi_gian
+      FROM luot_tra_loi a
+      JOIN nguoi_choi_trong_tran p ON p.ma_nguoi_choi_trong_tran = a.ma_nguoi_choi_trong_tran
+      JOIN tran_dau_1v1 t ON t.ma_tran = p.ma_tran
+      GROUP BY p.ma_nguoi_dung, t.ma_mon`, [true]);
+    const enrollments = await db.query('SELECT ma_nguoi_dung, ma_mon FROM tien_do_mon_hoc');
     const enriched = uniqueUsers.map(u => ({
       ...u,
+      mon_da_dang_ky: enrollments.filter(e => e.ma_nguoi_dung === u.ma_nguoi_dung).map(e => e.ma_mon),
+      thong_ke_tra_loi: answerStats.filter(s => s.ma_nguoi_dung === u.ma_nguoi_dung).map(s => ({
+        ma_mon:s.ma_mon, so_cau:Number(s.so_cau), so_cau_dung:Number(s.so_cau_dung), tong_thoi_gian:Number(s.tong_thoi_gian)
+      })),
       danh_hieu: deriveRankTitle(u.tong_diem_kinh_nghiem),
       chuoi_thang_arena: typeof u.chuoi_thang_arena === 'number' ? u.chuoi_thang_arena : 0,
       chuoi_thang_cao_nhat_arena: typeof u.chuoi_thang_cao_nhat_arena === 'number' ? u.chuoi_thang_cao_nhat_arena : 0

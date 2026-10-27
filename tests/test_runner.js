@@ -580,7 +580,10 @@ async function main() {
       assert.strictEqual(spoofTurn.la_dap_an_dung, false, 'Server must reject spoofed client isCorrect flag');
       assert.strictEqual(spoofTurn.sat_thuong_gay_ra, 0, 'Spoofed wrong answer must deal 0 damage');
     } finally {
-      if (matchId) await db.execute('DELETE FROM tran_dau_1v1 WHERE ma_tran = $1', [matchId]);
+      if (matchId) {
+        await db.execute('DELETE FROM luot_tra_loi WHERE ma_nguoi_choi_trong_tran IN (SELECT ma_nguoi_choi_trong_tran FROM nguoi_choi_trong_tran WHERE ma_tran = $1)',[matchId]);
+        await db.execute('DELETE FROM tran_dau_1v1 WHERE ma_tran = $1', [matchId]);
+      }
       await db.execute('DELETE FROM nguoi_dung WHERE ma_nguoi_dung IN ($1, $2)', [id1, id2]);
     }
   });

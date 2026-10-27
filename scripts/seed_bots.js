@@ -51,14 +51,15 @@ async function ensureBotUsers() {
           ngay_hoat_dong_cuoi, che_do_giao_dien, bat_am_thanh
         ) VALUES (
           $1, $2, $3, $4, $5,
-          $6, 'NGUOI_HOC', $7, $8, $9,
+          $6, 'HE_THONG', $7, $8, $9,
           $9, $9,
-          CAST(SYSDATETIME() AS DATE), 'TOI', 1
+          CAST(SYSDATETIME() AS DATE), 'TOI', $10
         )
-      `, [b.id, b.username, b.email, b.hash, b.name, b.frame, b.exp, b.coins, b.streak]);
+      `, [b.id, b.username, b.email, b.hash, b.name, b.frame, b.exp, b.coins, b.streak, true]);
 
       console.log('✓ Inserted bot user:', b.id, b.name);
     } else {
+      await db.execute('UPDATE nguoi_dung SET vai_tro = $1 WHERE ma_nguoi_dung = $2',['HE_THONG',b.id]);
       console.log('✓ Bot user exists:', b.id, b.name);
     }
 
@@ -67,8 +68,8 @@ async function ensureBotUsers() {
     if (!ownExist) {
       await db.execute(`
         INSERT INTO thu_cung_so_huu (ma_so_huu, ma_nguoi_dung, ma_thu_cung, dang_kich_hoat)
-        VALUES ($1, $2, $3, 1)
-      `, ['own_' + b.id, b.id, b.pet]);
+        VALUES ($1, $2, $3, $4)
+      `, ['own_' + b.id, b.id, b.pet, true]);
       console.log('✓ Assigned pet', b.pet, 'to bot', b.id);
     }
   }

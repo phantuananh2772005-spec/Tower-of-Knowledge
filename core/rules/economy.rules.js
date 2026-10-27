@@ -4,14 +4,8 @@
  * Đảm bảo danh hiệu không bị tụt khi tiêu xu.
  */
 
-const RANK_THRESHOLDS = [
-  { minExp: 7000, title: 'DAI_SU', level: 6, label: 'Đại sư' },
-  { minExp: 3500, title: 'THONG_THAI_3', level: 5, label: 'Thông thái III' },
-  { minExp: 1500, title: 'THONG_THAI_2', level: 4, label: 'Thông thái II' },
-  { minExp: 500,  title: 'THONG_THAI_1', level: 3, label: 'Thông thái I' },
-  { minExp: 100,  title: 'TAP_SU', level: 2, label: 'Tập sự' },
-  { minExp: 0,    title: 'TAN_THU', level: 1, label: 'Tân thủ' }
-];
+const levelRules = require('../../public/js/level-rules');
+const RANK_THRESHOLDS = [...levelRules.thresholds].reverse();
 
 /**
  * Suy ra Danh hiệu học vị dựa trên Tổng điểm kinh nghiệm tích lũy (EXP).
@@ -81,6 +75,7 @@ function applyCoinChange(currentCoins, changeAmount) {
 }
 
 module.exports = {
+  levelProgress: levelRules.progress,
   RANK_THRESHOLDS,
   deriveRankTitle,
   deriveUserLevel,

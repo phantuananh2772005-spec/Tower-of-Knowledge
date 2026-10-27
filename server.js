@@ -54,7 +54,7 @@ app.get('/admin.html', (req, res) => {
 app.get('/health', (req, res) => {
   res.apiSuccess({
     status: 'HEALTHY',
-    version: 'd901b3a_v6',
+    version: '1.1.0-guided-learning',
     database: process.env.DATABASE_URL ? 'PostgreSQL' : 'MSSQL'
   });
 });
@@ -68,6 +68,7 @@ app.use('/api/economy', economyRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/extreme', extremeRoutes);
 app.use('/api/pet-studio', petStudioRoutes);
+app.use('/api/items', require('./routes/inventory.routes'));
 
 // Fallback 404 handler
 app.use('/api/*', (req, res) => {
@@ -88,7 +89,12 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
+Promise.all([
+  require('./database/sync_pet_catalog').syncPetCatalog(),
+  require('./database/init_user_preferences').initUserPreferences(),
+  require('./database/init_inventory').initInventory(),
+  require('./database/init_identity').initIdentity()
+]).then(() => server.listen(PORT, () => {
   console.log(`================================================================`);
   console.log(`🚀 TOWER OF KNOWLEDGE SERVER IS RUNNING ON PORT ${PORT}`);
   console.log(`📚 Learner UI: http://localhost:${PORT}/`);
@@ -110,6 +116,9 @@ server.listen(PORT, () => {
       console.warn('⚠️ [STARTUP] Chapter 1 seeder load notice:', e.message);
     }
   }, 1000);
+})).catch(err => {
+  console.error('[STARTUP] Initialization failed:', err.message);
+  process.exit(1);
 });
 
 module.exports = { app, server };

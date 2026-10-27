@@ -12,13 +12,7 @@
  */
 function toVietnamDateString(date) {
   const d = new Date(date);
-  // Thêm 7 tiếng để chuyển từ UTC sang UTC+7
-  const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
-  const vnTime = new Date(utc + (3600000 * 7));
-  const year = vnTime.getFullYear();
-  const month = String(vnTime.getMonth() + 1).padStart(2, '0');
-  const day = String(vnTime.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return new Date(d.getTime() + 7 * 3600000).toISOString().slice(0, 10);
 }
 
 /**

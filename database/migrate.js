@@ -103,32 +103,22 @@ async function main() {
     console.log('==> Existing database detected. Preserving existing users and learning progress (non-destructive mode).');
   }
 
-  console.log('==> Seeding Chapter 1 (5 checkpoints & 63 questions)...');
-  try {
-    const ch1Seeder = require('../scripts/seed_chapter1_5levels');
-    await ch1Seeder.runSeed();
-  } catch (seedErr) {
-    console.warn('[MIGRATE] Warning: seed_chapter1_5levels error (non-fatal):', seedErr.message);
-  }
+  // Add every schema extension before running seeders that use those columns.
+  await require('../scripts/migrate_stepping').migrate();
+  await require('./init_telemetry').initTelemetrySchema();
+  await require('./sync_pet_catalog').syncPetCatalog();
+  await require('./init_user_preferences').initUserPreferences();
+  await require('./init_inventory').initInventory();
+  await require('./init_identity').initIdentity();
 
+  console.log('==> Seeding Chapter 1 (5 checkpoints & 63 questions)...');
+  await require('../scripts/seed_chapter1_5levels').runSeed();
   if (isPostgres) {
     const cdsPgSql = path.join(__dirname, 'seed_postgres_cds.sql');
     if (fs.existsSync(cdsPgSql)) {
       console.log('==> Seeding Chuyen Doi So for PostgreSQL...');
-      try {
-        await runPostgresFile(cdsPgSql);
-      } catch (e) {
-        console.warn('[MIGRATE] Warning: seed_postgres_cds error (non-fatal):', e.message);
-      }
+      await runPostgresFile(cdsPgSql);
     }
-  }
-
-  console.log('==> Initializing Telemetry Schema...');
-  try {
-    const { initTelemetrySchema } = require('./init_telemetry');
-    await initTelemetrySchema();
-  } catch (telemErr) {
-    console.warn('[MIGRATE] Warning: initTelemetrySchema notice:', telemErr.message);
   }
 
   console.log('==> Database setup successfully completed!');

@@ -7,10 +7,13 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../database/db');
 const { evaluateStreak, toVietnamDateString } = require('../core/rules/streak.rules');
-const { deriveRankTitle, deriveUserLevel } = require('../core/rules/economy.rules');
-const { mutateCoins } = require('./economy.service');
+const { deriveRankTitle, deriveUserLevel, levelProgress } = require('../core/rules/economy.rules');
+const { mutateCoinsInTransaction, withUserLock } = require('./economy.service');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'tower_of_knowledge_ultra_secure_jwt_secret_2026';
+function parsePreference(value) {
+  try { return typeof value === 'string' ? JSON.parse(value) : value || null; } catch { return null; }
+}
 
 /**
  * Generate JWT token
@@ -45,10 +48,15 @@ async function formatUserResponse(user) {
     email: user.email,
     ten_hien_thi: user.ten_hien_thi,
     khung_avatar: user.khung_avatar,
+    google_lien_ket: Boolean(user.google_sub),
+    google_email: user.google_sub ? user.google_email : null,
+    co_mat_khau: user.co_mat_khau !== false && user.co_mat_khau !== 0,
+    phu_kien_dang_dung: require('./inventory.service').itemFor(user.phu_kien_dang_dung),
     vai_tro: user.vai_tro,
     tong_diem_kinh_nghiem: user.tong_diem_kinh_nghiem,
     danh_hieu: deriveRankTitle(user.tong_diem_kinh_nghiem),
     cap_do: deriveUserLevel(user.tong_diem_kinh_nghiem),
+    tien_do_cap_do: levelProgress(user.tong_diem_kinh_nghiem),
     xu_tri_thuc: user.xu_tri_thuc,
     chuoi_streak_ngay: user.chuoi_streak_ngay,
     chuoi_thang_arena: typeof user.chuoi_thang_arena === 'number' ? user.chuoi_thang_arena : 0,
@@ -56,7 +64,9 @@ async function formatUserResponse(user) {
     ngay_hoat_dong_cuoi: user.ngay_hoat_dong_cuoi,
     che_do_giao_dien: user.che_do_giao_dien,
     bat_am_thanh: Boolean(user.bat_am_thanh),
-    thu_cung_dang_dung: activePet || null
+    cai_dat_am_thanh: parsePreference(user.cai_dat_am_thanh),
+    tien_do_huong_dan: parsePreference(user.tien_do_huong_dan),
+    thu_cung_dang_dung: require('./pet.service').formatPet(activePet)
   };
 }
 
@@ -132,38 +142,30 @@ async function login({ ten_dang_nhap, mat_khau, currentDate }) {
     throw new Error('Tài khoản hoặc mật khẩu không chính xác.');
   }
 
-  const isMatch = bcrypt.compareSync(mat_khau, user.mat_khau_hash);
+  const isMatch = user.co_mat_khau !== false && user.co_mat_khau !== 0 && bcrypt.compareSync(mat_khau, user.mat_khau_hash);
   if (!isMatch) {
     throw new Error('Tài khoản hoặc mật khẩu không chính xác.');
   }
 
-  // Lazy streak evaluation (Vietnam UTC+7 normalized date string)
-  const evalDate = currentDate ? new Date(currentDate) : new Date();
-  const todayStr = toVietnamDateString(evalDate);
-  const streakResult = evaluateStreak(user.ngay_hoat_dong_cuoi, todayStr, user.chuoi_streak_ngay);
-
-  if (streakResult.shouldUpdateDate) {
-    await db.execute(`
-      UPDATE nguoi_dung 
-      SET chuoi_streak_ngay = $1, ngay_hoat_dong_cuoi = $2, cap_nhat_luc = SYSDATETIME()
-      WHERE ma_nguoi_dung = $3
-    `, [streakResult.newStreak, streakResult.todayStr, user.ma_nguoi_dung]);
-
-    user.chuoi_streak_ngay = streakResult.newStreak;
-    user.ngay_hoat_dong_cuoi = streakResult.todayStr;
-
-    // Daily streak reward when streak initializes or increments consecutively
-    if (streakResult.streakIncremented) {
-      const rewardCoin = 5 * streakResult.newStreak;
-      const coinRes = await mutateCoins(user.ma_nguoi_dung, rewardCoin, 'THUONG_STREAK', `Thưởng chuỗi học ${streakResult.newStreak} ngày liên tiếp`);
-      user.xu_tri_thuc = coinRes.newBalance;
+  return issueSession(user,currentDate);
+}
+async function issueSession(user,currentDate) {
+  const result = await withUserLock(user.ma_nguoi_dung, () => db.transaction(async tx => {
+    const freshUser = await tx.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1' + (db.isPostgres ? ' FOR UPDATE' : ''),[user.ma_nguoi_dung]);
+    if(!freshUser)throw new Error('Tài khoản không còn tồn tại.');
+    const today = toVietnamDateString(currentDate ? new Date(currentDate) : new Date());
+    const streak = evaluateStreak(freshUser.ngay_hoat_dong_cuoi,today,freshUser.chuoi_streak_ngay);
+    if(streak.shouldUpdateDate){
+      await tx.execute('UPDATE nguoi_dung SET chuoi_streak_ngay = $1, ngay_hoat_dong_cuoi = $2, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $3',[streak.newStreak,streak.todayStr,freshUser.ma_nguoi_dung]);
+      freshUser.chuoi_streak_ngay=streak.newStreak;freshUser.ngay_hoat_dong_cuoi=streak.todayStr;
+      if(streak.streakIncremented){
+        const reward=await mutateCoinsInTransaction(tx,freshUser.ma_nguoi_dung,5*streak.newStreak,'THUONG_STREAK','Thưởng chuỗi học '+streak.newStreak+' ngày liên tiếp');
+        freshUser.xu_tri_thuc=reward.newBalance;
+      }
     }
-  }
-
-  const token = generateToken(user);
-  const profile = await formatUserResponse(user);
-
-  return { token, nguoi_dung: profile, streak_info: streakResult };
+    return {user:freshUser,streak};
+  }));
+  return {token:generateToken(result.user),nguoi_dung:await formatUserResponse(result.user),streak_info:result.streak};
 }
 
 /**
@@ -178,13 +180,28 @@ async function getCurrentUser(ma_nguoi_dung) {
 /**
  * Update user settings
  */
-async function updateSettings(ma_nguoi_dung, { che_do_giao_dien, bat_am_thanh, ten_hien_thi }) {
+async function updateSettings(ma_nguoi_dung, { che_do_giao_dien, bat_am_thanh, ten_hien_thi, cai_dat_am_thanh, tien_do_huong_dan }) {
+  return withUserLock(ma_nguoi_dung, async () => {
   const user = await db.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1', [ma_nguoi_dung]);
   if (!user) throw new Error('Người dùng không tồn tại.');
 
   const newTheme = che_do_giao_dien || user.che_do_giao_dien;
+  if (!['TOI', 'SANG'].includes(newTheme)) throw new Error('Chế độ giao diện không hợp lệ.');
   const newSound = bat_am_thanh !== undefined ? Boolean(bat_am_thanh) : Boolean(user.bat_am_thanh);
   const newName = ten_hien_thi || user.ten_hien_thi;
+  if (cai_dat_am_thanh !== undefined) {
+    if (!cai_dat_am_thanh || typeof cai_dat_am_thanh !== 'object') throw new Error('Cài đặt âm thanh không hợp lệ.');
+    const audio = {};
+    for (const key of ['quiz','reward','battle','outcome','bgm']) if (typeof cai_dat_am_thanh[key] === 'boolean') audio[key] = cai_dat_am_thanh[key];
+    await db.execute('UPDATE nguoi_dung SET cai_dat_am_thanh = $1 WHERE ma_nguoi_dung = $2', [JSON.stringify(audio), ma_nguoi_dung]);
+  }
+  if (tien_do_huong_dan !== undefined) {
+    const tour = tien_do_huong_dan;
+    if (!tour || typeof tour.step !== 'string' || tour.step.length > 100 || !['desktop','mobile'].includes(tour.layout)) throw new Error('Tiến độ hướng dẫn không hợp lệ.');
+    await db.execute('UPDATE nguoi_dung SET tien_do_huong_dan = $1 WHERE ma_nguoi_dung = $2',
+      [JSON.stringify({ version: 2, step: tour.step, layout: tour.layout, completed: Boolean(tour.completed),
+        context: tour.context && JSON.stringify(tour.context).length < 2000 ? tour.context : null }), ma_nguoi_dung]);
+  }
 
   await db.execute(`
     UPDATE nguoi_dung 
@@ -193,9 +210,42 @@ async function updateSettings(ma_nguoi_dung, { che_do_giao_dien, bat_am_thanh, t
   `, [newTheme, newSound, newName, ma_nguoi_dung]);
 
   return await getCurrentUser(ma_nguoi_dung);
+  });
+}
+
+async function updateAccount(userId, {ten_hien_thi, ten_dang_nhap}) {
+  return withUserLock(userId, async () => {
+    const user = await db.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1',[userId]);
+    if (!user) throw new Error('Người dùng không tồn tại.');
+    const name = ten_hien_thi === undefined ? user.ten_hien_thi : String(ten_hien_thi).trim();
+    const username = ten_dang_nhap === undefined ? user.ten_dang_nhap : String(ten_dang_nhap).trim().toLowerCase();
+    if (!name || name.length > 100) throw new Error('Tên hiển thị cần có từ 1 đến 100 ký tự.');
+    if (!/^[a-z0-9_.-]{3,50}$/.test(username)) throw new Error('Tên đăng nhập gồm 3–50 chữ thường, số, dấu chấm, gạch dưới hoặc gạch ngang.');
+    const duplicate = await db.queryOne('SELECT ma_nguoi_dung FROM nguoi_dung WHERE LOWER(ten_dang_nhap) = $1 AND ma_nguoi_dung <> $2',[username,userId]);
+    if (duplicate) throw new Error('Tên đăng nhập đã được sử dụng.');
+    await db.execute('UPDATE nguoi_dung SET ten_hien_thi = $1, ten_dang_nhap = $2, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $3',[name,username,userId]);
+    const updated = {...user,ten_hien_thi:name,ten_dang_nhap:username};
+    return {nguoi_dung:await formatUserResponse(updated),token:generateToken(updated)};
+  });
+}
+async function changePassword(userId,{mat_khau_hien_tai,mat_khau_moi},sessionIssuedAt) {
+  return withUserLock(userId,async()=>{
+    const user = await db.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1',[userId]);
+    if (!user) throw new Error('Người dùng không tồn tại.');
+    const hasPassword = user.co_mat_khau !== false && user.co_mat_khau !== 0;
+    if (hasPassword && !await bcrypt.compare(String(mat_khau_hien_tai||''),user.mat_khau_hash)) throw new Error('Mật khẩu hiện tại không chính xác.');
+    if (!hasPassword && (!user.google_sub || !Number.isFinite(sessionIssuedAt) || Date.now()/1000-sessionIssuedAt>600)) throw new Error('Hãy đăng nhập lại bằng Google trước khi tạo mật khẩu.');
+    if (typeof mat_khau_moi !== 'string' || mat_khau_moi.length < 8 || mat_khau_moi.length > 72) throw new Error('Mật khẩu mới cần có từ 8 đến 72 ký tự.');
+    const hash = await bcrypt.hash(mat_khau_moi,10);
+    await db.execute('UPDATE nguoi_dung SET mat_khau_hash = $1, co_mat_khau = $2, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $3',[hash,true,userId]);
+    return {updated:true};
+  });
 }
 
 module.exports = {
+  issueSession,
+  updateAccount,
+  changePassword,
   register,
   login,
   getCurrentUser,

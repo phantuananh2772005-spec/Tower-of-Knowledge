@@ -1,0 +1,158 @@
+[
+  {
+    "id": "dragon",
+    "name": "Rồng Nhỏ Sparky",
+    "icon": "🐉",
+    "buff": "Rồng con tinh nghịch · Cổ vũ bạn học",
+    "price": 0,
+    "image": "/assets/sparky_idle.gif",
+    "serverId": "pet_sparky",
+    "requiredLevel": 1,
+    "damageMultiplier": 1.15
+  },
+  {
+    "id": "fox",
+    "name": "Cáo Lửa Kitsune",
+    "icon": "🦊",
+    "buff": "Hiệp sĩ cáo · Lém lỉnh & trung thành",
+    "price": 150,
+    "image": "/assets/kitsune_idle.gif",
+    "serverId": "pet_kitsune",
+    "requiredLevel": 1,
+    "damageMultiplier": 1.2
+  },
+  {
+    "id": "pyra_phoenix",
+    "name": "Phượng Hoàng Pyra",
+    "icon": "🔥",
+    "buff": "Hỏa Phượng Hoàng · Thắp sáng niềm tin",
+    "price": 300,
+    "image": "/assets/pets/pyra_phoenix/03_spritesheet/pyra_phoenix_idle.gif",
+    "serverId": "pet_pyra_phoenix",
+    "requiredLevel": 1,
+    "damageMultiplier": 1
+  },
+  {
+    "id": "kim_quy_turtle",
+    "name": "Rùa Thần Kim Quy",
+    "icon": "🐢",
+    "buff": "Cụ Rùa thông thái · Vững vàng kiên trì",
+    "price": 180,
+    "image": "/assets/pets/kim_quy_turtle/03_spritesheet/kim_quy_turtle_idle.gif",
+    "serverId": "pet_kim_quy_turtle",
+    "requiredLevel": 1,
+    "damageMultiplier": 1
+  },
+  {
+    "id": "stone_golem",
+    "name": "Người Đá Golem",
+    "icon": "🗿",
+    "buff": "Vệ binh cổ đại · Tinh thần thép",
+    "price": 300,
+    "image": "/assets/pets/stone_golem/03_spritesheet/stone_golem_idle.gif",
+    "serverId": "pet_golem",
+    "requiredLevel": 2,
+    "damageMultiplier": 1.1
+  },
+  {
+    "id": "maneki_neko",
+    "name": "Mèo Thần Tài Neko",
+    "icon": "🐱",
+    "buff": "Mèo may mắn · Niềm vui học tập",
+    "price": 150,
+    "image": "/assets/pets/maneki_neko/03_spritesheet/maneki_neko_idle.gif",
+    "serverId": "pet_maneki_neko",
+    "requiredLevel": 1,
+    "damageMultiplier": 1
+  },
+  {
+    "id": "bambo_panda",
+    "name": "Gấu Trúc Bambo",
+    "icon": "🐼",
+    "buff": "Trúc vương lười biếng · Điềm tĩnh ôn hòa",
+    "price": 160,
+    "image": "/assets/pets/bambo_panda/03_spritesheet/bambo_panda_idle.gif",
+    "serverId": "pet_bambo_panda",
+    "requiredLevel": 1,
+    "damageMultiplier": 1
+  },
+  {
+    "id": "byte_robot",
+    "name": "Robot Khối Byte",
+    "icon": "🤖",
+    "buff": "Trợ lý AI nhí · Phân tích chuẩn xác",
+    "price": 200,
+    "image": "/assets/pets/byte_robot/03_spritesheet/byte_robot_idle.gif",
+    "serverId": "pet_byte_robot",
+    "requiredLevel": 1,
+    "damageMultiplier": 1
+  },
+  {
+    "id": "astra_stag",
+    "name": "Hươu Tinh Tú Astra",
+    "icon": "🦌",
+    "buff": "Tuần lộc sao băng · Soi đường tri thức",
+    "price": 250,
+    "image": "/assets/pets/astra_stag/03_spritesheet/astra_stag_idle.gif",
+    "serverId": "pet_astra_stag",
+    "requiredLevel": 1,
+    "damageMultiplier": 1
+  },
+  {
+    "id": "kylin_qilin",
+    "name": "Kỳ Lân Mây Kylin",
+    "icon": "🦄",
+    "buff": "Thánh thú ngũ sắc · Mang lại điềm lành",
+    "price": 280,
+    "image": "/assets/pets/kylin_qilin/03_spritesheet/kylin_qilin_idle.gif",
+    "serverId": "pet_kylin_qilin",
+    "requiredLevel": 1,
+    "damageMultiplier": 1
+  },
+  {
+    "id": "inky_octopus",
+    "name": "Bạch Tuộc Học Giả Inky",
+    "icon": "🐙",
+    "buff": "Bậc thầy thảo văn · Nét mực uyển chuyển",
+    "price": 170,
+    "image": "/assets/pets/inky_octopus/03_spritesheet/inky_octopus_idle.gif",
+    "serverId": "pet_inky_octopus",
+    "requiredLevel": 1,
+    "damageMultiplier": 1
+  },
+  {
+    "id": "spike_hedgehog",
+    "name": "Nhím Ghi Chú Spike",
+    "icon": "🦔",
+    "buff": "Ghi nhớ thần tốc · Chăm chỉ cần mẫn",
+    "price": 140,
+    "image": "/assets/pets/spike_hedgehog/03_spritesheet/spike_hedgehog_idle.gif",
+    "serverId": "pet_spike_hedgehog",
+    "requiredLevel": 1,
+    "damageMultiplier": 1
+  },
+  {
+    "id": "admin_aurum",
+    "name": "Kim Long Aurum 👑",
+    "icon": "🐉",
+    "buff": "Thần thú Hoàng Kim Tối Thượng · Dành riêng Quản trị viên",
+    "price": 9999,
+    "role": "admin",
+    "image": "/assets/pets/admin_aurum/03_spritesheet/admin_aurum_idle.gif",
+    "serverId": "pet_admin_aurum",
+    "requiredLevel": 1,
+    "damageMultiplier": 1
+  },
+  {
+    "id": "admin_nguyet",
+    "name": "Thỏ Nguyệt Thẩm Phán 👑",
+    "icon": "🐰",
+    "buff": "Quyền trượng Công lý Pháp đình · Dành riêng Quản trị viên",
+    "price": 9999,
+    "role": "admin",
+    "image": "/assets/pets/admin_nguyet/03_spritesheet/admin_nguyet_idle.gif",
+    "serverId": "pet_admin_nguyet",
+    "requiredLevel": 1,
+    "damageMultiplier": 1
+  }
+]
