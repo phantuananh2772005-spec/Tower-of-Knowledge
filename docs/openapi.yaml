@@ -5,13 +5,13 @@ info:
     Tài liệu hợp đồng API chuẩn mực cho hệ thống EdTech Gamification.
     Kiến trúc Clean Architecture, phân tách rõ ràng tầng nghiệp vụ và tầng giao vận.
     Được thiết kế để dễ dàng chuyển đổi sang ASP.NET Core (C#) sau này.
-  version: 1.0.0
+  version: 1.1.0
   contact:
     name: Anh-2005-pta
     email: s236435@nctu.edu.vn
 
 servers:
-  - url: http://localhost:5000
+  - url: http://localhost:3000
     description: Máy chủ thử nghiệm cục bộ (Local Development)
   - url: https://tower-of-knowledge.onrender.com
     description: Máy chủ triển khai Render (Production/Staging)
@@ -234,7 +234,7 @@ paths:
 
   /api/checkpoints/{id}:
     get:
-      summary: Lấy nội dung mốc bài học (Lý thuyết hoặc các câu hỏi không kèm đáp án đúng)
+      summary: Lấy nội dung mốc bài học và phản hồi luyện tập
       security:
         - BearerAuth: []
       parameters:
@@ -275,42 +275,30 @@ paths:
         '200':
           description: Danh sách thú cưng
 
-  /api/pets/buy:
+  /api/pets/{id}/buy:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string}
     post:
       summary: Mua thú cưng bằng Xu Tri Thức (ACID Transaction)
       security:
         - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [ma_thu_cung]
-              properties:
-                ma_thu_cung:
-                  type: string
-                idempotency_key:
-                  type: string
       responses:
         '200':
           description: Mua thành công
 
-  /api/pets/equip:
+  /api/pets/{id}/equip:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: {type: string}
     post:
       summary: Trang bị thú cưng làm bạn đồng hành (đảm bảo tối đa 1 pet kích hoạt)
       security:
         - BearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [ma_thu_cung]
-              properties:
-                ma_thu_cung:
-                  type: string
       responses:
         '200':
           description: Đã trang bị thú cưng

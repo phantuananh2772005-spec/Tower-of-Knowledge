@@ -358,7 +358,7 @@ function poolQuestionsByBloom(allQuestions, targetRatio, targetCount) {
 /**
  * Get checkpoint content for learning / taking test
  */
-async function getCheckpointContent(ma_moc, ma_nguoi_dung, stepRequested) {
+async function getCheckpointContent(ma_moc, ma_nguoi_dung, stepRequested, resumeIds) {
   const checkpoint = await db.queryOne('SELECT * FROM moc_bai_hoc WHERE ma_moc = $1', [ma_moc]);
   if (!checkpoint) throw new Error('Không tìm thấy mốc bài học.');
 
@@ -429,6 +429,15 @@ async function getCheckpointContent(ma_moc, ma_nguoi_dung, stepRequested) {
 
   if (rawQuestions && rawQuestions.length > 0) {
     rawQuestions = selectAdaptiveQuestions(rawQuestions, memoryMap, questionsPerStep);
+  }
+  // Resume only known question IDs from this accessible checkpoint's own pool.
+  if (Array.isArray(resumeIds) && resumeIds.length > 0) {
+    const poolById = new Map(allPoolQuestions.map(q => [q.ma_cau_hoi, q]));
+    const ids = [...new Set(resumeIds)];
+    if (ids.length > 200 || ids.some(id => typeof id !== 'string' || !poolById.has(id))) {
+      throw new Error('Bộ câu hỏi đã thay đổi. Hãy bắt đầu lại chặng học.');
+    }
+    rawQuestions = ids.map(id => poolById.get(id));
   }
 
   // Format questions safely (NEVER expose vi_tri_dap_an_dung to client)

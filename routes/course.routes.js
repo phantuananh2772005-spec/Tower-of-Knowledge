@@ -49,7 +49,8 @@ router.get('/courses/:slug', optionalAuthenticate, async (req, res) => {
 router.get('/checkpoints/:id', authenticate, async (req, res) => {
   try {
     const step = req.query.step ? parseInt(req.query.step, 10) : undefined;
-    const content = await courseService.getCheckpointContent(req.params.id, req.user.ma_nguoi_dung, step);
+    const resumeIds = req.query.resume ? String(req.query.resume).split(',') : undefined;
+    const content = await courseService.getCheckpointContent(req.params.id, req.user.ma_nguoi_dung, step, resumeIds);
     return res.apiSuccess(content);
   } catch (err) {
     return res.apiError(err.message, 'CHECKPOINT_ACCESS_DENIED', 403);

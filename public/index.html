@@ -6518,6 +6518,7 @@
       if (typeof initNewbieGuideAndQuests === 'function') {
         initNewbieGuideAndQuests();
       }
+      applyRoomInvitationFromUrl();
     }
 
     async function logoutAndOpenAuth() {
@@ -7925,11 +7926,13 @@
       return formattedLines.join('');
     }
 
-    async function startMocLearning(mocId) {
+    async function startMocLearning(mocId, resumeSnapshot) {
       closeCheckpointModal();
       const token = localStorage.getItem('tok_token');
       try {
-        const resp = await fetch('/api/checkpoints/' + mocId, {
+        const resumeIds=resumeSnapshot?[...new Set([...(resumeSnapshot.queue||[]),...(resumeSnapshot.submissions||[]).map(a=>a.ma_cau_hoi)])]:[];
+        const resumeQuery=resumeIds.length?'?resume='+encodeURIComponent(resumeIds.join(',')):'';
+        const resp = await fetch('/api/checkpoints/' + mocId + resumeQuery, {
           headers: token ? { 'Authorization': 'Bearer ' + token } : {}
         });
         const res = await resp.json();
@@ -10002,7 +10005,7 @@
       const modalCodeEl = document.getElementById('qr-modal-code-display');
       if (modalCodeEl) modalCodeEl.textContent = currentCasualRoomCode;
       const qrSvgContainer = document.getElementById('room-qr-svg');
-      if (qrSvgContainer) qrSvgContainer.innerHTML = generateQRSvg(currentCasualRoomCode);
+      if (qrSvgContainer) qrSvgContainer.innerHTML = generateRoomQrImage(currentCasualRoomCode);
 
       // Đồng bộ thông tin phòng lên Socket.IO
       if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected) {
@@ -10033,47 +10036,8 @@
       }
     }
 
-    function generateQRSvg(text) {
-      const size = 21;
-      const grid = [];
-      for (let i = 0; i < size; i++) grid.push(new Array(size).fill(0));
-      function setFinder(r0, c0) {
-        for (let r = 0; r < 7; r++) {
-          for (let c = 0; c < 7; c++) {
-            if (r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4)) {
-              grid[r0 + r][c0 + c] = 1;
-            }
-          }
-        }
-      }
-      setFinder(0, 0);
-      setFinder(0, 14);
-      setFinder(14, 0);
-      for (let i = 8; i < 13; i++) {
-        grid[6][i] = (i % 2 === 0) ? 1 : 0;
-        grid[i][6] = (i % 2 === 0) ? 1 : 0;
-      }
-      let hash = 0;
-      for (let i = 0; i < text.length; i++) {
-        hash = ((hash << 5) - hash) + text.charCodeAt(i);
-        hash |= 0;
-      }
-      for (let r = 0; r < size; r++) {
-        for (let c = 0; c < size; c++) {
-          if ((r < 7 && c < 7) || (r < 7 && c >= 14) || (r >= 14 && c < 7) || r === 6 || c === 6) continue;
-          const bit = Math.abs((hash ^ (r * 31 + c * 17)) % 100);
-          grid[r][c] = (bit > 45) ? 1 : 0;
-        }
-      }
-      let rects = '';
-      for (let r = 0; r < size; r++) {
-        for (let c = 0; c < size; c++) {
-          if (grid[r][c] === 1) {
-            rects += `<rect x="${c}" y="${r}" width="1" height="1" fill="#0f172a" />`;
-          }
-        }
-      }
-      return `<svg viewBox="0 0 ${size} ${size}" class="w-full h-full" shape-rendering="crispEdges">${rects}</svg>`;
+    function generateRoomQrImage(text) {
+      return '<img src="/api/arena/room-qr.png?code='+encodeURIComponent(text)+'" alt="Quét mã QR để mở lời mời vào phòng" class="w-full h-full object-contain" />';
     }
 
     function showRoomQRModal() {
@@ -10082,7 +10046,7 @@
       const modalCodeEl = document.getElementById('qr-modal-code-display');
       if (modalCodeEl) modalCodeEl.textContent = currentCasualRoomCode;
       const qrSvgContainer = document.getElementById('room-qr-svg');
-      if (qrSvgContainer) qrSvgContainer.innerHTML = generateQRSvg(currentCasualRoomCode);
+      if (qrSvgContainer) qrSvgContainer.innerHTML = generateRoomQrImage(currentCasualRoomCode);
       modal.classList.remove('hidden');
     }
 
@@ -10395,7 +10359,7 @@
       if (modalCodeEl) modalCodeEl.textContent = currentCasualRoomCode;
       const qrSvgContainer = document.getElementById('room-qr-svg');
       if (qrSvgContainer && !qrSvgContainer.innerHTML) {
-        qrSvgContainer.innerHTML = generateQRSvg(currentCasualRoomCode);
+        qrSvgContainer.innerHTML = generateRoomQrImage(currentCasualRoomCode);
       }
 
       // Sync subjects
@@ -11608,6 +11572,7 @@
     }
 
 </script>
+  <script src="/js/lesson-state.js"></script>
   <script src="/js/guided-tour.js"></script>
 </body>
 </html>

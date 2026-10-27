@@ -8,46 +8,31 @@ const { calculateDamage, applyDamage, resolveMatchOutcome } = require('../core/r
 const { mutateCoins, addExperience } = require('./economy.service');
 
 /**
- * Ensure player record exists in nguoi_dung table to avoid foreign key errors
- */
-async function ensurePlayerRecord(userId, defaultName = 'Người chơi') {
-  if (!userId) return;
-  const existing = await db.queryOne('SELECT ma_nguoi_dung FROM nguoi_dung WHERE ma_nguoi_dung = $1', [userId]);
-  if (!existing) {
-    const safeName = defaultName || (userId.startsWith('guest_') ? 'Khách ' + userId.slice(-4) : userId);
-    const cleanUsername = `u_${userId.replace(/[^a-zA-Z0-9_]/g, '').slice(-10)}_${Math.random().toString(36).substring(2, 6)}`;
-    const safeEmail = `${cleanUsername}@hocvien.tok.vn`;
-    await db.execute(`
-      INSERT INTO nguoi_dung (ma_nguoi_dung, ten_dang_nhap, email, mat_khau_hash, ten_hien_thi, vai_tro, xu_tri_thuc, tong_diem_kinh_nghiem, chuoi_streak_ngay)
-      VALUES ($1, $2, $3, 'hash_placeholder', $4, 'NGUOI_HOC', 100, 0, 1)
-    `, [userId, cleanUsername, safeEmail, safeName]);
-  }
-}
-
-/**
  * Create a new 1v1 match between 2 players
  */
 async function createMatch(player1Id, player2Id, ma_mon = 'mon_csdl') {
-  await ensurePlayerRecord(player1Id, 'Học viên ' + player1Id.slice(-4));
-  await ensurePlayerRecord(player2Id, 'Học viên ' + player2Id.slice(-4));
+  if (!player1Id || !player2Id || player1Id === player2Id) throw new Error('Trận đấu cần hai người chơi khác nhau.');
 
   const ma_tran = `match_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
 
+  await db.transaction(async tx => {
+  const players = await tx.query('SELECT ma_nguoi_dung FROM nguoi_dung WHERE ma_nguoi_dung IN ($1, $2)', [player1Id, player2Id]);
+  if (players.length !== 2) throw new Error('Người chơi không tồn tại. Hãy đăng nhập lại hoặc chọn đối thủ hợp lệ.');
   // Create match
-  await db.execute(`
+  await tx.execute(`
     INSERT INTO tran_dau_1v1 (ma_tran, ma_mon, trang_thai, thoi_gian_bat_dau)
     VALUES ($1, $2, 'DANG_THI_DAU', SYSDATETIME())
   `, [ma_tran, ma_mon]);
 
   // Player 1 pet
-  const pet1 = await db.queryOne(`
+  const pet1 = await tx.queryOne(`
     SELECT tc.ma_thu_cung, tc.he_so_sat_thuong 
     FROM thu_cung_so_huu sh JOIN thu_cung tc ON sh.ma_thu_cung = tc.ma_thu_cung 
     WHERE sh.ma_nguoi_dung = $1 AND sh.dang_kich_hoat = $2
   `, [player1Id, true]);
 
   // Player 2 pet
-  const pet2 = await db.queryOne(`
+  const pet2 = await tx.queryOne(`
     SELECT tc.ma_thu_cung, tc.he_so_sat_thuong 
     FROM thu_cung_so_huu sh JOIN thu_cung tc ON sh.ma_thu_cung = tc.ma_thu_cung 
     WHERE sh.ma_nguoi_dung = $1 AND sh.dang_kich_hoat = $2
@@ -56,18 +41,18 @@ async function createMatch(player1Id, player2Id, ma_mon = 'mon_csdl') {
   const p1IdInMatch = `pm_${ma_tran}_1`;
   const p2IdInMatch = `pm_${ma_tran}_2`;
 
-  await db.execute(`
+  await tx.execute(`
     INSERT INTO nguoi_choi_trong_tran (ma_nguoi_choi_trong_tran, ma_tran, ma_nguoi_dung, ma_thu_cung, mau_hien_tai, mau_toi_da, ket_qua)
     VALUES ($1, $2, $3, $4, 100, 100, 'CHUA_KET_THUC')
   `, [p1IdInMatch, ma_tran, player1Id, pet1 ? pet1.ma_thu_cung : null]);
 
-  await db.execute(`
+  await tx.execute(`
     INSERT INTO nguoi_choi_trong_tran (ma_nguoi_choi_trong_tran, ma_tran, ma_nguoi_dung, ma_thu_cung, mau_hien_tai, mau_toi_da, ket_qua)
     VALUES ($1, $2, $3, $4, 100, 100, 'CHUA_KET_THUC')
   `, [p2IdInMatch, ma_tran, player2Id, pet2 ? pet2.ma_thu_cung : null]);
 
   // Pick 10 questions randomly across ALL question types and difficulties from course
-  const questions = await db.query(`
+  const questions = await tx.query(`
     SELECT TOP 10 q.ma_cau_hoi
     FROM cau_hoi q
     JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
@@ -79,7 +64,7 @@ async function createMatch(player1Id, player2Id, ma_mon = 'mon_csdl') {
   // If NEWID() returns fewer or not supported, pick all questions and shuffle
   let selectedQuestions = questions;
   if (!selectedQuestions || selectedQuestions.length < 10) {
-    const all = await db.query(`
+    const all = await tx.query(`
       SELECT q.ma_cau_hoi 
       FROM cau_hoi q
       JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
@@ -90,14 +75,16 @@ async function createMatch(player1Id, player2Id, ma_mon = 'mon_csdl') {
     selectedQuestions = shuffled.slice(0, 10);
   }
 
+  if (!selectedQuestions.length) throw new Error('Môn học chưa có câu hỏi để thi đấu.');
   for (let i = 0; i < selectedQuestions.length; i++) {
     const ma_cau_trong_tran = `qm_${ma_tran}_${i + 1}`;
-    await db.execute(`
+    await tx.execute(`
       INSERT INTO cau_hoi_trong_tran (ma_cau_trong_tran, ma_tran, ma_cau_hoi, thu_tu_cau)
       VALUES ($1, $2, $3, $4)
     `, [ma_cau_trong_tran, ma_tran, selectedQuestions[i].ma_cau_hoi, i + 1]);
   }
 
+  });
   return await getMatchState(ma_tran);
 }
 

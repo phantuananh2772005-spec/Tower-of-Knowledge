@@ -1,5 +1,13 @@
 let accessoryCatalog=[];
 let accessoryRequestPending=false;
+function applyRoomInvitationFromUrl(){
+  const url=new URL(location.href),code=(url.searchParams.get('room')||'').toUpperCase();
+  if(!/^TOK-[A-Z0-9]{4,12}$/.test(code)||!currentUserAccount?.userId)return;
+  navTo('minigame');selectArenaMode('casual');
+  const input=document.getElementById('input_casual_room_code');if(input)input.value=code;
+  url.searchParams.delete('room');history.replaceState(null,'',url);
+  showToast('Đã điền mã '+code+'. Bấm Tham gia để vào phòng của bạn bè.','info');
+}
 function renderAccessoryOverlays(){
   const item=currentUserAccount?.accessory;
   for(const id of ['current-pet-icon-large','hub-pet-avatar','sidebar-pet-avatar','arena-lobby-pet','casual-lobby-pet','my-pet']){

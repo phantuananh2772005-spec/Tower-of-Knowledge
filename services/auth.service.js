@@ -198,9 +198,10 @@ async function updateSettings(ma_nguoi_dung, { che_do_giao_dien, bat_am_thanh, t
   if (tien_do_huong_dan !== undefined) {
     const tour = tien_do_huong_dan;
     if (!tour || typeof tour.step !== 'string' || tour.step.length > 100 || !['desktop','mobile'].includes(tour.layout)) throw new Error('Tiến độ hướng dẫn không hợp lệ.');
+    if (tour.context && (typeof tour.context !== 'object' || Array.isArray(tour.context) || JSON.stringify(tour.context).length > 65536)) throw new Error('Tiến độ hướng dẫn quá lớn hoặc không hợp lệ.');
     await db.execute('UPDATE nguoi_dung SET tien_do_huong_dan = $1 WHERE ma_nguoi_dung = $2',
       [JSON.stringify({ version: 2, step: tour.step, layout: tour.layout, completed: Boolean(tour.completed),
-        context: tour.context && JSON.stringify(tour.context).length < 2000 ? tour.context : null }), ma_nguoi_dung]);
+        context: tour.context || null }), ma_nguoi_dung]);
   }
 
   await db.execute(`

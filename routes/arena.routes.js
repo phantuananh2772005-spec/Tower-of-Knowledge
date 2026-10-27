@@ -2,6 +2,17 @@ const express = require('express');
 const router = express.Router();
 const arenaService = require('../services/arena.service');
 const { authenticate } = require('../middlewares/auth.middleware');
+router.get('/room-qr.png',async(req,res)=>{
+  const code=String(req.query.code||'').toUpperCase();
+  if(!/^TOK-[A-Z0-9]{4,12}$/.test(code))return res.apiError('Mã phòng không hợp lệ.','INVALID_ROOM_CODE',400);
+  try{
+    const protocol=(req.get('x-forwarded-proto')||req.protocol).split(',')[0].trim();
+    const origin=process.env.PUBLIC_APP_URL||protocol+'://'+req.get('host');
+    const invitation=new URL('/',origin);invitation.searchParams.set('room',code);
+    const png=await require('qrcode').toBuffer(invitation.toString(),{type:'png',width:384,margin:2,errorCorrectionLevel:'M'});
+    res.setHeader('Cache-Control','private, max-age=60');res.type('png').send(png);
+  }catch(error){return res.apiError('Không tạo được mã QR phòng.','ROOM_QR_FAILED',500);}
+});
 
 // Create a match (e.g. against bot or invited user)
 router.post('/create-match', authenticate, async (req, res) => {

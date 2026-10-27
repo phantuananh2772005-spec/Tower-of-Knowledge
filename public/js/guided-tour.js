@@ -75,13 +75,13 @@
 
     section='Linh vật'; nav('pet','Linh vật');
     add(read('pet-current','#current-pet-name','Pet đang đồng hành','Tên và hình ở đây là Pet đang được trang bị. Pet này cũng xuất hiện ở trang chủ, thanh bên và sảnh đấu trường.'),
-      click('pet-care','#btn_vuotve_pet','Thử vuốt ve Pet','Bấm “Vuốt ve” để tương tác miễn phí với Pet. Đây là thao tác chăm sóc, khác với chỉ mở trang Linh vật.',null),
+      click('pet-care','#btn_vuotve_pet','Thử vuốt ve Pet','Bấm “Vuốt ve” để tương tác miễn phí với Pet. Đây là thao tác chăm sóc, khác với chỉ mở trang Linh vật.',()=>Boolean(dailyQuestsState?.progress?.cham_pet)),
       read('pet-feed','#btn_choan_pet','Cho ăn sử dụng Xu','Nút ghi rõ chi phí 10 Xu. Chỉ xác nhận khi bạn muốn chi số Xu này; số dư sẽ được lưu trên máy chủ.'),
       read('pet-owned','#owned-pets-list > div','Đổi Pet đã sở hữu','Chỉ Pet đã mở khóa mới nằm trong bộ sưu tập. Bấm một Pet để đổi; thông báo “Đã lưu” xác nhận máy chủ đã nhận lựa chọn của bạn.'),
       click('pet-shop','#btn_pet_to_shop','Đi tới cửa hàng','Bấm “Cửa hàng” ngay trong phần bộ sưu tập để xem Pet có thể mở khóa.',screen('shop')),
       read('shop-card','#shop-pets-grid > div','Giá Xu và điều kiện cấp','Mỗi Pet ghi giá hoặc cấp độ cần đạt. Khi mua, hộp xác nhận ghi số Xu sẽ dùng. Bạn có thể hủy nếu chưa muốn mua.'),
       read('shop-admin',()=>find('#shop-pets-grid [data-pet-role="admin"]')||find('#shop-pets-grid > div:last-child'),'Pet dành cho quản trị viên','Pet có huy hiệu Admin chỉ được máy chủ cho phép trang bị khi tài khoản hiện tại là quản trị viên. Học viên có thể xem hình nhưng không thể mua hoặc dùng.'),
-      read('shop-items','#shop-accessories','Vật phẩm trang trí','Xem trạng thái khả dụng trên từng vật phẩm. Chỉ vật phẩm có chức năng lưu và trang bị thật mới cho phép mua; bản xem trước không trừ Xu.',{optional:true}));
+      read('shop-items','#shop-accessories','Vật phẩm trang trí','Mỗi phụ kiện ghi giá Xu. Bấm Mua, đọc hộp xác nhận rồi đồng ý nếu muốn mua. Sau khi mua, bấm Trang bị để dùng hoặc Tháo để gỡ. Phụ kiện được lưu theo tài khoản và hiện cùng Pet khi đăng nhập lại.',{optional:true}));
 
     section='Đấu trường'; nav('minigame','Minigame');
     add(read('arena-modes','#card-mode-ranked','Chọn chế độ trước khi tìm trận','Đấu hạng, giao hữu và thử thách có luật riêng. Trước khi bắt đầu, kiểm tra môn thi và Pet của bạn.'),
@@ -92,6 +92,9 @@
       click('ranked-back','#btn_back_modes_ranked','Quay lại chọn chế độ','Bấm nút quay lại chế độ để xem phần giao hữu.',shown('#arena-modes-bar')),
       click('casual-open','#card-mode-casual','Mở Đấu giao hữu','Bấm card giao hữu để xem mã phòng và các lựa chọn chơi với bạn bè hoặc Bot.',shown('#arena-casual')),
       read('casual-code','#casual-room-code-display','Mời bạn bằng mã phòng','Bấm mã phòng để sao chép và gửi cho người bạn muốn mời. Người kia nhập mã vào ô tham gia phòng. Chỉ bắt đầu khi cả hai đã sẵn sàng.'),
+      click('casual-qr-open','#btn_show_room_qr','Mở mã QR mời bạn','Bấm QR cạnh mã phòng để hiện liên kết mời có thể quét bằng điện thoại.',shown('#modal-room-qr')),
+      read('casual-qr','#room-qr-svg','Quét QR và tham gia phòng','Người bạn quét hình này để mở ứng dụng và điền sẵn mã phòng. Nếu chưa đăng nhập, đăng nhập trước; sau đó tự bấm nút Vào phòng. Mã QR không tự bắt đầu trận.'),
+      click('casual-qr-close','#btn_close_room_qr','Đóng mã QR','Bấm × để quay lại phòng giao hữu.',gone('#modal-room-qr')),
       read('casual-join','#input_casual_room_code','Tham gia phòng của bạn bè','Nhập mã được bạn bè gửi, rồi bấm Tham gia. Kiểm tra tên đối thủ, môn và Pet trước khi bắt đầu.',{fallback:'#arena-casual input'}),
       read('casual-bot','#btn_dauthuong_bot','Luyện tập với Bot','Nút này thêm Bot vào phòng tập. Khi đối thủ đã xuất hiện, bấm bắt đầu để luyện tập theo câu hỏi của môn đã chọn.'),
       read('casual-start','#btn_casual_start_friend','Bắt đầu và rời trận','Nút bắt đầu chỉ dùng khi bạn đã sẵn sàng chơi. Khi trận đang diễn ra, muốn rời hãy đọc hộp cảnh báo; việc rời có thể được tính là đầu hàng.'),
@@ -112,12 +115,21 @@
     add(click('profile-open', mobile?'#btn_m_more_profile':'#app-sidebar [onclick="openProfileModal()"]','Mở hồ sơ của bạn',mobile?'Chạm “Hồ sơ” trong menu Thêm.':'Bấm tên hoặc ảnh đại diện ở đầu thanh bên trái.',shown('#modal-profile')),
       read('profile-level','#profile-rank-badge','Cấp và danh hiệu trong hồ sơ','Danh hiệu, cấp và tiến độ EXP dùng cùng quy tắc với trang chủ. Thanh tiến độ chỉ tính khoảng EXP của cấp hiện tại.'),
       read('profile-stats','#profile-stat-streak','Xem thành tích của tài khoản','Streak, số mốc đã hoàn thành và số dư Xu là các thông tin riêng của bạn. Huy hiệu chưa đạt có trạng thái khóa và điều kiện mở.'),
+      read('profile-course','#profile-csdl-bar','Tiến độ môn trong hồ sơ','Thanh này theo môn đang chọn. Đổi môn ở danh sách môn học rồi mở lại hồ sơ để xem tiến độ của môn đó.'),
+      read('profile-badges','#badge-card-khoi-dau','Điều kiện nhận huy hiệu','Khởi Đầu: hoàn thành một mốc. Thần Tốc: streak 3 ngày. Kiên Cường: đạt 100 EXP. Đột Phá: hoàn thành 4 mốc. Huy hiệu tự mở theo kết quả tài khoản, không cần mua.'),
       click('profile-settings','#btn_profile_open_settings','Mở Cài đặt từ hồ sơ','Bấm bánh răng để mở Cài đặt. Bạn cũng có thể mở từ thanh đầu trang trên PC hoặc menu Thêm trên điện thoại.',shown('#modal-settings')),
       click('settings-account','#settings-open-account','Mở Tài khoản & bảo mật','Bấm mục này để xem tên hiển thị, tên đăng nhập và phần mật khẩu.',shown('#settings-view-auth')),
       read('settings-name','#auth-display-name-val','Tên hiển thị và tên đăng nhập','Tên hiển thị là tên mọi người nhìn thấy. Tên đăng nhập dùng để đăng nhập. Bấm Sửa ở đúng dòng, nhập giá trị rồi Lưu khi muốn thay đổi.'),
+      click('name-open','#btn_settings_edit_name','Mở ô đổi tên hiển thị','Bấm Đổi ở dòng Tên. Ô nhập và nút Lưu sẽ hiện ngay dưới dòng này.',shown('#edit-box-name')),
+      read('name-edit','#edit-box-name','Nhập tên rồi lưu khi muốn thay đổi','Nhập tên bạn muốn mọi người nhìn thấy rồi bấm Lưu. Trong hướng dẫn, có thể giữ nguyên và bấm Tiếp tục để xem cách đóng ô.'),
+      click('name-close','#btn_settings_edit_name','Đóng ô tên','Bấm Đổi lần nữa để đóng ô nhập mà chưa lưu thay đổi.',gone('#edit-box-name')),
+      click('username-open','#btn_settings_edit_username','Mở ô tên đăng nhập','Bấm Đổi ở dòng Username để xem ô chỉnh tên đăng nhập.',shown('#edit-box-username')),
+      read('username-edit','#edit-box-username','Tên đăng nhập phải chưa được sử dụng','Tên này dùng cho lần đăng nhập tiếp theo. Nhập tên hợp lệ rồi Lưu; nếu tên đã tồn tại, ứng dụng báo lỗi và bạn cần chọn tên khác.'),
+      click('username-close','#btn_settings_edit_username','Đóng ô Username','Bấm Đổi lần nữa để đóng ô. Chưa cần đổi tên đăng nhập khi làm hướng dẫn.',gone('#edit-box-username')),
       click('password-open','#btn_settings_edit_password','Xem cách đổi mật khẩu','Bấm Sửa mật khẩu để xem các trường cần nhập. Chưa cần thay đổi mật khẩu trong hướng dẫn.',shown('#edit-box-password')),
       read('password-fields','#edit-box-password','Nhập và xác nhận mật khẩu','Nhập mật khẩu hiện tại và mật khẩu mới theo yêu cầu, rồi bấm Cập nhật khi thật sự muốn đổi. Giữ thông tin đăng nhập của bạn an toàn.'),
       click('password-cancel','#btn_settings_cancel_password','Đóng phần đổi mật khẩu','Bấm Hủy để giữ nguyên thông tin và tiếp tục chuyến hướng dẫn.',gone('#edit-box-password')),
+      read('account-google','#auth-google-display-slot','Liên kết Google với đúng tài khoản','Bấm Liên kết bằng Google và chọn tài khoản trong cửa sổ Google để xác minh. Khi đã liên kết, địa chỉ đã xác minh hiện ở đây. Muốn hủy liên kết cần có mật khẩu đăng nhập riêng. Nếu ghi chưa cấu hình thì chức năng chưa sẵn sàng trên máy chủ.'),
       click('account-back','#btn_settings_auth_back','Quay về Cài đặt','Bấm mũi tên quay lại ở đầu bảng.',shown('#settings-view-main')),
       click('settings-audio','#settings-open-audio','Mở điều chỉnh âm thanh','Bấm Âm thanh hiệu ứng để chỉnh từng nhóm âm.',shown('#settings-view-audio')),
       read('audio-quiz','#toggle-audio-quiz','Âm khi làm bài','Công tắc này bật hoặc tắt âm của câu hỏi. Nút Nghe thử giúp bạn chọn mức trải nghiệm trước khi học.'),
@@ -157,14 +169,15 @@
     queuePreferenceSave({tien_do_huong_dan:progress});
   }
   function cleanupModals() {
-    for(const id of ['modal-checkpoint','modal-theory','modal-profile','modal-settings','modal-mobile-more','modal-daily-quests','modal-extreme-setup']) document.getElementById(id)?.classList.add('hidden');
+    for(const id of ['modal-checkpoint','modal-theory','modal-profile','modal-settings','modal-mobile-more','modal-daily-quests','modal-extreme-setup','modal-room-qr']) document.getElementById(id)?.classList.add('hidden');
     document.body.style.overflow='';
   }
   function captureContext() {
     return {view:currentAppView,course:typeof currentActiveCourseSlug==='string'?currentActiveCourseSlug:null,
       mocId:typeof currentMocSession!=='undefined'?currentMocSession?.mocId:null,
+      lesson:currentAppView==='play'?LessonProgress.capture():null,
       arena:typeof currentArenaMode!=='undefined'?currentArenaMode:null,rank:Boolean(find('#arena-rank')),
-      modal:['modal-checkpoint','modal-theory','modal-profile','modal-settings','modal-mobile-more','modal-daily-quests','modal-extreme-setup'].find(id=>find('#'+id))||null,
+      modal:['modal-checkpoint','modal-theory','modal-profile','modal-settings','modal-mobile-more','modal-daily-quests','modal-extreme-setup','modal-room-qr'].find(id=>find('#'+id))||null,
       settings:find('#settings-view-auth')?'auth':find('#settings-view-audio')?'audio':'main',
       editing:['name','username','password','google'].find(field=>find('#edit-box-'+field))||null};
   }
@@ -173,13 +186,17 @@
     if(context.course && ['saga','play'].includes(context.view)) {
       currentActiveCourseSlug=context.course; await loadCourseRoadmap(context.course);
     }
-    if(context.view==='play'&&context.mocId) await startMocLearning(context.mocId);
+    if(context.view==='play'&&context.mocId){
+      await startMocLearning(context.mocId,context.lesson);
+      if(context.lesson){const restored=await LessonProgress.restore(context.lesson);if(!restored){state.index=Math.max(0,state.steps.findIndex(step=>step.id==='lesson-question'));showToast('Nội dung bài đã thay đổi. Hãy xem lại câu hỏi hiện tại.','info');}}
+    }
     else navTo(['hub','catalog','enrolled','saga','pet','shop','minigame'].includes(context.view)?context.view:'hub');
     if(context.view==='minigame'){selectArenaMode(context.arena||null);if(context.rank)arenaTab('rank');}
     if(context.modal==='modal-profile')openProfileModal();
     if(context.modal==='modal-mobile-more')openMobileMoreSheet();
     if(context.modal==='modal-daily-quests')openDailyQuestsModal();
     if(context.modal==='modal-extreme-setup')openExtremeSetupModal();
+    if(context.modal==='modal-room-qr')showRoomQRModal();
     if(context.modal==='modal-settings'){
       openSettingsModal();if(context.settings==='auth'){openSettingsAuthView();if(context.editing)toggleEditField(context.editing);}if(context.settings==='audio')openSettingsAudioView();
     }
@@ -199,7 +216,7 @@
     const sidebar=document.getElementById('app-sidebar'); if(!state.mobile) sidebar?.classList.remove('collapsed');
     state.active=true;document.getElementById('modal-pet-onboarding').classList.remove('hidden');
     cancelAnimationFrame(geometryFrame);state.geometryKey='';geometryFrame=requestAnimationFrame(watchGeometry);
-    // A resumed chapter starts with a real navigation click; no automatic page jumps.
+    // Forward navigation requires real clicks; resume/back restore the saved context.
     await render();
   }
   async function render() {
