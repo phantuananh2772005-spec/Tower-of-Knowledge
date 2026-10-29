@@ -40,3 +40,19 @@
   #app-main-scroll { --page-gutter: 24px; --page-gap: 16px; }
   #app-topbar { padding-inline: 24px; }
 }
+/* The brand and workspace header share one baseline. Collapse hides the entire menu. */
+#app-sidebar { width:256px; overflow:hidden; transition:width .22s ease,border-color .22s ease; }
+#app-sidebar.collapsed { width:0 !important; border-right-width:0; visibility:hidden; }
+#app-sidebar .sidebar-main,#app-sidebar > .sidebar-footer { min-width:256px; }
+#sidebar-brand { height:64px; padding:0 20px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--border); box-sizing:border-box; }
+#sidebar-brand .sidebar-brand-logo { width:48px; height:48px; }
+#sidebar-brand .sidebar-text > span { font-size:16px; line-height:1.25; }
+#app-sidebar .sidebar-header { margin:16px 12px; }
+#app-sidebar nav { margin-inline:12px; }
+#sidebar-toggle-btn { display:none; width:36px; height:36px; flex-shrink:0; border:0; border-radius:10px; background:transparent; color:var(--muted-foreground); align-items:center; justify-content:center; cursor:pointer; }
+#sidebar-toggle-btn:hover { background:var(--border); color:var(--foreground); }
+#sidebar-toggle-btn:focus-visible { outline:2px solid #10b981; outline-offset:3px; }
+#sidebar-toggle-btn.is-collapsed svg { transform:scaleX(-1); }
+#app-topbar > div > img { width:40px; height:40px; }
+@media(min-width:768px){ #sidebar-toggle-btn { display:inline-flex; } }
+@media(prefers-reduced-motion:reduce){ #app-sidebar { transition:none; } }

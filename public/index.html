@@ -175,39 +175,6 @@
       }
     }
 
-    /* Sidebar co giãn linh hoạt trên desktop */
-    #app-sidebar {
-      transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    #app-sidebar.collapsed {
-      width: 4.5rem !important;
-    }
-    #app-sidebar.collapsed .sidebar-text {
-      display: none !important;
-    }
-    #app-sidebar.collapsed nav button {
-      justify-content: center !important;
-      padding-left: 0 !important;
-      padding-right: 0 !important;
-    }
-    #app-sidebar.collapsed nav button > div {
-      gap: 0 !important;
-    }
-    #app-sidebar.collapsed .sidebar-header {
-      flex-direction: column;
-      gap: 0.5rem;
-      align-items: center;
-      padding: 0;
-    }
-    #app-sidebar.collapsed .sidebar-footer {
-      justify-content: center !important;
-      align-items: center !important;
-      padding: 0.75rem 0.25rem !important;
-    }
-    #app-sidebar.collapsed .sidebar-footer .sidebar-stats {
-      display: none !important;
-    }
-
     /* Hiệu ứng bản đồ leo tháp uốn lượn SVG Bezier */
     @keyframes bob {
       0%, 100% { transform: translateY(0); }
@@ -228,19 +195,18 @@
 
   <!-- ================= 1. SIDEBAR ĐIỀU HƯỚNG CHUẨN CŨ (TASKBAR BÊN TRÁI - ẨN TRÊN MOBILE ĐỂ GIẢI PHÓNG KHÔNG GIAN) ================= -->
   <aside id="app-sidebar" class="hidden md:flex w-64 border-r border-[var(--border)] bg-[var(--card)] flex-col justify-between shrink-0 h-screen sticky top-0 z-30">
-    <div class="p-3 pt-3.5 space-y-4">
+    <div class="sidebar-main">
       
       <!-- Brand Logo Header -->
-      <div class="flex items-center gap-2.5 px-2 pb-3 border-b border-[var(--border)]">
-        <img src="/assets/logo_transparent.png" alt="Tháp Tri Thức Logo" class="w-8 h-8 object-contain shrink-0 drop-shadow-sm select-none" />
+      <div id="sidebar-brand" title="Tháp Tri Thức">
+        <img src="/assets/logo_transparent.png" alt="Tháp Tri Thức" class="sidebar-brand-logo object-contain shrink-0 select-none" />
         <div class="sidebar-text min-w-0">
-          <span class="font-extrabold text-xs tracking-tight text-[var(--foreground)] block truncate leading-tight">Tháp Tri Thức</span>
-          <span class="text-[9.5px] text-[var(--muted-foreground)] block truncate font-medium">Tower of Knowledge</span>
+          <span class="font-extrabold text-xs tracking-tight text-[var(--foreground)] block truncate leading-tight">Tri Thức</span>
         </div>
       </div>
 
       <!-- User Profile Slot & Nút Toggle Thu gọn/Mở rộng -->
-      <div class="flex items-center justify-between px-1 sidebar-header">
+      <div class="flex items-center px-1 sidebar-header">
         <div onclick="openProfileModal()" title="Xem trang cá nhân" class="flex items-center gap-2.5 cursor-pointer group min-w-0">
           <div class="user-avatar-slot w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-sm shadow-xs shrink-0 border border-emerald-500/30 group-hover:scale-105 transition select-none">
             👦
@@ -254,9 +220,6 @@
             </span>
           </div>
         </div>
-        <button onclick="toggleSidebar()" id="sidebar-toggle-btn" title="Thu gọn thanh bên thành cột icon" class="w-7 h-7 rounded-lg border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition cursor-pointer shrink-0 ml-1">
-          <span id="sidebar-toggle-icon">◀</span>
-        </button>
       </div>
 
       <!-- Menu Navigation Items -->
@@ -358,6 +321,7 @@
     <!-- ================= THANH BỐ CỤC CHUNG TRÊN CÙNG (KHÓA LẠI KHÔNG BỊ CUỘN) ================= -->
     <header id="app-topbar" class="shrink-0 z-20 bg-[var(--background)]/95 backdrop-blur-md border-b border-[var(--border)] px-3 sm:px-8 h-14 sm:h-16 flex items-center justify-between">
       <div class="min-w-0 flex-1 pr-2 sm:pr-4 flex items-center gap-2.5">
+        <button id="sidebar-toggle-btn" type="button" onclick="toggleSidebar()" title="Ẩn menu" aria-label="Ẩn menu" aria-controls="app-sidebar" aria-expanded="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16m6-12-3 4 3 4"/></svg></button>
         <img src="/assets/logo_transparent.png" alt="Logo" class="w-8 h-8 object-contain shrink-0 drop-shadow-sm select-none md:hidden" />
         <div class="min-w-0 flex-1">
           <!-- Breadcrumb vị trí phân cấp -->
@@ -2975,19 +2939,16 @@
 
     
     function toggleSidebar() {
-      const sb = document.getElementById('app-sidebar');
-      const isCollapsed = sb.classList.toggle('collapsed');
-      const icon = document.getElementById('sidebar-toggle-icon');
-      const btn = document.getElementById('sidebar-toggle-btn');
-      if (isCollapsed) {
-        icon.textContent = '▶';
-        btn.title = 'Mở rộng thanh bên';
-      } else {
-        icon.textContent = '◀';
-        btn.title = 'Thu gọn thanh bên';
-      }
+      const sidebar=document.getElementById('app-sidebar');
+      const collapsed=sidebar.classList.toggle('collapsed');
+      sidebar.inert=collapsed;
+      sidebar.setAttribute('aria-hidden',String(collapsed));
+      const button=document.getElementById('sidebar-toggle-btn');
+      button.setAttribute('aria-expanded',String(!collapsed));
+      button.setAttribute('aria-label',collapsed?'Mở menu':'Ẩn menu');
+      button.title=collapsed?'Mở menu':'Ẩn menu';
+      button.classList.toggle('is-collapsed',collapsed);
     }
-
     const TOPBAR_CONFIG = {
       saga: {
         breadcrumb: '<button id="btn_topbar_nav_doimon" onclick="navTo(\'enrolled\')" class="hover:text-[var(--foreground)] flex items-center gap-1 font-medium transition cursor-pointer truncate shrink-0">← Đổi môn</button><span class="text-[var(--border)] shrink-0">•</span><span id="topbar-breadcrumb-course" class="font-semibold text-emerald-600 truncate">Cơ sở dữ liệu</span>',
@@ -3635,18 +3596,6 @@
     function buyItem(itemId) { return purchaseAccessory(itemId); }
 
     // Replaced by dynamic renderQuizQuestion() & nextQuestion()
-
-    // Tự động co gọn thanh bên khi màn hình hẹp (< 768px) để không chèn ép nội dung
-    function handleAutoSidebar() {
-      const sb = document.getElementById('app-sidebar');
-      const icon = document.getElementById('sidebar-toggle-icon');
-      if (window.innerWidth < 768 && sb && !sb.classList.contains('collapsed')) {
-        sb.classList.add('collapsed');
-        if (icon) icon.textContent = '▶';
-      }
-    }
-    window.addEventListener('resize', handleAutoSidebar);
-    handleAutoSidebar();
 
     // Tự động cuộn đến điểm mốc đang học ngay khi tải trang
     scrollToActiveNode(false);

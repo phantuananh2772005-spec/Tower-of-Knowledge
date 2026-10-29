@@ -211,7 +211,7 @@
       if(index>=0 && saved.context){state.index=index;await restoreContext(saved.context);}
     }
     if(state.index===0)navTo('hub');
-    const sidebar=document.getElementById('app-sidebar'); if(!state.mobile) sidebar?.classList.remove('collapsed');
+    const sidebar=document.getElementById('app-sidebar'); if(!state.mobile && sidebar?.classList.contains('collapsed')) toggleSidebar();
     state.active=true;document.getElementById('modal-pet-onboarding').classList.remove('hidden');
     cancelAnimationFrame(geometryFrame);state.geometryKey='';geometryFrame=requestAnimationFrame(watchGeometry);
     // Forward navigation requires real clicks; resume/back restore the saved context.
@@ -237,6 +237,9 @@
     document.getElementById('btn_pet_tour_prev').disabled=state.index===0;
     const hint=document.getElementById('tour-action-hint');hint.textContent=step.action?'Thực hiện trên nút đang sáng để sang bước kế tiếp.':'Đọc phần được viền sáng, rồi bấm Tiếp tục.';
     let target;
+    if(!state.mobile && step.id.startsWith('nav-') && document.getElementById('app-sidebar')?.classList.contains('collapsed')){
+      toggleSidebar();await pause(240);
+    }
     for(let n=0;n<30;n++){target=find(step.target)||find(step.fallback);if(target)break;await pause(100);if(!state.active||run!==state.run)return;}
     if(!target){
       hint.textContent='Tài khoản hiện chưa có phần này hoặc nội dung chưa tải xong. Bạn có thể bỏ bước này để tiếp tục.';
