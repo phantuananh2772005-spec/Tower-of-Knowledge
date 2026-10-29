@@ -6,15 +6,15 @@
     const panel=document.createElement('div');dialog=panel;
     panel.id='modal-password-recovery';panel.className='fixed inset-0 z-[95] flex items-center justify-center p-3 bg-black/60';
     panel.innerHTML=`<section role="dialog" aria-modal="true" aria-labelledby="recovery-title" class="bg-[var(--card)] text-[var(--foreground)] border border-[var(--border)] rounded-2xl p-5 w-full max-w-sm max-h-[90dvh] overflow-y-auto space-y-4">
-      <div class="flex justify-between items-center"><h2 id="recovery-title" class="font-bold">Lấy lại mật khẩu</h2><button type="button" id="recovery-close" aria-label="Đóng" class="w-11 h-11">×</button></div>
-      <p class="text-xs">Tìm tài khoản bằng tên đăng nhập, sau đó xác minh bằng Google đã liên kết. Không gửi mã qua email.</p>
-      <form id="recovery-search" class="space-y-3"><label class="block text-xs">Tên đăng nhập cần tìm<input id="recovery-username" autocomplete="username" required maxlength="100" class="block w-full mt-1 p-3 rounded-xl border border-[var(--border)] bg-[var(--background)]"></label><button id="recovery-find" class="w-full p-3 rounded-xl bg-emerald-600 text-white">1. Tìm tài khoản</button></form>
-      <div id="recovery-google-flow" hidden class="space-y-3"><p id="recovery-hint" class="text-xs break-all"></p><button id="recovery-google" type="button" class="w-full p-3 rounded-xl bg-emerald-600 text-white">2. Xác minh bằng Google</button><button id="recovery-back" type="button" class="w-full p-2 text-xs underline">Tìm tài khoản khác</button></div>
+      <div class="flex justify-between items-center"><h2 id="recovery-title" class="font-bold">Quên mật khẩu</h2><button type="button" id="recovery-close" aria-label="Đóng" class="w-11 h-11">×</button></div>
+      <p class="text-xs">Nhập tên đăng nhập để tìm tài khoản của bạn.</p>
+      <form id="recovery-search" class="space-y-3"><label class="block text-xs">Tên đăng nhập<input id="recovery-username" autocomplete="username" required maxlength="100" class="block w-full mt-1 p-3 rounded-xl border border-[var(--border)] bg-[var(--background)]"></label><button id="recovery-find" class="w-full p-3 rounded-xl bg-emerald-600 text-white">Tìm tài khoản</button></form>
+      <div id="recovery-google-flow" hidden class="space-y-3"><p id="recovery-hint" class="text-xs break-all"></p><button id="recovery-google" type="button" class="w-full p-3 rounded-xl bg-emerald-600 text-white">Tiếp tục với Google</button><button id="recovery-back" type="button" class="w-full p-2 text-xs underline">Tìm tài khoản khác</button></div>
       <p id="recovery-verified" class="text-xs break-all" role="status"></p>
       <form id="recovery-form" class="space-y-3"><div id="recovery-password-flow" hidden class="space-y-3">
         <label class="block text-xs">Mật khẩu mới (ít nhất 8 ký tự)<input id="recovery-password" type="password" autocomplete="new-password" minlength="8" required class="block w-full mt-1 p-3 rounded-xl border border-[var(--border)] bg-[var(--background)]"></label>
         <label class="block text-xs">Nhập lại mật khẩu mới<input id="recovery-confirm" type="password" autocomplete="new-password" minlength="8" required class="block w-full mt-1 p-3 rounded-xl border border-[var(--border)] bg-[var(--background)]"></label>
-        <button id="recovery-submit" class="w-full p-3 rounded-xl bg-emerald-600 text-white">3. Đặt lại mật khẩu</button></div></form>
+        <button id="recovery-submit" class="w-full p-3 rounded-xl bg-emerald-600 text-white">Lưu mật khẩu mới</button></div></form>
       <p id="recovery-status" role="status" aria-live="polite" class="text-xs"></p></section>`;
     const find=id=>panel.querySelector('#recovery-'+id);
     let lookupToken=null,recoveryToken=null,email=null,busy=false;
@@ -24,7 +24,7 @@
       if(!lookupToken)return;
       recoveryToken=event.detail.recoveryToken;email=event.detail.email;
       find('google-flow').hidden=true;find('password-flow').hidden=false;
-      find('verified').textContent='Đã xác minh Google. Nhập mật khẩu mới trong vòng 10 phút.';
+      find('verified').textContent='Xác minh thành công. Bạn có thể đặt mật khẩu mới.';
       status('');find('password').focus();
     }
     window.addEventListener('tok-google-recovery',verified);
@@ -43,7 +43,7 @@
       lookupToken=recoveryToken=null;
       const result=await post('lookup',{username:find('username').value});
       if(dialog!==panel)return;
-      lookupToken=result.lookupToken;find('hint').textContent='Đã tìm thấy tài khoản. Hãy đăng nhập Google '+result.maskedEmail+' để xác minh bạn là chủ tài khoản.';
+      lookupToken=result.lookupToken;find('hint').textContent='Để đặt lại mật khẩu, hãy đăng nhập bằng tài khoản Google '+result.maskedEmail+'.';
       find('search').hidden=true;find('google-flow').hidden=false;status('');find('google').focus();
     });};
     find('google').onclick=()=>openGoogleDialog('recover',lookupToken);
@@ -57,3 +57,4 @@
     document.body.appendChild(panel);find('username').focus();
   };
 })();
+

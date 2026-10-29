@@ -49,8 +49,8 @@ function createRecoveryService({ database = db, transport = mail, now = Date.now
     const token=crypto.randomBytes(32).toString('base64url');
     await database.transaction(async tx=>{
       const user=await tx.queryOne('SELECT * FROM nguoi_dung WHERE google_sub = $1 FOR UPDATE',[identity.sub]);
-      if(!user || normalize(user.google_email)!==normalize(identity.email)) throw new Error('Google này chưa liên kết với tài khoản đã đăng ký. Không tạo tài khoản mới trong luồng khôi phục.');
-      if(target&&(user.ma_nguoi_dung!==target.userId||Number(user.session_version||0)!==target.version))throw new Error('Bạn đã chọn Google khác với tài khoản cần khôi phục. Hãy chọn đúng email được gợi ý.');
+      if(!user || normalize(user.google_email)!==normalize(identity.email)) throw new Error('Tài khoản Google này chưa được liên kết. Vui lòng chọn lại.');
+      if(target&&(user.ma_nguoi_dung!==target.userId||Number(user.session_version||0)!==target.version))throw new Error('Tài khoản Google không khớp. Vui lòng chọn đúng email được gợi ý.');
       await tx.execute('DELETE FROM password_recovery WHERE user_id = $1',[user.ma_nguoi_dung]);
       await tx.execute('INSERT INTO password_recovery(user_id,email,google_sub,code_hash,expires_at,sent_at,attempts) VALUES($1,$2,$3,$4,$5,$6,0)',[user.ma_nguoi_dung,normalize(identity.email),identity.sub,digest(user.ma_nguoi_dung,token),now()+600000,now()]);
     });
@@ -85,3 +85,4 @@ function createRecoveryService({ database = db, transport = mail, now = Date.now
   return { request, reset, googleProof };
 }
 module.exports = { ...createRecoveryService(), createRecoveryService, lookup, readLookup, maskEmail };
+

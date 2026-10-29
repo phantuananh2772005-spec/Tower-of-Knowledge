@@ -47,8 +47,8 @@ async function main() {
     clock+=61000;await request();const changedLinkCode=sent.at(-1).code;
     await db.execute('UPDATE nguoi_dung SET google_sub=$1 WHERE ma_nguoi_dung=$2',['changed_sub_'+clock,id]);
     await assert.rejects(reset(changedLinkCode),/Mã không đúng/);
-    await assert.rejects(recovery.googleProof({sub:'unknown-sub',email}),/chưa liên kết/);
-    await assert.rejects(recovery.googleProof({sub:'changed_sub_'+clock,email:'different@gmail.com'}),/chưa liên kết/);
+    await assert.rejects(recovery.googleProof({sub:'unknown-sub',email}),/chưa.*liên kết/);
+    await assert.rejects(recovery.googleProof({sub:'changed_sub_'+clock,email:'different@gmail.com'}),/chưa.*liên kết/);
     const verified=await recovery.googleProof({sub:'changed_sub_'+clock,email});
     assert.equal(verified.email,email);
     assert.match(verified.recoveryToken,/^[A-Za-z0-9_-]{43}$/);
@@ -61,7 +61,7 @@ async function main() {
     const lookup=await require('../services/password-recovery.service').lookup({username:reg.nguoi_dung.ten_dang_nhap});
     assert(!lookup.maskedEmail.includes(email.split('@')[0]));
     await assert.rejects(require('../services/password-recovery.service').lookup({username:'missing_account'}),/không tồn tại hoặc chưa liên kết/);
-    await assert.rejects(recovery.googleProof({sub:'changed_sub_'+clock,email},{userId:'other-user',version:0}),/Google khác/);
+    await assert.rejects(recovery.googleProof({sub:'changed_sub_'+clock,email},{userId:'other-user',version:0}),/Google không khớp/);
     const body={lookupToken:lookup.lookupToken,csrf:challenge.csrf,credential:JSON.stringify({sub:'changed_sub_'+clock,email,email_verified:true,nonce:challenge.nonce})};
     const actualProof=await google.recover(body,challenge.cookie);
     assert.match(actualProof.recoveryToken,/^[A-Za-z0-9_-]{43}$/);
@@ -85,3 +85,4 @@ async function main() {
   }
 }
 main().then(()=>process.exit(0)).catch(error=>{console.error(error);process.exit(1);});
+
