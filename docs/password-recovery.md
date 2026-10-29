@@ -1,27 +1,18 @@
-# Khôi phục mật khẩu
+# Khôi phục mật khẩu bằng tài khoản Google đã liên kết
 
-## Cách đang dùng: xác minh Google, không cần dịch vụ email
+Luồng giao diện:
+1. Nhập tên đăng nhập cần khôi phục và bấm Tìm tài khoản.
+2. Nếu không tồn tại hoặc chưa liên kết Google: cùng thông báo “Tài khoản không tồn tại hoặc chưa liên kết Google.”
+3. Nếu hợp lệ: chỉ hiển thị email che một phần, ví dụ ph***5@gmail.com, yêu cầu đăng nhập Google đó. Không gửi mã email.
+4. Server xác minh chữ ký Google, nonce, CSRF và đối chiếu đúng tài khoản vừa tìm. Google khác bị từ chối, không tự tạo hoặc chuyển sang tài khoản khác.
+5. Nhập và xác nhận mật khẩu mới; hoàn tất rồi đăng nhập lại.
 
-Đăng nhập → Quên mật khẩu → Xác minh bằng Google đã liên kết → chọn đúng Google → nhập và xác nhận mật khẩu mới → đăng nhập lại.
+Tra cứu có giới hạn theo IP, trả vé ký số có hạn 10 phút (không chứa email đầy đủ). Vé bị giả mạo/hết hạn hoặc tài khoản đã đổi phiên không được dùng. Email che chỉ là gợi ý, không phải bằng chứng sở hữu. Trả lời tra cứu không phân biệt tài khoản không tồn tại với tài khoản chưa liên kết.
 
-Backend xác minh chữ ký ID token, audience, nonce và CSRF bằng Google Identity Services. Chỉ tìm tài khoản có `google_sub` và email đã liên kết khớp; không tạo tài khoản mới, không tự ghép theo email đăng ký. Quyền khôi phục ngẫu nhiên 256 bit chỉ nằm trong bộ nhớ giao diện, không lưu localStorage hoặc URL. PostgreSQL lưu HMAC, thời hạn 10 phút; sử dụng một lần trong transaction khóa hàng. Sau khi đặt lại, tăng `session_version` để vô hiệu hóa JWT cũ ở HTTP và các gói Socket.IO tiếp theo.
+Quyền đặt lại ngẫu nhiên 256 bit chỉ nằm trong bộ nhớ giao diện, PostgreSQL lưu HMAC; có hạn 10 phút và dùng một lần trong transaction khóa hàng. Đổi mật khẩu thông thường/hủy liên kết hủy quyền khôi phục cũ. Reset thành công tăng session_version, thu hồi JWT HTTP và Socket.IO cũ. Mật khẩu tối thiểu 8 ký tự, tối đa 72 byte UTF-8.
 
-## Gửi mã email: tùy chọn, chưa kích hoạt
+Không mua tên miền, đăng ký dịch vụ thư hoặc kích hoạt gói trả phí. Mã gửi thư cũ chưa kích hoạt; giao diện mới hoàn toàn không có chức năng gửi mã.
 
-Không tự đăng ký, mua tên miền hoặc bật gói trả phí. Giao diện ẩn cách gửi mã khi chưa có cấu hình. Google đăng nhập không cấp quyền gửi thư Gmail.
+Backend khôi phục dùng PostgreSQL của Render. MSSQL adapter chưa hỗ trợ transaction qua nhiều lệnh nên không bật luồng khôi phục trên MSSQL.
 
-Nếu chủ dự án sau này có tài khoản Resend và địa chỉ gửi đã xác minh, thêm trên Render:
-
-- `RESEND_API_KEY`: khóa có quyền gửi email, chỉ lưu trong Environment.
-- `RECOVERY_MAIL_FROM`: địa chỉ gửi đã được nhà cung cấp xác minh.
-- `PASSWORD_RECOVERY_SECRET`: tùy chọn; mặc định dùng `JWT_SECRET` của server. Không dùng giá trị công khai.
-
-Gửi qua HTTPS Resend API. Không trả mã trong API, không log mã. Mã 6 số hết hạn sau 10 phút, tối đa 5 lần sai, gửi lại cách ít nhất 60 giây, thay mã cũ; lỗi nhà cung cấp rollback. Chỉ địa chỉ Google đã liên kết được nhận thư. Phản hồi chung không công khai việc tài khoản có tồn tại hay không. Giới hạn bổ sung theo IP, 20 yêu cầu/10 phút/mỗi tiến trình; Render dùng một proxy tin cậy. Dữ liệu mã tồn tại tối đa một hàng/tài khoản và được xóa khi dùng thành công/hủy liên kết hoặc thay bằng yêu cầu mới; hàng hết hạn không còn được chấp nhận.
-
-Hai cách khôi phục hiện dành cho PostgreSQL (Render). MSSQL vẫn hỗ trợ đăng nhập và đổi mật khẩu thông thường; không bật khôi phục bằng email/Google trên MSSQL vì adapter hiện chưa hỗ trợ transaction qua nhiều câu lệnh.
-
-## Kiểm thử
-
-`tests/test_password_recovery.js`: PostgreSQL thật, điều kiện liên kết, đồng thời, hết hạn, khóa sai, rollback gửi lỗi, dùng một lần, thu hồi phiên, xác minh Google nonce/CSRF/mode.
-
-`tests/test_password_recovery_ui.js`: 375/768/1280/1920px, đối chiếu mật khẩu, đặt lại qua HTTP/PG thật; thay riêng Google popup bằng proof kiểm thử. Không chứng minh gửi email thật. Kiểm tra HTTP thu hồi token, origin và giới hạn request.
+Kiểm thử: test_password_recovery.js (điều kiện tìm/liên kết, email che, vé giả, Google khác, nonce/CSRF/mode, hết hạn/single-use/thu hồi phiên); test_password_recovery_ui.js (375/768/1280/1920px, tìm không thấy/tìm đúng/email che, đổi mật khẩu qua HTTP/PG thật, mismatch, socket revocation, rate limit). Trong UI test chỉ thay Google popup bằng proof kiểm thử; xác minh Google thật được kiểm riêng trên production, không tự nhập mật khẩu thật của người dùng.

@@ -25,7 +25,7 @@ function recoveryLimit(req,res,next) {
   }
   item.count++;recoveryRequests.set(key,item);next();
 }
-for(const action of ['request','reset']) router.post('/password-recovery/'+action,recoveryLimit,async(req,res)=>{
+for(const action of ['lookup','request','reset']) router.post('/password-recovery/'+action,recoveryLimit,async(req,res)=>{
   res.setHeader('Cache-Control','no-store');
   try {assertSameOrigin(req);return res.apiSuccess(await require('../services/password-recovery.service')[action](req.body));}
   catch(error){

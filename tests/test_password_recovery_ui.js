@@ -17,8 +17,14 @@ async function main(){
       const page=await browser.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
       await page.setViewport({width,height:700});await page.goto(base,{waitUntil:'networkidle2'});
       await page.evaluate(()=>openPasswordRecovery());
-      await page.waitForSelector('#recovery-google');
-      assert(await page.$eval('#recovery-email-flow',element=>element.hidden),'Unconfigured email option must be hidden');
+      await page.waitForSelector('#recovery-username');
+      assert.equal(await page.$('#recovery-send'),null,'Email code option removed');
+      await page.type('#recovery-username','missing_account');await page.click('#recovery-find');
+      await page.waitForFunction(()=>document.getElementById('recovery-status').textContent.includes('không tồn tại hoặc chưa liên kết'));
+      await page.$eval('#recovery-username',el=>el.value='');
+      await page.type('#recovery-username',reg.nguoi_dung.ten_dang_nhap);await page.click('#recovery-find');
+      await page.waitForFunction(()=>!document.getElementById('recovery-google-flow').hidden);
+      const hint=await page.$eval('#recovery-hint',el=>el.textContent);assert(hint.includes('***'));assert(!hint.includes(email));
       assert(await page.$eval('#recovery-password-flow',element=>element.hidden),'Cannot enter password before Google verification');
       const proof=await recovery.googleProof({sub:'ui_recovery_'+stamp,email});
       // Only the Google popup is substituted; proof storage and redemption use real PostgreSQL + HTTP.

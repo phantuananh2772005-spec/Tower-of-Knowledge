@@ -67,8 +67,9 @@ function createGoogleIdentity({verifyIdToken=async(credential,audience)=>(await 
     });
   }
   async function recover(body,cookie){
+    const target=require('./password-recovery.service').readLookup(body.lookupToken);
     const identity=await verify(body,cookie,'recover');
-    return require('./password-recovery.service').googleProof(identity);
+    return require('./password-recovery.service').googleProof(identity,target);
   }
   return {challenge,signIn,link,unlink,recover};
 }

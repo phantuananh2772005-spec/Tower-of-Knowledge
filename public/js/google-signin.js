@@ -12,7 +12,7 @@ async function loadGoogleSdk(){
   return googleSdkPromise;
 }
 function closeGoogleDialog(){googleDialog?.remove();googleDialog=null;}
-async function openGoogleDialog(mode='login'){
+async function openGoogleDialog(mode='login',recoveryLookupToken=null){
   if(!googleIdentityAvailable){showToast('Google chưa được cấu hình. Hãy dùng tên đăng nhập và mật khẩu.','info');return;}
   closeGoogleDialog();
   const dialog=document.createElement('div');googleDialog=dialog;dialog.id='modal-google-identity';
@@ -32,7 +32,7 @@ async function openGoogleDialog(mode='login'){
       status.textContent='Đang xác minh tài khoản…';
       try{
         if(mode==='link'&&token!==localStorage.getItem('tok_token'))throw Error('Tài khoản đã thay đổi. Hãy mở lại phần liên kết.');
-        const response=await fetch('/api/auth/google'+(mode==='link'?'/link':mode==='recover'?'/recover':''),{method:'POST',headers:{'Content-Type':'application/json',...(mode==='link'?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({credential:credential.credential,csrf:challenge.csrf})});
+        const response=await fetch('/api/auth/google'+(mode==='link'?'/link':mode==='recover'?'/recover':''),{method:'POST',headers:{'Content-Type':'application/json',...(mode==='link'?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({credential:credential.credential,csrf:challenge.csrf,...(mode==='recover'?{lookupToken:recoveryLookupToken}:{})})});
         const result=await response.json();if(!result.success)throw Error(result.error?.message||'Không xác thực được Google.');
         if(mode==='recover'){
           window.dispatchEvent(new CustomEvent('tok-google-recovery',{detail:result.data}));

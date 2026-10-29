@@ -20,6 +20,7 @@ async function main() {
   try {
     const reg=await auth.register({ten_dang_nhap:'recovery_'+clock,email,mat_khau:'OldPassword123!'});
     const id=reg.nguoi_dung.ma_nguoi_dung;ids.push(id);
+    await assert.rejects(require('../services/password-recovery.service').lookup({username:reg.nguoi_dung.ten_dang_nhap}),/không tồn tại hoặc chưa liên kết/);
     const generic=await request(); assert.equal(sent.length,0,'Unlinked registration email must not receive a code');
     assert.deepEqual(await recovery.request({email:'missing@gmail.com'}),generic);
     await db.execute('UPDATE nguoi_dung SET google_sub=$1,google_email=$2 WHERE ma_nguoi_dung=$3',['recovery_sub_'+clock,email,id]);
@@ -57,11 +58,16 @@ async function main() {
     process.env.GOOGLE_CLIENT_ID='recovery-test.apps.googleusercontent.com';
     const google=require('../services/google-identity.service').createGoogleIdentity({verifyIdToken:async credential=>JSON.parse(credential)});
     const challenge=google.challenge('recover');
-    const body={csrf:challenge.csrf,credential:JSON.stringify({sub:'changed_sub_'+clock,email,email_verified:true,nonce:challenge.nonce})};
+    const lookup=await require('../services/password-recovery.service').lookup({username:reg.nguoi_dung.ten_dang_nhap});
+    assert(!lookup.maskedEmail.includes(email.split('@')[0]));
+    await assert.rejects(require('../services/password-recovery.service').lookup({username:'missing_account'}),/không tồn tại hoặc chưa liên kết/);
+    await assert.rejects(recovery.googleProof({sub:'changed_sub_'+clock,email},{userId:'other-user',version:0}),/Google khác/);
+    const body={lookupToken:lookup.lookupToken,csrf:challenge.csrf,credential:JSON.stringify({sub:'changed_sub_'+clock,email,email_verified:true,nonce:challenge.nonce})};
     const actualProof=await google.recover(body,challenge.cookie);
     assert.match(actualProof.recoveryToken,/^[A-Za-z0-9_-]{43}$/);
     await assert.rejects(google.signIn(body,challenge.cookie),/không khớp/);
     await assert.rejects(google.recover({...body,csrf:'wrong'},challenge.cookie),/không khớp/);
+    await assert.rejects(google.recover({...body,lookupToken:'forged'},challenge.cookie),/Phiên tìm tài khoản/);
     await assert.rejects(google.recover({...body,credential:JSON.stringify({sub:'changed_sub_'+clock,email,email_verified:false,nonce:challenge.nonce})},challenge.cookie),/chưa được xác minh/);
     await require('../services/password-recovery.service').reset({email,recovery_token:actualProof.recoveryToken,password:'GoogleRecovery456!'});
     const staleProof=await recovery.googleProof({sub:'changed_sub_'+clock,email});
