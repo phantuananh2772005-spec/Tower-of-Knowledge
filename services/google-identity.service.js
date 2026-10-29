@@ -12,7 +12,7 @@ const client=new OAuth2Client();
 function createGoogleIdentity({verifyIdToken=async(credential,audience)=>(await client.verifyIdToken({idToken:credential,audience})).getPayload()}={}){
   function challenge(mode='login',userId=null){
     if(!clientId())throw new Error('Đăng nhập Google chưa được cấu hình trên hệ thống. Hãy dùng tên đăng nhập và mật khẩu.');
-    if(!['login','link'].includes(mode)||mode==='link'&&!userId)throw new Error('Yêu cầu đăng nhập trước khi liên kết Google.');
+    if(!['login','link','recover'].includes(mode)||mode==='link'&&!userId)throw new Error('Yêu cầu đăng nhập trước khi liên kết Google.');
     const nonce=crypto.randomBytes(24).toString('base64url'),csrf=crypto.randomBytes(24).toString('base64url');
     return {clientId:clientId(),nonce,csrf,cookie:jwt.sign({purpose:'google-challenge',mode,userId,nonce,csrf},secret,{expiresIn:'10m'})};
   }
@@ -53,6 +53,7 @@ function createGoogleIdentity({verifyIdToken=async(credential,audience)=>(await 
       const existing=await db.queryOne('SELECT ma_nguoi_dung FROM nguoi_dung WHERE google_sub = $1',[identity.sub]);
       if(existing&&existing.ma_nguoi_dung!==userId)throw new Error('Tài khoản Google này đã liên kết với một người dùng khác.');
       await db.execute('UPDATE nguoi_dung SET google_sub = $1, google_email = $2, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $3',[identity.sub,identity.email,userId]);
+      if(db.isPostgres)await db.execute('DELETE FROM password_recovery WHERE user_id = $1',[userId]);
       return require('./auth.service').getCurrentUser(userId);
     }));
   }
@@ -61,9 +62,14 @@ function createGoogleIdentity({verifyIdToken=async(credential,audience)=>(await 
       const user=await db.queryOne('SELECT co_mat_khau FROM nguoi_dung WHERE ma_nguoi_dung = $1',[userId]);
       if(!user||user.co_mat_khau===false||user.co_mat_khau===0)throw new Error('Hãy tạo mật khẩu cho tài khoản trước khi hủy liên kết Google.');
       await db.execute('UPDATE nguoi_dung SET google_sub = NULL, google_email = NULL, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $1',[userId]);
+      if(db.isPostgres)await db.execute('DELETE FROM password_recovery WHERE user_id = $1',[userId]);
       return require('./auth.service').getCurrentUser(userId);
     });
   }
-  return {challenge,signIn,link,unlink};
+  async function recover(body,cookie){
+    const identity=await verify(body,cookie,'recover');
+    return require('./password-recovery.service').googleProof(identity);
+  }
+  return {challenge,signIn,link,unlink,recover};
 }
 module.exports={...createGoogleIdentity(),createGoogleIdentity,clientId};

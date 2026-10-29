@@ -1998,7 +1998,7 @@
                   <input type="checkbox" id="auth-remember-me" checked class="rounded accent-emerald-600 cursor-pointer">
                   <span>Ghi nhớ đăng nhập</span>
                 </label>
-                <button type="button" id="btn_auth_forgot_pass" onclick="showToast('Vui lòng liên hệ Quản trị viên để đặt lại mật khẩu!', 'info')" class="text-emerald-500 hover:text-emerald-400 hover:underline cursor-pointer">
+                <button type="button" id="btn_auth_forgot_pass" onclick="openPasswordRecovery()" class="text-emerald-500 hover:text-emerald-400 hover:underline cursor-pointer">
                   Quên mật khẩu?
                 </button>
               </div>
@@ -11574,6 +11574,7 @@
 
 </script>
   <script src="/js/lesson-state.js"></script>
+  <script src="/js/password-recovery.js"></script>
   <script src="/js/guided-tour.js"></script>
 </body>
 </html>

@@ -110,6 +110,7 @@ async function main() {
   await require('./init_user_preferences').initUserPreferences();
   await require('./init_inventory').initInventory();
   await require('./init_identity').initIdentity();
+  await require('./init_password_recovery').initPasswordRecovery();
 
   console.log('==> Seeding Chapter 1 (5 checkpoints & 63 questions)...');
   await require('../scripts/seed_chapter1_5levels').runSeed();

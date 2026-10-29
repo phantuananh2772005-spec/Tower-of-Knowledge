@@ -12,10 +12,30 @@ function readChallenge(req){
 function assertSameOrigin(req){
   if(req.headers.origin && new URL(req.headers.origin).host!==req.get('host'))throw new Error('Nguồn yêu cầu xác thực không hợp lệ.');
 }
-router.get('/config',(req,res)=>res.apiSuccess({googleClientId:googleIdentity.clientId()||null}));
+router.get('/config',(req,res)=>res.apiSuccess({googleClientId:googleIdentity.clientId()||null,passwordRecoveryEmail:require('../services/recovery-mail.service').configured()}));
+// Bound memory and per-source bursts. Per-account cooldown/attempts also persist in PostgreSQL.
+const recoveryRequests = new Map();
+function recoveryLimit(req,res,next) {
+  const now=Date.now(), key=req.ip;
+  for(const [ip,item] of recoveryRequests) if(item.until<=now) recoveryRequests.delete(ip);
+  const item=recoveryRequests.get(key)||{count:0,until:now+600000};
+  if(item.count>=20 || (!recoveryRequests.has(key)&&recoveryRequests.size>=10000)) {
+    res.setHeader('Retry-After','600');
+    return res.apiError('Bạn đã thử nhiều lần. Vui lòng đợi 10 phút.','RECOVERY_RATE_LIMIT',429);
+  }
+  item.count++;recoveryRequests.set(key,item);next();
+}
+for(const action of ['request','reset']) router.post('/password-recovery/'+action,recoveryLimit,async(req,res)=>{
+  res.setHeader('Cache-Control','no-store');
+  try {assertSameOrigin(req);return res.apiSuccess(await require('../services/password-recovery.service')[action](req.body));}
+  catch(error){
+    const message=error.message.startsWith('MAIL_')?'Chưa gửi được email. Vui lòng thử lại sau hoặc đăng nhập bằng Google.':error.message;
+    return res.apiError(message,'RECOVERY_FAILED',400);
+  }
+});
 router.get('/google/challenge',optionalAuthenticate,(req,res)=>{
   try{
-    const mode=req.query.mode==='link'?'link':'login';
+    const mode=['link','recover'].includes(req.query.mode)?req.query.mode:'login';
     const challenge=googleIdentity.challenge(mode,mode==='link'?req.user?.ma_nguoi_dung||null:null);
     res.setHeader('Cache-Control','no-store');res.cookie(challengeCookie,challenge.cookie,cookieOptions);
     return res.apiSuccess({clientId:challenge.clientId,nonce:challenge.nonce,csrf:challenge.csrf});
@@ -24,6 +44,11 @@ router.get('/google/challenge',optionalAuthenticate,(req,res)=>{
 router.post('/google',async(req,res)=>{
   try{assertSameOrigin(req);const result=await googleIdentity.signIn(req.body,readChallenge(req));res.clearCookie(challengeCookie,{...cookieOptions,maxAge:0});return res.apiSuccess(result);}
   catch(error){return res.apiError(error.message,'GOOGLE_LOGIN_FAILED',401);}
+});
+router.post('/google/recover',recoveryLimit,async(req,res)=>{
+  res.setHeader('Cache-Control','no-store');
+  try{assertSameOrigin(req);const result=await googleIdentity.recover(req.body,readChallenge(req));res.clearCookie(challengeCookie,{...cookieOptions,maxAge:0});return res.apiSuccess(result);}
+  catch(error){return res.apiError(error.message,'GOOGLE_RECOVERY_FAILED',400);}
 });
 router.post('/google/link',authenticate,async(req,res)=>{
   try{assertSameOrigin(req);const result=await googleIdentity.link(req.user.ma_nguoi_dung,req.body,readChallenge(req));res.clearCookie(challengeCookie,{...cookieOptions,maxAge:0});return res.apiSuccess(result);}

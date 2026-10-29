@@ -6,6 +6,7 @@ const inventory=require('../services/inventory.service');
 const googleModule=require('../services/google-identity.service');
 async function main(){
   await require('../database/init_identity').initIdentity();
+  await require('../database/init_password_recovery').initPasswordRecovery();
   await require('../database/init_inventory').initInventory();
   const ids=[],stamp=Date.now(),originalClientId=process.env.GOOGLE_CLIENT_ID;
   const payloads=new Map();

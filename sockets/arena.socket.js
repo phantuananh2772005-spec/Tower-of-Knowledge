@@ -66,7 +66,7 @@ function calculateBotTurnParams({ questionContent, myHp, botHp, userCombo }) {
 
 function initArenaSocket(io) {
   // Middleware to authenticate socket gracefully (supports registered users & guests)
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const token = (socket.handshake.auth && socket.handshake.auth.token) || socket.handshake.query?.token;
     if (!token) {
       const guestId = `guest_${Math.random().toString(36).substring(2, 9)}`;
@@ -75,6 +75,7 @@ function initArenaSocket(io) {
     }
     try {
       const decoded = jwt.verify(token, JWT_SECRET);
+      await require('../services/session-validity.service').assertCurrentSession(decoded);
       socket.user = decoded;
       next();
     } catch (err) {
@@ -86,6 +87,15 @@ function initArenaSocket(io) {
 
   io.on('connection', (socket) => {
     const userId = socket.user.ma_nguoi_dung;
+    socket.use(async (_packet, next) => {
+      if (socket.user.isGuest) return next();
+      try {
+        await require('../services/session-validity.service').assertCurrentSession(socket.user);
+        next();
+      } catch {
+        socket.disconnect(true);
+      }
+    });
 
     // Join Matchmaking Queue
     socket.on('join_queue', async (data = {}) => {

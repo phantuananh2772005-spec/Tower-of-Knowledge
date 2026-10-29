@@ -6,7 +6,7 @@
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'tower_of_knowledge_ultra_secure_jwt_secret_2026';
 
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
   const authHeader = req.headers['authorization'];
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({
@@ -19,6 +19,7 @@ function authenticate(req, res, next) {
   const token = authHeader.substring(7);
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+    await require('../services/session-validity.service').assertCurrentSession(decoded);
     req.user = decoded;
     next();
   } catch (err) {
@@ -33,12 +34,14 @@ function authenticate(req, res, next) {
 /**
  * Optional authentication: attaches req.user if token is present, continues otherwise
  */
-function optionalAuthenticate(req, res, next) {
+async function optionalAuthenticate(req, res, next) {
   const authHeader = req.headers['authorization'];
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
     try {
-      req.user = jwt.verify(token, JWT_SECRET);
+      const decoded = jwt.verify(token, JWT_SECRET);
+      await require('../services/session-validity.service').assertCurrentSession(decoded);
+      req.user = decoded;
     } catch (err) {
       // Ignore invalid optional token
     }

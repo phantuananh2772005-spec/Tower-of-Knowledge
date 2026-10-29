@@ -23,7 +23,8 @@ function generateToken(user) {
     {
       ma_nguoi_dung: user.ma_nguoi_dung,
       ten_dang_nhap: user.ten_dang_nhap,
-      vai_tro: user.vai_tro
+      vai_tro: user.vai_tro,
+      session_version: Number(user.session_version || 0)
     },
     JWT_SECRET,
     { expiresIn: '7d' }

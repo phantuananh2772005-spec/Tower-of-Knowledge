@@ -16,9 +16,9 @@ async function openGoogleDialog(mode='login'){
   if(!googleIdentityAvailable){showToast('Google chưa được cấu hình. Hãy dùng tên đăng nhập và mật khẩu.','info');return;}
   closeGoogleDialog();
   const dialog=document.createElement('div');googleDialog=dialog;dialog.id='modal-google-identity';
-  dialog.className='fixed inset-0 z-[90] flex items-center justify-center p-4 bg-black/60';
+  dialog.className='fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60';
   dialog.innerHTML='<div role="dialog" aria-labelledby="google-dialog-title" class="bg-[var(--card)] border border-[var(--border)] rounded-3xl p-6 w-full max-w-sm space-y-4"><div class="flex items-center justify-between"><h3 id="google-dialog-title" class="font-bold text-base"></h3><button id="btn_close_google_identity" type="button" class="w-11 h-11 rounded-xl border border-[var(--border)]" aria-label="Đóng">×</button></div><p id="google-dialog-status" class="text-xs text-[var(--muted-foreground)]">Đang kết nối Google…</p><p class="text-xs text-[var(--muted-foreground)]">Google cung cấp tên và email để xác minh, liên kết tài khoản học tập. <a href="/privacy.html" target="_blank" rel="noopener" class="text-emerald-600 underline">Xem chính sách quyền riêng tư</a>.</p><div id="google-identity-button" class="flex justify-center"></div></div>';
-  dialog.querySelector('h3').textContent=mode==='link'?'Liên kết tài khoản Google':'Đăng nhập bằng Google';
+  dialog.querySelector('h3').textContent=mode==='recover'?'Xác minh Google để lấy lại mật khẩu':mode==='link'?'Liên kết tài khoản Google':'Đăng nhập bằng Google';
   dialog.querySelector('button').onclick=closeGoogleDialog;dialog.onclick=event=>{if(event.target===dialog)closeGoogleDialog();};document.body.appendChild(dialog);
   const status=dialog.querySelector('#google-dialog-status');
   try{
@@ -32,9 +32,11 @@ async function openGoogleDialog(mode='login'){
       status.textContent='Đang xác minh tài khoản…';
       try{
         if(mode==='link'&&token!==localStorage.getItem('tok_token'))throw Error('Tài khoản đã thay đổi. Hãy mở lại phần liên kết.');
-        const response=await fetch('/api/auth/google'+(mode==='link'?'/link':''),{method:'POST',headers:{'Content-Type':'application/json',...(mode==='link'?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({credential:credential.credential,csrf:challenge.csrf})});
+        const response=await fetch('/api/auth/google'+(mode==='link'?'/link':mode==='recover'?'/recover':''),{method:'POST',headers:{'Content-Type':'application/json',...(mode==='link'?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({credential:credential.credential,csrf:challenge.csrf})});
         const result=await response.json();if(!result.success)throw Error(result.error?.message||'Không xác thực được Google.');
-        if(mode==='link'){
+        if(mode==='recover'){
+          window.dispatchEvent(new CustomEvent('tok-google-recovery',{detail:result.data}));
+        }else if(mode==='link'){
           if(token!==localStorage.getItem('tok_token'))return;
           applyUserData(result.data);renderGoogleAccountSettings();showToast('Đã lưu liên kết Google.','success');
         }else{

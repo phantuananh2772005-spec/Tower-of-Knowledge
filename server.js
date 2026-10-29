@@ -24,6 +24,7 @@ const extremeRoutes = require('./routes/extreme.routes');
 const petStudioRoutes = require('./routes/petStudioRoutes');
 
 const app = express();
+if (process.env.RENDER) app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 // Initialize Socket.IO
@@ -93,7 +94,8 @@ Promise.all([
   require('./database/sync_pet_catalog').syncPetCatalog(),
   require('./database/init_user_preferences').initUserPreferences(),
   require('./database/init_inventory').initInventory(),
-  require('./database/init_identity').initIdentity()
+  require('./database/init_identity').initIdentity(),
+  require('./database/init_password_recovery').initPasswordRecovery()
 ]).then(() => server.listen(PORT, () => {
   console.log(`================================================================`);
   console.log(`🚀 TOWER OF KNOWLEDGE SERVER IS RUNNING ON PORT ${PORT}`);
