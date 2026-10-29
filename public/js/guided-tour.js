@@ -59,7 +59,7 @@
     section='Bản đồ & bài học'; nav('saga','Lộ trình');
     add(read('map-scroll','.garden-intro','Khám phá toàn bộ hành trình','Cuộn lên hoặc xuống để xem các mốc và các chương. Mốc có khóa vẫn xem được nhưng chỉ mở sau khi hoàn thành mốc trước.'),
       read('map-return','#btn_garden_current','Quay về mốc đang học','Khi xem xa vị trí hiện tại, bấm nút này để trở lại mốc đang học mà không cần kéo tìm.'),
-      read('map-progress','#topbar-title','Mốc, sao và chương đang học','Thanh tiến độ cho biết số mốc đã qua. Nếu có huy hiệu sao của chương, đó là kết quả học trong chương đang chọn.'),
+      read('map-progress','.garden-summary','Tiến độ môn học','Xem số mốc đã hoàn thành và thanh tiến độ tại đây. Số sao nằm bên tên từng chương và dưới các mốc đã hoàn thành.'),
       click('checkpoint-open',()=>find('[id^="btn_moc_active_"]')||find('[id^="btn_moc_done_"]'), 'Mở một mốc đang học','Bấm mốc được viền sáng trên bản đồ. Hệ thống mở phần tổng quan, lý thuyết hoặc bài luyện tùy loại mốc.',()=>Boolean(find('#modal-checkpoint')||find('#modal-theory')||find('#view-play')), {optional:true}),
       read('checkpoint-summary',()=>find('#cp-modal-title')||find('#theory-title')||find('#card-title'),'Đọc hướng dẫn của mốc','Mốc lý thuyết có nội dung bài giảng; mốc luyện tập chia thành các chặng. Chặng khóa sẽ mở khi bạn hoàn thành chặng trước.'),
       read('checkpoint-steps',()=>find('#cp-modal-steps-container > div')||find('#theory-content')||find('#card-content'),'Cách học từng chặng','Đọc bài trước, chọn “Bắt đầu” ở chặng đang mở, rồi làm từng câu. Trắc nghiệm: chọn một đáp án. Nối cặp: chọn hai ô tương ứng. Điền từ: chọn từ phù hợp. Ghép câu: chạm các thẻ theo thứ tự.'),

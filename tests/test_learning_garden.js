@@ -15,11 +15,15 @@ async function main(){
    await page.evaluateOnNewDocument(token=>localStorage.setItem('tok_token',token),reg.data.token);await page.goto(base,{waitUntil:'networkidle2'});await page.waitForFunction(()=>currentUserAccount?.userId);
    for(const slug of ['co-so-du-lieu','chuyen-doi-so']){
     await page.evaluate(async slug=>{await openCourseRoadmap(slug);},slug);await page.waitForSelector('.garden-node');
+    assert.equal(await page.$eval('#topbar-title',el=>el.textContent),'Bản đồ leo tháp');
+    assert.equal(await page.$eval('#app-topbar',el=>el.querySelectorAll('[role="progressbar"],#topbar-progress,#saga-chapter-stars-badge').length),0);
+    assert.equal(await page.$$('.garden-chapter-score').then(items=>items.length),await page.$$('.garden-chapter').then(items=>items.length));
     const stats=await page.evaluate(()=>({nodes:document.querySelectorAll('.garden-node').length,expected:liveCourseData.cac_chuong.reduce((n,c)=>n+c.cac_moc.length,0),chapters:document.querySelectorAll('.garden-chapter').length,expectedChapters:liveCourseData.cac_chuong.length,overflow:document.documentElement.scrollWidth>innerWidth||document.getElementById('view-saga').scrollWidth>document.getElementById('view-saga').clientWidth,scrollable:document.getElementById('app-main-scroll').scrollHeight>document.getElementById('app-main-scroll').clientHeight}));
     assert.equal(stats.nodes,stats.expected);assert.equal(stats.chapters,stats.expectedChapters);assert(stats.scrollable);assert(!stats.overflow);
     await page.evaluate(()=>{const s=document.getElementById('app-main-scroll');s.scrollTop=s.scrollHeight;});
     await new Promise(r=>setTimeout(r,650));
     assert(await page.$eval('.garden-finish',e=>{const r=e.getBoundingClientRect(),s=document.getElementById('app-main-scroll').getBoundingClientRect();return r.top<s.bottom&&r.bottom>s.top;}),'End of path cannot be reached');
+    assert.equal(await page.$eval('#topbar-title',el=>el.textContent),'Bản đồ leo tháp','Scrolling chapters changed the shared page header');
     await page.click('#btn_garden_current');await new Promise(r=>setTimeout(r,650));
     assert(await page.$eval('[aria-current="step"]',e=>{const r=e.getBoundingClientRect(),s=document.getElementById('app-main-scroll').getBoundingClientRect();return r.top>=s.top&&r.bottom<=s.bottom;}),'Return to active node failed');
     if(process.env.TEST_SCREENSHOTS){

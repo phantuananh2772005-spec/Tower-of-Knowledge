@@ -13,29 +13,23 @@ function renderLearningGarden(courseData) {
   currentSagaChapterId=active.chapter.ma_chuong;
   setSagaFocusMoc(active.m);
   const complete=entries.filter(e=>done(e.m)).length;
-  document.getElementById('topbar-progress-text').textContent=`Đã qua ${complete}/${entries.length} mốc`;
-  document.getElementById('topbar-progress-bar').style.width=(entries.length?complete/entries.length*100:0)+'%';
   const name=courseData.mon_hoc?.ten_mon||'Lộ trình học tập';
-  const crumb=document.getElementById('topbar-breadcrumb-course');if(crumb)crumb.textContent=name;
   const courseCode=courseData.mon_hoc?.slug==='chuyen-doi-so'?'CĐS':courseData.mon_hoc?.ma_mon==='mon_csdl'?'CSDL':'Môn học';
   function updateChapter(ch){
     currentSagaChapterId=ch.ma_chuong;
     if(currentAppView!=='saga')return;
-    document.getElementById('topbar-title').textContent=ch.tieu_de||'Lộ trình học tập';
     document.getElementById('sidebar-saga-course-tag').textContent=courseCode+' · C'+(ch.thu_tu||chapters.indexOf(ch)+1);
-    const mocs=ch.cac_moc||[];
-    document.getElementById('saga-chapter-stars-count').textContent=mocs.reduce((sum,m)=>sum+getStarCountForMoc(m),0)+'/'+mocs.length*3+' sao';
   }
   updateChapter(active.chapter);
   const esc=escapeHtml;
-  host.innerHTML=`<div class="garden-map"><div class="garden-intro"><div><span class="garden-eyebrow">HÀNH TRÌNH TRI THỨC</span><h2>${esc(name)}</h2><p>Mỗi bước nhỏ, thêm một điều mới.</p></div><span class="garden-progress">${complete}/${entries.length} mốc</span></div><div class="garden-chapters"></div><div class="garden-finish"><span aria-hidden="true">🏁</span><strong>Đích đến của hành trình</strong><span>Hoàn thành từng mốc để chinh phục môn học.</span></div></div><div class="garden-jump-wrap"><button id="btn_garden_current" type="button">↟ Về mốc đang học</button></div>`;
+  host.innerHTML=`<div class="garden-map"><div class="garden-intro"><div><span class="garden-eyebrow">HÀNH TRÌNH TRI THỨC</span><h2>${esc(name)}</h2><p>Mỗi bước nhỏ, thêm một điều mới.</p></div><div class="garden-summary"><span class="garden-progress">${complete}/${entries.length} mốc đã hoàn thành</span><div class="garden-course-progress" role="progressbar" aria-label="Tiến độ môn học" aria-valuenow="${complete}" aria-valuemin="0" aria-valuemax="${entries.length}"><span style="width:${complete/entries.length*100}%"></span></div><button id="btn_garden_change_course" type="button">Đổi môn →</button></div></div><div class="garden-chapters"></div><div class="garden-finish"><span aria-hidden="true">🏁</span><strong>Đích đến của hành trình</strong><span>Hoàn thành từng mốc để chinh phục môn học.</span></div></div><div class="garden-jump-wrap"><button id="btn_garden_current" type="button">↟ Về mốc đang học</button></div>`;
   const container=host.querySelector('.garden-chapters');
   chapters.forEach((ch,index)=>{
     const items=entries.filter(e=>e.index===index), unlocked=index===0||items.some(e=>e.unlocked);
     const section=document.createElement('section');section.className='garden-chapter';section.dataset.chapter=ch.ma_chuong;section.id='garden-chapter-'+ch.ma_chuong;
     const offsets=[50,66,56,34,44,63,50],height=Math.max(220,items.length*170+150), points=items.map((e,i)=>({x:offsets[i%offsets.length]*6,y:136+i*170}));
     let d='';points.forEach((p,i)=>{if(!i){d=`M ${p.x} ${p.y}`;return;}const last=points[i-1],mid=(last.y+p.y)/2;d+=` C ${last.x} ${mid}, ${p.x} ${mid}, ${p.x} ${p.y}`;});
-    section.innerHTML=`<header class="garden-chapter-heading"><span class="garden-chapter-number">${String(ch.thu_tu||index+1).padStart(2,'0')}</span><div><h3>${esc(ch.tieu_de||'Chương '+(index+1))}</h3><p>${unlocked?'Khám phá từng mốc trên đường đi':'Hoàn thành chương trước để mở khóa'}</p></div><span class="garden-chapter-state">${unlocked?'🌿':'🔒'}</span></header><div class="garden-landscape"><div class="garden-lane" style="height:${height}px"><svg class="garden-trail" aria-hidden="true" viewBox="0 0 600 ${height}" preserveAspectRatio="none"><path class="garden-trail-shadow" d="${d}"/><path class="garden-trail-line" d="${d}"/></svg></div></div>`;
+    section.innerHTML=`<header class="garden-chapter-heading"><span class="garden-chapter-number">${String(ch.thu_tu||index+1).padStart(2,'0')}</span><div><h3>${esc(ch.tieu_de||'Chương '+(index+1))}</h3><p>${unlocked?'Khám phá từng mốc trên đường đi':'Hoàn thành chương trước để mở khóa'}</p></div><span class="garden-chapter-state">${unlocked?'🌿':'🔒'}</span><span class="garden-chapter-score" aria-label="Sao của chương">★ ${(ch.cac_moc||[]).reduce((sum,m)=>sum+getStarCountForMoc(m),0)}/${items.length*3}</span></header><div class="garden-landscape"><div class="garden-lane" style="height:${height}px"><svg class="garden-trail" aria-hidden="true" viewBox="0 0 600 ${height}" preserveAspectRatio="none"><path class="garden-trail-shadow" d="${d}"/><path class="garden-trail-line" d="${d}"/></svg></div></div>`;
     const lane=section.querySelector('.garden-lane');
     items.forEach((entry,i)=>{
       const {m}=entry,isDone=done(m),isActive=entry===active,locked=!entry.available,isBoss=m.loai_moc==='THU_THACH_BOSS'||i===items.length-1;
@@ -53,6 +47,7 @@ function renderLearningGarden(courseData) {
     container.appendChild(section);
   });
   host.querySelector('#btn_garden_current').onclick=()=>scrollToActiveNode(true);
+  host.querySelector('#btn_garden_change_course').onclick=()=>navTo('enrolled');
   syncAllPetDisplays();
   const root=document.getElementById('app-main-scroll');
   window.gardenChapterObserver=new IntersectionObserver(records=>{

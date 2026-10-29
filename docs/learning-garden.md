@@ -7,3 +7,5 @@ Phong cảnh SVG cây/hoa/cỏ do dự án tự vẽ, không dùng hình hoặc 
 Mốc khóa được xem trước nhưng không mở bài; kiểm quyền hiện có ở backend được giữ nguyên. Mốc hoàn thành giữ điểm sao, mốc đang mở hiển thị Pet đã trang bị. Không thay đổi tiến độ hoặc dữ liệu môn học để phục vụ bố cục.
 
 Kiểm thử: test_learning_garden.js dùng tài khoản thử riêng trong PostgreSQL local, hai môn/11 và 18 mốc, 375/768/1280/1920px. Xác nhận số chương/mốc bằng API, không tràn ngang, cuộn được đến đích, quay lại mốc hiện tại, khóa không mở bài, Enter mở được bài, không lỗi JS. Chụp cả giao diện sáng/tối. Tour hoàn chỉnh PC 88 bước và mobile 96 bước đạt, không thiếu mục tiêu hoặc chồng hộp lên mục tiêu.
+
+Thanh ứng dụng dùng layout chung của 7 trang: tên trang cố định Bản đồ leo tháp và breadcrumb cùng kiểu. Tên môn, đổi môn, số mốc/tiến độ nằm trong garden-summary; số sao ở tiêu đề từng chương. Cuộn chương không ghi đè header. Kiểm thử xác nhận điều này và giữ nguyên đầy đủ điểm sao.

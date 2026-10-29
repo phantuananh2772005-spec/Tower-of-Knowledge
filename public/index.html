@@ -325,39 +325,15 @@
         <img src="/assets/logo_transparent.png" alt="Logo" class="w-8 h-8 object-contain shrink-0 drop-shadow-sm select-none md:hidden" />
         <div class="min-w-0 flex-1">
           <!-- Breadcrumb vị trí phân cấp -->
-          <div id="topbar-breadcrumb" class="flex items-center gap-1.5 text-[11px] text-[var(--muted-foreground)] mb-0.5 min-w-0">
-            <button id="btn_topbar_doimon" onclick="navTo('enrolled')" class="hover:text-[var(--foreground)] flex items-center gap-1 font-medium transition cursor-pointer truncate shrink-0">
-              ← Đổi môn
-            </button>
-            <span class="text-[var(--border)] shrink-0">•</span>
-            <span id="topbar-breadcrumb-course" class="font-semibold text-emerald-600 truncate">Cơ sở dữ liệu</span>
-          </div>
+          <nav id="topbar-breadcrumb" aria-label="Đường dẫn trang"></nav>
           <!-- Tiêu đề lớn -->
-          <h1 id="topbar-title" class="font-bold tracking-tight text-sm sm:text-base md:text-lg leading-tight truncate">Chương 1: Tổng quan CSDL</h1>
+          <h1 id="topbar-title" class="font-bold tracking-tight text-sm sm:text-base md:text-lg leading-tight truncate">Tổng quan</h1>
         </div>
       </div>
 
-      <!-- Khu vực bên phải: Tiến độ học + Nút Cài đặt tài khoản -->
+      <!-- Các thao tác chung của ứng dụng -->
       <div id="topbar-right" class="shrink-0 flex items-center gap-2 sm:gap-3">
-        <!-- Huy hiệu số sao chương (chỉ hiển thị khi mở Bản đồ leo tháp) -->
-        <div id="saga-chapter-stars-badge" class="hidden items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-500 text-[11px] sm:text-xs font-bold font-mono shrink-0" title="Số sao đạt được trong chương này">
-          <span>⭐</span>
-          <span id="saga-chapter-stars-count">0/15 sao</span>
-        </div>
-
-        <div id="topbar-progress" class="text-right hidden sm:block">
-          <span id="topbar-progress-text" class="text-xs font-bold text-emerald-600 font-mono">Đang tải tiến độ...</span>
-          <div class="w-20 sm:w-28 h-1.5 bg-[var(--border)] rounded-full mt-1 overflow-hidden ml-auto">
-            <div id="topbar-progress-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
-          </div>
-        </div>
-
-        <!-- Nút Cổng Quản Trị (chỉ hiện khi vai_tro === 'QUAN_TRI_VIEN') -->
-        <a href="/admin/" style="display:none" id="btn-topbar-admin-portal" title="Chuyển sang Cổng Quản Trị" class="hidden px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/30 hover:bg-amber-500/20 text-xs font-bold transition md:flex items-center gap-1.5 shrink-0">
-          <span>🛡️</span>
-          <span class="hidden sm:inline">Quản Trị</span>
-        </a>
-
+        <a href="/admin/" style="display:none" id="btn-topbar-admin-portal" title="Chuyển sang Cổng Quản Trị" class="hidden px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/30 hover:bg-amber-500/20 text-xs font-bold transition md:flex items-center gap-1.5 shrink-0"><span>🛡️</span><span class="hidden sm:inline">Quản Trị</span></a>
         <!-- Nút Bật/Tắt Sáng Tối (chỉ hiện trên desktop md trở lên, trên mobile có trong menu Thêm) -->
         <button onclick="toggleTheme()" id="btn-theme-toggle" title="Chuyển chế độ Sáng (☀️) / Tối (🌙)" class="hidden md:flex h-8 px-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:border-amber-500/50 items-center gap-0.5 transition cursor-pointer shadow-2xs shrink-0 select-none">
           <span id="theme-icon-sun" class="w-6 h-6 rounded flex items-center justify-center text-xs opacity-35 grayscale transition-all">☀️</span>
@@ -2950,94 +2926,32 @@
       button.classList.toggle('is-collapsed',collapsed);
     }
     const TOPBAR_CONFIG = {
-      saga: {
-        breadcrumb: '<button id="btn_topbar_nav_doimon" onclick="navTo(\'enrolled\')" class="hover:text-[var(--foreground)] flex items-center gap-1 font-medium transition cursor-pointer truncate shrink-0">← Đổi môn</button><span class="text-[var(--border)] shrink-0">•</span><span id="topbar-breadcrumb-course" class="font-semibold text-emerald-600 truncate">Cơ sở dữ liệu</span>',
-        title: 'Chương 1: CSDL',
-        showProgress: true
-      },
-      hub: {
-        breadcrumb: '<span class="font-semibold text-emerald-600">🏠 Trang chủ</span>',
-        title: 'Tổng quan',
-        showProgress: false
-      },
-      enrolled: {
-        breadcrumb: '<button id="btn_topbar_nav_trangchu" onclick="navTo(\'hub\')" class="hover:text-[var(--foreground)] transition cursor-pointer shrink-0">Trang chủ</button><span class="text-[var(--border)] shrink-0">•</span><span class="truncate">Môn học</span>',
-        title: 'Môn đang học',
-        showProgress: false
-      },
-      catalog: {
-        breadcrumb: '<button id="btn_nav_trangchu_crumb" onclick="navTo(\'hub\')" class="hover:text-[var(--foreground)] transition cursor-pointer shrink-0">Trang chủ</button><span class="text-[var(--border)] shrink-0">•</span><span class="truncate">Kho môn</span>',
-        title: 'Kho môn học',
-        showProgress: false
-      },
-      minigame: {
-        breadcrumb: '<span class="font-semibold text-emerald-600">🎮 Minigame</span>',
-        title: 'Khu Minigame',
-        showProgress: false
-      },
-      battle: {
-        breadcrumb: '<button id="btn_battle_header_leave" onclick="openSurrenderModal()" class="hover:text-rose-400 text-rose-500 font-bold transition cursor-pointer">🏳️ Đầu hàng</button>',
-        title: 'Đấu 1v1',
-        showProgress: false
-      },
-      pet: {
-        breadcrumb: '<span class="font-semibold text-emerald-600">🐾 Đồng hành</span>',
-        title: 'Linh vật',
-        showProgress: false
-      },
-      shop: {
-        breadcrumb: '<span class="font-semibold text-emerald-600">🛍️ Cửa hàng</span>',
-        title: 'Shop',
-        showProgress: false
-      },
-      play: {
-        breadcrumb: '<button id="btn_play_header_close" onclick="closePlay()" class="hover:text-[var(--foreground)] transition cursor-pointer">✕ Đóng</button>',
-        title: 'Luyện tập',
-        showProgress: false
-      },
-      extreme: {
-        breadcrumb: '<button id="btn_extreme_header_quit" onclick="openExtremeQuitConfirmModal()" class="hover:text-rose-400 text-rose-500 font-bold transition cursor-pointer flex items-center gap-1">← Rời trận</button><span class="text-[var(--border)] shrink-0">•</span><span>Cực Hạn</span>',
-        title: 'Sinh Tồn Vô Tận',
-        showProgress: false
-      }
+      hub:{title:'Tổng quan'},
+      enrolled:{title:'Môn đang theo học'},
+      saga:{title:'Bản đồ leo tháp'},
+      catalog:{title:'Kho môn học'},
+      minigame:{title:'Minigame'},
+      pet:{title:'Linh vật'},
+      shop:{title:'Cửa hàng'},
+      battle:{title:'Đấu 1v1',breadcrumb:'<button id="btn_battle_header_leave" onclick="openSurrenderModal()">Đầu hàng</button>'},
+      play:{title:'Luyện tập',breadcrumb:'<button id="btn_play_header_close" onclick="closePlay()">Đóng bài học</button>'},
+      extreme:{title:'Sinh tồn vô tận',breadcrumb:'<button id="btn_extreme_header_quit" onclick="openExtremeQuitConfirmModal()">Rời trận</button>'}
     };
-
-    function updateTopbarUI(viewName) {
-      const cfg = TOPBAR_CONFIG[viewName] || TOPBAR_CONFIG.saga;
-      const bcEl = document.getElementById('topbar-breadcrumb');
-      if (bcEl) {
-        if (viewName === 'saga') {
-          const currentCourseName = (liveCourseData && liveCourseData.mon_hoc && liveCourseData.mon_hoc.ten_mon) 
-            ? liveCourseData.mon_hoc.ten_mon 
-            : (currentActiveCourseSlug === 'chuyen-doi-so' ? 'Chuyển đổi số & Kinh tế số' : 'Cơ sở dữ liệu');
-          bcEl.innerHTML = `<button id="btn_topbar_nav_doimon" onclick="navTo('enrolled')" class="hover:text-[var(--foreground)] flex items-center gap-1 font-medium transition cursor-pointer truncate shrink-0">← Đổi môn</button><span class="text-[var(--border)] shrink-0">•</span><span id="topbar-breadcrumb-course" class="font-semibold text-emerald-600 truncate">${currentCourseName}</span>`;
-        } else {
-          bcEl.innerHTML = cfg.breadcrumb;
-        }
-      }
-      const titleEl = document.getElementById('topbar-title');
-      if (titleEl) {
-        if (viewName === 'saga' && liveCourseData && liveCourseData.cac_chuong) {
-          const activeCh = liveCourseData.cac_chuong.find(c => c.ma_chuong === currentSagaChapterId) || liveCourseData.cac_chuong[0];
-          titleEl.textContent = activeCh ? (activeCh.tieu_de || cfg.title) : cfg.title;
-        } else {
-          titleEl.textContent = cfg.title;
-        }
-      }
-      const progEl = document.getElementById('topbar-progress');
-      if (progEl) progEl.style.display = cfg.showProgress ? 'block' : 'none';
-      const starsBadge = document.getElementById('saga-chapter-stars-badge');
-      if (starsBadge) {
-        if (viewName === 'saga') {
-          starsBadge.classList.remove('hidden');
-          starsBadge.classList.add('flex');
-        } else {
-          starsBadge.classList.remove('flex');
-          starsBadge.classList.add('hidden');
-        }
-      }
+    function setPageHeader(title,parent=null){
+      const breadcrumb=document.getElementById('topbar-breadcrumb');
+      breadcrumb.replaceChildren();
+      const addButton=(label,handler)=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.onclick=handler;breadcrumb.appendChild(button);};
+      const separator=()=>{const span=document.createElement('span');span.textContent='/';span.setAttribute('aria-hidden','true');breadcrumb.appendChild(span);};
+      addButton('Trang chủ',()=>navTo('hub'));separator();
+      if(parent){addButton(parent.label,parent.onClick);separator();}
+      const current=document.createElement('span');current.textContent=title;current.setAttribute('aria-current','page');breadcrumb.appendChild(current);
+      document.getElementById('topbar-title').textContent=title;
     }
-
+    function updateTopbarUI(viewName){
+      const cfg=TOPBAR_CONFIG[viewName]||TOPBAR_CONFIG.hub;
+      if(cfg.breadcrumb){document.getElementById('topbar-breadcrumb').innerHTML=cfg.breadcrumb;document.getElementById('topbar-title').textContent=cfg.title;}
+      else setPageHeader(cfg.title);
+    }
     let currentAppView = 'hub';
 
     function updateMobileBottomBar(viewName) {
@@ -3646,24 +3560,14 @@
       if (rankPanel) rankPanel.classList.remove('hidden');
 
       // Cập nhật Topbar cố định giúp người dùng luôn có nút quay lại dù cuộn tới đâu
-      if (topBreadcrumb) {
-        topBreadcrumb.innerHTML = `<button id="btn_topbar_back_arena" onclick="arenaTab('fight')" class="hover:text-[var(--foreground)] text-emerald-500 font-bold flex items-center gap-1 transition cursor-pointer"><span>←</span> <span>Sảnh chế độ đấu</span></button> <span>/</span> <span class="text-amber-500 font-semibold">Bảng xếp hạng</span>`;
-      }
-      if (topTitle) {
-        topTitle.textContent = '🏆 Bảng Xếp Hạng Đấu Trường';
-      }
+      setPageHeader('Bảng xếp hạng',{label:'Minigame',onClick:()=>arenaTab('fight')});
 
       renderRank();
       if (typeof loadRealLeaderboard === 'function') loadRealLeaderboard();
     } else {
       if (rankPanel) rankPanel.classList.add('hidden');
 
-      if (topBreadcrumb) {
-        topBreadcrumb.innerHTML = '<span>⚔️ Đấu trí</span>';
-      }
-      if (topTitle) {
-        topTitle.textContent = 'Đấu trường Minigame';
-      }
+      updateTopbarUI('minigame');
 
       if (typeof selectArenaMode === 'function') {
         if (typeof currentArenaMode !== 'undefined' && currentArenaMode) {

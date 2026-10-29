@@ -56,3 +56,8 @@
 #app-topbar > div > img { width:40px; height:40px; }
 @media(min-width:768px){ #sidebar-toggle-btn { display:inline-flex; } }
 @media(prefers-reduced-motion:reduce){ #app-sidebar { transition:none; } }
+/* One breadcrumb treatment on every navigation page. */
+#topbar-breadcrumb{display:flex;align-items:center;gap:6px;min-width:0;height:16px;margin-bottom:2px;color:var(--muted-foreground);font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden}
+#topbar-breadcrumb>button{flex-shrink:0;cursor:pointer;font:inherit;color:inherit}
+#topbar-breadcrumb>button:hover{color:var(--foreground)}
+#topbar-breadcrumb>[aria-current]{min-width:0;overflow:hidden;text-overflow:ellipsis}
