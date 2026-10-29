@@ -83,10 +83,9 @@
       read('shop-items','#shop-accessories','Vật phẩm trang trí','Mỗi phụ kiện ghi giá Xu. Bấm Mua, đọc hộp xác nhận rồi đồng ý nếu muốn mua. Sau khi mua, bấm Trang bị để dùng hoặc Tháo để gỡ. Phụ kiện được lưu theo tài khoản và hiện cùng Pet khi đăng nhập lại.',{optional:true}));
 
     section='Đấu trường'; nav('minigame','Minigame');
-    add(read('arena-modes','#card-mode-ranked','Chọn chế độ trước khi tìm trận','Đấu hạng, giao hữu và thử thách có luật riêng. Trước khi bắt đầu, kiểm tra môn thi và Pet của bạn.'),
+    add(read('arena-modes','#card-mode-ranked','Chọn chế độ trước khi tìm trận','Đấu hạng, giao hữu và thử thách có luật riêng. Trước khi bắt đầu, hãy chọn môn thi phù hợp.'),
       click('ranked-open','#card-mode-ranked','Mở sảnh Đấu hạng','Bấm card Đấu hạng 1v1 để mở các lựa chọn ghép trận.',shown('#arena-fight')),
       read('ranked-subject','#lobby-subject','Chọn môn để đối kháng','Danh sách này chọn ngân hàng câu hỏi dùng cho trận đấu. Chọn môn đã học để luyện tập hiệu quả.',{fallback:'#arena-fight select'}),
-      read('ranked-pet','#arena-pet-select','Chọn Pet trước trận','Bạn có thể đổi sang một Pet đã sở hữu từ danh sách. Lựa chọn được lưu như khi đổi ở trang Linh vật.'),
       read('ranked-start','#btn_timtran_1v1','Tìm đối thủ và diễn biến trận','Bấm tìm trận khi sẵn sàng. Bạn có thể hủy lúc đang chờ. Nếu không có đối thủ, hệ thống có thể ghép Bot. Khi trận bắt đầu, trả lời câu hỏi để gây sát thương; xem kết quả và thưởng khi kết thúc.',{fallback:'#arena-fight button[onclick*="startMatchmaking"]'}),
       click('ranked-back','#btn_back_modes_ranked','Quay lại chọn chế độ','Bấm nút quay lại chế độ để xem phần giao hữu.',shown('#arena-modes-bar')),
       click('casual-open','#card-mode-casual','Mở Đấu giao hữu','Bấm card giao hữu để xem mã phòng và các lựa chọn chơi với bạn bè hoặc Bot.',shown('#arena-casual')),
@@ -205,7 +204,7 @@
     let saved=currentUserAccount.tourProgress;
     if(!saved){try{saved=JSON.parse(localStorage.getItem('tok_tour_v2_'+currentUserAccount.userId));}catch{}}
     if(saved && !saved.completed && saved.layout===(state.mobile?'mobile':'desktop')) {
-      const renamedSteps={'shop-admin':'shop-items','audio-quiz':'audio-overview','audio-reward':'audio-overview','audio-battle':'audio-overview','audio-outcome':'audio-overview'};
+      const renamedSteps={'ranked-pet':'ranked-start','shop-admin':'shop-items','audio-quiz':'audio-overview','audio-reward':'audio-overview','audio-battle':'audio-overview','audio-outcome':'audio-overview'};
       const index=state.steps.findIndex(step=>step.id===(renamedSteps[saved.step]||saved.step));
       if(index>=0 && saved.context){state.index=index;await restoreContext(saved.context);}
     }

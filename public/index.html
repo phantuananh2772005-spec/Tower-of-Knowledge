@@ -890,9 +890,6 @@
             <select id="lobby-subject" onchange="renderLobby()" class="text-xs font-semibold bg-[var(--background)] border border-[var(--border)] rounded-xl px-3 py-2 cursor-pointer">
               <option value="csdl">Cơ sở dữ liệu</option>
             </select>
-            <select id="arena-pet-select" onchange="quickSwitchPet(this.value)" class="text-xs font-semibold bg-[var(--background)] border border-[var(--border)] rounded-xl px-3 py-2 text-emerald-600 cursor-pointer" title="Chọn linh vật ra trận">
-              <!-- Cập nhật tự động từ danh sách sở hữu -->
-            </select>
           </div>
           <div class="grid grid-cols-2 gap-3 max-w-sm mx-auto text-xs shrink-0">
             <div class="rounded-xl border border-[var(--border)] p-3 space-y-1">
@@ -1017,13 +1014,10 @@
             </div>
           </div>
 
-          <!-- Tùy chọn môn và linh thú -->
+          <!-- Chọn môn thi đấu -->
           <div class="flex flex-wrap items-center justify-center gap-3 shrink-0 py-1">
             <select id="casual-subject" class="text-xs font-semibold bg-[var(--background)] border border-[var(--border)] rounded-xl px-3 py-2 cursor-pointer">
               <option value="csdl">Cơ sở dữ liệu</option>
-            </select>
-            <select id="casual-pet-select" onchange="quickSwitchPet(this.value)" class="text-xs font-semibold bg-[var(--background)] border border-[var(--border)] rounded-xl px-3 py-2 text-cyan-600 cursor-pointer" title="Chọn linh vật ra trận">
-              <!-- Cập nhật tự động từ danh sách sở hữu -->
             </select>
           </div>
 
@@ -3503,16 +3497,6 @@
       const arenaLobbyName = document.getElementById('arena-lobby-pet-name');
       if (arenaLobbyName) arenaLobbyName.textContent = '🐾 ' + name;
 
-      // Dropdown chọn nhanh pet tại sảnh đấu trường
-      const isAdminForSelect = Boolean(currentUserAccount && currentUserAccount.vai_tro === 'QUAN_TRI_VIEN');
-      const arenaPetSelect = document.getElementById('arena-pet-select');
-      if (arenaPetSelect) {
-        arenaPetSelect.innerHTML = allPets
-          .filter(p => (p.role !== 'admin' || isAdminForSelect) && ownedPets[p.id])
-          .map(p => `<option value="${p.id}" ${p.id === id ? 'selected' : ''}>${p.icon} ${p.name}</option>`)
-          .join('');
-      }
-
       // 5b. Sảnh Đấu thường (view-minigame Casual VS)
       const casualLobbyPet = document.getElementById('casual-lobby-pet');
       if (casualLobbyPet) {
@@ -3524,14 +3508,6 @@
       }
       const casualLobbyName = document.getElementById('casual-lobby-pet-name');
       if (casualLobbyName) casualLobbyName.textContent = '🐾 ' + name;
-
-      const casualPetSelect = document.getElementById('casual-pet-select');
-      if (casualPetSelect) {
-        casualPetSelect.innerHTML = allPets
-          .filter(p => (p.role !== 'admin' || isAdminForSelect) && ownedPets[p.id])
-          .map(p => `<option value="${p.id}" ${p.id === id ? 'selected' : ''}>${p.icon} ${p.name}</option>`)
-          .join('');
-      }
 
       // 6. Trận đấu pet (view-battle)
       const battlePet = document.getElementById('my-pet');
@@ -3567,22 +3543,6 @@
         renderRank();
       }
       renderAccessoryOverlays();
-    }
-
-    function quickSwitchPet(petId) {
-      const pet = allPets.find(p => p.id === petId);
-      if (!pet) return;
-      const isAdminUser = Boolean(currentUserAccount && currentUserAccount.vai_tro === 'QUAN_TRI_VIEN');
-      if (pet.role === 'admin' && !isAdminUser) {
-        showToast("👑 Linh thú Thần thoại này chỉ dành riêng cho Quản Trị Viên!", "error");
-        return;
-      }
-      if (!ownedPets[petId]) {
-        showToast("Bạn chưa sở hữu linh vật này! Hãy mở khóa trong Cửa hàng.", "error");
-        syncAllPetDisplays();
-        return;
-      }
-      equipPet(pet.id, pet.name, pet.icon, pet.buff, pet.image);
     }
 
     function renderShopPets() {
