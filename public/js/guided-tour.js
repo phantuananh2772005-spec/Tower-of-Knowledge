@@ -57,7 +57,9 @@
     add(read('enrolled-card','#enrolled-courses-grid > div','Quản lý những môn đã đăng ký','Card hiển thị tiến độ của từng môn. Nút vào leo tháp mở đúng bản đồ môn đó. Dùng mục này khi muốn đổi môn đang học.'),
       read('enrolled-progress','#enrolled-courses-grid > div:first-child p','Tiến độ theo tài khoản','Tiến độ học được lấy từ máy chủ. Bài chưa hoàn thành và bài đã hoàn thành được phân biệt khi bạn mở bản đồ.'));
     section='Bản đồ & bài học'; nav('saga','Lộ trình');
-    add(read('map-progress','#topbar-title','Mốc, sao và chương đang học','Thanh tiến độ cho biết số mốc đã qua. Nếu có huy hiệu sao của chương, đó là kết quả học trong chương đang chọn.'),
+    add(read('map-scroll','.garden-intro','Khám phá toàn bộ hành trình','Cuộn lên hoặc xuống để xem các mốc và các chương. Mốc có khóa vẫn xem được nhưng chỉ mở sau khi hoàn thành mốc trước.'),
+      read('map-return','#btn_garden_current','Quay về mốc đang học','Khi xem xa vị trí hiện tại, bấm nút này để trở lại mốc đang học mà không cần kéo tìm.'),
+      read('map-progress','#topbar-title','Mốc, sao và chương đang học','Thanh tiến độ cho biết số mốc đã qua. Nếu có huy hiệu sao của chương, đó là kết quả học trong chương đang chọn.'),
       click('checkpoint-open',()=>find('[id^="btn_moc_active_"]')||find('[id^="btn_moc_done_"]'), 'Mở một mốc đang học','Bấm mốc được viền sáng trên bản đồ. Hệ thống mở phần tổng quan, lý thuyết hoặc bài luyện tùy loại mốc.',()=>Boolean(find('#modal-checkpoint')||find('#modal-theory')||find('#view-play')), {optional:true}),
       read('checkpoint-summary',()=>find('#cp-modal-title')||find('#theory-title')||find('#card-title'),'Đọc hướng dẫn của mốc','Mốc lý thuyết có nội dung bài giảng; mốc luyện tập chia thành các chặng. Chặng khóa sẽ mở khi bạn hoàn thành chặng trước.'),
       read('checkpoint-steps',()=>find('#cp-modal-steps-container > div')||find('#theory-content')||find('#card-content'),'Cách học từng chặng','Đọc bài trước, chọn “Bắt đầu” ở chặng đang mở, rồi làm từng câu. Trắc nghiệm: chọn một đáp án. Nối cặp: chọn hai ô tương ứng. Điền từ: chọn từ phù hợp. Ghép câu: chạm các thẻ theo thứ tự.'),
