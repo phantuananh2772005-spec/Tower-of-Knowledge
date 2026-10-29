@@ -1463,21 +1463,16 @@
     </section>
 
     <!-- ================= VIEW 8: CỬA HÀNG SHOP RIÊNG BIỆT (TÁCH HẲN RA KHỎI PET) ================= -->
-    <section id="view-shop" class="hidden p-6 sm:p-10 max-w-4xl w-full mx-auto space-y-6">
-      <div class="flex items-center justify-end border-b border-[var(--border)] pb-3">
-        <!-- Số dư Xu -->
-        <div class="bg-amber-500/10 border border-amber-500/30 text-amber-600 px-3 py-1.5 rounded-xl flex items-center gap-1.5 font-mono font-bold text-xs shadow-2xs">
-          <span>Ví:</span>
-          <span class="user-coins-val font-black">0</span> 🪙
-        </div>
-      </div>
-
+    <section id="view-shop" class="hidden p-6 sm:p-10 w-full space-y-6">
       <!-- Nhóm 1: Mở khóa Linh vật mới (DẠNG THANH MINI SIÊU GỌN) -->
       <div class="space-y-2.5">
+        <div class="flex items-center justify-between gap-3">
         <h3 class="text-[11px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] flex items-center gap-1.5">
           <span>🐾</span> <span>Linh vật đồng hành</span>
         </h3>
-        <div id="shop-pets-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+        <div id="shop-mobile-wallet" class="md:hidden shrink-0 text-amber-600 font-bold text-xs"><span class="user-coins-val">0</span> 🪙</div>
+        </div>
+        <div id="shop-pets-grid" class="grid gap-2" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,max(260px,calc((100% - 24px)/4))),1fr))">
           <!-- Linh vật được hiển thị động bởi renderShopPets() -->
         </div>
       </div>
