@@ -3,6 +3,7 @@ const puppeteer=require('puppeteer-core');
 const db=require('../database/db');
 const auth=require('../services/auth.service');
 const recovery=require('../services/password-recovery.service');
+const {io}=require('socket.io-client');
 const base='http://localhost:3002';
 async function main(){
   assert(/127\.0\.0\.1:55432\/tok_test/.test(process.env.DATABASE_URL),'Disposable local DB only');
@@ -37,12 +38,20 @@ async function main(){
     const oldResponse=await fetch(base+'/api/auth/me',{headers:{Authorization:'Bearer '+reg.token}});assert.equal(oldResponse.status,401);
     const newLogin=await auth.login({ten_dang_nhap:reg.nguoi_dung.ten_dang_nhap,mat_khau:'RecoveryUi123!'});
     const me=await fetch(base+'/api/auth/me',{headers:{Authorization:'Bearer '+newLogin.token}});assert.equal(me.status,200);
+    const socket=io(base,{auth:{token:newLogin.token},transports:['websocket'],reconnection:false});
+    try{
+      await new Promise((resolve,reject)=>{socket.once('connect',resolve);socket.once('connect_error',reject);setTimeout(()=>reject(Error('Socket connect timeout')),5000).unref();});
+      const proof=await recovery.googleProof({sub:'ui_recovery_'+stamp,email});
+      await recovery.reset({email,recovery_token:proof.recoveryToken,password:'SocketRecovery123!'});
+      const revoked=new Promise((resolve,reject)=>{socket.once('disconnect',resolve);setTimeout(()=>reject(Error('Revoked socket remained connected')),5000).unref();});
+      socket.emit('session_probe');await revoked;
+    }finally{socket.disconnect();}
     const crossOrigin=await fetch(base+'/api/auth/password-recovery/reset',{method:'POST',headers:{'Content-Type':'application/json',Origin:'https://other.example'},body:JSON.stringify({})});assert.equal(crossOrigin.status,400);
     for(let i=0;i<21;i++){
       const limited=await fetch(base+'/api/auth/password-recovery/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
       if(i===20)assert.equal(limited.status,429);
     }
-    console.log('PASS HTTP: revoked session denied, new session accepted, cross-origin denied, recovery rate limit enforced');
+    console.log('PASS HTTP/socket: revoked session denied, new session accepted, connected socket revoked, cross-origin denied, recovery rate limit enforced');
   }finally{
     if(browser)await browser.close();
     if(id){await db.execute('DELETE FROM giao_dich_xu WHERE ma_nguoi_dung=$1',[id]);await db.execute('DELETE FROM thu_cung_so_huu WHERE ma_nguoi_dung=$1',[id]);await db.execute('DELETE FROM nguoi_dung WHERE ma_nguoi_dung=$1',[id]);}
