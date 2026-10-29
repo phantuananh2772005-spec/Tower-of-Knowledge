@@ -231,17 +231,18 @@ async function updateAccount(userId, {ten_hien_thi, ten_dang_nhap}) {
   });
 }
 async function changePassword(userId,{mat_khau_hien_tai,mat_khau_moi},sessionIssuedAt) {
-  return withUserLock(userId,async()=>{
-    const user = await db.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1',[userId]);
+  return withUserLock(userId,()=>db.transaction(async tx=>{
+    const user = await tx.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1'+(db.isPostgres?' FOR UPDATE':''),[userId]);
     if (!user) throw new Error('Người dùng không tồn tại.');
     const hasPassword = user.co_mat_khau !== false && user.co_mat_khau !== 0;
     if (hasPassword && !await bcrypt.compare(String(mat_khau_hien_tai||''),user.mat_khau_hash)) throw new Error('Mật khẩu hiện tại không chính xác.');
     if (!hasPassword && (!user.google_sub || !Number.isFinite(sessionIssuedAt) || Date.now()/1000-sessionIssuedAt>600)) throw new Error('Hãy đăng nhập lại bằng Google trước khi tạo mật khẩu.');
-    if (typeof mat_khau_moi !== 'string' || mat_khau_moi.length < 8 || mat_khau_moi.length > 72) throw new Error('Mật khẩu mới cần có từ 8 đến 72 ký tự.');
+    if (typeof mat_khau_moi !== 'string' || mat_khau_moi.length < 8 || Buffer.byteLength(mat_khau_moi,'utf8') > 72) throw new Error('Mật khẩu mới cần ít nhất 8 ký tự và tối đa 72 byte.');
     const hash = await bcrypt.hash(mat_khau_moi,10);
-    await db.execute('UPDATE nguoi_dung SET mat_khau_hash = $1, co_mat_khau = $2, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $3',[hash,true,userId]);
+    await tx.execute('UPDATE nguoi_dung SET mat_khau_hash = $1, co_mat_khau = $2, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $3',[hash,true,userId]);
+    if(db.isPostgres)await tx.execute('DELETE FROM password_recovery WHERE user_id = $1',[userId]);
     return {updated:true};
-  });
+  }));
 }
 
 module.exports = {

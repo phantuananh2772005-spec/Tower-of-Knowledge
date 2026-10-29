@@ -64,6 +64,10 @@ async function main() {
     await assert.rejects(google.recover({...body,csrf:'wrong'},challenge.cookie),/không khớp/);
     await assert.rejects(google.recover({...body,credential:JSON.stringify({sub:'changed_sub_'+clock,email,email_verified:false,nonce:challenge.nonce})},challenge.cookie),/chưa được xác minh/);
     await require('../services/password-recovery.service').reset({email,recovery_token:actualProof.recoveryToken,password:'GoogleRecovery456!'});
+    const staleProof=await recovery.googleProof({sub:'changed_sub_'+clock,email});
+    await auth.changePassword(id,{mat_khau_hien_tai:'GoogleRecovery456!',mat_khau_moi:'ChangedNormally123!'});
+    await assert.rejects(recovery.reset({email,recovery_token:staleProof.recoveryToken,password}),/Mã không đúng/);
+    await assert.rejects(auth.changePassword(id,{mat_khau_hien_tai:'ChangedNormally123!',mat_khau_moi:'ậ'.repeat(25)}),/72 byte/);
     await assert.rejects(createRecoveryService({transport:{configured:()=>false}}).request({email}),/chưa được cấu hình/);
     console.log('PASS: registered + verified link gating, cooldown/concurrency, hashed codes, five-attempt lockout, expiration, mail failure rollback, single-use reset, old session revocation, new login, changed-link rejection, unavailable mail; free Google proof requires existing subject/email and is single-use');
   } finally {
