@@ -1,0 +1,42 @@
+/* Shared gutters and spacing for the seven navigation pages. */
+#app-main-scroll {
+  --page-gutter: 16px;
+  --page-gap: 12px;
+  scrollbar-gutter: stable;
+}
+#app-main-scroll .app-page {
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+  padding: var(--page-gutter);
+}
+#app-main-scroll .app-page > * {
+  margin-block: 0;
+  min-width: 0;
+}
+#app-main-scroll .app-page > :not(.hidden):not([hidden]) + :not(.hidden):not([hidden]) {
+  margin-block-start: var(--page-gap);
+}
+#app-main-scroll .app-page > .grid,
+#hub-enrolled-courses-grid,
+#enrolled-courses-grid,
+#catalog-courses-grid,
+#arena-modes-bar,
+#owned-pets-list,
+#shop-pets-grid,
+#shop-items-grid {
+  gap: var(--page-gap);
+}
+#app-topbar { padding-inline: 16px; }
+#app-sidebar nav { display: flex; flex-direction: column; gap: 4px; }
+#app-sidebar nav > button {
+  min-height: 46px;
+  margin-block: 0;
+  border-width: 1px;
+  border-style: solid;
+}
+#app-sidebar nav > button:not(.border) { border-color: transparent; }
+@media (min-width: 768px) {
+  #app-main-scroll { --page-gutter: 24px; --page-gap: 16px; }
+  #app-topbar { padding-inline: 24px; }
+}

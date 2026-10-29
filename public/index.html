@@ -15,6 +15,7 @@
   <title>Tháp Tri Thức - Nền Tảng Học Tập Gamification & Đấu Trường 1v1</title>
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="/css/page-layout.css">
   <style>
     @keyframes lunge { 0%,100%{transform:translateX(0)} 40%{transform:translateX(60px) scale(1.15)} }
     @keyframes lungeL { 0%,100%{transform:translateX(0) scaleX(-1)} 40%{transform:translateX(-60px) scaleX(-1) scale(1.15)} }
@@ -412,7 +413,7 @@
     <main id="app-main-scroll" class="flex-1 overflow-y-auto flex flex-col pb-20 md:pb-6">
 
       <!-- ================= VIEW 1: BẢN ĐỒ LỘ TRÌNH LEO THÁP (CHUYỂN VÀO KHI HỌC MÔN) ================= -->
-      <section id="view-saga" class="hidden px-2 sm:px-4 max-w-2xl lg:max-w-6xl xl:max-w-7xl w-full mx-auto pt-4 pb-8 transition-all duration-300">
+      <section id="view-saga" class="app-page hidden transition-all duration-300">
 
         <!-- Dynamic Roadmap Content rendered via renderRealSagaRoadmap() from live DB -->
         <div id="saga-roadmap-track" class="w-full flex flex-col items-center">
@@ -524,7 +525,7 @@
 
     <!-- ================= VIEW 3: TRANG CHỦ CHÍNH (HUB OVERVIEW - MẶC ĐỊNH MỞ NGAY) ================= -->
     <!-- ================= VIEW 3: TRANG CHỦ CHÍNH (COMMAND CENTER ACTION HUB) ================= -->
-    <section id="view-hub" class="p-3 sm:p-5 max-w-6xl w-full mx-auto space-y-4 sm:space-y-5">
+    <section id="view-hub" class="app-page">
 
       <!-- ================= MAIN COMMAND GRID: 2 CỘT CÂN ĐỐI (MOBILE: TỰ ĐỘNG XẾP DỌC) ================= -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 items-stretch">
@@ -738,7 +739,7 @@
           <button id="btn_hub_xem_tatca_mon" onclick="navTo('enrolled')" class="text-xs font-semibold text-emerald-600 hover:underline cursor-pointer">Xem tất cả →</button>
         </div>
         <div id="hub-enrolled-courses-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div class="py-4 text-center text-xs text-[var(--muted-foreground)] col-span-2">Đang tải danh sách môn học...</div>
+          <div class="py-4 text-center text-xs text-[var(--muted-foreground)] col-span-full">Đang tải danh sách môn học...</div>
         </div>
       </div>
 
@@ -746,7 +747,7 @@
     </section>
 
     <!-- ================= VIEW 4: MÔN ĐANG THEO HỌC (MY LEARNING - CHỈ HIỂN THỊ MÔN ĐÃ THAM GIA) ================= -->
-    <section id="view-enrolled" class="hidden p-6 sm:p-10 max-w-5xl w-full mx-auto space-y-6">
+    <section id="view-enrolled" class="app-page hidden">
       <div class="flex items-center justify-between border-b border-[var(--border)] pb-4">
         <div>
           <h2 class="text-lg font-bold">Môn học đang tham gia</h2>
@@ -757,23 +758,23 @@
         </button>
       </div>
       <div id="enrolled-courses-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div class="col-span-2 text-center py-12 text-xs text-[var(--muted-foreground)]">Đang tải danh sách môn học từ hệ thống...</div>
+        <div class="col-span-full text-center py-12 text-xs text-[var(--muted-foreground)]">Đang tải danh sách môn học từ hệ thống...</div>
       </div>
     </section>
 
     <!-- ================= VIEW 5: KHO MÔN HỌC HỆ THỐNG (CATALOG - ĐỂ DUYỆT VÀ THAM GIA) ================= -->
-    <section id="view-catalog" class="hidden p-6 sm:p-10 max-w-5xl w-full mx-auto space-y-6">
+    <section id="view-catalog" class="app-page hidden">
       <div class="border-b border-[var(--border)] pb-4">
         <h2 class="text-lg font-bold">Kho môn học hệ thống</h2>
         
       </div>
       <div id="catalog-courses-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        <div class="col-span-3 text-center py-12 text-xs text-[var(--muted-foreground)]">Đang tải kho môn học...</div>
+        <div class="col-span-full text-center py-12 text-xs text-[var(--muted-foreground)]">Đang tải kho môn học...</div>
       </div>
     </section>
 
     <!-- ================= VIEW 6: ĐẤU TRƯỜNG MINI GAME (SẢNH CHẾ ĐỘ + BXH) ================= -->
-    <section id="view-minigame" class="hidden p-3 sm:p-5 max-w-5xl lg:max-w-6xl w-full mx-auto flex-1 flex flex-col justify-start min-h-0 space-y-4">
+    <section id="view-minigame" class="app-page hidden flex-1 flex flex-col justify-start min-h-0">
       <!-- Tiêu đề Sảnh Đấu Trường Mini Game -->
       <div id="arena-header-banner" class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border)] pb-4">
         <div>
@@ -1395,7 +1396,7 @@
 
     <!-- ================= VIEW 7: LINH VẬT THÚ CƯNG (THUẦN CHĂM SÓC & BỘ SƯU TẬP) ================= -->
     <!-- ================= VIEW 7: LINH VẬT THÚ CƯNG (2 CỘT RESPONSIVE) ================= -->
-    <section id="view-pet" class="hidden p-4 sm:p-8 max-w-5xl w-full mx-auto">
+    <section id="view-pet" class="app-page hidden">
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
         <!-- CỘT TRÁI (Lg: 7 cột): Thẻ Linh vật đang trang bị -->
@@ -1463,7 +1464,7 @@
     </section>
 
     <!-- ================= VIEW 8: CỬA HÀNG SHOP RIÊNG BIỆT (TÁCH HẲN RA KHỎI PET) ================= -->
-    <section id="view-shop" class="hidden p-6 sm:p-10 w-full space-y-6">
+    <section id="view-shop" class="app-page hidden">
       <!-- Nhóm 1: Mở khóa Linh vật mới (DẠNG THANH MINI SIÊU GỌN) -->
       <div class="space-y-2.5">
         <div class="flex items-center justify-between gap-3">
@@ -1472,7 +1473,7 @@
         </h3>
         <div id="shop-mobile-wallet" class="md:hidden shrink-0 text-amber-600 font-bold text-xs"><span class="user-coins-val">0</span> 🪙</div>
         </div>
-        <div id="shop-pets-grid" class="grid gap-2" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,max(260px,calc((100% - 24px)/4))),1fr))">
+        <div id="shop-pets-grid" class="grid gap-2" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,max(260px,calc((100% - var(--page-gap)*3)/4))),1fr))">
           <!-- Linh vật được hiển thị động bởi renderShopPets() -->
         </div>
       </div>
@@ -4032,7 +4033,7 @@
 
       if (!myEnrolledCourses || myEnrolledCourses.length === 0) {
         container.innerHTML = `
-          <div class="col-span-2 p-6 rounded-2xl border border-dashed border-[var(--border)] bg-[var(--background)]/40 text-center space-y-3">
+          <div class="col-span-full p-6 rounded-2xl border border-dashed border-[var(--border)] bg-[var(--background)]/40 text-center space-y-3">
             <div class="text-3xl select-none">📚</div>
             <div class="font-bold text-sm text-[var(--foreground)]">Bạn chưa đăng ký môn học nào</div>
             <p class="text-xs text-[var(--muted-foreground)] max-w-md mx-auto leading-relaxed">
@@ -4069,7 +4070,7 @@
 
       if (!myEnrolledCourses || myEnrolledCourses.length === 0) {
         container.innerHTML = `
-          <div class="col-span-2 text-center py-16 text-xs text-[var(--muted-foreground)] space-y-3 bg-[var(--card)]/40 rounded-2xl border border-dashed border-[var(--border)] p-8">
+          <div class="col-span-full text-center py-16 text-xs text-[var(--muted-foreground)] space-y-3 bg-[var(--card)]/40 rounded-2xl border border-dashed border-[var(--border)] p-8">
             <div class="text-4xl select-none">🎯</div>
             <div class="font-bold text-sm text-[var(--foreground)]">Chưa có môn học nào trong lộ trình cá nhân của bạn</div>
             <p class="text-xs text-[var(--muted-foreground)] max-w-sm mx-auto leading-relaxed">
@@ -4121,7 +4122,7 @@
       if (!container) return;
 
       if (!allSystemCourses || allSystemCourses.length === 0) {
-        container.innerHTML = '<div class="col-span-3 text-center py-12 text-xs text-[var(--muted-foreground)]">Kho môn học hiện chưa có môn nào.</div>';
+        container.innerHTML = '<div class="col-span-full text-center py-12 text-xs text-[var(--muted-foreground)]">Kho môn học hiện chưa có môn nào.</div>';
         return;
       }
 
