@@ -1,0 +1,7 @@
+# Clay node icon study
+
+Generated using built-in image_gen with transparent_background=true. Original preserved at C:/Users/phant/.codex/generated_images/01a17daf-fa56-7d73-b334-c8669519fb84/exec-084146f8-2750-4125-bc31-9e7aa32c5404.png (RGBA, 1536×1024). Four quadrants extracted and resized using Pillow without creative edits. Project assets: node-learn.webp, node-reinforce.webp, node-apply.webp, node-boss.webp. Preview: /design/nodes-clay.html. No learning data changes.
+
+## Exact prompt
+
+Create a clean 2 by 2 sprite sheet of FOUR separate premium cozy clay 2.5D educational game icons on a truly transparent background. Equal square quadrants, generous transparent gaps, no text, no labels, no frames, no platforms or bases. Top left: an open ivory book with sage green thick cover, pages and one tiny gold bookmark. Top right: two chunky curved sage-and-teal arrows forming a circular refresh loop, with a small cream checkmark in the center. Bottom left: three rounded interlocking puzzle building blocks, teal, ochre and cream, visibly fitting together, simple silhouette. Bottom right: a substantial golden crown with three points and one muted jade jewel. All four in same handmade clay material, soft organic bevels, three-quarter near-front view, light from upper left, readable large silhouettes at 48px, subtle ambient occlusion, no cast shadow outside the object, no scenery. Each icon completely contained in its own quadrant. Uniform object scale with crown slightly grander. Not flat vector, not shiny plastic, no lettering.
