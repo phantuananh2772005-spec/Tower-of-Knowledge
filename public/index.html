@@ -2,6 +2,16 @@
 <html lang="vi" class="dark">
 <head>
   <meta charset="UTF-8">
+  <script>
+    // Apply the saved theme before external resources can delay the first paint.
+    try {
+      document.documentElement.classList.toggle('dark', localStorage.getItem('app-theme') !== 'light');
+    } catch (_) { /* Keep the existing dark default if browser storage is unavailable. */ }
+  </script>
+  <style>
+    html { color-scheme: light; background: #f8fafc; color: #0f172a; }
+    html.dark { color-scheme: dark; background: #090a0f; color: #f1f5f9; }
+  </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <link rel="manifest" href="/manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
