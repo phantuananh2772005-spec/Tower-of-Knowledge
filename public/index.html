@@ -4335,7 +4335,7 @@
       if (opponent && opponent.image) {
         opPetBox.innerHTML = `<img src="${opponent.image}" alt="${opponent.petName || 'Bot'}" class="w-24 h-24 sm:w-28 sm:h-28 object-contain pixel-art drop-shadow-xl select-none mx-auto block" />`;
       } else {
-        opPetBox.innerHTML = `<span class="text-6xl sm:text-7xl select-none inline-block pet-animated block" style="transform:scaleX(${opponent.isBot ? 1 : -1})">${opponent.petIcon || '🤖'}</span>`;
+        opPetBox.innerHTML = `<span class="text-6xl sm:text-7xl select-none inline-block pet-animated block" style="transform:scaleX(${(opponent.id?.startsWith('usr_bot_') || opponent.isBot || matchData?.doi_thu_la_bot) ? 1 : -1})">${opponent.petIcon || '🤖'}</span>`;
       }
     }
     const opUserName = document.getElementById('vs-op-user-name');
@@ -4381,9 +4381,7 @@
     Object.assign(B, { my: 100, op: 100, combo: 0, maxCombo: 0, userCorrectCount: 0, qi: 0, shield: false, shieldUsed: false, over: false });
 
     // Xác định vai trò đối thủ (Bot hay Người chơi thực PvP) & Định danh người dùng
-    B.isBot = (typeof opponent?.isBot === 'boolean')
-      ? opponent.isBot
-      : Boolean(matchData?.doi_thu_la_bot ?? (opponent?.id && opponent.id.startsWith('usr_bot_')));
+    B.isBot = Boolean(opponent?.id?.startsWith('usr_bot_') || opponent?.isBot || matchData?.doi_thu_la_bot);
     B.isCasual = Boolean(opponent?.isCasual || currentArenaMode === 'casual' || matchData?.isCasual);
     B.isFriendMatch = Boolean(opponent?.isFriendMatch);
     B.myUserId = matchData?.my_user_id || B.myUserId || currentUserAccount?.userId;
