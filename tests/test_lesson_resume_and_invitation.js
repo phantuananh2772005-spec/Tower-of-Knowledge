@@ -57,7 +57,7 @@ async function main(){
         const ok=GuidedTour.step==='lesson-explanation';
         return {ok,state:LessonProgress.capture(),feedback:!document.getElementById('q-feedback-box').classList.contains('hidden')};
       },snapshot);
-      assert(restored.ok&&restored.feedback,'Feedback not restored: '+type);
+      assert(restored.ok&&(type==='NOI_CAP'?!restored.feedback:restored.feedback),'Answer feedback state not restored: '+type);
       for(const key of ['queue','submissions','answer','checked','word','words','pairs','failed','firstCorrect'])assert.deepStrictEqual(restored.state[key],snapshot[key],type+': '+key);
       await page.evaluate(()=>skipPetTour());
       console.log('PASS restore '+type+' after reload without duplicate submissions');

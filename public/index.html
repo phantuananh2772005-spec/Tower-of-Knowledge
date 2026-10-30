@@ -8187,15 +8187,7 @@
               }
             }
 
-            const fbBox = document.getElementById('q-feedback-box');
-            const fbTitle = document.getElementById('q-feedback-title');
-            const fbDesc = document.getElementById('q-feedback-desc');
-            if (fbBox && fbTitle && fbDesc) {
-              fbTitle.innerHTML = `<span class="text-emerald-600 font-bold">✓ Đã ghép đúng tất cả các cặp.</span>`;
-              fbDesc.textContent = q.giai_thich || 'Khái niệm trọng tâm của mốc học giúp củng cố bản chất lý thuyết và ghi nhớ bền vững.';
-              fbBox.className = "rounded-2xl p-4 border border-emerald-500/40 bg-emerald-500/10 text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200";
-              fbBox.classList.remove('hidden');
-            }
+            document.getElementById('q-feedback-box')?.classList.add('hidden');
 
             const nextBtn = document.getElementById('btn-next-step');
             if (nextBtn) {
