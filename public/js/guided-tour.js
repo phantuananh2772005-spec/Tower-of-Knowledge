@@ -246,9 +246,9 @@
       nextBtn.disabled=false;nextBtn.textContent='Tiếp tục →';layout();return;
     }
     state.target=target;
-    if(step.id==='lesson-answer'||(step.id==='audio-overview'&&state.mobile)){
+    if(step.id==='lesson-answer'||(['audio-overview','checkpoint-steps'].includes(step.id)&&state.mobile)){
       const oldStyle=target.getAttribute('style');
-      const heightRatio=step.id==='audio-overview' ? 0.28 : 0.36;
+      const heightRatio=['audio-overview','checkpoint-steps'].includes(step.id) ? 0.28 : 0.36;
       target.style.maxHeight=Math.floor(innerHeight*heightRatio)+'px';target.style.minHeight='0';target.style.overflowY='auto';
       state.restoreTargetStyle=()=>{if(oldStyle===null)target.removeAttribute('style');else target.setAttribute('style',oldStyle);};
     }

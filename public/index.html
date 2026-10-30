@@ -16,6 +16,7 @@
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
   <link rel="stylesheet" href="/css/page-layout.css">
+  <link rel="stylesheet" href="/css/lesson-layout.css">
   <link rel="stylesheet" href="/css/learning-garden.css">
   <style>
     @keyframes lunge { 0%,100%{transform:translateX(0)} 40%{transform:translateX(60px) scale(1.15)} }
@@ -368,7 +369,7 @@
 
     <!-- ================= VIEW 2: MÀN HÌNH BÀI HỌC THEO MỐC (THẺ GHI NHỚ LÝ THUYẾT + LUYỆN TẬP DUOLINGO) ================= -->
     <section id="view-play" class="hidden flex-1 flex flex-col justify-between max-w-2xl w-full mx-auto p-4 sm:p-8 min-h-[calc(100vh-1rem)]">
-      <!-- 1. DUOLINGO TOP FOCUS HEADER: [ ✕ ] ━━━━━━━━━░░░░░ ❤️ 5 -->
+      <!-- Tiến độ bài học -->
       <div class="w-full shrink-0">
         <div class="flex items-center gap-3 w-full py-2">
           <!-- Nút X thoát bài học (gộp "Dừng" và "Về bản đồ") -->
@@ -385,11 +386,7 @@
             <div id="play-progress" class="h-full bg-emerald-500 rounded-full transition-all duration-300 shadow-sm" style="width: 0%"></div>
           </div>
 
-          <!-- Sinh mạng / Chuỗi tim Duolingo -->
-          <div id="play-hearts-badge" class="flex items-center gap-1 font-bold text-xs sm:text-sm text-rose-500 shrink-0 font-mono px-2.5 py-1 rounded-xl bg-rose-500/10 border border-rose-500/20 shadow-2xs select-none">
-            <span class="animate-pulse">❤️</span>
-            <span id="play-hearts-count">5</span>
-          </div>
+
         </div>
       </div>
 
@@ -433,6 +430,7 @@
         <!-- Hidden legacy tags to preserve compatibility with existing JS updates -->
         <span id="q-bloom-tag" class="hidden"></span>
         <span id="q-counter" class="hidden"></span>
+        <div id="practice-scroll-region" tabindex="0" aria-label="Câu hỏi và phản hồi">
 
         <!-- Question Prompt: Gọn gàng, nổi bật, không trùng lặp -->
         <div class="space-y-1 pt-1">
@@ -450,8 +448,9 @@
           <p id="q-feedback-desc" class="text-[var(--foreground)]/90 leading-relaxed font-sans"></p>
         </div>
 
-        <!-- Action Footer Duolingo: Nút chính full-width ở đáy + link xem gợi ý bài giảng nhẹ nhàng -->
-        <div class="pt-3 border-t border-[var(--border)]/70 space-y-2">
+        </div>
+        <!-- Thao tác bài học luôn nằm trong khung nhìn -->
+        <div id="lesson-actions" class="pt-3 border-t border-[var(--border)]/70 space-y-2">
           <button id="btn-next-step" onclick="handleMocPracticeAction()" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md hover:shadow-lg transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]">
             <span>Kiểm tra</span> <span>✓</span>
           </button>
@@ -7135,6 +7134,7 @@
     }
 
     function renderCurrentPracticeQuestion() {
+      const region=document.getElementById('practice-scroll-region');if(region)region.scrollTop=0;
       if (!currentMocSession || currentMocSession.questionsQueue.length === 0) return;
       const s = currentMocSession;
       const q = s.questionsQueue[0];
@@ -7739,6 +7739,7 @@
     }
 
     function renderQuizQuestion() {
+      const region=document.getElementById('practice-scroll-region');if(region)region.scrollTop=0;
       if (!currentQuizSession) return;
       const { tieuDe, step, questions, qIndex } = currentQuizSession;
       if (qIndex >= questions.length) {
@@ -8004,7 +8005,7 @@
         btn.dataset.item = item;
         btn.dataset.side = 'left';
         btn.className = LEFT_BASE_CLASS;
-        btn.innerHTML = `<span class="break-words line-clamp-3">${escapeHtml(item)}</span>`;
+        btn.innerHTML = `<span class="break-words">${escapeHtml(item)}</span>`;
         btn.onclick = () => selectNoiCapToken('left', item, btn);
         leftCol.appendChild(btn);
       });
@@ -8025,7 +8026,7 @@
         btn.dataset.item = item;
         btn.dataset.side = 'right';
         btn.className = RIGHT_BASE_CLASS;
-        btn.innerHTML = `<span class="break-words line-clamp-4">${escapeHtml(item)}</span>`;
+        btn.innerHTML = `<span class="break-words">${escapeHtml(item)}</span>`;
         btn.onclick = () => selectNoiCapToken('right', item, btn);
         rightCol.appendChild(btn);
       });
@@ -8110,7 +8111,7 @@
         const isMatch = (expectedRight !== undefined && expectedRight === rightVal);
 
         if (isMatch) {
-          // --- MATCH CORRECT: Vanish both paired cards + sparkling chime ---
+          // Matched cards remain visible for review.
           if (audioSettings && audioSettings.quiz) playAdvancedSound('pair-match');
 
           leftBtn.dataset.matched = 'true';
@@ -8118,12 +8119,8 @@
           leftBtn.classList.add('pair-matched-vanish');
           rightBtn.classList.add('pair-matched-vanish');
 
-          setTimeout(() => {
-            leftBtn.style.visibility = 'hidden';
-            leftBtn.style.pointerEvents = 'none';
-            rightBtn.style.visibility = 'hidden';
-            rightBtn.style.pointerEvents = 'none';
-          }, 350);
+          leftBtn.disabled = true;
+          rightBtn.disabled = true;
 
           ms.matchedPairs.push({ left: leftVal, right: rightVal });
           ms.selectedLeft = null;
@@ -8145,12 +8142,22 @@
 
           // If all pairs are matched -> Tự động hoàn thành câu & chuyển nút thành [Tiếp tục]
           if (ms.matchedPairs.length >= ms.totalPairs) {
+            // Keep completed pairs readable, aligned for review instead of leaving empty slots.
+            const rightButtons=[...container.querySelectorAll('button[data-side="right"]')];
+            for(const left of container.querySelectorAll('button[data-side="left"]')){
+              const right=rightButtons.find(button=>button.dataset.item===ms.pairsMap[left.dataset.item]);
+              if(right){
+                right.parentElement.appendChild(right);
+                const rowHeight=Math.max(left.getBoundingClientRect().height,right.getBoundingClientRect().height);
+                left.style.minHeight=right.style.minHeight=rowHeight+'px';
+              }
+            }
             if (counterBadge) {
               counterBadge.textContent = `✓ ${ms.totalPairs}/${ms.totalPairs} hoàn tất`;
               counterBadge.className = "text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white font-mono";
             }
             const statusEl = document.getElementById('noi-cap-status-box');
-            if (statusEl) statusEl.classList.remove('hidden');
+            if (statusEl) statusEl.classList.add('hidden');
             if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-correct');
 
             const s = currentMocSession || currentQuizSession;
@@ -8184,7 +8191,7 @@
             const fbTitle = document.getElementById('q-feedback-title');
             const fbDesc = document.getElementById('q-feedback-desc');
             if (fbBox && fbTitle && fbDesc) {
-              fbTitle.innerHTML = `<span class="text-emerald-600 font-bold">✓ Rất chính xác! Ghép thành công tất cả các cặp!</span>`;
+              fbTitle.innerHTML = `<span class="text-emerald-600 font-bold">✓ Đã ghép đúng tất cả các cặp.</span>`;
               fbDesc.textContent = q.giai_thich || 'Khái niệm trọng tâm của mốc học giúp củng cố bản chất lý thuyết và ghi nhớ bền vững.';
               fbBox.className = "rounded-2xl p-4 border border-emerald-500/40 bg-emerald-500/10 text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200";
               fbBox.classList.remove('hidden');
