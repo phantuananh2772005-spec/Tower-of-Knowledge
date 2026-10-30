@@ -76,3 +76,13 @@
 #hub-focus-title{line-height:1.4;height:2.8em;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 #hub-target-desc{min-width:0;line-height:1.5;height:1.5em;overflow:hidden}
 @media(max-width:639px){#hub-target-desc{height:3em}}
+
+/* Compact account progress and identical quest action slots in every state. */
+#hub-level-progress{padding:6px 0;background:transparent;border:0;border-radius:0}
+#hub-level-progress>div:first-child{font-size:11px;line-height:18px}
+#hub-level-progress>div:nth-child(2){height:4px;margin-top:5px}
+#hub-next-level{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+#daily-quests-list button,#modal-daily-quests button[id^="btn_modal_quest_"]{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;width:116px;min-width:116px;max-width:116px;height:34px;min-height:34px;padding:0 6px;flex-shrink:0;font-size:11px;line-height:1.2;white-space:nowrap;overflow:hidden}
+#daily-quests-list button>span{overflow:hidden;text-overflow:ellipsis}
+#daily-quests-list [id$="-text"]{display:inline-block;width:24px;min-width:24px;text-align:right}
+#daily-quest-summary{display:inline-flex;justify-content:center;width:100px;min-width:100px}
