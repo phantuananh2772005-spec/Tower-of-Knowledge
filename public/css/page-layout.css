@@ -65,3 +65,7 @@
 .app-nav-art{display:block;width:30px;height:30px;object-fit:contain;flex-shrink:0;pointer-events:none;user-select:none}
 #mobile-bottom-bar .app-nav-art{width:28px;height:28px}
 #modal-mobile-more .app-nav-art{width:40px;height:40px}
+.function-art{display:inline-block;width:var(--art-size,24px);height:var(--art-size,24px);object-fit:contain;vertical-align:middle;flex-shrink:0;pointer-events:none;user-select:none}
+#arena-modes-bar .function-art{--art-size:44px!important}
+#mobile-bottom-bar .function-art{--art-size:28px!important}
+#modal-mobile-more .function-art{--art-size:40px!important}
