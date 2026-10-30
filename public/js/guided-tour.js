@@ -113,11 +113,11 @@
     section='Hồ sơ & cài đặt';
     if (mobile) more('profile');
     add(click('profile-open', mobile?'#btn_m_more_profile':'#app-sidebar [onclick="openProfileModal()"]','Mở hồ sơ của bạn',mobile?'Chạm “Hồ sơ” trong menu Thêm.':'Bấm tên hoặc ảnh đại diện ở đầu thanh bên trái.',shown('#modal-profile')),
-      read('profile-level','#profile-rank-badge','Cấp và danh hiệu trong hồ sơ','Danh hiệu, cấp và tiến độ EXP dùng cùng quy tắc với trang chủ. Thanh tiến độ chỉ tính khoảng EXP của cấp hiện tại.'),
-      read('profile-stats','#profile-stat-streak','Xem thành tích của tài khoản','Streak, số mốc đã hoàn thành và số dư Xu là các thông tin riêng của bạn. Huy hiệu chưa đạt có trạng thái khóa và điều kiện mở.'),
-      read('profile-course','#profile-csdl-bar','Tiến độ môn trong hồ sơ','Thanh này theo môn đang chọn. Đổi môn ở danh sách môn học rồi mở lại hồ sơ để xem tiến độ của môn đó.'),
-      read('profile-badges','#badge-card-khoi-dau','Điều kiện nhận huy hiệu','Khởi Đầu: hoàn thành một mốc. Thần Tốc: streak 3 ngày. Kiên Cường: đạt 100 EXP. Đột Phá: hoàn thành 4 mốc. Huy hiệu tự mở theo kết quả tài khoản, không cần mua.'),
-      click('profile-settings','#btn_profile_open_settings','Mở Cài đặt từ hồ sơ','Bấm bánh răng để mở Cài đặt. Bạn cũng có thể mở từ thanh đầu trang trên PC hoặc menu Thêm trên điện thoại.',shown('#modal-settings')),
+      read('profile-level','.journey-exp','Cấp và danh hiệu trong hồ sơ','Số cấp nằm ở góc ảnh đại diện. Danh hiệu và EXP dùng cùng quy tắc với trang chủ.'),
+      read('profile-stats','.journey-streak','Xem thành tích của tài khoản','Đây là chuỗi ngày học hiện tại. Lịch bên dưới hiển thị những ngày có phiên làm bài đã lưu.'),
+      read('profile-course','#journey-courses','Tiến độ môn trong hồ sơ','Chuyển giữa môn đang học và môn hoàn thành. Bấm Học tiếp để mở lộ trình tương ứng.'),
+      read('profile-badges','.journey-badges','Điều kiện nhận huy hiệu','Khởi Đầu: hoàn thành một mốc. Thần Tốc: streak 3 ngày. Kiên Cường: đạt 100 EXP. Đột Phá: hoàn thành 4 mốc. Huy hiệu tự mở theo kết quả tài khoản, không cần mua.'),
+      click('profile-settings','#btn_profile_open_settings','Mở Cài đặt từ hồ sơ','Bấm Cài đặt ở đầu hồ sơ. Bạn cũng có thể mở từ thanh đầu trang trên PC hoặc menu Thêm trên điện thoại.',shown('#modal-settings')),
       click('settings-account','#settings-open-account','Mở Tài khoản & bảo mật','Bấm mục này để xem tên hiển thị, tên đăng nhập và phần mật khẩu.',shown('#settings-view-auth')),
       read('settings-name','#auth-display-name-val','Tên hiển thị và tên đăng nhập','Tên hiển thị là tên mọi người nhìn thấy. Tên đăng nhập dùng để đăng nhập. Bấm Sửa ở đúng dòng, nhập giá trị rồi Lưu khi muốn thay đổi.'),
       click('name-open','#btn_settings_edit_name','Mở ô đổi tên hiển thị','Bấm Đổi ở dòng Tên. Ô nhập và nút Lưu sẽ hiện ngay dưới dòng này.',shown('#edit-box-name')),

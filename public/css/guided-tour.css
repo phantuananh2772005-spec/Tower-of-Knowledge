@@ -21,7 +21,7 @@
 #pet-tour-dialog > .tour-header, #pet-tour-dialog > .tour-controls, #pet-tour-dialog > .tour-progress-track { flex-shrink:0; }
 #tour-resume-banner { position:fixed; bottom:80px; right:16px; z-index:45; max-width:calc(100vw - 32px); padding:12px 16px; border-radius:16px; color:var(--foreground); background:var(--card); border:1px solid #10b981; box-shadow:0 8px 30px #0002; font-size:13px; }
 #tour-resume-banner button { color:#059669; font-weight:700; margin-left:10px; min-height:40px; }
-#modal-profile > div, #modal-checkpoint > div { max-height:90dvh; overflow-y:auto; }
+#modal-checkpoint > div { max-height:90dvh; overflow-y:auto; }
 #profile-rank-percent { font-family:inherit; text-align:right; line-height:1.4; }
 #modal-profile .grid.grid-cols-2 { gap:8px; }
 @media (max-width:767px) {

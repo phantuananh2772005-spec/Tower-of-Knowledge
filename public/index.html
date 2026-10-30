@@ -201,7 +201,8 @@
   <script src="/js/inventory.js"></script>
   <script src="/js/google-signin.js"></script>
   <link rel="stylesheet" href="/css/guided-tour.css">
-<link rel="stylesheet" href="/css/battle-reactions.css"></head>
+<link rel="stylesheet" href="/css/battle-reactions.css">  <link rel="stylesheet" href="/css/personal-journey.css">
+</head>
 <body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen flex font-sans">
 
   <!-- ================= 1. SIDEBAR ĐIỀU HƯỚNG CHUẨN CŨ (TASKBAR BÊN TRÁI - ẨN TRÊN MOBILE ĐỂ GIẢI PHÓNG KHÔNG GIAN) ================= -->
@@ -1432,122 +1433,9 @@
 
   
     <!-- ================= MODAL TRANG CÁ NHÂN (RỘNG RÃI, THUẦN NỘI DUNG, KHÔNG CUỘN) ================= -->
-    <div id="modal-profile" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs transition-opacity duration-200">
-      <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl space-y-4 overflow-hidden relative animate-in fade-in zoom-in-95">
-        
-        <!-- Header: Avatar chuẩn + Tên + Nút đóng -->
-        <div class="flex items-center justify-between gap-4 pb-3.5 border-b border-[var(--border)]">
-          <div class="flex items-center gap-3.5 min-w-0">
-            <div onclick="openAvatarPopover(event)" title="Đổi ảnh đại diện" class="user-avatar-slot w-14 h-14 rounded-2xl border-2 border-emerald-500 shadow-sm flex items-center justify-center text-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 select-none cursor-pointer hover:ring-4 hover:ring-emerald-500/25 hover:scale-105 active:scale-95 transition shrink-0">
-              👦
-            </div>
-            <div class="min-w-0">
-              <h3 class="user-display-name font-bold text-base sm:text-lg tracking-tight truncate leading-tight">Học viên</h3>
-              <span id="profile-role-badge" class="text-[10px] bg-emerald-500/10 text-emerald-600 font-bold px-2.5 py-0.5 rounded-full inline-block mt-1 whitespace-nowrap">
-                Học viên chính thức
-              </span>
-            </div>
-          </div>
-          <div class="flex items-center gap-1.5 shrink-0">
-            <button id="btn_profile_open_settings" onclick="closeProfileModal(); openSettingsModal();" title="Cài đặt tài khoản" class="px-2.5 py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold flex items-center gap-1 text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition cursor-pointer">
-              <span>⚙️</span>
-              <span class="hidden sm:inline">Cài đặt</span>
-            </button>
-            <button id="btn_profile_close" onclick="closeProfileModal()" class="w-8 h-8 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] flex items-center justify-center text-xs font-bold transition cursor-pointer">
-              ✕
-            </button>
-          </div>
-        </div>
-
-        <!-- Cấp bậc & Thứ hạng -->
-        <div class="space-y-2">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
-            🏆 Cấp bậc & Thứ hạng
-          </h4>
-          <div class="grid grid-cols-2 gap-3 text-xs">
-            <div class="bg-[var(--background)] p-3 rounded-2xl border border-[var(--border)] space-y-1.5">
-              <div class="flex items-center justify-between">
-                <span class="text-[11px] text-[var(--muted-foreground)] font-medium">Danh hiệu</span>
-                <span id="profile-rank-badge" class="font-bold text-amber-600 text-xs">TẬP SỰ</span>
-              </div>
-              <div class="flex items-center justify-between font-mono">
-                <span class="font-bold text-sm text-[var(--foreground)]"><span id="profile-rank-pts">0</span> <span class="text-[10px] font-normal text-[var(--muted-foreground)]">EXP</span></span>
-                <span id="profile-rank-percent" class="text-[10px] text-[var(--muted-foreground)]">0%</span>
-              </div>
-              <div class="w-full h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
-                <div id="profile-rank-bar" class="h-full bg-amber-500 rounded-full transition-all duration-300" style="width: 0%"></div>
-              </div>
-            </div>
-            <div class="bg-[var(--background)] p-3 rounded-2xl border border-[var(--border)] space-y-1.5">
-              <div class="flex items-center justify-between">
-                <span id="profile-course-title" class="text-[11px] text-[var(--muted-foreground)] font-medium truncate max-w-[100px]">Môn đang học</span>
-                <span id="profile-csdl-rank-badge" class="font-bold text-[var(--muted-foreground)] text-xs">Chưa học</span>
-              </div>
-              <div class="flex items-center justify-between font-mono">
-                <span class="font-bold text-sm text-[var(--foreground)]"><span id="profile-csdl-mocs-stat">0 môn</span> <span class="text-[10px] font-normal text-[var(--muted-foreground)]">mốc</span></span>
-                <span id="profile-csdl-percent" class="text-[10px] text-[var(--muted-foreground)]">0%</span>
-              </div>
-              <div class="w-full h-1.5 bg-[var(--border)] rounded-full overflow-hidden">
-                <div id="profile-csdl-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-300" style="width: 0%"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Thành tích học tập -->
-        <div class="space-y-2">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
-            📊 Thành tích học tập
-          </h4>
-          <div class="grid grid-cols-3 gap-3 text-center">
-            <div class="bg-[var(--background)] py-2.5 px-3 rounded-2xl border border-[var(--border)]">
-              <span class="text-xl block select-none mb-0.5">🔥</span>
-              <p id="profile-stat-streak" class="font-mono font-bold text-sm text-amber-500">0 ngày</p>
-              <span class="text-[10px] text-[var(--muted-foreground)]">Chuỗi Streak</span>
-            </div>
-            <div class="bg-[var(--background)] py-2.5 px-3 rounded-2xl border border-[var(--border)]">
-              <span class="text-xl block select-none mb-0.5">🎯</span>
-              <p id="profile-stat-mocs" class="font-mono font-bold text-sm text-emerald-600">0 mốc</p>
-              <span class="text-[10px] text-[var(--muted-foreground)]">Đã hoàn thành</span>
-            </div>
-            <div class="bg-[var(--background)] py-2.5 px-3 rounded-2xl border border-[var(--border)]">
-              <span class="text-xl block select-none mb-0.5">🪙</span>
-              <p id="profile-stat-coins" class="font-mono font-bold text-sm text-blue-500">0 Xu</p>
-              <span class="text-[10px] text-[var(--muted-foreground)]">Ví Tri Thức</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Huy hiệu đạt được -->
-        <div class="space-y-2">
-          <h4 class="text-xs font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
-            🏅 Huy hiệu vinh danh
-          </h4>
-          <div class="grid grid-cols-4 gap-2.5 text-center text-xs">
-            <div id="badge-card-khoi-dau" class="bg-[var(--background)] p-2.5 rounded-2xl border border-dashed border-[var(--border)] opacity-40 grayscale flex flex-col items-center gap-1 shadow-2xs select-none">
-              <span class="text-xl select-none">🌱</span>
-              <span class="text-[11px] font-medium text-[var(--muted-foreground)] leading-tight">Khởi Đầu</span>
-              <span class="text-[9px] font-mono text-[var(--muted-foreground)]">🔒 Chưa mở</span>
-            </div>
-            <div id="badge-card-than-toc" class="bg-[var(--background)] p-2.5 rounded-2xl border border-dashed border-[var(--border)] opacity-40 grayscale flex flex-col items-center gap-1 shadow-2xs select-none">
-              <span class="text-xl select-none">⚡</span>
-              <span class="text-[11px] font-medium text-[var(--muted-foreground)] leading-tight">Thần Tốc</span>
-              <span class="text-[9px] font-mono text-[var(--muted-foreground)]">🔒 Chưa mở</span>
-            </div>
-            <div id="badge-card-kien-cuong" class="bg-[var(--background)] p-2.5 rounded-2xl border border-dashed border-[var(--border)] opacity-40 grayscale flex flex-col items-center gap-1 shadow-2xs select-none">
-              <span class="text-xl select-none">🛡️</span>
-              <span class="text-[11px] font-medium text-[var(--muted-foreground)] leading-tight">Kiên Cường</span>
-              <span class="text-[9px] font-mono text-[var(--muted-foreground)]">🔒 Chưa mở</span>
-            </div>
-            <div id="badge-card-dot-pha" class="bg-[var(--background)] p-2.5 rounded-2xl border border-dashed border-[var(--border)] opacity-40 grayscale flex flex-col items-center gap-1 shadow-2xs select-none">
-              <span class="text-xl select-none">👑</span>
-              <span class="text-[11px] font-medium text-[var(--muted-foreground)] leading-tight">Đột Phá</span>
-              <span class="text-[9px] font-mono text-[var(--muted-foreground)]">🔒 Chưa mở</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
+    <div id="modal-profile" class="hidden" role="dialog" aria-modal="true" aria-label="Hành trình của tôi">
+      <div class="journey-top"><button id="btn_profile_close" onclick="closeProfileModal()" aria-label="Quay lại">← Quay lại</button><strong>Hành trình của tôi</strong><button id="btn_profile_open_settings" onclick="closeProfileModal();openSettingsModal()">Cài đặt</button></div>
+      <div id="journey-content" class="journey-content"></div>
     </div><!-- ================= MODAL CÀI ĐẶT (SETTINGS) ================= -->
     <div id="modal-settings" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs transition-opacity duration-200" onclick="if(event.target===this)closeSettingsModal()">
       <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl overflow-y-auto max-h-[90dvh] relative animate-in fade-in zoom-in-95">
@@ -6368,6 +6256,7 @@
     function openProfileModal() {
       renderUserProfileModal();
       renderPresetAvatarsGrid();
+      window.PersonalJourney?.open();
       const modal = document.getElementById('modal-profile');
       if (modal) {
         modal.classList.remove('hidden');
@@ -6381,6 +6270,7 @@
         modal.classList.add('hidden');
         document.body.style.overflow = '';
       }
+      window.PersonalJourney?.close();
       closeAvatarPopover();
     }
 
@@ -10652,5 +10542,6 @@
   <script src="/js/lesson-state.js"></script>
   <script src="/js/password-recovery.js"></script>
   <script src="/js/guided-tour.js"></script>
-<script src="/js/battle-reactions.js"></script></body>
+<script src="/js/battle-reactions.js"></script><script src="/js/personal-journey.js"></script>
+</body>
 </html>
