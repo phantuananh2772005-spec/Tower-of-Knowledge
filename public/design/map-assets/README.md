@@ -23,3 +23,9 @@ A single beautifully rendered miniature leafy garden tree for a 2.5D educational
 The ASCII scene is drawn with text/CSS, inspired by the supplied screenshot; it does not identify or reuse the product shown there. Motion can be paused and respects prefers-reduced-motion. Completed chapters increase scene color and add flowers. Progress, frame width and node selection are demo state only.
 
 Validated at widths 375, 768, 1280 and 1600: all four styles, 15 nodes, vertical scrolling, completed chapter states, return-to-current button, motion toggle, four-card comparison, no horizontal page overflow and no JavaScript errors.
+
+## Four-season integration (2026-10-30)
+
+Production chapters now select spring, summer, autumn and winter by chapter index modulo four. Seven generated WebP assets live here as season-{spring,summer,autumn,winter,halloween,teachers,christmas}.webp. Exact image_gen prompts are recorded in season-prompts.json. Originals remain in Codex generated_images. Resizing/encoding only; no painting via Python.
+
+/design/seasons.html demonstrates six chapters and manual holiday previews. Production uses the four regular seasons only. Holiday scheduling is not enabled. A 200px decorative overlap blends chapter scenery while each chapter SVG remains independent. Production chapter titles/stars remain in a compact overlay instead of a full-width separating band. Both courses retain their real nodes, unlock rules and lesson handlers.

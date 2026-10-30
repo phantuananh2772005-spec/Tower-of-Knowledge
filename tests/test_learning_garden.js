@@ -18,6 +18,9 @@ async function main(){
     assert.equal(await page.$eval('#topbar-title',el=>el.textContent),'Bản đồ leo tháp');
     assert.equal(await page.$eval('#app-topbar',el=>el.querySelectorAll('[role="progressbar"],#topbar-progress,#saga-chapter-stars-badge').length),0);
     assert.equal(await page.$$('.garden-chapter-score').then(items=>items.length),await page.$$('.garden-chapter').then(items=>items.length));
+    const scenery=await page.$$eval('.garden-chapter',sections=>sections.map(s=>({season:s.dataset.season,art:getComputedStyle(s,'::before').backgroundImage,trailCount:s.querySelectorAll('.garden-trail').length})));
+    assert.deepEqual(scenery.map(s=>s.season),scenery.map((_,i)=>['spring','summer','autumn','winter'][i%4]));
+    for(const scene of scenery){assert(scene.art.includes('season-'+scene.season+'.webp'));assert.equal(scene.trailCount,1,'Chapter trail must stay independent');}
     const stats=await page.evaluate(()=>({nodes:document.querySelectorAll('.garden-node').length,expected:liveCourseData.cac_chuong.reduce((n,c)=>n+c.cac_moc.length,0),chapters:document.querySelectorAll('.garden-chapter').length,expectedChapters:liveCourseData.cac_chuong.length,overflow:document.documentElement.scrollWidth>innerWidth||document.getElementById('view-saga').scrollWidth>document.getElementById('view-saga').clientWidth,scrollable:document.getElementById('app-main-scroll').scrollHeight>document.getElementById('app-main-scroll').clientHeight}));
     assert.equal(stats.nodes,stats.expected);assert.equal(stats.chapters,stats.expectedChapters);assert(stats.scrollable);assert(!stats.overflow);
     await page.evaluate(()=>{const s=document.getElementById('app-main-scroll');s.scrollTop=s.scrollHeight;});

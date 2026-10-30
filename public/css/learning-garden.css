@@ -20,3 +20,18 @@
 @media(max-width:767px){.garden-wildlife>span{font-size:18px}.garden-butterfly{left:8px;animation-name:garden-flutter-small}.garden-rabbit{right:8px}}
 @keyframes garden-flutter-small{0%,100%{transform:translate(0,0) rotate(-8deg)}40%{transform:translate(7px,-9px) rotate(8deg)}70%{transform:translate(2px,5px)}}
 @media(prefers-reduced-motion:reduce){.garden-wildlife>span{animation:none}}
+/* The next season fades over the extended previous scene across 200px.
+   Each chapter retains its own SVG trail: no cross-chapter connectors. */
+.garden-chapters{position:relative;background:#e4ead7;overflow:hidden}
+.garden-chapter{position:relative}
+.garden-chapter:before{content:'';position:absolute;inset:-100px 0;background-image:var(--season-art);background-size:100% 100%;background-position:center;pointer-events:none;mask-image:linear-gradient(to bottom,transparent,#000 200px);z-index:0}
+.garden-chapter:first-child:before{mask-image:none}
+.garden-landscape,.dark .garden-landscape{background:none;position:relative}
+.garden-chapter-heading{position:absolute;top:18px;left:20px;right:20px;z-index:2;padding:8px 12px;border:0;border-radius:14px;background:#fffdf0e6;color:#294531;gap:9px;box-shadow:0 2px 10px #32482d0a}
+.garden-chapter-heading h3{font-size:12px;line-height:1.35}.garden-chapter-heading p,.garden-chapter-number,.garden-chapter-state{display:none}.garden-chapter-score{font-size:10px;padding:3px 7px}
+.garden-stop-label{color:#243c2c;text-shadow:0 1px 3px #fff}
+.garden-stop-label>span:not(.garden-stars){color:#3c5142;background:#ffffffe0;border-radius:9px;padding:3px 7px;text-shadow:none}
+.dark .garden-chapters{background:#26382c}.dark .garden-chapter:before{filter:brightness(.64) saturate(.8)}
+.dark .garden-stop-label{color:#fff;text-shadow:0 1px 4px #162b22}.dark .garden-stop-label>span:not(.garden-stars){background:#20392dec;color:#e3eddf}
+.garden-chapter[data-season=winter] .garden-butterfly{display:none}
+@media(max-width:767px){.garden-chapter-heading{left:10px;right:10px;top:14px;padding:7px 9px}.garden-chapter-heading h3{font-size:11px}}
