@@ -347,7 +347,7 @@
       <div id="topbar-right" class="shrink-0 flex items-center gap-2 sm:gap-3">
         <a href="/admin/" style="display:none" id="btn-topbar-admin-portal" title="Chuyển sang Cổng Quản Trị" class="hidden px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/30 hover:bg-amber-500/20 text-xs font-bold transition md:flex items-center gap-1.5 shrink-0"><span>🛡️</span><span class="hidden sm:inline">Quản Trị</span></a>
         <!-- Nút Bật/Tắt Sáng Tối (chỉ hiện trên desktop md trở lên, trên mobile có trong menu Thêm) -->
-        <button onclick="toggleTheme()" id="btn-theme-toggle" title="Chuyển chế độ Sáng (☀️) / Tối (🌙)" class="hidden md:flex h-8 px-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:border-amber-500/50 items-center gap-0.5 transition cursor-pointer shadow-2xs shrink-0 select-none">
+        <button onclick="toggleTheme(event)" id="btn-theme-toggle" title="Chuyển chế độ Sáng (☀️) / Tối (🌙)" class="hidden md:flex h-8 px-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:border-amber-500/50 items-center gap-0.5 transition cursor-pointer shadow-2xs shrink-0 select-none">
           <span id="theme-icon-sun" class="w-6 h-6 rounded flex items-center justify-center text-xs opacity-35 grayscale transition-all">☀️</span>
           <span id="theme-icon-moon" class="w-6 h-6 rounded bg-amber-500/20 flex items-center justify-center text-xs opacity-100 shadow-xs scale-105 transition-all">🌙</span>
         </button>
@@ -2688,7 +2688,7 @@
         </button>
 
         <!-- 5. Chuyển đổi giao diện Sáng / Tối -->
-        <button id="btn_m_more_theme" onclick="toggleTheme()" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
+        <button id="btn_m_more_theme" onclick="toggleTheme(event)" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
           <span class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center text-lg shrink-0">🌓</span>
           <div class="flex-1 min-w-0">
             <p class="font-bold text-xs text-[var(--foreground)]">Chế độ giao diện</p>
@@ -5341,11 +5341,26 @@
       setTheme(savedTheme);
     }
 
-    function toggleTheme() {
-      const isDark = document.documentElement.classList.contains('dark');
-      const nextTheme = isDark ? 'light' : 'dark';
-      setTheme(nextTheme);
-      showToast(nextTheme === 'dark' ? '🌙 Đã chuyển sang chế độ Tối' : '☀️ Đã chuyển sang chế độ Sáng');
+    let themeTransitionRunning = false;
+    function toggleTheme(event) {
+      if (themeTransitionRunning) return;
+      const nextTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+      const apply = () => setTheme(nextTheme);
+      if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        apply();
+        return;
+      }
+      const button = event?.currentTarget || document.getElementById('btn-theme-toggle');
+      const rect = button?.getBoundingClientRect();
+      const x = rect?.width ? rect.left + rect.width / 2 : innerWidth / 2;
+      const y = rect?.height ? rect.top + rect.height / 2 : 0;
+      const radius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+      themeTransitionRunning = true;
+      const transition = document.startViewTransition(apply);
+      transition.ready.then(() => document.documentElement.animate({
+        clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`]
+      }, { duration: 480, easing: 'cubic-bezier(.22,.65,.3,1)', pseudoElement: '::view-transition-new(root)' })).catch(() => {});
+      transition.finished.catch(() => {}).finally(() => { themeTransitionRunning = false; });
     }
 
     function setTheme(theme) {

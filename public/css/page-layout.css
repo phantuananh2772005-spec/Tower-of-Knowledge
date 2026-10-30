@@ -86,3 +86,8 @@
 #daily-quests-list button>span{overflow:hidden;text-overflow:ellipsis}
 #daily-quests-list [id$="-text"]{display:inline-block;width:24px;min-width:24px;text-align:right}
 #daily-quest-summary{display:inline-flex;justify-content:center;width:100px;min-width:100px}
+
+/* Circular theme reveal; initial saved-theme restoration remains immediate. */
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
+::view-transition-old(root){z-index:1}::view-transition-new(root){z-index:2}
+@media(prefers-reduced-motion:reduce){::view-transition-group(root){animation:none}}
