@@ -18,6 +18,8 @@ async function main(){
     assert.equal(await page.$eval('#topbar-title',el=>el.textContent),'Bản đồ leo tháp');
     assert.equal(await page.$eval('#app-topbar',el=>el.querySelectorAll('[role="progressbar"],#topbar-progress,#saga-chapter-stars-badge').length),0);
     assert.equal(await page.$$('.garden-chapter-score').then(items=>items.length),await page.$$('.garden-chapter').then(items=>items.length));
+    const companion=await page.$eval('[aria-current="step"]',button=>{const pet=button.querySelector('#roadmap-pet-avatar'),a=button.getBoundingClientRect(),b=pet.getBoundingClientRect();return {iconCount:button.querySelectorAll('.garden-node-icon').length,dx:Math.abs(a.x+a.width/2-b.x-b.width/2),dy:Math.abs(a.y+a.height/2-b.y-b.height/2)};});
+    assert.equal(companion.iconCount,0,'Current companion must replace the node icon');assert(companion.dx<1&&companion.dy<1,'Companion must be centered on its pedestal '+JSON.stringify(companion));
     const scenery=await page.$$eval('.garden-chapter',sections=>sections.map(s=>({season:s.dataset.season,art:getComputedStyle(s,'::before').backgroundImage,trailCount:s.querySelectorAll('.garden-trail').length})));
     assert.deepEqual(scenery.map(s=>s.season),scenery.map((_,i)=>['spring','summer','autumn','winter'][i%4]));
     for(const scene of scenery){assert(scene.art.includes('season-'+scene.season+'.webp'));assert.equal(scene.trailCount,1,'Chapter trail must stay independent');}
