@@ -202,6 +202,7 @@
   <script src="/js/google-signin.js"></script>
   <link rel="stylesheet" href="/css/guided-tour.css">
 <link rel="stylesheet" href="/css/battle-reactions.css">  <link rel="stylesheet" href="/css/personal-journey.css">
+<link rel="stylesheet" href="/css/season-switch.css">
 </head>
 <body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen flex font-sans">
 
@@ -347,10 +348,7 @@
       <div id="topbar-right" class="shrink-0 flex items-center gap-2 sm:gap-3">
         <a href="/admin/" style="display:none" id="btn-topbar-admin-portal" title="Chuyển sang Cổng Quản Trị" class="hidden px-2.5 py-1.5 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/30 hover:bg-amber-500/20 text-xs font-bold transition md:flex items-center gap-1.5 shrink-0"><span>🛡️</span><span class="hidden sm:inline">Quản Trị</span></a>
         <!-- Nút Bật/Tắt Sáng Tối (chỉ hiện trên desktop md trở lên, trên mobile có trong menu Thêm) -->
-        <button onclick="toggleTheme(event)" id="btn-theme-toggle" title="Chuyển chế độ Sáng (☀️) / Tối (🌙)" class="hidden md:flex h-8 px-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:border-amber-500/50 items-center gap-0.5 transition cursor-pointer shadow-2xs shrink-0 select-none">
-          <span id="theme-icon-sun" class="w-6 h-6 rounded flex items-center justify-center text-xs opacity-35 grayscale transition-all">☀️</span>
-          <span id="theme-icon-moon" class="w-6 h-6 rounded bg-amber-500/20 flex items-center justify-center text-xs opacity-100 shadow-xs scale-105 transition-all">🌙</span>
-        </button>
+        <button onclick="toggleTheme(event)" id="btn-theme-toggle" class="season-switch" role="switch" aria-label="Chế độ tối" aria-checked="true"></button>
 
         <!-- Nút Cài đặt (chỉ hiện trên desktop md trở lên, trên mobile có trong menu Thêm) -->
         <button onclick="openSettingsModal()" id="btn-topbar-settings" title="Cài đặt" class="hidden md:flex w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--border)]/40 hover:border-emerald-500/50 text-[var(--muted-foreground)] hover:text-[var(--foreground)] items-center justify-center transition cursor-pointer shadow-2xs shrink-0">
@@ -1453,6 +1451,7 @@
             </button>
           </div>
 
+          <label class="season-choice" for="theme-art-choice"><span>Chủ đề nút sáng/tối</span><select id="theme-art-choice"><option value="auto">Tự động theo dịp lễ</option><option value="sky">Ngày & đêm</option><option value="halloween">Halloween</option><option value="teachers">20/11 · Đèn bàn</option><option value="christmas">Giáng sinh</option><option value="new-year">Năm mới</option><option value="tet">Tết</option><option value="valentine">Valentine</option><option value="womens-day">8/3 · Tulip</option><option value="youth-spring">26/3 · Mầm xanh</option></select></label>
           <!-- 2 MỤC Ở NGOÀI: 1. AUTH, 2. ÂM THANH HIỆU ỨNG (CẢ 2 ĐỀU ẤN VÀO MỞ CHI TIẾT) -->
           <div class="space-y-3">
             <!-- Mục 1: Auth (Gom tài khoản & mật khẩu lại khi ấn vào mở chi tiết) -->
@@ -2689,12 +2688,7 @@
 
         <!-- 5. Chuyển đổi giao diện Sáng / Tối -->
         <button id="btn_m_more_theme" onclick="toggleTheme(event)" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
-          <span class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center text-lg shrink-0">🌓</span>
-          <div class="flex-1 min-w-0">
-            <p class="font-bold text-xs text-[var(--foreground)]">Chế độ giao diện</p>
-            <p class="text-[10px] text-[var(--muted-foreground)]">Chuyển đổi giao diện Sáng / Tối</p>
-          </div>
-          <span class="text-xs text-[var(--muted-foreground)] shrink-0">☀️/🌙</span>
+          <span class="season-switch single" aria-hidden="true"></span><span class="flex-1 text-xs font-bold">Chế độ giao diện</span>
         </button>
 
         <!-- 6. Cài đặt hệ thống & Âm thanh -->
@@ -10560,5 +10554,6 @@
   <script src="/js/password-recovery.js"></script>
   <script src="/js/guided-tour.js"></script>
 <script src="/js/battle-reactions.js"></script><script src="/js/personal-journey.js"></script>
+<script src="/js/season-switch.js"></script>
 </body>
 </html>
