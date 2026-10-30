@@ -28,7 +28,6 @@
   }
   if(theme!=='ascii'){
    for(const [suffix,symbol]of [['a','🌼'],['b','🌷'],['c','🌸']]){const flower=document.createElement('span');flower.className='blossom bloom-'+suffix;flower.textContent=symbol;flower.setAttribute('aria-hidden','true');landscape.appendChild(flower);}
-   const butterfly=document.createElement('span');butterfly.className='ambient-butterfly';butterfly.textContent='🦋';butterfly.setAttribute('aria-hidden','true');landscape.appendChild(butterfly);
   }
   const lane=document.createElement('div');lane.className='path-lane';
   const xs=[50,64,53,36,48],ys=mini?[60,190,320,450,580]:[85,245,405,565,725],height=mini?720:850;

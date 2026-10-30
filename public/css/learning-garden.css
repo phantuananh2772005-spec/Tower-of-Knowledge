@@ -13,13 +13,6 @@
 @media(prefers-reduced-motion:reduce){.garden-node{transition:none}}
 .garden-intro>div:first-child{flex:1;min-width:0}.garden-summary{flex:0 0 220px;display:flex;flex-direction:column;align-items:stretch;gap:9px}.garden-summary .garden-progress{border:0;padding:0;background:none;text-align:right}.garden-course-progress{height:6px;border-radius:20px;background:var(--garden-line);overflow:hidden}.garden-course-progress>span{display:block;height:100%;border-radius:inherit;background:#159b6c}.garden-summary button{font-size:12px;font-weight:700;text-align:right;cursor:pointer;color:var(--garden-ink)}.garden-summary button:hover{text-decoration:underline}.garden-chapter-heading>div{flex:1;min-width:0}.garden-chapter-score{font-size:12px;font-weight:700;color:#a87924;white-space:nowrap;padding:6px 9px;border-radius:20px;background:#d6a13e15}
 @media(max-width:767px){.garden-intro{flex-direction:column;align-items:stretch}.garden-summary{flex:auto;width:100%}.garden-summary .garden-progress{text-align:left}.garden-summary button{align-self:flex-end}.garden-chapter-state{display:none}.garden-chapter-score{font-size:10px;padding:5px 7px}}
-/* Small background animals stay beside the trail and never intercept taps. */
-.garden-wildlife{position:absolute;inset:0;pointer-events:none;user-select:none;overflow:hidden}.garden-wildlife>span{position:absolute;font-size:24px;line-height:1;filter:saturate(.8)}.garden-butterfly{left:8%;top:65px;animation:garden-flutter 12s ease-in-out infinite}.garden-rabbit{right:8%;top:58%;animation:garden-hop 18s ease-in-out infinite}
-@keyframes garden-flutter{0%,100%{transform:translate(0,0) rotate(-8deg)}30%{transform:translate(14px,-12px) rotate(7deg)}65%{transform:translate(6px,8px) rotate(-4deg)}}
-@keyframes garden-hop{0%,60%,100%{transform:translate(0,0)}65%,80%{transform:translate(-5px,-6px)}70%,85%{transform:translate(-10px,0)}95%{transform:translate(-4px,0)}}
-@media(max-width:767px){.garden-wildlife>span{font-size:18px}.garden-butterfly{left:8px;animation-name:garden-flutter-small}.garden-rabbit{right:8px}}
-@keyframes garden-flutter-small{0%,100%{transform:translate(0,0) rotate(-8deg)}40%{transform:translate(7px,-9px) rotate(8deg)}70%{transform:translate(2px,5px)}}
-@media(prefers-reduced-motion:reduce){.garden-wildlife>span{animation:none}}
 /* The next season fades over the extended previous scene across 200px.
    Each chapter retains its own SVG trail: no cross-chapter connectors. */
 .garden-chapters{position:relative;background:#e4ead7;overflow:hidden}
@@ -33,5 +26,4 @@
 .garden-stop-label>span:not(.garden-stars){color:#3c5142;background:#ffffffe0;border-radius:9px;padding:3px 7px;text-shadow:none}
 .dark .garden-chapters{background:#26382c}.dark .garden-chapter:before{filter:brightness(.64) saturate(.8)}
 .dark .garden-stop-label{color:#fff;text-shadow:0 1px 4px #162b22}.dark .garden-stop-label>span:not(.garden-stars){background:#20392dec;color:#e3eddf}
-.garden-chapter[data-season=winter] .garden-butterfly{display:none}
 @media(max-width:767px){.garden-chapter-heading{left:10px;right:10px;top:14px;padding:7px 9px}.garden-chapter-heading h3{font-size:11px}}
