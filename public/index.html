@@ -491,7 +491,7 @@
                 TRUNG TÂM HỌC TẬP
               </span>
               <h1 id="hub-welcome-title" class="text-sm sm:text-base md:text-xl font-bold tracking-tight text-[var(--foreground)] leading-tight mt-0.5 break-words">
-                Chào mừng, <span class="user-display-name">Học viên</span>! 👋
+                <span class="hub-greeting-line">Chào mừng bạn,</span><span class="hub-greeting-name"><span class="user-display-name">Học viên</span>! 👋</span>
               </h1>
             </div>
             <div class="shrink-0">
@@ -3812,7 +3812,7 @@
       const extraBtn = document.getElementById('btn_hub_khampha_kho_mon');
 
       if (myEnrolledCourses.length === 0) {
-        if (titleEl) titleEl.innerHTML = `Chào mừng bạn đến với Tháp Tri Thức, <span class="user-display-name">${escapeHtml(uName)}</span>! 👋`;
+        if (titleEl) titleEl.innerHTML = `<span class="hub-greeting-line">Chào mừng bạn,</span><span class="hub-greeting-name" title="${escapeHtml(uName)}"><span class="user-display-name">${escapeHtml(uName)}</span>! 👋</span>`;
         if (descEl) descEl.textContent = 'Khám phá các khóa học hệ thống và bắt đầu hành trình nâng cao kiến thức ngay hôm nay.';
         if (actionBtn) {
           actionBtn.innerHTML = '<span>🔍</span> <span class="truncate">Khám phá Kho môn</span> <span>→</span>';
@@ -3820,7 +3820,7 @@
         }
         if (extraBtn) extraBtn.classList.add('hidden');
       } else {
-        if (titleEl) titleEl.innerHTML = `Chào mừng quay trở lại, <span class="user-display-name">${escapeHtml(uName)}</span>! ⚡`;
+        if (titleEl) titleEl.innerHTML = `<span class="hub-greeting-line">Chào mừng quay trở lại,</span><span class="hub-greeting-name" title="${escapeHtml(uName)}"><span class="user-display-name">${escapeHtml(uName)}</span>! ⚡</span>`;
         if (descEl) descEl.textContent = 'Tiếp tục hành trình chinh phục kiến thức và vượt qua các mốc trên lộ trình học tập.';
         if (actionBtn) {
           const firstCourse = myEnrolledCourses[0];

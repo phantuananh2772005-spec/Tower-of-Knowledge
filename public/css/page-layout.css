@@ -69,3 +69,10 @@
 #arena-modes-bar .function-art{--art-size:44px!important}
 #mobile-bottom-bar .function-art{--art-size:28px!important}
 #modal-mobile-more .function-art{--art-size:40px!important}
+
+/* Reserve the same text geometry before and after account/course data arrives. */
+#hub-welcome-title{line-height:1.35;height:2.7em;min-width:0}
+#hub-welcome-title .hub-greeting-line,#hub-welcome-title .hub-greeting-name{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hub-focus-title{line-height:1.4;height:2.8em;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+#hub-target-desc{min-width:0;line-height:1.5;height:1.5em;overflow:hidden}
+@media(max-width:639px){#hub-target-desc{height:3em}}
