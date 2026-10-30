@@ -2,6 +2,7 @@ function renderLearningGarden(courseData) {
   const host=document.getElementById('saga-roadmap-track');
   if(!host||!courseData?.cac_chuong)return;
   window.gardenChapterObserver?.disconnect();
+  window.gardenArtObserver?.disconnect();
   const chapters=courseData.cac_chuong||[], done=m=>['DA_HOAN_THANH','HOAN_THANH'].includes(m?.trang_thai);
   const entries=chapters.flatMap((chapter,index)=>{
     const previous=chapters[index-1]?.cac_moc||[];
@@ -26,7 +27,7 @@ function renderLearningGarden(courseData) {
   const container=host.querySelector('.garden-chapters');
   chapters.forEach((ch,index)=>{
     const items=entries.filter(e=>e.index===index), unlocked=index===0||items.some(e=>e.unlocked);
-    const section=document.createElement('section');section.className='garden-chapter';section.dataset.chapter=ch.ma_chuong;section.dataset.season=['spring','summer','autumn','winter'][index%4];section.style.setProperty('--season-art',`url('/design/map-assets/season-${section.dataset.season}.webp')`);section.id='garden-chapter-'+ch.ma_chuong;
+    const section=document.createElement('section');section.className='garden-chapter';section.dataset.chapter=ch.ma_chuong;section.dataset.season=['spring','summer','autumn','winter'][index%4];section.id='garden-chapter-'+ch.ma_chuong;
     const offsets=[50,66,56,34,44,63,50],height=Math.max(220,items.length*170+150), points=items.map((e,i)=>({x:offsets[i%offsets.length]*6,y:136+i*170}));
     let d='';points.forEach((p,i)=>{if(!i){d=`M ${p.x} ${p.y}`;return;}const last=points[i-1],mid=(last.y+p.y)/2;d+=` C ${last.x} ${mid}, ${p.x} ${mid}, ${p.x} ${p.y}`;});
     section.innerHTML=`<header class="garden-chapter-heading"><span class="garden-chapter-number">${String(ch.thu_tu||index+1).padStart(2,'0')}</span><div><h3>${esc(ch.tieu_de||'Chương '+(index+1))}</h3><p>${unlocked?'Khám phá từng mốc trên đường đi':'Hoàn thành chương trước để mở khóa'}</p></div><span class="garden-chapter-state">${unlocked?'🌿':'🔒'}</span><span class="garden-chapter-score" aria-label="Sao của chương">★ ${(ch.cac_moc||[]).reduce((sum,m)=>sum+getStarCountForMoc(m),0)}/${items.length*3}</span></header><div class="garden-landscape"><div class="garden-lane" style="height:${height}px"><svg class="garden-trail" aria-hidden="true" viewBox="0 0 600 ${height}" preserveAspectRatio="none"><path class="garden-trail-shadow" d="${d}"/><path class="garden-trail-line" d="${d}"/></svg></div></div>`;
@@ -46,6 +47,19 @@ function renderLearningGarden(courseData) {
     });
     container.appendChild(section);
   });
+  const artSize=matchMedia('(max-width:767px)').matches?480:960;
+  const loadArt=section=>{
+    const base='/design/map-assets/optimized/'+section.dataset.season+'-'+artSize;
+    section.style.setProperty('--season-art',CSS.supports('background-image','image-set(url("x.avif") type("image/avif"))')?`image-set(url('${base}.avif') type('image/avif'),url('${base}.webp') type('image/webp'))`:`url('${base}.webp')`);
+  };
+  const scenes=[...host.querySelectorAll('.garden-chapter')];
+  // Load the initial/active scenery immediately; fetch other scenes near the viewport.
+  loadArt(scenes[0]);
+  if(scenes[active.index]!==scenes[0])loadArt(scenes[active.index]);
+  window.gardenArtObserver=new IntersectionObserver(records=>{
+    records.forEach(record=>{if(record.isIntersecting){loadArt(record.target);window.gardenArtObserver.unobserve(record.target);}});
+  },{root:document.getElementById('app-main-scroll'),rootMargin:'600px 0px'});
+  scenes.forEach(section=>window.gardenArtObserver.observe(section));
   host.querySelector('#btn_garden_current').onclick=()=>scrollToActiveNode(true);
   host.querySelector('#btn_garden_change_course').onclick=()=>navTo('enrolled');
   syncAllPetDisplays();

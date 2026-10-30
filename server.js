@@ -44,6 +44,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(responseFormatter);
 
 // Serve static assets & frontend applications
+app.use('/design/map-assets/optimized', express.static(path.join(__dirname, 'public/design/map-assets/optimized'), { maxAge: '7d' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Admin Redirects
