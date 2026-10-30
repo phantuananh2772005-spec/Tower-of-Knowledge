@@ -1,0 +1,1 @@
+Theme switch artwork: generated day/night atlas, transparent extraction, crop + resize to WebP. Source: exec-03bed8fa-054c-4efd-9001-033724b6f8fc.png. Day/night sky 256x104; symbols 100x100. Demo only.
