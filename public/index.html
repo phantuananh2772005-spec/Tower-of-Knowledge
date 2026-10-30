@@ -191,7 +191,7 @@
   <script src="/js/inventory.js"></script>
   <script src="/js/google-signin.js"></script>
   <link rel="stylesheet" href="/css/guided-tour.css">
-</head>
+<link rel="stylesheet" href="/css/battle-reactions.css"></head>
 <body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen flex font-sans">
 
   <!-- ================= 1. SIDEBAR ĐIỀU HƯỚNG CHUẨN CŨ (TASKBAR BÊN TRÁI - ẨN TRÊN MOBILE ĐỂ GIẢI PHÓNG KHÔNG GIAN) ================= -->
@@ -1090,6 +1090,7 @@
           </div>
         </div>
 
+        <div id="b-reactions"><button id="b-reaction-toggle" type="button" aria-label="Gửi biểu cảm" aria-expanded="false" aria-controls="b-reaction-panel" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 9h.1m7.9 0h.1M8 14q4 5 8 0"/></svg></button><div id="b-reaction-panel" hidden><strong>Biểu cảm nhanh</strong><div id="b-reaction-grid"></div><label><input id="b-reaction-mute" type="checkbox">Ẩn biểu cảm từ đối thủ</label><p id="b-reaction-status" role="status"></p></div></div>
         <!-- Nút Khiên bảo vệ tròn gọn gàng -->
         <button id="b-skill" onclick="useShield()" class="w-8 h-8 rounded-full border border-cyan-500/40 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 flex items-center justify-center text-sm font-bold transition cursor-pointer shrink-0 shadow-xs" title="Sử dụng Khiên hộ thể">🛡️</button>
       </div>
@@ -1106,7 +1107,7 @@
             <div id="my-hp" class="h-full bg-emerald-500 transition-all duration-500 rounded-full" style="width:100%"></div>
           </div>
           <div class="relative h-16 flex items-center justify-center mt-1">
-            <div id="my-pet" class="w-16 h-16 flex items-center justify-center select-none text-5xl">🐉</div>
+            <div id="my-reaction" class="battle-reaction" role="status" hidden></div><div id="my-pet" class="w-16 h-16 flex items-center justify-center select-none text-5xl">🐉</div>
             <span id="my-shield" class="hidden absolute text-4xl opacity-80">🛡️</span>
             <span id="my-float" class="absolute -top-2 text-base font-extrabold text-rose-500 opacity-0 pointer-events-none"></span>
             <!-- Huy hiệu Combo x5 cạnh linh vật -->
@@ -1125,7 +1126,7 @@
             <div id="op-hp" class="h-full bg-rose-500 transition-all duration-500 ml-auto rounded-full" style="width:100%"></div>
           </div>
           <div class="relative h-16 flex items-center justify-center mt-1">
-            <div id="op-pet" class="w-16 h-16 flex items-center justify-center select-none text-5xl" style="transform:scaleX(-1)">🦊</div>
+            <div id="op-reaction" class="battle-reaction" role="status" hidden></div><div id="op-pet" class="w-16 h-16 flex items-center justify-center select-none text-5xl" style="transform:scaleX(-1)">🦊</div>
             <span id="op-float" class="absolute -top-2 text-base font-extrabold text-rose-500 opacity-0 pointer-events-none"></span>
           </div>
           <div id="op-battle-pet-name" class="text-[10.5px] text-center font-semibold text-rose-400 truncate">🐾 Cáo Lửa Kitsune</div>
@@ -4506,6 +4507,8 @@
       B.list = [...FALLBACK_BATTLE_QUESTIONS].sort(() => Math.random() - 0.5);
     }
 
+    window.BattleReactions?.start(liveSocket, matchData?.ma_tran, B.myUserId, B.isBot);
+
     // Tham gia phòng Socket thời gian thực (nếu có trận đấu trực tuyến)
     if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected && currentLiveMatch?.ma_tran) {
       liveSocket.emit('join_match_room', { ma_tran: currentLiveMatch.ma_tran });
@@ -4653,6 +4656,7 @@
   }
 
   function clearBattleTimers() {
+    window.BattleReactions?.stop();
     clearInterval(B.tick);
     clearTimeout(B.botT);
   }
@@ -10638,5 +10642,5 @@
   <script src="/js/lesson-state.js"></script>
   <script src="/js/password-recovery.js"></script>
   <script src="/js/guided-tour.js"></script>
-</body>
+<script src="/js/battle-reactions.js"></script></body>
 </html>

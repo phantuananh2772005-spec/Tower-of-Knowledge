@@ -65,6 +65,7 @@ function calculateBotTurnParams({ questionContent, myHp, botHp, userCombo }) {
 }
 
 function initArenaSocket(io) {
+  const reactionCooldowns = new Map();
   // Middleware to authenticate socket gracefully (supports registered users & guests)
   io.use(async (socket, next) => {
     const token = (socket.handshake.auth && socket.handshake.auth.token) || socket.handshake.query?.token;
@@ -96,6 +97,8 @@ function initArenaSocket(io) {
         socket.disconnect(true);
       }
     });
+
+    require('./match-reactions')(io, socket, require('../database/db'), reactionCooldowns);
 
     // Join Matchmaking Queue
     socket.on('join_queue', async (data = {}) => {
