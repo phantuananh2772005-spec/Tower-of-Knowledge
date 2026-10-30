@@ -27,3 +27,15 @@
 .dark .garden-chapters{background:#26382c}.dark .garden-chapter:before{filter:brightness(.64) saturate(.8)}
 .dark .garden-stop-label{color:#fff;text-shadow:0 1px 4px #162b22}.dark .garden-stop-label>span:not(.garden-stars){background:#20392dec;color:#e3eddf}
 @media(max-width:767px){.garden-chapter-heading{left:10px;right:10px;top:14px;padding:7px 9px}.garden-chapter-heading h3{font-size:11px}}
+/* Static round pedestals; only their decorative paper icons drift gently. */
+.garden-node{width:78px;height:56px;border-radius:50%;background:#719958;border-color:#bbcf9f;box-shadow:0 6px 0 #496d3b,0 9px 7px #29493120;overflow:visible}
+.garden-node.is-boss{width:94px;height:67px;border-radius:50%;background:#bd9c60;border-color:#e2d4ac;box-shadow:0 6px 0 #896f42,0 9px 7px #29493120}
+.garden-node-icon{position:absolute;width:82px;height:82px;object-fit:contain;image-rendering:pixelated;pointer-events:none;transform:translateY(-17px);filter:drop-shadow(1px 3px 0 #183a4020);animation:learning-icon-float 4.8s ease-in-out infinite}
+.is-boss .garden-node-icon{width:97px;height:97px;transform:translateY(-21px);animation-delay:-1.5s}
+.is-locked .garden-node-icon{filter:grayscale(.8) saturate(.45);opacity:.7;animation:none}
+.garden-node-badge{position:absolute;right:-8px;bottom:-7px;width:25px;height:25px;display:grid;place-items:center;border:2px solid #fffdef;border-radius:50%;z-index:2;font-size:14px;text-shadow:none;line-height:1;pointer-events:none}
+.garden-node-badge.lock{background:#edf0df;color:#657653;border-color:#b7c5a7}.garden-node-badge.complete{background:#477a4b;color:white}
+.garden-node-badge svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+@keyframes learning-icon-float{0%,100%{translate:0 0}50%{translate:0 -4px}}
+@media(max-width:767px){.garden-node{width:70px;height:51px}.garden-node.is-boss{width:85px;height:61px}.garden-node-icon{width:73px;height:73px;transform:translateY(-15px)}.is-boss .garden-node-icon{width:88px;height:88px;transform:translateY(-19px)}}
+@media(prefers-reduced-motion:reduce){.garden-node-icon{animation:none;translate:0 0}}
