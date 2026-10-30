@@ -7643,6 +7643,8 @@
     }
 
     function renderQuizQuestion() {
+      document.getElementById('play-theory-container')?.classList.add('hidden');
+      document.getElementById('play-practice-container')?.classList.remove('hidden');
       const region=document.getElementById('practice-scroll-region');if(region)region.scrollTop=0;
       if (!currentQuizSession) return;
       const { tieuDe, step, questions, qIndex } = currentQuizSession;
