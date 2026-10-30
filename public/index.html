@@ -2103,11 +2103,12 @@
           <h3 id="cp-modal-title" class="font-bold text-base sm:text-lg leading-tight text-[var(--foreground)]">Mốc 1.1: Khái niệm CSDL</h3>
         </div>
 
+        <div id="cp-records" aria-live="polite"></div>
         <!-- Tóm tắt Lý thuyết mốc học -->
         <div class="bg-[var(--background)]/60 border border-[var(--border)] rounded-2xl p-4 space-y-2">
           <div class="flex items-center justify-between text-xs">
-            <span class="font-bold text-[var(--muted-foreground)] uppercase tracking-wider text-[10px]">📖 Lý thuyết cốt lõi</span>
-            <button id="btn_cp_open_theory_full" onclick="openTheoryFromCheckpoint()" class="text-xs font-semibold text-emerald-600 hover:underline cursor-pointer">Đọc đầy đủ bài giảng →</button>
+            <span class="font-bold text-[var(--muted-foreground)] uppercase tracking-wider text-[10px]">Lý thuyết</span>
+            <button id="btn_cp_open_theory_full" onclick="openTheoryFromCheckpoint()" class="text-xs font-semibold text-emerald-600 hover:underline cursor-pointer">Xem lý thuyết →</button>
           </div>
           <p id="cp-modal-summary" class="text-xs text-[var(--foreground)]/80 leading-relaxed line-clamp-3"></p>
         </div>
@@ -6707,7 +6708,7 @@
 
     function startFocusMocLearning() {
       if (currentFocusMoc && currentFocusMoc.ma_moc) {
-        startMocLearning(currentFocusMoc.ma_moc);
+        openCheckpointModal(currentFocusMoc.ma_moc);
       } else {
         openCourseRoadmap(currentActiveCourseSlug || 'co-so-du-lieu');
       }
@@ -6751,11 +6752,9 @@
 
     function getStarCountForMoc(moc) {
       if (!moc || (moc.trang_thai !== 'HOAN_THANH' && moc.trang_thai !== 'DA_HOAN_THANH')) return 0;
-      const score = (typeof moc.diem_dat_duoc === 'number' && moc.diem_dat_duoc > 0) ? moc.diem_dat_duoc : 100;
-      if (score >= 100) return 3;
-      if (score >= 80) return 2;
-      if (score >= 70) return 1;
-      return 1;
+      const record=moc.ky_luc;
+      if(!record||record.recordedSteps<Number(moc.tong_so_buoc||4))return 1;
+      return record.accuracy>=95?3:record.accuracy>=80?2:1;
     }
 
     function getActiveMoc(mocs) {
@@ -7439,6 +7438,8 @@
         if (res.success && res.data) {
           currentCheckpointMoc = res.data;
           const d = res.data;
+          const record=d.ky_luc,stars=getStarCountForMoc(d);
+          document.getElementById('cp-records').innerHTML=`<div class="cp-stars" aria-label="${stars} trên 3 sao">${[1,2,3].map(n=>'<span class="'+(n<=stars?'earned':'')+'">'+(n<=stars?'★':'☆')+'</span>').join('')}</div><div class="cp-stat-grid"><div><strong>${record?record.accuracy+'%':'—'}</strong><span>Độ chính xác tốt nhất</span></div><div><strong>${record?.averageSeconds!=null?record.averageSeconds+' giây':'—'}</strong><span>Thời gian TB / câu</span></div></div><p class="cp-record-note">Kết hợp lượt tốt nhất của từng chặng${record?' · Đã ghi nhận '+record.recordedSteps+'/'+d.tong_so_buoc+' chặng':''}.</p><details class="cp-star-rules"><summary>Điều kiện nhận sao</summary><p>1 sao: hoàn thành mốc. 2 sao: đúng từ 80%. 3 sao: đúng từ 95%. Sao chính xác chỉ được tính khi có kết quả đủ các chặng. Thời gian không ảnh hưởng số sao.</p></details>`;
 
           const badgeEl = document.getElementById('cp-modal-badge');
           if (badgeEl) badgeEl.textContent = d.loai_moc === 'THU_THACH_BOSS' ? '👑 BOSS CHƯƠNG' : 'Mốc học hệ thống';

@@ -41,7 +41,7 @@ function renderLearningGarden(courseData) {
       wrapper.innerHTML=`<button type="button" id="${esc(buttonId)}" class="garden-node${isBoss?' is-boss':''}" aria-label="${esc(title+(locked?' — Chưa mở':isDone?' — Ôn tập':' — Bắt đầu học'))}" ${locked?'aria-disabled="true"':''} ${isActive?'aria-current="step"':''}>${isActive?'<span class="garden-pet"><span id="roadmap-pet-avatar" aria-hidden="true"></span></span><span id="roadmap-pet-speech-text" class="garden-current-speech" aria-hidden="true">Tiếp tục nhé!</span>':'<img class="garden-node-icon" src="/design/map-assets/'+(isBoss?'pixel-boss-paper':'pixel-learn-v2')+'.webp" alt="" width="96" height="96" decoding="async">'}${locked?'<span class="garden-node-badge lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg></span>':isDone?'<span class="garden-node-badge complete" aria-hidden="true">✓</span>':''}</button><div class="garden-stop-label"><strong>${esc(label)}</strong>${detail?'<span>'+esc(detail)+'</span>':''}${isDone?'<span class="garden-stars" aria-label="'+getStarCountForMoc(m)+' sao">'+'★'.repeat(getStarCountForMoc(m))+'☆'.repeat(3-getStarCountForMoc(m))+'</span>':''}</div>`;
       wrapper.querySelector('button').onclick=()=>{
         if(locked){onSagaLockedClick(m.ma_moc);return;}
-        currentSagaChapterId=ch.ma_chuong;setSagaFocusMoc(m);updateChapter(ch);startMocLearning(m.ma_moc);
+        currentSagaChapterId=ch.ma_chuong;setSagaFocusMoc(m);updateChapter(ch);openCheckpointModal(m.ma_moc);
       };
       lane.appendChild(wrapper);
     });

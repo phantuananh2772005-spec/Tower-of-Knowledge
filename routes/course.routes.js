@@ -39,6 +39,8 @@ router.get('/courses/:slug', optionalAuthenticate, async (req, res) => {
   try {
     const userId = req.user ? req.user.ma_nguoi_dung : null;
     const details = await courseService.getCourseDetails(req.params.slug, userId);
+    const records=userId?await require('../services/checkpoint-records').records(userId):{};
+    for(const ch of details.cac_chuong||[])for(const m of ch.cac_moc||[])m.ky_luc=records[m.ma_moc]||null;
     return res.apiSuccess(details);
   } catch (err) {
     return res.apiError(err.message, 'FETCH_COURSE_FAILED', 404);
@@ -51,6 +53,8 @@ router.get('/checkpoints/:id', authenticate, async (req, res) => {
     const step = req.query.step ? parseInt(req.query.step, 10) : undefined;
     const resumeIds = req.query.resume ? String(req.query.resume).split(',') : undefined;
     const content = await courseService.getCheckpointContent(req.params.id, req.user.ma_nguoi_dung, step, resumeIds);
+    const records=await require('../services/checkpoint-records').records(req.user.ma_nguoi_dung);
+    content.ky_luc=records[req.params.id]||null;
     return res.apiSuccess(content);
   } catch (err) {
     return res.apiError(err.message, 'CHECKPOINT_ACCESS_DENIED', 403);

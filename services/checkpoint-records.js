@@ -1,0 +1,6 @@
+const db=require('../database/db');
+async function records(userId){
+ const rows=await db.query("SELECT ma_moc,buoc_so,chi_tiet_cau_hoi,thoi_gian_tong_giay FROM lich_su_phien_hoc WHERE ma_nguoi_dung=$1 AND loai_phien='DUOLINGO_STEP' ORDER BY tao_luc",[userId]);
+ const byMoc={};for(const row of rows){let details;try{details=JSON.parse(row.chi_tiet_cau_hoi||'[]')}catch{continue}if(!Array.isArray(details)||!details.length)continue;const first=new Map();for(const q of details){if(q.ma_cau_hoi&&!first.has(q.ma_cau_hoi)&&typeof q.la_dung==='boolean')first.set(q.ma_cau_hoi,q)}if(!first.size)continue;const count=first.size,correct=[...first.values()].filter(q=>q.la_dung).length;const ratio=correct/count;const group=byMoc[row.ma_moc]||(byMoc[row.ma_moc]={});const key=String(row.buoc_so||1);if(!group[key]||ratio>group[key].ratio)group[key]={ratio,count,correct,seconds:Number(row.thoi_gian_tong_giay)||0};}
+ const result={};for(const [id,steps]of Object.entries(byMoc)){const values=Object.values(steps),count=values.reduce((n,s)=>n+s.count,0);result[id]={accuracy:Math.round(values.reduce((n,s)=>n+s.correct,0)/count*100),averageSeconds:values.every(s=>s.seconds>0)?Math.round(values.reduce((n,s)=>n+s.seconds,0)/count*10)/10:null,recordedSteps:values.length};}return result;
+}module.exports={records};
