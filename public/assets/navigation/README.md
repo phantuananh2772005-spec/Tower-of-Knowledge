@@ -1,0 +1,7 @@
+# Navigation artwork
+
+Selected direction: dimensional illustrated navigation symbols. Generated with built-in image_gen using the approved concept sheet as style reference. Original source preserved at C:/Users/phant/.codex/generated_images/01a17daf-fa56-7d73-b334-c8669519fb84/exec-3f1bbb83-e9b6-4301-89ae-f75ff33fa238.png, RGBA 1536×1024. Symbols extracted/cropped and resized to maximum 128px WebP using Pillow; no creative image edits. Final files: hub.webp, enrolled.webp, saga.webp, catalog.webp, minigame.webp, pet.webp, shop.webp. Desktop sidebar, mobile bottom navigation and relevant More entries share these files. Avatars unchanged.
+
+## Production prompt
+
+Turn this seven-icon concept board into a production transparent SPRITE SHEET. Preserve the exact seven subjects and crisp illustrated navy azure ivory orange cel-shaded style, but simplify tiny interior details for a 32px navigation icon. Maintain same 4 top / 3 bottom layout with ample gaps. Top row: welcoming tower, open book, winding path and tower, upright books. Bottom row: puzzle pair, friendly blue dragon head, shopping bag. REMOVE ALL TEXT LABELS and completely REMOVE the ivory background, paper grain, ground and cast shadows. Genuine transparent alpha outside each isolated symbol. No panels or tiles. Every icon fully contained in its grid cell, no overlap. Top row equal quarter-width cells; bottom row equal third-width cells. Match visual weight. No emoji. No new elements.

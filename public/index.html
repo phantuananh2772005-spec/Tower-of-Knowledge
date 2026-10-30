@@ -228,7 +228,7 @@
         <!-- 1. Trang chủ chính (Active mặc định) -->
         <button onclick="navTo('hub')" id="nav-hub" title="Trang chủ chính" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-semibold bg-[var(--background)] border border-[var(--border)] flex items-center justify-between shadow-xs">
           <div class="flex items-center gap-3">
-            <span class="text-base shrink-0">🏠</span>
+            <img class="app-nav-art" src="/assets/navigation/hub.webp" alt="" width="32" height="32" decoding="async">
             <span class="sidebar-text font-semibold">Trang chủ chính</span>
           </div>
         </button>
@@ -236,7 +236,7 @@
         <!-- 2. Danh sách Môn đang theo học (Tách riêng biệt) -->
         <button onclick="navTo('enrolled')" id="nav-enrolled" title="Môn đang theo học" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-base shrink-0">🎯</span>
+            <img class="app-nav-art" src="/assets/navigation/enrolled.webp" alt="" width="32" height="32" decoding="async">
             <span class="sidebar-text font-medium">Môn đang theo học</span>
           </div>
           <span id="sidebar-enrolled-count" class="sidebar-text text-[10px] bg-emerald-500/10 text-emerald-600 font-bold px-1.5 py-0.5 rounded font-mono">0</span>
@@ -245,7 +245,7 @@
         <!-- 3. Bản đồ Lộ trình leo tháp -->
         <button onclick="navTo('saga')" id="nav-saga" title="Bản đồ leo tháp" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-base shrink-0">🗺️</span>
+            <img class="app-nav-art" src="/assets/navigation/saga.webp" alt="" width="32" height="32" decoding="async">
             <span class="sidebar-text font-medium">Bản đồ leo tháp</span>
           </div>
           <span id="sidebar-saga-course-tag" class="sidebar-text text-[10px] bg-emerald-500/10 text-emerald-600 font-bold px-1.5 py-0.5 rounded font-mono">CSDL · C1</span>
@@ -254,7 +254,7 @@
         <!-- 4. Kho Môn học Hệ thống (Tách riêng để duyệt & đăng ký) -->
         <button onclick="navTo('catalog')" id="nav-catalog" title="Kho môn học hệ thống" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-base shrink-0">📚</span>
+            <img class="app-nav-art" src="/assets/navigation/catalog.webp" alt="" width="32" height="32" decoding="async">
             <span class="sidebar-text font-medium">Kho môn học hệ thống</span>
           </div>
         </button>
@@ -262,7 +262,7 @@
         <!-- 5. Minigame -->
         <button onclick="navTo('minigame')" id="nav-minigame" title="Minigame" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-base shrink-0">🎮</span>
+            <img class="app-nav-art" src="/assets/navigation/minigame.webp" alt="" width="32" height="32" decoding="async">
             <span class="sidebar-text font-medium">Minigame</span>
           </div>
         </button>
@@ -270,7 +270,7 @@
         <!-- 6. Linh vật Thú cưng -->
         <button onclick="navTo('pet')" id="nav-pet" title="Linh vật Thú cưng" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-base shrink-0">🐾</span>
+            <img class="app-nav-art" src="/assets/navigation/pet.webp" alt="" width="32" height="32" decoding="async">
             <span class="sidebar-text font-medium">Linh vật Thú cưng</span>
           </div>
         </button>
@@ -278,7 +278,7 @@
         <!-- 7. Cửa hàng Shop riêng biệt -->
         <button onclick="navTo('shop')" id="nav-shop" title="Cửa hàng Shop" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-base shrink-0">🛍️</span>
+            <img class="app-nav-art" src="/assets/navigation/shop.webp" alt="" width="32" height="32" decoding="async">
             <span class="sidebar-text font-medium">Cửa hàng Shop</span>
           </div>
         </button>
@@ -2687,19 +2687,19 @@
   <nav id="mobile-bottom-bar" class="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-[var(--card)]/95 backdrop-blur-md border-t border-[var(--border)] px-1 py-1 flex items-center justify-around shadow-lg select-none">
     <!-- 1. Học / Trang chủ -->
     <button id="btn_m_nav_hub" onclick="navTo('hub')" class="flex-1 max-w-[62px] flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition text-emerald-600 dark:text-emerald-400 font-bold active:scale-95 cursor-pointer text-center relative">
-      <span class="text-xl">🏠</span>
+      <img class="app-nav-art" src="/assets/navigation/hub.webp" alt="" width="32" height="32" decoding="async">
       <span class="text-[9.5px] mt-0.5 whitespace-nowrap leading-tight">Học</span>
     </button>
 
     <!-- 2. Bản đồ Lộ trình -->
     <button id="btn_m_nav_saga" onclick="navTo('saga')" class="flex-1 max-w-[62px] flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer text-center relative">
-      <span class="text-xl">🗺️</span>
+      <img class="app-nav-art" src="/assets/navigation/saga.webp" alt="" width="32" height="32" decoding="async">
       <span class="text-[9.5px] mt-0.5 whitespace-nowrap leading-tight">Lộ trình</span>
     </button>
 
     <!-- 3. Minigame -->
     <button id="btn_m_nav_minigame" onclick="navTo('minigame')" class="flex-1 max-w-[62px] flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer text-center relative">
-      <span class="text-xl">🎮</span>
+      <img class="app-nav-art" src="/assets/navigation/minigame.webp" alt="" width="32" height="32" decoding="async">
       <span class="text-[9.5px] mt-0.5 whitespace-nowrap leading-tight">Minigame</span>
     </button>
 
@@ -2712,7 +2712,7 @@
 
     <!-- 5. Linh vật Pet -->
     <button id="btn_m_nav_pet" onclick="navTo('pet')" class="flex-1 max-w-[62px] flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer text-center relative">
-      <span class="text-xl">🐾</span>
+      <img class="app-nav-art" src="/assets/navigation/pet.webp" alt="" width="32" height="32" decoding="async">
       <span class="text-[9.5px] mt-0.5 whitespace-nowrap leading-tight">Linh vật</span>
     </button>
 
@@ -2759,7 +2759,7 @@
 
         <!-- 2. Kho môn học -->
         <button id="btn_m_more_catalog" onclick="closeMobileMoreSheet(); navTo('catalog')" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
-          <span class="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center text-lg shrink-0">📚</span>
+          <img class="app-nav-art" src="/assets/navigation/catalog.webp" alt="" width="32" height="32" decoding="async">
           <div class="flex-1 min-w-0">
             <p class="font-bold text-xs text-[var(--foreground)]">Kho môn học</p>
             <p class="text-[10px] text-[var(--muted-foreground)]">Khám phá và đăng ký môn học mới</p>
@@ -2769,7 +2769,7 @@
 
         <!-- 3. Môn đang học -->
         <button id="btn_m_more_enrolled" onclick="closeMobileMoreSheet(); navTo('enrolled')" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
-          <span class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center text-lg shrink-0">🎯</span>
+          <img class="app-nav-art" src="/assets/navigation/enrolled.webp" alt="" width="32" height="32" decoding="async">
           <div class="flex-1 min-w-0">
             <p class="font-bold text-xs text-[var(--foreground)]">Môn đang theo học</p>
             <p class="text-[10px] text-[var(--muted-foreground)]">Quản lý và chuyển đổi môn học</p>
@@ -2779,7 +2779,7 @@
 
         <!-- 4. Cửa hàng Shop -->
         <button id="btn_m_more_shop" onclick="closeMobileMoreSheet(); navTo('shop')" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
-          <span class="w-10 h-10 rounded-xl bg-purple-500/15 text-purple-500 flex items-center justify-center text-lg shrink-0">🛍️</span>
+          <img class="app-nav-art" src="/assets/navigation/shop.webp" alt="" width="32" height="32" decoding="async">
           <div class="flex-1 min-w-0">
             <p class="font-bold text-xs text-[var(--foreground)]">Cửa hàng Shop</p>
             <p class="text-[10px] text-[var(--muted-foreground)]">Trang bị, thức ăn linh vật, hiệu ứng</p>

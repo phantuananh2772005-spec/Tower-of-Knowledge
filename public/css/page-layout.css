@@ -61,3 +61,7 @@
 #topbar-breadcrumb>button{flex-shrink:0;cursor:pointer;font:inherit;color:inherit}
 #topbar-breadcrumb>button:hover{color:var(--foreground)}
 #topbar-breadcrumb>[aria-current]{min-width:0;overflow:hidden;text-overflow:ellipsis}
+/* Shared original navigation illustrations on desktop and mobile. */
+.app-nav-art{display:block;width:30px;height:30px;object-fit:contain;flex-shrink:0;pointer-events:none;user-select:none}
+#mobile-bottom-bar .app-nav-art{width:28px;height:28px}
+#modal-mobile-more .app-nav-art{width:40px;height:40px}
