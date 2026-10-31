@@ -1,0 +1,56 @@
+/* Isolated header decoration; does not participate in the header flex layout. */
+#app-topbar.tt-pumpkin-host{position:relative}
+.tt-halloween{position:absolute;top:0;bottom:0;overflow:hidden;pointer-events:none;container-type:inline-size;--s:104px;--ground:transparent}
+.tt-halloween>.pk{position:absolute;left:50%;bottom:calc(var(--s) * -0.0958);translate:-50% 0}
+@container(max-width:135px){.tt-halloween>svg.pk{display:none}}
+
+.tt-halloween .pk{display:block;width:var(--s,120px);height:auto;aspect-ratio:1;overflow:visible;pointer-events:none}
+.tt-halloween .pk *{transform-box:view-box}
+.tt-halloween .gr{stroke:var(--ground,#6E5E96);stroke-width:2;stroke-linecap:round;fill:none}
+.tt-halloween .vn{fill:none;stroke:#4C7A34;stroke-width:3;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:var(--vd,0)}
+.tt-halloween .tn{stroke-width:2}
+.tt-halloween .lf{transform-origin:0 0;transform:scale(var(--ls,1))}
+.tt-halloween .lf path:first-child{fill:#6FA03F;stroke:#4C7A34;stroke-width:1.2;stroke-linejoin:round}
+.tt-halloween .lf path+path{fill:none;stroke:#4C7A34;stroke-width:1;stroke-linecap:round}
+.tt-halloween .pump{transform-origin:60px 108px;transform:scale(var(--ps,1))}
+.tt-halloween .bg{fill:#7DA83F;stroke:#4C7A34}
+.tt-halloween .bo{fill:#F08A24;stroke:#B9500E;opacity:var(--og,1)}
+.tt-halloween .shine{fill:none;stroke:#FFD08A;stroke-width:2;stroke-linecap:round;opacity:calc(var(--og,1)*.55)}
+.tt-halloween .stem{fill:#5B7F34;stroke:#3F5E24;stroke-width:1.4;stroke-linejoin:round}
+.tt-halloween .carve{fill:none;stroke:#7A3208;stroke-width:1.4;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:var(--cd,0);opacity:var(--fc,1)}
+.tt-halloween .in{opacity:var(--fc,1)}
+.tt-halloween .glow,.tt-halloween .halo{opacity:var(--lit,1)}
+.tt-halloween .fw{transform-origin:60px 82px;transform:scale(var(--lit,1));opacity:var(--lit,1)}
+.tt-halloween .fl{transform-origin:60px 82px;animation:tt-flick 1.3s ease-in-out infinite}
+
+/* Giai đoạn tĩnh */
+
+
+
+/* Chuỗi chuyển động 14s: mọc → quả → khắc → thắp nến → tắt */
+.tt-halloween .play{--T:14s}
+.tt-halloween .play .scene{animation:tt-out var(--T) linear infinite}
+.tt-halloween .play .vn{animation:tt-vine var(--T) ease-in-out infinite}
+.tt-halloween .play .lA{animation:tt-lfA var(--T) ease-out infinite}
+.tt-halloween .play .lB{animation:tt-lfB var(--T) ease-out infinite}
+.tt-halloween .play .pump{animation:tt-grow var(--T) ease-in-out infinite}
+.tt-halloween .play .bo{animation:tt-ripe var(--T) ease-in-out infinite}
+.tt-halloween .play .carve{animation:tt-carve var(--T) linear infinite}
+.tt-halloween .play .in{animation:tt-holes var(--T) ease-out infinite}
+.tt-halloween .play .glow,.tt-halloween .play .halo{animation:tt-lit var(--T) ease-in-out infinite}
+.tt-halloween .play .fw{animation:tt-ignite var(--T) ease-out infinite}
+
+@keyframes tt-vine{0%,2%{stroke-dashoffset:1}16%,100%{stroke-dashoffset:0}}
+@keyframes tt-lfA{0%,11%{transform:scale(0)}17%{transform:scale(1.15)}20%,100%{transform:scale(1)}}
+@keyframes tt-lfB{0%,15%{transform:scale(0)}21%{transform:scale(1.15)}24%,100%{transform:scale(1)}}
+@keyframes tt-grow{0%,15%{transform:scale(.02)}28%{transform:scale(1.06)}31%{transform:scale(1.08,.92)}34%{transform:scale(.97,1.03)}37%,100%{transform:scale(1)}}
+@keyframes tt-ripe{0%,22%{opacity:0}34%,100%{opacity:1}}
+@keyframes tt-carve{0%,39%{stroke-dashoffset:1}47%,100%{stroke-dashoffset:0}}
+@keyframes tt-holes{0%,46%{opacity:0}50%,100%{opacity:1}}
+@keyframes tt-lit{0%,55%{opacity:0}63%,86%{opacity:1}89%,100%{opacity:0}}
+@keyframes tt-ignite{0%,54%{transform:scale(0);opacity:0}58%{transform:scale(1.2);opacity:1}61%,86%{transform:scale(1);opacity:1}88%,100%{transform:scale(0);opacity:0}}
+@keyframes tt-out{0%,91%{opacity:1}97%,100%{opacity:0}}
+@keyframes tt-flick{0%,100%{transform:scale(1,1) skewX(0)}30%{transform:scale(.94,1.08) skewX(-3deg)}60%{transform:scale(1.05,.95) skewX(2deg)}}
+
+/* Giảm chuyển động: đứng yên ở trạng thái đã thắp nến */
+@media(prefers-reduced-motion:reduce){.tt-halloween .pk,.tt-halloween .pk *{animation:none!important}}
