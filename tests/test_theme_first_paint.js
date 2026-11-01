@@ -17,7 +17,7 @@ const puppeteer=require('puppeteer-core');
    await page.waitForFunction(()=>document.head.querySelector('style')&&getComputedStyle(document.documentElement).backgroundColor!=='rgba(0, 0, 0, 0)');
    const result=await page.evaluate(()=>({dark:document.documentElement.classList.contains('dark'),bg:getComputedStyle(document.documentElement).backgroundColor,body:!!document.body}));
    assert.equal(result.dark,saved!=='light');
-   assert.equal(result.bg,saved==='light'?'rgb(248, 250, 252)':'rgb(9, 10, 15)');
+   assert.equal(result.bg,saved==='blocked'?'rgb(9, 10, 15)':saved==='light'?'rgb(247, 243, 235)':'rgb(20, 29, 33)');
    assert.equal(result.body,false,'Theme must be applied before external scripts finish and body is parsed');
    if(stalled)await stalled.abort();
    console.log('PASS early theme:',saved,result.bg);

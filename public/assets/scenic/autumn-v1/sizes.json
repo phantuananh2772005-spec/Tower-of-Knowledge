@@ -1,0 +1,38 @@
+[
+  {
+    "file": "header-1440.avif",
+    "bytes": 30275
+  },
+  {
+    "file": "header-1440.webp",
+    "bytes": 35056
+  },
+  {
+    "file": "header-640.avif",
+    "bytes": 8286
+  },
+  {
+    "file": "header-640.webp",
+    "bytes": 10210
+  },
+  {
+    "file": "sidebar-320.avif",
+    "bytes": 11607
+  },
+  {
+    "file": "sidebar-320.webp",
+    "bytes": 17426
+  },
+  {
+    "file": "frame-960.webp",
+    "bytes": 137324
+  },
+  {
+    "file": "corner-mobile.webp",
+    "bytes": 13674
+  },
+  {
+    "file": "book-mobile.webp",
+    "bytes": 7850
+  }
+]
