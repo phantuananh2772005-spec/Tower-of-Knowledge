@@ -3,6 +3,8 @@ function renderLearningGarden(courseData) {
   if(!host||!courseData?.cac_chuong)return;
   window.gardenChapterObserver?.disconnect();
   window.gardenArtObserver?.disconnect();
+  window.gardenThemeObserver?.disconnect();
+  window.gardenArtCleanup?.();
   const chapters=courseData.cac_chuong||[], done=m=>['DA_HOAN_THANH','HOAN_THANH'].includes(m?.trang_thai);
   const entries=chapters.flatMap((chapter,index)=>{
     const previous=chapters[index-1]?.cac_moc||[];
@@ -23,7 +25,7 @@ function renderLearningGarden(courseData) {
   }
   updateChapter(active.chapter);
   const esc=escapeHtml;
-  host.innerHTML=`<div class="garden-map"><div class="garden-intro"><div><span class="garden-eyebrow">HÀNH TRÌNH TRI THỨC</span><h2>${esc(name)}</h2><p>Mỗi bước nhỏ, thêm một điều mới.</p></div><div class="garden-summary"><span class="garden-progress">${complete}/${entries.length} mốc đã hoàn thành</span><div class="garden-course-progress" role="progressbar" aria-label="Tiến độ môn học" aria-valuenow="${complete}" aria-valuemin="0" aria-valuemax="${entries.length}"><span style="width:${complete/entries.length*100}%"></span></div><button id="btn_garden_change_course" type="button">Đổi môn →</button></div></div><div class="garden-chapters"></div><div class="garden-finish"><span aria-hidden="true">🏁</span><strong>Đích đến của hành trình</strong><span>Hoàn thành từng mốc để chinh phục môn học.</span></div></div><div class="garden-jump-wrap"><button id="btn_garden_current" type="button">↟ Về mốc đang học</button></div>`;
+  host.innerHTML=`<div class="garden-map"><div class="garden-intro"><div><span class="garden-eyebrow">HÀNH TRÌNH TRI THỨC</span><h2>${esc(name)}</h2></div><div class="garden-summary"><span class="garden-progress">${complete}/${entries.length} mốc đã hoàn thành</span><div class="garden-course-progress" role="progressbar" aria-label="Tiến độ môn học" aria-valuenow="${complete}" aria-valuemin="0" aria-valuemax="${entries.length}"><span style="width:${complete/entries.length*100}%"></span></div><button id="btn_garden_change_course" type="button">Đổi môn →</button></div></div><div class="garden-chapters"></div><div class="garden-finish"><span aria-hidden="true">🏁</span><strong>Đích đến của hành trình</strong><span>Hoàn thành từng mốc để chinh phục môn học.</span></div></div><div class="garden-jump-wrap"><button id="btn_garden_current" type="button">↟ Về mốc đang học</button></div>`;
   const container=host.querySelector('.garden-chapters');
   chapters.forEach((ch,index)=>{
     const items=entries.filter(e=>e.index===index), unlocked=index===0||items.some(e=>e.unlocked);
@@ -38,7 +40,7 @@ function renderLearningGarden(courseData) {
       if(isActive)wrapper.id='active-learning-node';
       const buttonId=(locked?'btn_moc_lock_':isDone?'btn_moc_done_':'btn_moc_active_')+m.ma_moc;
       const title=m.tieu_de||`Mốc ${index+1}.${i+1}`,label=title.split(':')[0],detail=title.includes(':')?title.slice(title.indexOf(':')+1).trim():'';
-      wrapper.innerHTML=`<button type="button" id="${esc(buttonId)}" class="garden-node${isBoss?' is-boss':''}" aria-label="${esc(title+(locked?' — Chưa mở':isDone?' — Ôn tập':' — Bắt đầu học'))}" ${locked?'aria-disabled="true"':''} ${isActive?'aria-current="step"':''}>${isActive?'<span class="garden-pet"><span id="roadmap-pet-avatar" aria-hidden="true"></span></span><span id="roadmap-pet-speech-text" class="garden-current-speech" aria-hidden="true">Tiếp tục nhé!</span>':'<img class="garden-node-icon" src="/design/map-assets/'+(isBoss?'pixel-boss-paper':'pixel-learn-v2')+'.webp" alt="" width="96" height="96" decoding="async">'}${locked?'<span class="garden-node-badge lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg></span>':isDone?'<span class="garden-node-badge complete" aria-hidden="true">✓</span>':''}</button><div class="garden-stop-label"><strong>${esc(label)}</strong>${detail?'<span>'+esc(detail)+'</span>':''}${isDone?'<span class="garden-stars" aria-label="'+getStarCountForMoc(m)+' sao">'+'★'.repeat(getStarCountForMoc(m))+'☆'.repeat(3-getStarCountForMoc(m))+'</span>':''}</div>`;
+      wrapper.innerHTML=`<button type="button" id="${esc(buttonId)}" class="garden-node${isBoss?' is-boss':''}" aria-label="${esc(title+(locked?' — Chưa mở':isDone?' — Ôn tập':' — Bắt đầu học'))}" ${locked?'aria-disabled="true"':''} ${isActive?'aria-current="step"':''}>${isActive?'<span class="garden-pet"><span id="roadmap-pet-avatar" aria-hidden="true"></span></span><span id="roadmap-pet-speech-text" class="garden-current-speech" aria-hidden="true">Tiếp tục nhé!</span>':'<img class="garden-node-icon" data-garden-kind="'+(isBoss?'boss':'learn')+'" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="96" height="96" decoding="async">'}${locked?'<span class="garden-node-badge lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg></span>':isDone?'<span class="garden-node-badge complete" aria-hidden="true">✓</span>':''}</button><div class="garden-stop-label"><strong>${esc(label)}</strong>${detail?'<span>'+esc(detail)+'</span>':''}${isDone?'<span class="garden-stars" aria-label="'+getStarCountForMoc(m)+' sao">'+'★'.repeat(getStarCountForMoc(m))+'☆'.repeat(3-getStarCountForMoc(m))+'</span>':''}</div>`;
       wrapper.querySelector('button').onclick=()=>{
         if(locked){onSagaLockedClick(m.ma_moc);return;}
         currentSagaChapterId=ch.ma_chuong;setSagaFocusMoc(m);updateChapter(ch);openCheckpointModal(m.ma_moc);
@@ -47,19 +49,33 @@ function renderLearningGarden(courseData) {
     });
     container.appendChild(section);
   });
-  const artSize=matchMedia('(max-width:767px)').matches?480:960;
+  const artQuery=matchMedia('(max-width:767px)'),loaded=new Set();
+  const themes=['sky','halloween','teachers','christmas','new-year','tet','valentine','womens-day','youth-spring'];
+  const theme=()=>themes.includes(document.documentElement.dataset.scenicTheme)?document.documentElement.dataset.scenicTheme:'sky';
   const loadArt=section=>{
-    const base='/design/map-assets/optimized/'+section.dataset.season+'-'+artSize;
+    if(!section)return;
+    loaded.add(section);
+    const base='/assets/garden-v2/'+theme()+'/'+section.dataset.season+'-'+(artQuery.matches?480:960);
     section.style.setProperty('--season-art',CSS.supports('background-image','image-set(url("x.avif") type("image/avif"))')?`image-set(url('${base}.avif') type('image/avif'),url('${base}.webp') type('image/webp'))`:`url('${base}.webp')`);
   };
+  const refreshIcons=()=>host.querySelectorAll('[data-garden-kind]').forEach(img=>{
+    const current=theme(),src=img.dataset.gardenKind==='boss'?'/assets/garden-v2/nodes/'+current+'-boss.webp':current==='sky'?'/assets/navigation/enrolled.webp':'/assets/seasonal-icons/'+current+'/enrolled.webp';
+    if(img.getAttribute('src')!==src)img.src=src;
+  });
+  const refresh=()=>{if(currentAppView!=='saga')return;loaded.forEach(loadArt);refreshIcons()};
+  window.refreshLearningGardenArt=refresh;
   const scenes=[...host.querySelectorAll('.garden-chapter')];
-  // Load the initial/active scenery immediately; fetch other scenes near the viewport.
   loadArt(scenes[0]);
   if(scenes[active.index]!==scenes[0])loadArt(scenes[active.index]);
+  refreshIcons();
   window.gardenArtObserver=new IntersectionObserver(records=>{
     records.forEach(record=>{if(record.isIntersecting){loadArt(record.target);window.gardenArtObserver.unobserve(record.target);}});
   },{root:document.getElementById('app-main-scroll'),rootMargin:'600px 0px'});
   scenes.forEach(section=>window.gardenArtObserver.observe(section));
+  window.gardenThemeObserver=new MutationObserver(refresh);
+  window.gardenThemeObserver.observe(document.documentElement,{attributes:true,attributeFilter:['data-scenic-theme']});
+  artQuery.addEventListener('change',refresh);
+  window.gardenArtCleanup=()=>artQuery.removeEventListener('change',refresh);
   host.querySelector('#btn_garden_current').onclick=()=>scrollToActiveNode(true);
   host.querySelector('#btn_garden_change_course').onclick=()=>navTo('enrolled');
   syncAllPetDisplays();

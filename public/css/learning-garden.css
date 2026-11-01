@@ -49,3 +49,27 @@
 .garden-node .garden-pet #roadmap-pet-avatar{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
 
 .cp-stars{display:flex;justify-content:center;gap:12px;font-size:38px;line-height:1.2;color:var(--muted-foreground)}.cp-stars .earned{color:#d89b28}.cp-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 8px}.cp-stat-grid>div{text-align:center;border:1px solid var(--border);border-radius:12px;padding:12px 6px}.cp-stat-grid strong{display:block;font-size:18px}.cp-stat-grid span{display:block;font-size:10px;color:var(--muted-foreground);margin-top:4px}.cp-record-note{font-size:10px;color:var(--muted-foreground);text-align:center}.cp-star-rules{font-size:10px;color:var(--muted-foreground);margin-top:10px}.cp-star-rules summary{cursor:pointer}.cp-star-rules p{margin-top:6px;line-height:1.6}
+/* Unified illustrated study garden; seasonal art never stretches with chapter length. */
+.garden-map{--garden-bg:#e9eddc;--garden-ink:var(--scene-ink,#234632);--garden-muted:#5f7364;--garden-line:var(--scene-border,#cfdbc0);--garden-path:#fff4d6;--garden-card:#fffdf1f0;border-color:var(--scene-border,#d3dcc6);background:var(--garden-bg)}
+.garden-intro,.garden-finish{background:var(--scene-paper,#fffdf1)}
+.garden-intro h2{font-family:Georgia,'Times New Roman',serif;color:var(--garden-ink)}
+.garden-chapters{background:#e9eddc}
+.garden-chapter:before{background-size:cover;background-position:center;background-repeat:no-repeat;mask-image:linear-gradient(to bottom,transparent,#000 180px,#000 calc(100% - 180px),transparent)}
+.garden-chapter:first-child:before{mask-image:linear-gradient(to bottom,#000,#000 calc(100% - 180px),transparent)}
+.garden-chapter-heading{background:#fffdf0ed;border:1px solid #d7d7bd;box-shadow:0 3px 12px #364b2d0a}
+.garden-trail-shadow{stroke:#b6ac82;stroke-width:31;opacity:.65}.garden-trail-line{stroke:#fff4d6;stroke-width:24}
+.garden-node{background:#e7d8ac;border-color:#fff1c6;box-shadow:0 6px 0 #ac9157,0 9px 7px #29493120}
+.garden-node-icon{image-rendering:auto;filter:drop-shadow(0 3px 2px #183a4020)}
+.garden-node:not(.is-boss) .garden-node-icon{width:70px;height:70px}
+.is-boss .garden-node-icon{width:92px;height:92px;transform:translateY(-8px)}
+.garden-stop-label strong{background:#fffdf0eb;border:1px solid #dadbc7;border-radius:20px;padding:3px 10px;text-shadow:none}
+.dark .garden-map{--garden-bg:#20302b;--garden-ink:#eeeadd;--garden-muted:#b7c4b6;--garden-line:#4a5c47;--garden-path:#d4c69c;--garden-card:#21352ff0;border-color:#4a5c47}
+.dark .garden-intro,.dark .garden-finish{background:#202c2b}.dark .garden-chapters{background:#20302b}
+.dark .garden-chapter:before{filter:brightness(.61) saturate(.75)}
+.dark .garden-chapter-heading{background:#20392df0;border-color:#56634b;color:#eeeadd}
+.dark .garden-trail-shadow{stroke:#182c21;opacity:.9}.dark .garden-trail-line{stroke:#9c9d79}
+.dark .garden-stop-label strong{background:#20392df0;border-color:#64715b}
+@media(max-width:767px){.garden-chapter:before{background-size:100% auto;background-repeat:repeat-y;background-position:center top}.garden-node:not(.is-boss) .garden-node-icon{width:62px;height:62px}.is-boss .garden-node-icon{width:83px;height:83px;transform:translateY(-7px)}}
+/* Blend the edges of aspect-preserving mobile tiles instead of exposing a repeat seam. */
+.garden-chapters{container-type:inline-size}
+@media(max-width:767px){.garden-chapter:before{--garden-tile-height:calc(100cqw * 1.3354167);background-image:linear-gradient(to bottom,#e9eddc,transparent 18%,transparent 82%,#e9eddc),var(--season-art);background-size:100% var(--garden-tile-height),100% var(--garden-tile-height);background-repeat:repeat-y}}

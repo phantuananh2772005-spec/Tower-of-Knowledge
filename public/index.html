@@ -2990,6 +2990,7 @@
         if (typeof arenaTab === 'function') arenaTab('fight');
       }
       if (viewName === 'saga') {
+        window.refreshLearningGardenArt?.();
         scrollToActiveNode(true);
       }
       updateTopbarUI(viewName);
