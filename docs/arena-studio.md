@@ -1,0 +1,11 @@
+# Arena lobby design studio
+
+Preview only: `/design/arena-studio.html`. Main matchmaking lobby and socket logic are unchanged.
+
+Three directions: garden campus (open scene and horizontal preparation footer), study/debate lounge (stage beside controls on PC), navy/gold championship stage (darker competitive atmosphere). All stack on mobile. Seasonal selector previews existing holiday icon/corner accents without claiming nine independently painted lobby environments. Shareable `style` and `theme` query parameters preserve preview state. Match button is a clearly labelled local visual simulation with no API/socket calls. Ranking dialog directs visitors back to the main website rather than inventing real leaderboard data.
+
+Built-in image generation: three separate original scene atlases, each with a desktop region and independent mobile region. Prompts request refined dimensional painted illustrations compatible with navy/ivory/gold educational icons, quiet central space for HTML figures, no embedded UI/text/characters. Garden: modern Vietnamese campus courtyard, cream paving, sage foliage, modest books/benches and warm lamps. Study: ivory/navy contemporary learning-club lounge, side bookshelves, brass lamps, open center. Championship: midnight navy/azure and restrained gold framing, open floor and distant academic trophy details. Exclude cultural monuments, bronze drums, flags and traditional clothing/headgear.
+
+`tools/export_arena_studio.py` detects atlas gutters, crops the two compositions, preserves aspect ratio and exports AVIF/WebP. Logo is a resized WebP derivative of the existing brand PNG. New assets are under `public/design/arena-assets/`; only the selected layout's responsive image is requested. AVIF background payload is about 15–40 KiB mobile /25–65 KiB desktop. Original generated PNGs remain outside runtime assets.
+
+Validation: `node tests/test_arena_studio.js` checks 320/390/768/1440/1920 widths, each of three designs, correct mobile/desktop artwork source, all nine seasonal accents, local find/cancel interaction, ranking dialog, reduced-motion CSS, URL persistence, no horizontal overflow or script/asset failures. Screenshots at 390 and1440 are inspected separately.
