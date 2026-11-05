@@ -234,6 +234,11 @@ function initArenaSocket(io) {
         userActiveMatchMap.set(userId, ma_tran);
         socketActiveMatchMap.set(socket.id, ma_tran);
         socket.join(`room_${ma_tran}`);
+        const bot = match.nguoi_choi.find(player => player.ma_nguoi_dung.startsWith('usr_bot_'));
+        if (bot && match.che_do === 'PRACTICE' && match.trang_thai === 'DANG_THI_DAU'
+          && !match.luot_da_tra_loi.some(turn => turn.ma_nguoi_choi_trong_tran === bot.ma_nguoi_choi_trong_tran) && !botTimers.has(ma_tran)) {
+          setupSmartBotTurns(io, `room_${ma_tran}`, ma_tran, userId, bot.ma_nguoi_dung);
+        }
       } catch {
         socket.emit('error_msg', 'Không thể vào phòng đấu.');
       }
@@ -705,7 +710,7 @@ function setupSmartBotTurns(io, roomName, matchId, humanUserId, botUserId) {
   }
 
   // Start round 1 after VS screen animation completes (~2.5 seconds)
-  setTimeout(scheduleNextBotTurn, 2500);
+  botTimers.set(matchId, setTimeout(scheduleNextBotTurn, 2500));
 }
 
 module.exports = {

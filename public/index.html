@@ -4160,9 +4160,11 @@
     }
 
     // 2. Cơ chế Bảo vệ Chờ đợi (Safe Fallback Protection):
-    // Sau 15.0 giây nếu chưa ghép được người chơi thực, tự động khởi tạo trận đấu với Bot AI
-    matchmakingTimeout = setTimeout(async () => {
+    // Nếu máy chủ không trả trận đúng hạn, mở lượt đấu tập cục bộ
+    matchmakingTimeout = setTimeout(() => {
       if (socketMatched) return;
+      socketMatched = true;
+      liveSocket?.emit('leave_queue');
       clearInterval(matchmakingInterval);
       if (statusEl) statusEl.textContent = 'Đấu tập với bot · Không tính điểm hạng';
       if (audioSettings && audioSettings.battle) playAdvancedSound('click');
@@ -4180,34 +4182,12 @@
         isFriendMatch: false
       };
 
-      let liveMatchData = null;
-      try {
-        const resp = await fetch('/api/arena/create-match', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
-          },
-          body: JSON.stringify({
-            doi_thu_id: chosenBot.id,
-            ma_mon: maMon
-          })
-        });
-        const res = await resp.json();
-        if (res.success && res.data) {
-          liveMatchData = res.data;
-          currentLiveMatch = res.data;
-        }
-      } catch (e) {
-        console.warn('REST fallback match:', e);
-      }
-
       matchedOpponent = chosenBot;
       setTimeout(() => {
         if (mmModal) mmModal.classList.add('hidden');
-        showVersusScreen(matchedOpponent, liveMatchData);
+        showVersusScreen(matchedOpponent, null);
       }, 400);
-    }, 15000);
+    }, 18000);
   }
 
   function cancelMatchmaking() {
@@ -4782,7 +4762,7 @@
     clearTimeout(B.botT);
     const botStatus = document.getElementById('b-bot-status');
 
-    if (B.isBot) {
+    if (B.isBot && !currentLiveMatch?.ma_tran) {
       // Tính toán thông số Bot thích ứng động theo diễn biến trận đấu
       const botParams = calculateClientBotTurnParams({
         questionContent: q.q,
