@@ -4124,7 +4124,9 @@
         clearInterval(matchmakingInterval);
         clearTimeout(matchmakingTimeout);
 
-        if (statusEl) statusEl.textContent = '🎯 Đã tìm thấy đối thủ trực tuyến!';
+        if (statusEl) statusEl.textContent = data.doi_thu_la_bot
+          ? 'Đấu tập với bot · Không tính điểm hạng'
+          : 'Đã tìm thấy đối thủ trực tuyến!';
         if (audioSettings && audioSettings.battle) playAdvancedSound('click');
 
         if (data.my_user_id) {
@@ -4162,7 +4164,7 @@
     matchmakingTimeout = setTimeout(async () => {
       if (socketMatched) return;
       clearInterval(matchmakingInterval);
-      if (statusEl) statusEl.textContent = '🎯 Đã ghép nối đối thủ (Đấu Sĩ Thần Bí)!';
+      if (statusEl) statusEl.textContent = 'Đấu tập với bot · Không tính điểm hạng';
       if (audioSettings && audioSettings.battle) playAdvancedSound('click');
 
       const botPool = [
@@ -4243,7 +4245,9 @@
     const opPetName = document.getElementById('vs-op-pet-name');
     if (opPetName) opPetName.textContent = '🐾 ' + (opponent.petName || 'Linh vật đối thủ');
     const opTier = document.getElementById('vs-op-tier');
-    if (opTier) opTier.textContent = opponent.tier || '🌱 Khởi nguyên I';
+    if (opTier) opTier.textContent = (matchData?.che_do === 'PRACTICE' || opponent.isBot || matchData?.doi_thu_la_bot)
+      ? 'Đấu tập · Không tính điểm hạng'
+      : (opponent.tier || '🌱 Khởi nguyên I');
 
     // Chạy thanh tiến trình 2.2s
     const pBar = document.getElementById('vs-progress-bar');
@@ -4300,6 +4304,7 @@
         ma_cau_trong_tran: q.ma_cau_trong_tran
       }));
     } else {
+      currentLiveMatch = null;
       B.list = [...FALLBACK_BATTLE_QUESTIONS].sort(() => Math.random() - 0.5);
     }
 
