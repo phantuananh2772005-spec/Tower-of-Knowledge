@@ -1,4 +1,4 @@
-const { validatePassword, hashPassword } = require('./password-policy');
+const { validatePassword, hashPassword, verifyPassword } = require('./password-policy');
 const crypto = require('crypto');
 const db = require('../database/db');
 const mail = require('./recovery-mail.service');
@@ -65,7 +65,6 @@ function createRecoveryService({ database = db, transport = mail, now = Date.now
     const users = await database.query('SELECT ma_nguoi_dung FROM nguoi_dung WHERE LOWER(google_email) = $1 AND google_sub IS NOT NULL', [email]);
     if (users.length !== 1) throw new Error(invalid);
     const id = users[0].ma_nguoi_dung;
-    const hash = await hashPassword(password);
     const ok = await database.transaction(async tx => {
       const user = await tx.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1 FOR UPDATE', [id]);
       const item = await tx.queryOne('SELECT * FROM password_recovery WHERE user_id = $1', [id]);
@@ -75,6 +74,11 @@ function createRecoveryService({ database = db, transport = mail, now = Date.now
         await tx.execute('UPDATE password_recovery SET attempts = attempts + 1 WHERE user_id = $1', [id]);
         return false; // Commit the failed attempt; throwing inside the transaction would undo it.
       }
+      validatePassword(password, [user.ten_dang_nhap, user.email, email]);
+      if (user.co_mat_khau && await verifyPassword(password, user.mat_khau_hash)) {
+        throw new Error('Hãy chọn mật khẩu khác mật khẩu hiện tại.');
+      }
+      const hash = await hashPassword(password);
       await tx.execute('UPDATE nguoi_dung SET mat_khau_hash = $1, co_mat_khau = $2, session_version = session_version + 1, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $3', [hash,true,id]);
       await tx.execute('DELETE FROM password_recovery WHERE user_id = $1', [id]);
       return true;

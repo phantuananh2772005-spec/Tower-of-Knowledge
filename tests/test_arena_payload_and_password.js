@@ -23,9 +23,10 @@ test('live match exposes only playable data for all four question types', async 
 test('new password rules reject weak inputs and still verify legacy hashes', async () => {
   const bcrypt = require('bcryptjs');
   const { validatePassword, hashPassword, verifyPassword } = require('../services/password-policy');
-  for (const weak of ['short', '123456789012345', 'passwordpassword', 'abcabcabcabcabc']) {
+  for (const weak of ['short', '123456789012345', 'passwordpassword', 'abcabcabcabcabc', '   password20262026!   ', 'ＱＷＥＲＴＹ20262026!']) {
     assert.throws(() => validatePassword(weak));
   }
+  assert.throws(() => validatePassword('testlearner2026!!', ['testlearner@gmail.com']));
   const password = 'Mua xuan tren dinh nui';
   validatePassword(password);
   const hash = await hashPassword(password);

@@ -8,16 +8,23 @@ const common = new Set([
   '123456789012345', '1234567890123456', '0123456789012345',
   'passwordpassword', 'password123456789', 'qwertyuiopasdfgh',
   'qwerty1234567890', 'iloveyouiloveyou', 'letmeinletmein123',
-  'matkhau123456789', 'towerofknowledge', 'thaptrithuc12345'
+  'matkhau123456789', 'towerofknowledge', 'thaptrithuc12345',
+  'password', 'qwerty', 'iloveyou', 'letmein', 'matkhau', 'thaptrithuc'
 ]);
 
 function validatePassword(value, identifiers = []) {
   if (typeof value !== 'string') throw new Error('Vui lòng nhập mật khẩu.');
   const length = [...value].length;
   if (length < 15 || length > 128) throw new Error('Mật khẩu cần từ 15 đến 128 ký tự.');
-  const lower = value.toLowerCase();
-  const matchesAccount = identifiers.some(id => typeof id === 'string' && id.toLowerCase() === lower);
-  if (common.has(lower) || matchesAccount || /^(.{1,4})\1+$/su.test(value) || /^[0-9]+$/.test(value)) {
+  const normalized = value.normalize('NFKC').trim().toLowerCase();
+  const stem = normalized.replace(/[\d\p{P}\p{S}\s]+$/gu, '');
+  const matchesAccount = identifiers.some(id => {
+    if (typeof id !== 'string') return false;
+    const account = id.normalize('NFKC').trim().toLowerCase();
+    return normalized === account || [account, account.split('@')[0]].some(part => part.length >= 5 && part === stem);
+  });
+  if (common.has(normalized) || common.has(stem) || matchesAccount
+    || /^(.{1,4})\1+$/su.test(normalized) || !stem) {
     throw new Error('Mật khẩu này dễ đoán. Hãy chọn một cụm từ dài khác.');
   }
 }
