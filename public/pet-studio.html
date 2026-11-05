@@ -329,6 +329,11 @@
   </main>
 
   <script>
+    function studioHeaders() {
+      const token = localStorage.getItem('tok_admin_token') || localStorage.getItem('tok_token');
+      return { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) };
+    }
+
     let selectedCellIndex = 1;
     let currentRawImage = null;
     let isDrawing = false;
@@ -345,7 +350,7 @@
     // 1. Tải danh sách video ban đầu
     async function loadVideoList() {
       try {
-        const resp = await fetch('/api/pet-studio/videos');
+        const resp = await fetch('/api/pet-studio/videos', { headers: studioHeaders() });
         const json = await resp.json();
         const select = document.getElementById('select-video');
         select.innerHTML = '';
@@ -438,7 +443,7 @@
       try {
         const resp = await fetch('/api/pet-studio/preview-cell', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: studioHeaders(),
           body: JSON.stringify({
             videoPath,
             cellIndex: selectedCellIndex,
@@ -553,7 +558,7 @@
       try {
         const resp = await fetch('/api/pet-studio/export', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: studioHeaders(),
           body: JSON.stringify({
             videoPath,
             cellIndex: selectedCellIndex,
@@ -599,9 +604,6 @@
     // Khởi chạy khi vào trang
     window.addEventListener('DOMContentLoaded', async () => {
       await loadVideoList();
-      selectCell(1, 'pyra_phoenix');
-    });
-      loadVideoList();
       selectCell(1, 'pyra_phoenix');
     });
   </script>

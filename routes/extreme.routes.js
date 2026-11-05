@@ -33,7 +33,8 @@ router.post('/check-answer', optionalAuthenticate, async (req, res) => {
     if (!ma_cau_hoi) {
       return res.apiError('Thiếu mã câu hỏi.', 'MISSING_QUESTION_ID', 400);
     }
-    const result = await extremeService.checkAnswer(ma_cau_hoi, tra_loi, tra_loi_text || lua_chon_text);
+    const result = await extremeService.gradeSession(req.user?.ma_nguoi_dung, req.body.session_id,
+      req.body.answer_index, ma_cau_hoi, tra_loi, tra_loi_text || lua_chon_text);
     return res.apiSuccess(result);
   } catch (err) {
     return res.apiError(err.message, 'CHECK_ANSWER_FAILED', 400);

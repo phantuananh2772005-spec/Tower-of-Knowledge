@@ -3,7 +3,7 @@
  * Handles registration, login, streak maintenance, and JWT tokens.
  */
 
-const bcrypt = require('bcryptjs');
+const { validatePassword, hashPassword, verifyPassword } = require('./password-policy');
 const jwt = require('jsonwebtoken');
 const db = require('../database/db');
 const { evaluateStreak, toVietnamDateString } = require('../core/rules/streak.rules');
@@ -43,7 +43,9 @@ async function formatUserResponse(user) {
     WHERE sh.ma_nguoi_dung = $1 AND sh.dang_kich_hoat = $2
   `, [user.ma_nguoi_dung, true]);
 
+  const ranked=await db.query('SELECT ma_mon,diem FROM diem_dau_hang WHERE ma_nguoi_dung=$1',[user.ma_nguoi_dung]);
   return {
+    diem_dau_hang:Object.fromEntries(ranked.map(r=>[r.ma_mon,Number(r.diem)])),
     ma_nguoi_dung: user.ma_nguoi_dung,
     ten_dang_nhap: user.ten_dang_nhap,
     email: user.email,
@@ -101,8 +103,8 @@ async function register({ ten_dang_nhap, email, mat_khau, ten_hien_thi }) {
     throw new Error('Tên đăng nhập hoặc email đã được sử dụng.');
   }
 
-  const salt = bcrypt.genSaltSync(10);
-  const mat_khau_hash = bcrypt.hashSync(mat_khau, salt);
+  validatePassword(mat_khau, [finalUsername, finalEmail]);
+  const mat_khau_hash = await hashPassword(mat_khau);
   const ma_nguoi_dung = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
   const displayName = ten_hien_thi ? String(ten_hien_thi).trim() : String(ten_dang_nhap).trim();
 
@@ -143,7 +145,7 @@ async function login({ ten_dang_nhap, mat_khau, currentDate }) {
     throw new Error('Tài khoản hoặc mật khẩu không chính xác.');
   }
 
-  const isMatch = user.co_mat_khau !== false && user.co_mat_khau !== 0 && bcrypt.compareSync(mat_khau, user.mat_khau_hash);
+  const isMatch = user.co_mat_khau !== false && user.co_mat_khau !== 0 && await verifyPassword(mat_khau, user.mat_khau_hash);
   if (!isMatch) {
     throw new Error('Tài khoản hoặc mật khẩu không chính xác.');
   }
@@ -235,10 +237,13 @@ async function changePassword(userId,{mat_khau_hien_tai,mat_khau_moi},sessionIss
     const user = await tx.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1'+(db.isPostgres?' FOR UPDATE':''),[userId]);
     if (!user) throw new Error('Người dùng không tồn tại.');
     const hasPassword = user.co_mat_khau !== false && user.co_mat_khau !== 0;
-    if (hasPassword && !await bcrypt.compare(String(mat_khau_hien_tai||''),user.mat_khau_hash)) throw new Error('Mật khẩu hiện tại không chính xác.');
+    if (hasPassword && !await verifyPassword(mat_khau_hien_tai,user.mat_khau_hash)) throw new Error('Mật khẩu hiện tại không chính xác.');
     if (!hasPassword && (!user.google_sub || !Number.isFinite(sessionIssuedAt) || Date.now()/1000-sessionIssuedAt>600)) throw new Error('Hãy đăng nhập lại bằng Google trước khi tạo mật khẩu.');
-    if (typeof mat_khau_moi !== 'string' || mat_khau_moi.length < 8 || Buffer.byteLength(mat_khau_moi,'utf8') > 72) throw new Error('Mật khẩu mới cần ít nhất 8 ký tự và tối đa 72 byte.');
-    const hash = await bcrypt.hash(mat_khau_moi,10);
+    validatePassword(mat_khau_moi, [user.ten_dang_nhap, user.email]);
+    if (hasPassword && await verifyPassword(mat_khau_moi, user.mat_khau_hash)) {
+      throw new Error('Hãy chọn mật khẩu khác mật khẩu hiện tại.');
+    }
+    const hash = await hashPassword(mat_khau_moi);
     await tx.execute('UPDATE nguoi_dung SET mat_khau_hash = $1, co_mat_khau = $2, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $3',[hash,true,userId]);
     if(db.isPostgres)await tx.execute('DELETE FROM password_recovery WHERE user_id = $1',[userId]);
     return {updated:true};

@@ -120,7 +120,7 @@ function initArenaSocket(io) {
         if (opponent.timer) clearTimeout(opponent.timer);
 
         try {
-          const matchState = await arenaService.createMatch(userId, opponent.userId, ma_mon);
+          const matchState = await arenaService.createMatch(userId, opponent.userId, ma_mon, 'RANKED');
           const roomName = `room_${matchState.ma_tran}`;
 
           userActiveMatchMap.set(userId, matchState.ma_tran);
@@ -224,13 +224,18 @@ function initArenaSocket(io) {
     });
 
     // Join Match Room
-    socket.on('join_match_room', ({ ma_tran }) => {
-      if (ma_tran) {
-        const roomName = `room_${ma_tran}`;
+    socket.on('join_match_room', async ({ ma_tran } = {}) => {
+      if (!ma_tran) return;
+      try {
+        const match = await arenaService.getMatchState(ma_tran);
+        if (!match.nguoi_choi.some(player => player.ma_nguoi_dung === userId)) return;
+        const previous = socketActiveMatchMap.get(socket.id);
+        if (previous && previous !== ma_tran) socket.leave(`room_${previous}`);
         userActiveMatchMap.set(userId, ma_tran);
         socketActiveMatchMap.set(socket.id, ma_tran);
-        socket.join(roomName);
-        console.log(`[SOCKET] User ${userId} (socket ${socket.id}) joined ${roomName}. Rooms of this socket:`, Array.from(socket.rooms));
+        socket.join(`room_${ma_tran}`);
+      } catch {
+        socket.emit('error_msg', 'Không thể vào phòng đấu.');
       }
     });
 
@@ -261,12 +266,6 @@ function initArenaSocket(io) {
           sat_thuong_gay_ra: turnResult.sat_thuong_gay_ra,
           la_chi_mang: turnResult.la_chi_mang,
           trang_thai_tran: turnResult.trang_thai_tran
-        });
-
-        // Send feedback to caller
-        socket.emit('turn_feedback', {
-          vi_tri_dap_an_dung: turnResult.vi_tri_dap_an_dung,
-          giai_thich: turnResult.giai_thich
         });
 
         if (turnResult.tran_ket_thuc) {
@@ -454,7 +453,7 @@ function initArenaSocket(io) {
         const p2Id = room.guest.userId;
         const isGuestBot = Boolean(room.guest.isBot);
 
-        const matchState = await arenaService.createMatch(p1Id, p2Id, room.ma_mon || 'mon_csdl');
+        const matchState = await arenaService.createMatch(p1Id, p2Id, room.ma_mon || 'mon_csdl', isGuestBot?'PRACTICE':'CASUAL');
         const roomName = `room_${matchState.ma_tran}`;
 
         userActiveMatchMap.set(p1Id, matchState.ma_tran);
@@ -590,6 +589,11 @@ function setupSmartBotTurns(io, roomName, matchId, humanUserId, botUserId) {
       if (matchState.trang_thai === 'KET_THUC') return;
       const totalQuestions = matchState.cau_hoi?.length || 10;
       if (currentQuestion > totalQuestions) return;
+
+      if (matchState.luot_da_tra_loi.length < (currentQuestion - 1) * 2) {
+        botTimers.set(matchId, setTimeout(scheduleNextBotTurn, 500));
+        return;
+      }
 
       const qInMatch = matchState.cau_hoi[currentQuestion - 1];
       if (!qInMatch) return;

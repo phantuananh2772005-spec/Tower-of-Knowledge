@@ -4,6 +4,9 @@
  */
 
 require('dotenv').config();
+if ((process.env.RENDER || process.env.NODE_ENV === 'production') && !process.env.JWT_SECRET?.trim()) {
+  throw new Error('JWT_SECRET is required in production.');
+}
 const http = require('http');
 const path = require('path');
 const express = require('express');
@@ -56,7 +59,7 @@ app.get('/admin.html', (req, res) => {
 app.get('/health', (req, res) => {
   res.apiSuccess({
     status: 'HEALTHY',
-    version: '1.1.0-guided-learning',
+    version: '1.2.0-contextual-learning',
     database: process.env.DATABASE_URL ? 'PostgreSQL' : 'MSSQL'
   });
 });
@@ -97,8 +100,10 @@ Promise.all([
   require('./database/init_user_preferences').initUserPreferences(),
   require('./database/init_inventory').initInventory(),
   require('./database/init_identity').initIdentity(),
+  require('./database/init_arena_ranking').initArenaRanking(),
+  require('./database/init_repeat_experience').initRepeatExperience(),
   require('./database/init_password_recovery').initPasswordRecovery()
-]).then(() => server.listen(PORT, () => {
+]).then(() => require('./database/init_telemetry').initTelemetrySchema()).then(() => server.listen(PORT, () => {
   console.log(`================================================================`);
   console.log(`🚀 TOWER OF KNOWLEDGE SERVER IS RUNNING ON PORT ${PORT}`);
   console.log(`📚 Learner UI: http://localhost:${PORT}/`);
@@ -109,9 +114,6 @@ Promise.all([
   // Ensure Chapter 1 has 5 checkpoints and full question set (self-healing seed)
   setTimeout(() => {
     try {
-      const { initTelemetrySchema } = require('./database/init_telemetry');
-      initTelemetrySchema().catch(e => console.warn('⚠️ [STARTUP] Telemetry schema notice:', e.message));
-
       const ch1Seeder = require('./scripts/seed_chapter1_5levels');
       ch1Seeder.runSeed()
         .then(() => console.log('✅ [STARTUP] Chapter 1 5-level database sync completed!'))

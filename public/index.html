@@ -200,10 +200,10 @@
     .nd:hover { filter: brightness(1.15); }
   </style>
   <script src="/js/level-rules.js"></script>
+<script src="/js/arena-rules.js"></script>
   <script src="/js/account-state.js"></script>
   <script src="/js/inventory.js"></script>
   <script src="/js/google-signin.js"></script>
-  <link rel="stylesheet" href="/css/guided-tour.css">
 <link rel="stylesheet" href="/css/battle-reactions.css">  <link rel="stylesheet" href="/css/personal-journey.css">
 <link rel="stylesheet" href="/css/season-switch.css">
 <link rel="stylesheet" href="/css/halloween-visitor.css">
@@ -889,12 +889,10 @@
           <div class="flex flex-col sm:flex-row items-center justify-between gap-2.5 sm:gap-3 py-2 sm:py-2.5 border-b border-[var(--border)] shrink-0">
             <!-- Nhập KEY từ bạn bè (Góc trái) -->
             <div class="flex items-center gap-2 w-full sm:w-auto">
-              <span class="text-xs font-bold text-[var(--muted-foreground)] whitespace-nowrap" title="Nhập KEY phòng">KEY:</span>
-              <input type="text" id="input_casual_room_code" placeholder="Nhập KEY (VD: TOK-8842)..." class="w-full sm:w-48 px-3 py-1.5 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs font-mono uppercase focus:outline-hidden focus:border-cyan-500">
+              <span class="text-xs font-bold text-[var(--muted-foreground)] whitespace-nowrap" title="Nhập mã phòng">Mã phòng:</span>
+              <input type="text" id="input_casual_room_code" placeholder="Ví dụ TOK-8842" class="w-full sm:w-48 px-3 py-1.5 bg-[var(--background)] border border-[var(--border)] rounded-xl text-xs font-mono uppercase focus:outline-hidden focus:border-cyan-500">
               <button id="btn_casual_join_room" onclick="joinCasualFriendRoom()" class="p-2 sm:px-2.5 sm:py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-bold text-xs transition cursor-pointer shrink-0 shadow-2xs flex items-center justify-center hover:scale-105 active:scale-95 duration-150" title="Vào phòng" aria-label="Vào phòng">
-                <svg class="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" />
-                </svg>
+                Vào phòng
               </button>
             </div>
 
@@ -902,13 +900,11 @@
             <div class="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
               <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[var(--background)] border border-cyan-500/30 text-xs shadow-2xs">
                 <!-- Nút tạo mã mới: icon đơn giản nhỏ gọn nằm trước mã phòng -->
-                <button id="btn_casual_create_code" onclick="createCasualRoomCode()" class="p-1 hover:bg-cyan-500/20 text-cyan-500 hover:text-cyan-400 rounded-lg transition-transform hover:rotate-180 duration-300 cursor-pointer flex items-center justify-center shrink-0" title="Tạo KEY phòng mới" aria-label="Tạo KEY phòng mới">
-                  <svg class="w-3.5 h-3.5 fill-none stroke-current stroke-2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
+                <button id="btn_casual_create_code" onclick="createCasualRoomCode()" class="p-1 hover:bg-cyan-500/20 text-cyan-500 hover:text-cyan-400 rounded-lg transition-transform hover:rotate-180 duration-300 cursor-pointer flex items-center justify-center shrink-0" title="Tạo mã phòng mới" aria-label="Tạo mã phòng mới">
+                  Tạo mã
                 </button>
-                <span class="font-bold text-[var(--muted-foreground)] text-[11px] tracking-wide">KEY:</span>
-                <span id="casual-room-code-display" onclick="copyCasualRoomCode()" title="Bấm để sao chép KEY phòng" class="font-mono font-black text-cyan-500 tracking-wider cursor-pointer hover:underline">TOK-7294</span>
+                <span class="font-bold text-[var(--muted-foreground)] text-[11px] tracking-wide">Mã phòng:</span>
+                <span id="casual-room-code-display" onclick="copyCasualRoomCode()" title="Bấm để sao chép mã phòng" class="font-mono font-black text-cyan-500 tracking-wider cursor-pointer hover:underline">—</span>
                 <button id="btn_show_room_qr" onclick="showRoomQRModal()" class="ml-0.5 px-1.5 py-0.5 hover:bg-cyan-500/10 rounded-md text-[11px] font-semibold text-[var(--foreground)] transition cursor-pointer border border-[var(--border)]" title="Xem mã QR">
                   📱 QR
                 </button>
@@ -1495,7 +1491,7 @@
             </div>
 
             <!-- Mục 3: Xem lại Hướng dẫn Tân thủ cùng Linh Thú -->
-            <div id="settings-open-guide" role="button" tabindex="0" onclick="closeSettingsModal(); startPetOnboardingTour();" class="p-3.5 rounded-2xl bg-[var(--background)] border border-[var(--border)] hover:border-emerald-500/50 hover:bg-[var(--card)] transition cursor-pointer flex items-center justify-between group shadow-2xs">
+            <div id="settings-open-guide" role="button" tabindex="0" onclick="window.GuidedTour?.view('settings', true);" class="p-3.5 rounded-2xl bg-[var(--background)] border border-[var(--border)] hover:border-emerald-500/50 hover:bg-[var(--card)] transition cursor-pointer flex items-center justify-between group shadow-2xs">
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-base shrink-0 group-hover:scale-105 transition">
                   🐉
@@ -1592,7 +1588,7 @@
               <!-- Hộp sửa Mật khẩu ẩn -->
               <div id="edit-box-password" class="hidden pt-2 border-t border-[var(--border)] space-y-2">
                 <input type="password" id="input-edit-pwd-old" placeholder="Mật khẩu hiện tại..." class="w-full px-2.5 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-xs focus:outline-none focus:border-emerald-500">
-                <input type="password" id="input-edit-pwd-new" placeholder="Mật khẩu mới (từ 8 đến 72 ký tự)..." class="w-full px-2.5 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-xs focus:outline-none focus:border-emerald-500">
+                <input type="password" id="input-edit-pwd-new" placeholder="Mật khẩu mới (15–128 ký tự)..." class="w-full px-2.5 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-xs focus:outline-none focus:border-emerald-500">
                 <input type="password" id="input-edit-pwd-confirm" placeholder="Xác nhận mật khẩu mới..." class="w-full px-2.5 py-1.5 bg-[var(--card)] border border-[var(--border)] rounded-lg text-xs focus:outline-none focus:border-emerald-500">
                 <div class="flex justify-end gap-2 pt-1">
                   <button id="btn_settings_cancel_password" onclick="toggleEditField('password')" class="px-3 py-1.5 border border-[var(--border)] rounded-lg text-xs transition cursor-pointer">Hủy</button>
@@ -2233,58 +2229,6 @@
     </div>
 
     <!-- ================= MODAL HƯỚNG DẪN TÂN THỦ CÙNG LINH THÚ (PET ONBOARDING SPOTLIGHT TOUR) ================= -->
-    <div id="modal-pet-onboarding" class="hidden fixed inset-0 z-[70] transition-opacity duration-300">
-      <!-- Dark Backdrop with click to dismiss/continue -->
-      <div id="pet-tour-backdrop" class="absolute inset-0 bg-black/60 pointer-events-auto"></div>
-      
-      <!-- Spotlight highlight box around target element -->
-      <div id="pet-tour-spotlight" class="hidden fixed pointer-events-none transition-all duration-300 border-2 border-emerald-400 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.7)] z-[75]"></div>
-
-      <!-- Companion Dialog Card -->
-      <div id="pet-tour-dialog" class="fixed z-[80] w-[94vw] sm:w-[460px] max-w-[480px] bg-[var(--card)] border-2 border-emerald-500/80 rounded-3xl p-5 shadow-2xl transition-all duration-300 space-y-4">
-        <!-- Card Header -->
-        <div class="flex items-center justify-between border-b border-[var(--border)] pb-3">
-          <div class="flex items-center gap-2.5">
-            <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-2xl select-none shrink-0 border border-emerald-500/20">
-              <span id="pet-tour-avatar" class="pet-animated">🐉</span>
-            </div>
-            <div>
-              <div class="flex items-center gap-1.5">
-                <span id="pet-tour-name" class="font-bold text-xs text-emerald-500">Rồng Nhỏ Sparky</span>
-                <span class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600">Đồng Hành</span>
-              </div>
-              <p class="text-[10px] text-[var(--muted-foreground)]">Hướng dẫn viên Tháp Tri Thức</p>
-            </div>
-          </div>
-          <span id="pet-tour-step-badge" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">1/5</span>
-        </div>
-
-        <!-- Speech Content -->
-        <div class="space-y-1.5">
-          <h3 id="pet-tour-title" class="font-bold text-sm text-[var(--foreground)]">Chào mừng bạn mới! 👋</h3>
-          <p id="pet-tour-text" class="text-xs text-[var(--muted-foreground)] leading-relaxed">...</p>
-        </div>
-
-        <!-- Actions -->
-        <div class="flex items-center justify-between pt-2 border-t border-[var(--border)] gap-2">
-          <button id="btn_pet_tour_skip" onclick="skipPetTour()" class="shrink-0 px-3 py-2 text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-semibold transition cursor-pointer">
-            Bỏ qua
-          </button>
-          <div class="flex items-center gap-2 shrink-0">
-            <button id="btn_pet_tour_prev" onclick="prevPetTourStep()" class="hidden shrink-0 px-3.5 py-2 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer">
-              ← Trước
-            </button>
-            <button id="btn_pet_tour_next" onclick="nextPetTourStep()" class="shrink-0 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition cursor-pointer shadow-sm flex items-center gap-1">
-              <span>Tiếp tục</span> <span>➜</span>
-            </button>
-            <button id="btn_pet_tour_finish" onclick="finishPetTour()" class="hidden shrink-0 whitespace-nowrap px-4 py-2 rounded-xl bg-linear-to-r from-amber-500 to-emerald-600 hover:opacity-90 text-white font-bold text-xs transition cursor-pointer shadow-md flex items-center gap-1.5">
-              <span>🎁 Nhận 20 Xu & Bắt đầu!</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- ================= NÚT HỎI TRỢ GIÚP / PET TOUR NẰM GÓC DƯỚI BÊN PHẢI (CHỈ HIỆN TRÊN DESKTOP, TRÊN MOBILE ĐƯA VÀO MENU THÊM) ================= -->
     <button id="btn_floating_help_tour" onclick="startPetOnboardingTour()" title="Hướng dẫn cùng Pet" class="hidden md:flex fixed bottom-6 right-6 z-40 w-10 h-10 rounded-full bg-linear-to-tr from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white shadow-xl hover:shadow-2xl items-center justify-center font-black text-sm transition-all duration-200 transform hover:scale-110 active:scale-95 cursor-pointer border border-white/30 backdrop-blur-xs group">
       <span class="select-none">❓</span>
@@ -2390,8 +2334,7 @@
         <!-- Action Button -->
         <div class="w-full pt-2">
           <button id="btn_unboxing_start_tour" onclick="completeUnboxingAndStartTour()" class="w-full py-3.5 px-6 rounded-2xl bg-linear-to-r from-amber-500 via-emerald-600 to-teal-600 hover:from-amber-400 hover:to-teal-500 text-white font-black text-sm tracking-wide shadow-xl hover:shadow-2xl transition transform hover:scale-[1.02] active:scale-95 cursor-pointer flex items-center justify-center gap-2 border border-white/30">
-            <span>Cùng Sparky Tham Quan Tháp Tri Thức</span>
-            <span>🚀</span>
+            Bắt đầu học
           </button>
         </div>
       </div>
@@ -2994,6 +2937,8 @@
       updateTopbarUI(viewName);
       updateMobileBottomBar(viewName);
       syncAllPetDisplays();
+      window.GuidedTour?.close();
+      window.GuidedTour?.view(viewName);
     }
 
     function scrollToActiveNode(smooth = true) {
@@ -3428,14 +3373,14 @@
   // ===== Đấu trường Tiers & Ranks =====
   const SUBJ = { csdl: 'Cơ Sở Dữ Liệu', ctdl: 'Cấu Trúc Dữ Liệu', mon_csdl: 'Cơ Sở Dữ Liệu', mon_ctdl: 'Cấu Trúc Dữ Liệu' };
   const RANKS = { csdl: 0, ctdl: 0, mon_csdl: 0, mon_ctdl: 0 };
-  const overallPts = () => Math.max(0, (RANKS.csdl || 0) + (RANKS.ctdl || 0));
+  const overallPts = () => Object.values(RANKS).reduce((sum,value)=>sum+Math.max(0,Number(value)||0),0);
   const THI_THRESH = [0, 500, 1000, 1500, 2000];
   const THI_NAMES = ['🌱 Khởi nguyên', '🔥 Bứt phá', '⚡ Tinh thông', '🌟 Xuất chúng', '👑 Đỉnh cao'];
 
   function tierOf(p, isOverall) {
-    const r = LevelRules.progress(p); return r.icon + ' ' + r.label;
+    return ArenaRules.progress(p).label;
   }
-  function tierProgress(p, isOverall) { return LevelRules.progress(p).percent; }
+  function tierProgress(p, isOverall) { return ArenaRules.progress(p).percent; }
 
   function arenaTab(t) {
     const casualPanel = document.getElementById('arena-casual');
@@ -3496,48 +3441,6 @@
     if (!RANK_DATA[s] || !RANK_DATA[s][type]) return [];
     let rows = RANK_DATA[s][type].map(r => r.slice());
 
-    const myUserId = (currentUserAccount?.userId || '').trim();
-    const myUsername = (currentUserAccount?.username || '').trim().toLowerCase();
-
-    // CHỈ nhận diện duy nhất 1 hàng là "Bạn" dựa trên ID người dùng chính xác (hoặc username)
-    // TUYỆT ĐỐI không so sánh theo displayName vì nhiều người chơi có thể đặt tên giống nhau
-    let foundMe = false;
-    rows.forEach(r => {
-      const rowUserId = (r[4] || '').trim();
-      const rowUsername = (r[5] || '').trim().toLowerCase();
-      
-      const isMe = !foundMe && (
-        (myUserId && rowUserId && rowUserId === myUserId) ||
-        (myUsername && rowUsername && rowUsername === myUsername) ||
-        (!rowUserId && !rowUsername && r[0] === ME)
-      );
-
-      if (isMe) {
-        foundMe = true;
-        r[0] = ME;
-        if (type === 'hang') {
-          const myPts = (typeof overallPts === 'function' ? overallPts() : (currentUserAccount?.exp || 0));
-          r[3] = String(myPts);
-          r[2] = tierOf(+r[3], s === 'all');
-        } else if (type === 'streak') {
-          const myStreak = typeof currentUserAccount?.arenaWinStreak === 'number'
-            ? currentUserAccount.arenaWinStreak
-            : (typeof userArenaWinStreak === 'number' ? userArenaWinStreak : 0);
-          r[3] = String(myStreak);
-          r[2] = typeof tierOf === 'function' ? tierOf(currentUserAccount?.exp || 0, s === 'all') : (currentUserAccount?.rankTitle || '🌱 Khởi nguyên I');
-        } else if (type === 'speed' || type === 'acc') {
-          r[2] = typeof tierOf === 'function' ? tierOf(currentUserAccount?.exp || 0, s === 'all') : (currentUserAccount?.rankTitle || '🌱 Khởi nguyên I');
-        }
-      } else if (r[0] === ME) {
-        // Tránh trùng lặp từ mock template cũ
-        r[0] = r[5] || 'Người chơi';
-      }
-
-      if (type === 'hang') {
-        r[2] = tierOf(+r[3], s === 'all');
-      }
-    });
-
     if (type === 'hang') {
       rows.sort((a, b) => parseFloat(b[3]) - parseFloat(a[3]));
     } else if (type === 'streak') {
@@ -3585,7 +3488,7 @@
   function renderLobby() {
     const sub = document.getElementById('lobby-subject').value;
     document.getElementById('lobby-sub-tier').textContent = tierOf(RANKS[sub], false);
-    document.getElementById('lobby-sub-pts').textContent = RANKS[sub] + ' điểm';
+    document.getElementById('lobby-sub-pts').textContent = (RANKS[sub] || 0) + ' điểm';
     document.getElementById('lobby-all-tier').textContent = tierOf(overallPts(), true);
     document.getElementById('lobby-all-pts').textContent = overallPts() + ' điểm';
   }
@@ -3598,12 +3501,12 @@
     });
     const medals = ['🥇','🥈','🥉'];
     const rankRows = rowsFor(sub, rankType);
-    if (!rankRows.length) {document.getElementById('rank-list').innerHTML = '<div class="p-5 text-xs text-[var(--muted-foreground)]">Chưa có kết quả thực tế cho chỉ số này. Hãy hoàn thành một trận để có dữ liệu.</div>'; return;}
+    if (!rankRows.length) {document.getElementById('rank-list').innerHTML = '<div class="p-5 text-xs text-[var(--muted-foreground)]">Chưa có kết quả đấu hạng cho mục này.</div>'; return;}
     document.getElementById('rank-list').innerHTML = rankRows.map((r, i) => {
-      const me = r[0] === ME;
+      const me = Boolean(currentUserAccount?.userId && r[4]===currentUserAccount.userId);
       const petThumb = me 
         ? (currentEquippedPet.image ? `<img src="${currentEquippedPet.image}" class="w-6 h-6 object-contain pixel-art inline-block select-none" />` : currentEquippedPet.icon)
-        : r[1];
+        : `<img src="${escapeHtml(typeof r[6]==='string'&&r[6].startsWith('/assets/')?r[6]:'/assets/navigation/pet.webp')}" alt="" width="28" height="28" class="w-7 h-7 object-contain">`;
       let valDisplay = r[3];
       if (rankType === 'streak') {
         valDisplay = `<span class="text-amber-500 font-extrabold">🔥 ${r[3]}</span> <span class="text-[10px] text-[var(--muted-foreground)]">trận</span>`;
@@ -4137,7 +4040,7 @@
     if (m) m.classList.add('hidden');
   }
 
-  function executeSurrender() {
+  async function executeSurrender() {
     closeSurrenderModal();
     clearBattleTimers();
     B.my = 0;
@@ -4145,20 +4048,15 @@
 
     if (currentLiveMatch && currentLiveMatch.ma_tran) {
       const mId = currentLiveMatch.ma_tran;
-      if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected) {
-        liveSocket.emit('surrender', { ma_tran: mId });
-      }
       try {
         const token = localStorage.getItem('tok_token');
-        fetch(`/api/arena/${mId}/surrender`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
-          }
-        }).catch(() => {});
-      } catch (e) {
-        console.warn('Surrender REST fallback:', e);
+        const response = await fetch('/api/arena/'+mId+'/surrender', {
+          method: 'POST', headers: {Authorization: 'Bearer '+token}
+        });
+        const result = await response.json();
+        if (result.success) currentLiveMatch = result.data;
+      } catch (error) {
+        console.warn('Không thể xác nhận đầu hàng:', error.message);
       }
     }
     checkEnd('DAU_HANG');
@@ -4413,7 +4311,13 @@
       liveSocket.off('turn_resolved');
       liveSocket.off('match_ended');
 
-      liveSocket.on('turn_resolved', (data) => {
+    }
+    const resolvedTurns = new Set();
+    B.onTurnResolved = (data) => {
+        if (data.trang_thai_tran?.ma_tran !== currentLiveMatch?.ma_tran || data.thu_tu_cau !== B.qi || B.over) return;
+        const key = `${data.thu_tu_cau}:${data.nguoi_tra_loi}`;
+        if (resolvedTurns.has(key)) return;
+        resolvedTurns.add(key);
         console.log('[CLIENT] turn_resolved received! nguoi_tra_loi:', data.nguoi_tra_loi, 'myUserId:', B.myUserId, 'dmg:', data.sat_thuong_gay_ra);
         const isMe = (data.nguoi_tra_loi === B.myUserId);
         const d = data.sat_thuong_gay_ra || 0;
@@ -4422,6 +4326,8 @@
         if (isMe) {
           // --- BẢN THÂN VỪA TẤN CÔNG (Attacker) ---
           B.pDone = true;
+          const box = document.getElementById('b-options');
+          box?.classList.add('ring-2', data.la_dap_an_dung ? 'ring-emerald-500' : 'ring-rose-500', 'rounded-2xl');
           if (data.la_dap_an_dung) {
             B.userCorrectCount = (B.userCorrectCount || 0) + 1;
             B.combo = (B.combo || 0) + 1;
@@ -4494,26 +4400,21 @@
           }
           roundCheck();
         }
-      });
-
-      liveSocket.on('match_ended', (data) => {
-        const didIWin = data.nguoi_thang_cuoc === B.myUserId || data.nguoi_thang_cuoc === currentUserAccount?.userId;
-        if (data.ly_do_ket_thuc === 'DAU_HANG') {
-          if (didIWin) {
-            B.op = 0;
-            checkEnd('OP_SURRENDER');
-          } else {
-            B.my = 0;
-            checkEnd('DAU_HANG');
-          }
-        } else if (!B.over) {
-          if (didIWin) {
-            B.op = 0;
-          } else {
-            B.my = 0;
-          }
-          checkEnd();
-        }
+    };
+    if (liveSocket?.connected && currentLiveMatch?.ma_tran) {
+      liveSocket.on('turn_resolved', B.onTurnResolved);
+      liveSocket.on('match_ended', data => {
+        if (data.ma_tran !== currentLiveMatch?.ma_tran || B.over) return;
+        if (data.trang_thai_cuoi) currentLiveMatch = data.trang_thai_cuoi;
+        const players = currentLiveMatch.nguoi_choi || [];
+        const mine = players.find(p => p.ma_nguoi_dung === B.myUserId);
+        const opponent = players.find(p => p.ma_nguoi_dung !== B.myUserId);
+        if (mine) B.my = Number(mine.mau_hien_tai);
+        if (opponent) B.op = Number(opponent.mau_hien_tai);
+        const won = data.nguoi_thang_cuoc === B.myUserId;
+        const reason = data.ly_do_ket_thuc === 'DAU_HANG'
+          ? (won ? 'OP_SURRENDER' : 'DAU_HANG') : 'RESOLVED';
+        checkEnd(reason);
       });
     }
 
@@ -4679,13 +4580,13 @@
       const pairs = q.data?.pairs || [];
       if (promptEl) promptEl.textContent = q.q || 'Nối từng mục bên Trái với mục tương ứng bên Phải:';
       if (box) {
-        const leftItems = pairs.map((p, idx) => ({ id: idx, text: p.left }));
-        const rightItems = [...pairs.map((p, idx) => ({ id: idx, text: p.right }))].sort(() => Math.random() - 0.5);
+        const leftItems = (q.data?.left || pairs.map(p => p.left)).map((text, id) => ({ id, text }));
+        const rightItems = (q.data?.right || pairs.map(p => p.right)).map((text, id) => ({ id, text })).sort(() => Math.random() - 0.5);
 
         let selectedLeft = null;
         let matchedCount = 0;
         const matchedPairs = [];
-        const totalPairs = pairs.length;
+        const totalPairs = leftItems.length;
 
         box.innerHTML = `
           <div class="grid grid-cols-2 gap-2 sm:gap-2.5 text-xs w-full items-start">
@@ -4726,14 +4627,17 @@
           btn.onclick = () => {
             if (B.pDone || B.over || btn.disabled || selectedLeft === null) return;
             const leftBtn = document.getElementById(`pair-left-${selectedLeft}`);
-            if (selectedLeft === item.id) {
+            if (currentLiveMatch?.ma_tran || selectedLeft === item.id) {
               matchedCount++;
               matchedPairs.push({ left: leftBtn ? leftBtn.textContent : '', right: item.text });
               leftBtn.disabled = true;
               btn.disabled = true;
               const matchedStyle = "w-full text-left p-2 sm:p-3 rounded-xl border-emerald-500 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold opacity-90 cursor-default text-[11px] sm:text-xs leading-snug break-words hyphens-auto min-h-[46px] flex flex-col justify-center select-none shadow-xs";
-              leftBtn.className = matchedStyle;
-              btn.className = matchedStyle;
+              const pairStyle = currentLiveMatch?.ma_tran
+                ? matchedStyle.replaceAll('emerald', 'indigo')
+                : matchedStyle;
+              leftBtn.className = pairStyle;
+              btn.className = pairStyle;
               selectedLeft = null;
               if (audioSettings.battle) playAdvancedSound('click');
               if (matchedCount >= totalPairs) {
@@ -4753,7 +4657,7 @@
       const promptText = q.data?.prompt || q.q || 'Sắp xếp các cụm từ theo thứ tự chuẩn xác:';
       const correctWords = q.data?.correct_order || [];
       const distractors = q.data?.distractors || [];
-      const allChips = [...correctWords, ...distractors].sort(() => Math.random() - 0.5);
+      const allChips = (currentLiveMatch?.ma_tran ? [...q.o] : [...correctWords, ...distractors]).sort(() => Math.random() - 0.5);
 
       let placedWords = [];
       if (promptEl) promptEl.textContent = promptText;
@@ -4942,6 +4846,34 @@
     B.pDone = true;
     const ms = Date.now() - B.t0;
 
+    if (currentLiveMatch?.ma_tran) {
+      const matchId = currentLiveMatch.ma_tran;
+      const round = B.qi;
+      const token = localStorage.getItem('tok_token');
+      const { isCorrect, ...answer } = payload || { vi_tri_chon: i };
+      fetch(`/api/arena/${matchId}/turn`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({
+          thu_tu_cau: round,
+          vi_tri_dap_an_chon: i,
+          cau_tra_loi: answer,
+          thoi_gian_giay: ms / 1000
+        })
+      }).then(response => response.json()).then(result => {
+        if (!result.success) throw new Error(result.message || 'Không gửi được câu trả lời.');
+        if (currentLiveMatch?.ma_tran === matchId) {
+          B.onTurnResolved({ ...result.data, thu_tu_cau: round, nguoi_tra_loi: B.myUserId });
+        }
+      }).catch(error => {
+        if (currentLiveMatch?.ma_tran !== matchId || B.qi !== round || B.over) return;
+        B.pDone = false;
+        const status = document.getElementById('b-bot-status');
+        if (status) status.textContent = error.message;
+      });
+      return;
+    }
+
     let ok = false;
     if (payload && typeof payload.isCorrect === 'boolean') {
       ok = payload.isCorrect;
@@ -4986,38 +4918,6 @@
       updHp();
     }
 
-    // Gửi lượt lên backend CSDL thật & Socket trực tuyến
-    if (currentLiveMatch && currentLiveMatch.ma_tran) {
-      const token = localStorage.getItem('tok_token');
-      const sec = Math.round(ms / 100) / 10;
-      const ansPayload = payload || { vi_tri_chon: i };
-
-      if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected) {
-        liveSocket.emit('submit_answer', {
-          ma_tran: currentLiveMatch.ma_tran,
-          thu_tu_cau: B.qi,
-          vi_tri_dap_an_chon: (typeof i === 'number') ? i : (ok ? 1 : 0),
-          cau_tra_loi: ansPayload,
-          thoi_gian_giay: sec
-        });
-      } else {
-        // Fallback REST chỉ kích hoạt khi mất kết nối Socket, tránh xung đột race condition
-        fetch(`/api/arena/${currentLiveMatch.ma_tran}/turn`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
-          },
-          body: JSON.stringify({
-            thu_tu_cau: B.qi,
-            vi_tri_dap_an_chon: (typeof i === 'number') ? i : (ok ? 1 : 0),
-            cau_tra_loi: ansPayload,
-            thoi_gian_giay: sec
-          })
-        }).catch(() => {});
-      }
-    }
-
     roundCheck();
   }
 
@@ -5058,49 +4958,40 @@
   }
 
   async function checkEnd(specialReason = null) {
-    if (B.over && !specialReason) return;
+    if (B.over) return;
     if (!specialReason && B.my > 0 && B.op > 0 && B.qi < B.list.length) return;
-    B.over = true;
-    clearBattleTimers();
-    if (typeof trackDailyQuestAction === 'function') {
-      trackDailyQuestAction('dau_truong');
-    }
-
+    const matchId = currentLiveMatch?.ma_tran;
     const isSurrender = specialReason === 'DAU_HANG';
     const isOpSurrender = specialReason === 'OP_SURRENDER';
-    const win = isOpSurrender || (!isSurrender && ((B.op <= 0 && B.my > 0) || (B.my > B.op)));
+    let win = isOpSurrender || (!isSurrender && ((B.op <= 0 && B.my > 0) || (B.my > B.op)));
 
-    // Cập nhật chuỗi thắng Đấu Trường của người chơi
-    if (win) {
-      userArenaWinStreak = (userArenaWinStreak || 0) + 1;
-    } else {
-      userArenaWinStreak = 0;
-    }
-    if (currentUserAccount) {
-      currentUserAccount.arenaWinStreak = userArenaWinStreak;
-    }
-
-    // Đồng bộ kết quả lên Backend CSDL thật
-    if (currentLiveMatch && currentLiveMatch.ma_tran && !isSurrender) {
+    if (matchId && !isSurrender && currentLiveMatch.trang_thai !== 'KET_THUC') {
+      if (B.resolvingMatch === matchId) return;
+      B.resolvingMatch = matchId;
       try {
         const token = localStorage.getItem('tok_token');
-        const winnerId = win ? (currentUserAccount.userId || 'usr_current') : (currentLiveMatch.nguoi_choi?.find(p => p.ma_nguoi_dung !== currentUserAccount.userId)?.ma_nguoi_dung || 'usr_bot_003');
-        await fetch(`/api/arena/${currentLiveMatch.ma_tran}/conclude`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
-          },
-          body: JSON.stringify({
-            winnerUserId: winnerId,
-            reason: isOpSurrender ? 'DAU_HANG' : (B.op <= 0 ? 'KO_VICTORY' : 'TIMEOUT_SCORE')
-          })
+        const response = await fetch('/api/arena/'+matchId+'/conclude', {
+          method: 'POST', headers: {Authorization: 'Bearer '+token}
         });
-      } catch (err) {
-        console.warn('Could not record match conclusion on backend:', err);
+        const result = await response.json();
+        if (currentLiveMatch?.ma_tran !== matchId || B.over) return;
+        if (result.success) currentLiveMatch = result.data;
+      } catch (error) {
+        console.warn('Không tải được kết quả:', error.message);
+      } finally {
+        if (B.resolvingMatch === matchId) B.resolvingMatch = null;
       }
+      if (currentLiveMatch?.ma_tran !== matchId || B.over) return;
+      if (currentLiveMatch.che_do === 'RANKED' && currentLiveMatch.trang_thai !== 'KET_THUC') return;
     }
+    B.over = true;
+    clearBattleTimers();
+    if (typeof trackDailyQuestAction === 'function') trackDailyQuestAction('dau_truong');
 
+    const settledPlayer=currentLiveMatch?.trang_thai==='KET_THUC'
+      ? currentLiveMatch.nguoi_choi?.find(p=>p.ma_nguoi_dung===currentUserAccount?.userId) : null;
+    if(settledPlayer) win=settledPlayer.ket_qua==='THANG';
+    const draw=settledPlayer?.ket_qua==='HOA';
     if (typeof refreshUserData === 'function') {
       setTimeout(refreshUserData, 400);
     }
@@ -5114,36 +5005,33 @@
       const koSub = document.getElementById('b-result-sub');
       const petImg = document.getElementById('b-result-pet-img');
 
-      const isCasual = Boolean(B.isCasual || (B.isBot && currentArenaMode === 'casual'));
+      const isCasual = currentLiveMatch?.che_do!=='RANKED';
       const totalQ = (B.list && B.list.length) ? B.list.length : 10;
       const userCorrect = (typeof B.userCorrectCount === 'number')
         ? B.userCorrectCount
         : (win ? Math.min(totalQ, Math.max(B.qi || 1, 1)) : 0);
       const userMaxCombo = Math.max(B.maxCombo || 0, B.combo || 0, win ? (userCorrect > 3 ? 3 : 1) : 0);
 
-      const coinsReward = isCasual ? (win ? 25 : 10) : (win ? 50 : 20);
-      const expReward = isCasual ? (win ? 35 : 10) : (win ? 75 : 25);
-
-      // Cập nhật tài khoản
-      if (currentUserAccount) {
-        currentUserAccount.exp = (currentUserAccount.exp || 0) + expReward;
-        currentUserAccount.xu = (currentUserAccount.xu || 0) + coinsReward;
-      }
+      const savedPlayer=settledPlayer;
+      const coinsReward=Number(savedPlayer?.xu_nhan_duoc||0),expReward=Number(savedPlayer?.exp_nhan_duoc||0);
       const curExp = (currentUserAccount && typeof currentUserAccount.exp === 'number') ? currentUserAccount.exp : 155;
       const expLevel = LevelRules.progress(curExp);
       const expInTier = expLevel.earned;
       const expNext = expLevel.needed;
       const expPct = expLevel.percent;
-      const expLevelName = typeof tierOf === 'function' ? tierOf(curExp, false) : '🌱 Khởi nguyên I';
+      const expLevelName = expLevel.icon+' '+expLevel.label;
 
-      if (isSurrender) {
+      if (draw) {
+        if (koTitle) koTitle.textContent='Hòa trận';
+        if (koSub) koSub.textContent='Trận đấu đã kết thúc';
+      } else if (isSurrender) {
         if (koBadge) koBadge.className = "inline-block bg-gradient-to-r from-zinc-700 to-rose-700 text-white px-5 py-2 rounded-2xl transform rotate-1 shadow-xl border-2 border-white/80";
         if (koTitle) koTitle.textContent = "🏳️ ĐÃ ĐẦU HÀNG";
         if (koSub) koSub.textContent = isCasual
           ? "Đấu tập luyện · Dừng trận sớm"
           : "Đấu Xếp Hạng · Đã nhận thua";
         if (audioSettings.outcome) playAdvancedSound('defeat-sad');
-        showToast(isCasual ? 'Trận tập luyện kết thúc: Bạn đã đầu hàng (+10 Xu).' : 'Trận đấu kết thúc: Bạn đã đầu hàng (+15 Xu tham gia).', 'info');
+        showToast(coinsReward||expReward?`Kết thúc trận: +${coinsReward} Xu · +${expReward} EXP`:'Kết thúc trận đấu.','info');
       } else if (isOpSurrender) {
         if (koBadge) koBadge.className = "inline-block bg-gradient-to-r from-fuchsia-600 via-rose-500 to-cyan-400 text-white px-5 py-2 rounded-2xl transform -rotate-1 shadow-xl border-2 border-white animate-bounce";
         if (koTitle) koTitle.textContent = "🏆 ĐỐI THỦ ĐẦU HÀNG!";
@@ -5151,7 +5039,7 @@
           ? "Đấu tập luyện · Không tính rank"
           : "Đấu Xếp Hạng · Chiến thắng trọn vẹn";
         if (audioSettings.outcome) playAdvancedSound('win-fanfare');
-        showToast(isCasual ? '🎉 Trận giao hữu kết thúc! Nhận +25 Xu và +35 EXP (không tính rank).' : '🎉 Đối thủ đã đầu hàng! Bạn nhận trọn vẹn +50 Xu và +75 EXP.', 'success');
+        showToast(coinsReward||expReward?`Kết thúc trận: +${coinsReward} Xu · +${expReward} EXP`:'Kết thúc trận đấu.','info');
       } else if (win) {
         if (koBadge) koBadge.className = "inline-block bg-gradient-to-r from-fuchsia-600 via-rose-500 to-cyan-400 text-white px-5 py-2 rounded-2xl transform -rotate-1 shadow-xl border-2 border-white animate-bounce";
         if (koTitle) koTitle.textContent = "🏆 K.O. CHIẾN THẮNG!";
@@ -5159,7 +5047,7 @@
           ? "Đấu tập luyện · Không tính rank"
           : "Đấu Xếp Hạng · Thăng hạng xuất sắc";
         if (audioSettings.outcome) playAdvancedSound('win-fanfare');
-        showToast(isCasual ? '🥊 Chiến thắng trận tập luyện / giao hữu! (+25 Xu, +35 EXP, không tính điểm Rank).' : '🎉 Chiến thắng Đấu Hạng! +30 Điểm Rank, +50 Xu và +75 EXP.', 'success');
+        showToast(coinsReward||expReward?`Kết thúc trận: +${coinsReward} Xu · +${expReward} EXP`:'Kết thúc trận đấu.','info');
       } else {
         if (koBadge) koBadge.className = "inline-block bg-gradient-to-r from-rose-700 to-red-600 text-white px-5 py-2 rounded-2xl transform rotate-1 shadow-xl border-2 border-white/80";
         if (koTitle) koTitle.textContent = "💀 K.O. THẤT BẠI";
@@ -5167,7 +5055,7 @@
           ? "Đấu tập luyện · Cần cố gắng hơn"
           : "Đấu Xếp Hạng · Cần rèn luyện thêm";
         if (audioSettings.outcome) playAdvancedSound('defeat-sad');
-        showToast(isCasual ? 'Trận tập luyện kết thúc (+10 Xu khích lệ).' : 'Bạn đã bị hạ gục. Nhận được +20 Xu khích lệ.', 'info');
+        showToast(coinsReward||expReward?`Kết thúc trận: +${coinsReward} Xu · +${expReward} EXP`:'Kết thúc trận đấu.','info');
       }
 
       // Render pet in result
@@ -5194,9 +5082,9 @@
 
       // Hai huy hiệu phần thưởng lớn nổi bật (Xu & EXP)
       const elRewardCoins = document.getElementById('res-reward-coins');
-      if (elRewardCoins) elRewardCoins.textContent = `+${coinsReward} Xu`;
+      if (elRewardCoins) { elRewardCoins.textContent = `+${coinsReward} Xu`; elRewardCoins.classList.toggle('hidden',!coinsReward); }
       const elRewardExp = document.getElementById('res-reward-exp');
-      if (elRewardExp) elRewardExp.textContent = `+${expReward} EXP`;
+      if (elRewardExp) { elRewardExp.textContent = `+${expReward} EXP`; elRewardExp.classList.toggle('hidden',!expReward); }
 
       // Thanh tiến độ EXP có nhãn đầy đủ
       const elExpBar = document.getElementById('res-exp-bar');
@@ -5215,14 +5103,12 @@
       let deltaTxt = '±0';
       let deltaColor = 'text-cyan-400';
 
-      if (!isCasual) {
-        const hpBonus = (win && B.my >= 50);
-        delta = win ? (hpBonus ? 30 : 25) : (isSurrender ? -15 : -15);
-        RANKS[sub] = Math.max(0, RANKS[sub] + delta);
-        deltaTxt = delta > 0 ? `+${delta}` : `${delta}`;
-        deltaColor = delta > 0 ? 'text-emerald-400' : 'text-rose-500';
-      }
-
+      delta=Number(savedPlayer?.diem_hang_thay_doi||0);
+      deltaTxt=delta>0?'+'+delta:String(delta);
+      deltaColor=delta>0?'text-emerald-400':delta<0?'text-rose-500':'text-slate-400';
+      const summaryContainer=document.getElementById('res-rank-banner');
+      if(summaryContainer)summaryContainer.hidden=isCasual || !savedPlayer;
+      for(const id of ['res-sub-name','res-all-name']){const el=document.getElementById(id);if(el?.parentElement)el.parentElement.hidden=isCasual;}
       // Tinh gọn hiển thị Rank: Tránh trùng lặp 2 thẻ, chuẩn hóa tên môn học
       const rawSubName = (typeof SUBJ !== 'undefined' && SUBJ[sub]) ? SUBJ[sub] : 'Cơ Sở Dữ Liệu';
       const safeSubName = rawSubName
@@ -5231,13 +5117,7 @@
 
       const elRankSummary = document.getElementById('res-rank-summary');
       if (elRankSummary) {
-        if (isCasual || delta === 0) {
-          elRankSummary.innerHTML = `Rank không đổi · 👑 <span class="font-mono font-bold text-amber-400">${RANKS[sub]}</span> <span class="text-slate-400">(${tierOf(RANKS[sub], false)})</span>`;
-        } else {
-          const deltaSign = delta > 0 ? `+${delta}` : `${delta}`;
-          const deltaClass = delta > 0 ? 'text-emerald-400' : 'text-rose-400';
-          elRankSummary.innerHTML = `${safeSubName}: 👑 <span class="font-mono font-bold text-amber-400">${RANKS[sub]}</span> (<span class="${deltaClass} font-bold font-mono">${deltaSign}</span> · ${tierOf(RANKS[sub], false)})`;
-        }
+        elRankSummary.textContent = delta === 0 ? 'Điểm hạng giữ nguyên' : 'Điểm hạng '+deltaTxt;
       }
 
       // Backward compatibility placeholders
@@ -6056,12 +5936,14 @@
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
         backToSettingsMain();
+        window.GuidedTour?.view('settings');
       }
     }
 
     function closeSettingsModal() {
       const modal = document.getElementById('modal-settings');
       if (modal) {
+        window.GuidedTour?.close();
         modal.classList.add('hidden');
         document.body.style.overflow = '';
       }
@@ -6113,6 +5995,7 @@
       if (vMain) vMain.classList.add('hidden');
       if (vAuth) vAuth.classList.add('hidden');
       if (vAudio) vAudio.classList.remove('hidden');
+      window.GuidedTour?.view('audio');
 
       // Đồng bộ checkbox states cho từng loại hiệu ứng
       ['quiz', 'reward', 'battle', 'outcome', 'bgm'].forEach(k => {
@@ -6178,8 +6061,7 @@
       accessoryCatalog = [];renderAccessories();
       userStreak = 0;
       if (typeof RANKS !== 'undefined') {
-        RANKS.csdl = 0;
-        RANKS.ctdl = 0;
+        Object.keys(RANKS).forEach(key=>RANKS[key]=0);
       }
       Object.keys(ownedPets).forEach(id => delete ownedPets[id]);
       currentEquippedPet = allPets.find(p => p.id === 'dragon') || { id: 'dragon', name: 'Rồng Nhỏ Sparky', icon: '🐉', buff: 'Rồng con tinh nghịch · Cổ vũ bạn học', image: SPARKY_ANIM_GIF };
@@ -6462,8 +6344,8 @@
         showToast('Tên đăng nhập phải có ít nhất 3 ký tự!', 'error');
         return;
       }
-      if (!password || password.length < 4) {
-        showToast('Mật khẩu phải có ít nhất 4 ký tự!', 'error');
+      if (!password || (authMode === 'register' && [...password].length < 15)) {
+        showToast(authMode === 'register' ? 'Mật khẩu phải có ít nhất 15 ký tự.' : 'Vui lòng nhập mật khẩu.', 'error');
         return;
       }
 
@@ -6570,7 +6452,7 @@
         ownedPets['admin_nguyet'] = true;
       }
       currentUserAccount.exp = user.tong_diem_kinh_nghiem || 0;
-      currentUserAccount.rankTitle = typeof tierOf === 'function' ? tierOf(currentUserAccount.exp, true) : '🌱 Khởi nguyên I';
+      currentUserAccount.rankTitle = LevelRules.progress(currentUserAccount.exp).label;
       userCoins = typeof user.xu_tri_thuc === 'number' ? user.xu_tri_thuc : 0;
       userStreak = typeof user.chuoi_streak_ngay === 'number' ? user.chuoi_streak_ngay : 0;
       userArenaWinStreak = typeof user.chuoi_thang_arena === 'number' ? user.chuoi_thang_arena : 0;
@@ -6596,7 +6478,8 @@
       applySavedPreferences(user);
 
       if (typeof RANKS !== 'undefined') {
-        RANKS.csdl = currentUserAccount.exp;
+        Object.keys(RANKS).forEach(key=>RANKS[key]=0);
+        Object.entries(user.diem_dau_hang||{}).forEach(([course,points])=>RANKS[course.replace(/^mon_/,'')]=Number(points)||0);
         renderLobby();
       }
 
@@ -6826,7 +6709,10 @@
       chapter?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
     }
 
-    function renderRealSagaRoadmap(courseData) { renderLearningGarden(courseData); }
+    function renderRealSagaRoadmap(courseData) {
+      renderLearningGarden(courseData);
+      if (currentAppView === 'saga') window.GuidedTour?.view('saga');
+    }
 
     function handleTheoryHintClick() {
       if (currentMocSession) {
@@ -7056,6 +6942,7 @@
       if (!currentMocSession || currentMocSession.questionsQueue.length === 0) return;
       const s = currentMocSession;
       const q = s.questionsQueue[0];
+      queueMicrotask(() => window.GuidedTour?.question(q.loai_cau_hoi || 'TRAC_NGHIEM_4'));
 
       s.questions = s.questionsQueue;
       s.qIndex = 0;
@@ -7462,7 +7349,7 @@
 
           const totalSteps = d.tong_so_buoc || 4;
           const headerEl = document.getElementById('cp-modal-steps-header');
-          if (headerEl) headerEl.textContent = `🎯 ${totalSteps} Chặng Luyện tập Ghi nhớ & Làm chủ (Bloom):`;
+          if (headerEl) headerEl.textContent = `Luyện tập · ${totalSteps} chặng`;
 
           const stBadge = document.getElementById('cp-modal-status-badge');
           if (stBadge) {
@@ -7507,7 +7394,6 @@
             container.innerHTML = steps.map(s => {
               const isStepDone = s.hoan_thanh;
               const isStepActive = (s.buoc === d.buoc_hien_tai);
-              const isStepLocked = (s.buoc > d.buoc_hien_tai);
 
               let borderClass = 'border-[var(--border)] bg-[var(--card)]';
               let badgeHtml = '';
@@ -7520,7 +7406,6 @@
               } else if (isStepActive) {
                 borderClass = 'border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/20';
                 badgeHtml = `<span class="text-[10px] font-bold text-emerald-600 bg-emerald-500/20 px-2 py-0.5 rounded-full font-mono animate-pulse">▶ Bước hiện tại</span>`;
-                actionBtnHtml = `<button id="btn_cp_step_start_${s.buoc}" onclick="startStepPlay('${d.ma_moc}', ${s.buoc}, '${escapeHtml(d.tieu_de)}')" class="px-4 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-[11px] hover:bg-emerald-700 transition cursor-pointer shadow-xs">Bắt đầu →</button>`;
               } else {
                 borderClass = 'border-[var(--border)] opacity-40 bg-[var(--background)]/30';
                 badgeHtml = `<span class="text-[10px] text-[var(--muted-foreground)] font-mono">🔒 Khóa</span>`;
@@ -7554,10 +7439,10 @@
           if (primaryBtn) {
             const activeBuoc = Math.min(totalSteps, d.buoc_hien_tai || 1);
             if (d.trang_thai === 'DA_HOAN_THANH' || d.buoc_hien_tai > totalSteps) {
-              primaryBtn.innerHTML = '<span>Ôn tập toàn bộ mốc học 🔄</span>';
+              primaryBtn.textContent = 'Ôn tập từ chặng 1';
               primaryBtn.onclick = () => startStepPlay(d.ma_moc, 1, d.tieu_de);
             } else {
-              primaryBtn.innerHTML = `<span>Bắt đầu Luyện tập Chặng ${activeBuoc}</span> <span>→</span>`;
+              primaryBtn.innerHTML = `Luyện tập chặng ${activeBuoc} →`;
               primaryBtn.onclick = () => startStepPlay(d.ma_moc, activeBuoc, d.tieu_de);
             }
           }
@@ -7679,6 +7564,7 @@
       currentQuizSession.currentQuestionLookupEvents = [];
 
       const q = questions[qIndex];
+      queueMicrotask(() => window.GuidedTour?.question(q.loai_cau_hoi || 'TRAC_NGHIEM_4'));
       const totalSteps = currentCheckpointMoc?.tong_so_buoc || 4;
 
       const playTitle = document.getElementById('play-title');
@@ -8546,7 +8432,8 @@
         const res = await resp.json();
         if (res.success && res.data) {
           if (audioSettings && audioSettings.quiz) playAdvancedSound('success');
-          showToast(`🎉 Chúc mừng! Đã hoàn thành mốc lý thuyết (+${res.data.xu_thuong || 10} 🪙 Xu, +${res.data.diem_thuong || 15} ⭐ EXP)!`);
+          const { xu_nhan_duoc: coins = 0, exp_nhan_duoc: exp = 0, alreadyCompleted } = res.data;
+          showToast(alreadyCompleted ? 'Bạn đã hoàn thành mốc này.' : `Hoàn thành mốc lý thuyết · +${coins} Xu · +${exp} EXP`);
           closeTheoryModal();
           await Promise.all([
             refreshUserData(),
@@ -8627,16 +8514,16 @@
       try {
         const response=await fetch('/api/arena/leaderboard');const result=await response.json();
         if(!result.success || !Array.isArray(result.data))return;
-        const scopes=['all',...(allSystemCourses||[]).map(c=>(c.ma_mon||'').replace(/^mon_/,''))];
+        const scopes=['all','csdl',...(allSystemCourses||[]).map(c=>(c.ma_mon||'').replace(/^mon_/,''))];
         for(const scope of new Set(scopes)){
-          const users=result.data.filter(u=>scope==='all'||(u.mon_da_dang_ky||[]).includes('mon_'+scope));
+          const users=result.data.filter(u=>scope==='all'||Object.prototype.hasOwnProperty.call(u.diem_dau_hang||{},'mon_'+scope));
           const rows={hang:[],speed:[],acc:[],streak:[]};
           for(const user of users){
-            const pet=allPets.find(p=>p.name===user.ten_thu_cung);const icon=pet?.icon||'🐾';
-            const prefix=[user.ten_hien_thi,icon,tierOf(Number(user.tong_diem_kinh_nghiem),true)];
-            const row=value=>[...prefix,String(value),user.ma_nguoi_dung,user.ten_dang_nhap];
-            rows.hang.push(row(user.tong_diem_kinh_nghiem||0));
-            rows.streak.push(row(user.chuoi_thang_arena||0));
+            const points=scope==='all'?Object.values(user.diem_dau_hang||{}).reduce((n,p)=>n+Number(p||0),0):Number(user.diem_dau_hang?.['mon_'+scope]||0);
+            const prefix=[user.ten_hien_thi||user.ten_dang_nhap,'',tierOf(points,true)];
+            const row=value=>[...prefix,String(value),user.ma_nguoi_dung,user.ten_dang_nhap,user.thu_cung?.anh_dai_dien||'/assets/navigation/pet.webp'];
+            rows.hang.push(row(points));
+            rows.streak.push(row(user.chuoi_dau_hang?.[scope]||0));
             const stats=(user.thong_ke_tra_loi||[]).filter(x=>scope==='all'||x.ma_mon==='mon_'+scope);
             const count=stats.reduce((n,x)=>n+x.so_cau,0);
             if(count){rows.speed.push(row((stats.reduce((n,x)=>n+x.tong_thoi_gian,0)/count).toFixed(2)+'s'));
@@ -9436,6 +9323,7 @@
       const scrollContainer = document.getElementById('app-main-scroll');
       if (scrollContainer) scrollContainer.scrollTop = 0;
 
+      window.GuidedTour?.view(mode);
       if (mode === 'ranked') {
         renderLobby();
         syncAllPetDisplays();
@@ -9620,8 +9508,14 @@
       localStorage.setItem('tok_unboxed_starter_pet', 'true');
       isUnboxingInProgress = false;
 
-      // Launch companion onboarding tour
-      startPetOnboardingTour();
+      navTo('catalog');
+      const token = localStorage.getItem('tok_token');
+      if (token) fetch('/api/economy/onboarding-gift', {
+        method: 'POST', headers: { Authorization: 'Bearer ' + token }
+      }).then(response => response.json()).then(result => {
+        if (result.success && token === localStorage.getItem('tok_token')) return refreshUserData();
+      }).catch(() => {});
+
     }
 
     // =========================================================================
@@ -9683,6 +9577,7 @@
           hp: extremeSession.hp,
           maxHp: extremeSession.maxHp,
           soCauDaLam: extremeSession.soCauDaLam,
+          sessionId: extremeSession.sessionId,
           soCauDung: extremeSession.soCauDung,
           soCauSai: extremeSession.soCauSai,
           streak: extremeSession.streak,
@@ -9716,11 +9611,13 @@
           return;
         }
         const saved = JSON.parse(raw);
+        if (!saved.sessionId) { clearExtremeSessionStorage(); showToast('Phiên cũ đã hết hạn. Hãy bắt đầu lượt mới.'); return; }
         closeExtremeSetupModal();
         showToast('⚡ Đã khôi phục thành công trận đấu cực hạn!', 'success');
 
         extremeSession = {
           active: true,
+          sessionId: saved.sessionId,
           maMon: saved.maMon,
           tenMon: saved.tenMon,
           tongSoCauKho: saved.tongSoCauKho || (saved.cachedPool ? saved.cachedPool.length : 108),
@@ -9882,6 +9779,7 @@
 
         extremeSession = {
           active: true,
+          sessionId: data.session_id,
           maMon: data.ma_mon || resolvedMon,
           tenMon: data.ten_mon || 'Cơ sở Dữ liệu',
           tongSoCauKho: fullCachedPool.length,
@@ -10189,6 +10087,19 @@
     /**
      * Xử lý chấm điểm và phản hồi câu hỏi
      */
+    function showExtremeRetry(message, retry) {
+      const container = document.getElementById('extreme-options-container');
+      if (!container) return;
+      container.querySelector('[data-extreme-retry]')?.remove();
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.extremeRetry = '';
+      button.className = 'rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-semibold';
+      button.textContent = message + ' Thử lại';
+      button.onclick = () => { button.remove(); retry(); };
+      container.appendChild(button);
+    }
+
     async function handleExtremeAnswer(choiceIdx, selectedOptText = '', isTimeout = false) {
       if (!extremeSession || !extremeSession.active || extremeSession.isGrading) return;
       extremeSession.isGrading = true;
@@ -10218,7 +10129,8 @@
         if (isTimeout) {
           isCorrect = false;
           // Gọi API để lấy đáp án đúng
-          const checkRes = await fetchExtremeApi('/api/extreme/check-answer', { ma_cau_hoi: q.ma_cau_hoi, tra_loi: -1 });
+          const checkRes = await fetchExtremeApi('/api/extreme/check-answer', { session_id: extremeSession.sessionId, answer_index: extremeSession.soCauDung + extremeSession.soCauSai, ma_cau_hoi: q.ma_cau_hoi, tra_loi: -1 });
+          if (!checkRes.ok || !checkRes.data) throw new Error('Chưa xác nhận được lượt hết giờ.');
           if (checkRes.ok && checkRes.data) {
             const expText = String(checkRes.data.dap_an_dung_text || checkRes.data.correct_answer || '').trim().toLowerCase();
             correctIdx = currentOpts.findIndex(o => String(o || '').trim().toLowerCase() === expText);
@@ -10230,6 +10142,8 @@
         } else {
           // Gửi câu trả lời kèm văn bản đáp án đã chọn lên server chấm điểm độc lập vị trí
           const checkRes = await fetchExtremeApi('/api/extreme/check-answer', {
+            session_id: extremeSession.sessionId,
+            answer_index: extremeSession.soCauDung + extremeSession.soCauSai,
             ma_cau_hoi: q.ma_cau_hoi,
             tra_loi: chosenText,
             tra_loi_text: chosenText,
@@ -10245,8 +10159,7 @@
             }
             if (checkRes.data.giai_thich) explanation = checkRes.data.giai_thich;
           } else {
-            // Dự phòng offline nếu lỗi mạng
-            isCorrect = false;
+            throw new Error(checkRes.error?.message || 'Chưa xác nhận được câu trả lời.');
           }
         }
 
@@ -10388,10 +10301,11 @@
 
       } catch (err) {
         console.error('handleExtremeAnswer error:', err);
-        // Fallback chuyển câu
-        setTimeout(() => {
-          renderNextExtremeQuestion();
-        }, 1000);
+        if (extremeSession?.currentQuestion !== q || !extremeSession.active) return;
+        showExtremeRetry('Chưa xác nhận được câu trả lời.', () => {
+          extremeSession.isGrading = false;
+          handleExtremeAnswer(choiceIdx, selectedOptText, isTimeout);
+        });
       }
     }
 
@@ -10437,43 +10351,29 @@
      */
     async function finishExtremeGame(isDead = false) {
       if (!extremeSession) return;
-      clearExtremeSessionStorage();
       stopExtremeQuestionTimer();
       extremeSession.active = false;
 
       extremeSession.soCauDaLam = (extremeSession.soCauDung || 0) + (extremeSession.soCauSai || 0);
 
       const durationSec = Math.max(1, Math.round((Date.now() - (extremeSession.startTime || Date.now())) / 1000));
-      const sessionPayload = {
-        ma_mon: extremeSession.maMon,
-        tong_so_cau_lam: extremeSession.soCauDaLam,
-        total_answered: extremeSession.soCauDaLam,
-        tong_so_cau_dung: extremeSession.soCauDung,
-        correct_count: extremeSession.soCauDung,
-        wrong_count: extremeSession.soCauSai,
-        chuoi_dung_cao_nhat: extremeSession.maxStreak,
-        max_streak: extremeSession.maxStreak,
-        tong_diem: extremeSession.score,
-        total_score: extremeSession.score,
-        thoi_gian_giay: durationSec,
-        vong_lap: extremeSession.vongLap,
-        loops_completed: extremeSession.vongLap,
-        danh_sach_cau_hoi: extremeSession.answeredQuestions || [],
-        questions: extremeSession.answeredQuestions || []
-      };
+      const sessionPayload = { session_id: extremeSession.sessionId };
 
       try {
         const res = await fetchExtremeApi('/api/extreme/finish', sessionPayload);
+        if (!res.ok || !res.data) throw new Error('Chưa xác nhận được kết quả.');
+        clearExtremeSessionStorage();
+        const summary = res.data.summary;
 
-        const answeredCount = extremeSession.soCauDaLam || 0;
-        const correctCount = extremeSession.soCauDung || 0;
-        const streakCount = extremeSession.maxStreak || 0;
-        const totalScore = extremeSession.score || 0;
-        const loopCount = extremeSession.vongLap || 1;
+        const answeredCount = summary?.total_answered ?? 0;
+        const correctCount = summary?.correct_count ?? 0;
+        const streakCount = summary?.max_streak ?? 0;
+        const totalScore = summary?.total_score ?? 0;
+        const loopCount = summary?.loops_completed ?? 1;
 
         let badge = isDead ? 'Chiến Binh Sinh Tồn' : 'Đấu Sĩ Dũng Cảm';
-        let coins = Math.round(totalScore * 0.1);
-        let exp = Math.round(totalScore * 0.25);
+        let coins = 0;
+        let exp = 0;
 
         if (res.ok && res.data) {
           if (res.data.badgeTitle) badge = res.data.badgeTitle;
@@ -10525,8 +10425,7 @@
         }
       } catch (err) {
         console.error('finishExtremeGame error:', err);
-        const sumModal = document.getElementById('modal-extreme-summary');
-        if (sumModal) sumModal.classList.remove('hidden');
+        showExtremeRetry('Chưa xác nhận được kết quả.', () => finishExtremeGame(isDead));
       }
     }
 

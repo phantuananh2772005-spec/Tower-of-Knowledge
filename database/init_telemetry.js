@@ -133,11 +133,12 @@ async function initTelemetrySchema() {
   try {
     const { ensureBotUsers } = require('../scripts/seed_bots');
     await ensureBotUsers();
-    await db.execute(`
-      UPDATE nguoi_dung SET chuoi_thang_arena = 2, chuoi_thang_cao_nhat_arena = 2 WHERE ma_nguoi_dung = 'usr_bot_001' AND (chuoi_thang_arena = 0 OR chuoi_thang_arena IS NULL);
-      UPDATE nguoi_dung SET chuoi_thang_arena = 5, chuoi_thang_cao_nhat_arena = 5 WHERE ma_nguoi_dung = 'usr_bot_002' AND (chuoi_thang_arena = 0 OR chuoi_thang_arena IS NULL);
-      UPDATE nguoi_dung SET chuoi_thang_arena = 9, chuoi_thang_cao_nhat_arena = 9 WHERE ma_nguoi_dung = 'usr_bot_003' AND (chuoi_thang_arena = 0 OR chuoi_thang_arena IS NULL);
-    `);
+    for (const [botId, streak] of [['usr_bot_001', 2], ['usr_bot_002', 5], ['usr_bot_003', 9]]) {
+      await db.execute(`
+        UPDATE nguoi_dung SET chuoi_thang_arena = $1, chuoi_thang_cao_nhat_arena = $1
+        WHERE ma_nguoi_dung = $2 AND (chuoi_thang_arena = 0 OR chuoi_thang_arena IS NULL)
+      `, [streak, botId]);
+    }
   } catch (botErr) {
     console.warn('⚠️ Could not ensure bot users in initTelemetrySchema:', botErr.message);
   }

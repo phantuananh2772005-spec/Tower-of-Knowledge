@@ -1,3 +1,4 @@
+const { randomUUID } = require('node:crypto');
 /**
  * Economy Service
  * Handles coin transactions, EXP accumulation, and rank progression.
@@ -95,25 +96,33 @@ async function mutateCoinsInTransaction(tx, ma_nguoi_dung, delta, nguon_giao_dic
  * @param {string} ma_nguoi_dung
  * @param {number} expToAdd
  */
-async function addExperience(ma_nguoi_dung, expToAdd) {
-  const deltaExp = Number(expToAdd) || 0;
-  if (deltaExp <= 0) return;
-
-  return await withUserLock(ma_nguoi_dung, () => db.transaction(async tx => {
-    const user = await tx.queryOne('SELECT tong_diem_kinh_nghiem FROM nguoi_dung WHERE ma_nguoi_dung = $1' + (db.isPostgres ? ' FOR UPDATE' : ''), [ma_nguoi_dung]);
-    if (!user) throw new Error('Người dùng không tồn tại.');
-
-    await tx.execute(
-      'UPDATE nguoi_dung SET tong_diem_kinh_nghiem = tong_diem_kinh_nghiem + $1, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $2',
-      [deltaExp, ma_nguoi_dung]
+async function addExperienceInTransaction(tx, userId, expToAdd, { repeat = false } = {}) {
+  let delta=Math.max(0,Math.floor(Number(expToAdd)||0));
+  const user=await tx.queryOne('SELECT tong_diem_kinh_nghiem FROM nguoi_dung WHERE ma_nguoi_dung = $1'+(db.isPostgres?' FOR UPDATE':''),[userId]);
+  if(!user)throw new Error('Người dùng không tồn tại.');
+  if (repeat && delta > 0) {
+    const local = new Date(Date.now() + 7 * 3600000);
+    const today = local.toISOString().slice(0, 10);
+    local.setUTCDate(local.getUTCDate() - ((local.getUTCDay() + 6) % 7));
+    const monday = local.toISOString().slice(0, 10);
+    const rows = await tx.query(
+      'SELECT ngay_vn,exp FROM exp_lap_lai WHERE ma_nguoi_dung=$1 AND ngay_vn >= $2 AND ngay_vn <= $3',
+      [userId, monday, today]
     );
+    const day = rows.filter(row => row.ngay_vn === today).reduce((n,row) => n + Number(row.exp), 0);
+    const week = rows.reduce((n,row) => n + Number(row.exp), 0);
+    delta = Math.max(0, Math.min(delta, 300 - day, 1500 - week));
+    if (delta) await tx.execute('INSERT INTO exp_lap_lai(ma_giao_dich,ma_nguoi_dung,ngay_vn,exp) VALUES($1,$2,$3,$4)',
+      [randomUUID(), userId, today, delta]);
+  }
 
-    const updated = await tx.queryOne('SELECT tong_diem_kinh_nghiem FROM nguoi_dung WHERE ma_nguoi_dung = $1', [ma_nguoi_dung]);
-    const newExp = updated ? updated.tong_diem_kinh_nghiem : (user.tong_diem_kinh_nghiem + deltaExp);
-    const newRank = deriveRankTitle(newExp);
-    const newLevel = deriveUserLevel(newExp);
-    return { newExp, newRank, newLevel };
-  }));
+  await tx.execute('UPDATE nguoi_dung SET tong_diem_kinh_nghiem = tong_diem_kinh_nghiem + $1, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $2',[delta,userId]);
+  const newExp=Number(user.tong_diem_kinh_nghiem)+delta;
+  return {newExp,newRank:deriveRankTitle(newExp),newLevel:deriveUserLevel(newExp),expAwarded:delta};
+}
+async function addExperience(userId, expToAdd) {
+  if(!(Number(expToAdd)>0))return;
+  return withUserLock(userId,()=>db.transaction(tx=>addExperienceInTransaction(tx,userId,expToAdd)));
 }
 
 /**
@@ -131,5 +140,6 @@ module.exports = {
   mutateCoinsInTransaction,
   mutateCoins,
   addExperience,
+  addExperienceInTransaction,
   getTransactionHistory
 };

@@ -38,17 +38,14 @@ router.get('/leaderboard', async (req, res) => {
       SELECT u.ma_nguoi_dung, u.ten_dang_nhap, u.ten_hien_thi, u.tong_diem_kinh_nghiem, u.chuoi_streak_ngay,
              COALESCE(u.chuoi_thang_arena, 0) as chuoi_thang_arena,
              COALESCE(u.chuoi_thang_cao_nhat_arena, 0) as chuoi_thang_cao_nhat_arena,
-             p.ten_thu_cung, p.anh_dai_dien
+             p.ma_thu_cung,p.ten_thu_cung, p.anh_dai_dien
       FROM nguoi_dung u
       LEFT JOIN thu_cung_so_huu tcsh ON u.ma_nguoi_dung = tcsh.ma_nguoi_dung AND tcsh.dang_kich_hoat = 1
       LEFT JOIN thu_cung p ON tcsh.ma_thu_cung = p.ma_thu_cung
-      WHERE u.vai_tro NOT IN ('QUAN_TRI_VIEN', 'HE_THONG')
-        AND u.ten_hien_thi NOT LIKE N'%Đối thủ%'
-        AND u.ten_hien_thi NOT LIKE N'%Người chơi%'
-        AND u.ten_dang_nhap NOT LIKE '%cron%'
-        AND u.ten_dang_nhap NOT LIKE '%test_%'
-        AND u.ten_hien_thi NOT LIKE N'%Tester%'
-      ORDER BY u.tong_diem_kinh_nghiem DESC
+      WHERE u.vai_tro NOT IN ('QUAN_TRI_VIEN','HE_THONG')
+        AND u.ma_nguoi_dung NOT LIKE 'usr_bot_%'
+        AND EXISTS(SELECT 1 FROM diem_dau_hang r WHERE r.ma_nguoi_dung=u.ma_nguoi_dung)
+      ORDER BY u.ma_nguoi_dung
     `);
     
     // Khử trùng lặp theo ma_nguoi_dung (đảm bảo mỗi người dùng chỉ xuất hiện đúng 1 lần)
@@ -68,10 +65,29 @@ router.get('/leaderboard', async (req, res) => {
       FROM luot_tra_loi a
       JOIN nguoi_choi_trong_tran p ON p.ma_nguoi_choi_trong_tran = a.ma_nguoi_choi_trong_tran
       JOIN tran_dau_1v1 t ON t.ma_tran = p.ma_tran
+      WHERE t.che_do='RANKED' AND t.trang_thai='KET_THUC' AND p.xu_nhan_duoc>0
       GROUP BY p.ma_nguoi_dung, t.ma_mon`, [true]);
     const enrollments = await db.query('SELECT ma_nguoi_dung, ma_mon FROM tien_do_mon_hoc');
+    const ratings=await db.query('SELECT ma_nguoi_dung,ma_mon,diem FROM diem_dau_hang');
+    const results=await db.query(`
+      SELECT p.ma_nguoi_dung,t.ma_mon,p.ket_qua
+      FROM nguoi_choi_trong_tran p JOIN tran_dau_1v1 t ON t.ma_tran=p.ma_tran
+      WHERE t.che_do='RANKED' AND t.trang_thai='KET_THUC' AND p.xu_nhan_duoc>0
+      ORDER BY t.thoi_gian_ket_thuc,t.ma_tran
+    `);
+    const streaks=new Map();
+    for(const result of results){
+      if(!streaks.has(result.ma_nguoi_dung))streaks.set(result.ma_nguoi_dung,{});
+      const streak=streaks.get(result.ma_nguoi_dung);
+      for(const scope of ['all',result.ma_mon.replace(/^mon_/,'')]){
+        streak[scope]=result.ket_qua==='THANG'?(streak[scope]||0)+1:0;
+      }
+    }
     const enriched = uniqueUsers.map(u => ({
       ...u,
+      chuoi_dau_hang:streaks.get(u.ma_nguoi_dung)||{},
+      diem_dau_hang:Object.fromEntries(ratings.filter(r=>r.ma_nguoi_dung===u.ma_nguoi_dung).map(r=>[r.ma_mon,Number(r.diem)])),
+      thu_cung:require('../services/pet.service').formatPet(u.ma_thu_cung?u:null),
       mon_da_dang_ky: enrollments.filter(e => e.ma_nguoi_dung === u.ma_nguoi_dung).map(e => e.ma_mon),
       thong_ke_tra_loi: answerStats.filter(s => s.ma_nguoi_dung === u.ma_nguoi_dung).map(s => ({
         ma_mon:s.ma_mon, so_cau:Number(s.so_cau), so_cau_dung:Number(s.so_cau_dung), tong_thoi_gian:Number(s.tong_thoi_gian)
@@ -89,6 +105,9 @@ router.get('/leaderboard', async (req, res) => {
 router.get('/:matchId', authenticate, async (req, res) => {
   try {
     const matchState = await arenaService.getMatchState(req.params.matchId);
+    if (!matchState.nguoi_choi.some(player => player.ma_nguoi_dung === req.user.ma_nguoi_dung)) {
+      return res.apiError("Bạn không tham gia trận này.", "MATCH_FORBIDDEN", 403);
+    }
     return res.apiSuccess(matchState);
   } catch (err) {
     return res.apiError(err.message, 'FETCH_MATCH_FAILED', 404);
@@ -157,9 +176,7 @@ router.post('/:matchId/surrender', authenticate, async (req, res) => {
 
 router.post('/:matchId/conclude', authenticate, async (req, res) => {
   try {
-    const { winnerUserId, reason } = req.body;
-    await arenaService.concludeMatch(req.params.matchId, winnerUserId, reason || 'KO_VICTORY');
-    const updatedState = await arenaService.getMatchState(req.params.matchId);
+    const updatedState = await arenaService.concludeIfResolved(req.params.matchId,req.user.ma_nguoi_dung);
     const io = req.app.get('io');
     if (io) {
       io.emit('leaderboard_updated', { timestamp: Date.now(), ma_tran: req.params.matchId });

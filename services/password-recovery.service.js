@@ -1,5 +1,5 @@
+const { validatePassword, hashPassword } = require('./password-policy');
 const crypto = require('crypto');
-const bcrypt = require('bcryptjs');
 const db = require('../database/db');
 const mail = require('./recovery-mail.service');
 const jwt = require('jsonwebtoken');
@@ -59,13 +59,13 @@ function createRecoveryService({ database = db, transport = mail, now = Date.now
   async function reset({ email, code, recovery_token, password }) {
     email = normalize(email);
     if (!database.isPostgres) throw new Error('Khôi phục mật khẩu cần cơ sở dữ liệu PostgreSQL.');
-    if (typeof password !== 'string' || password.length < 8 || Buffer.byteLength(password,'utf8') > 72) throw new Error('Mật khẩu cần ít nhất 8 ký tự và tối đa 72 byte.');
+    validatePassword(password, [email]);
     const proof=typeof recovery_token==='string'&&/^[A-Za-z0-9_-]{43}$/.test(recovery_token)?recovery_token:code;
     if (!email || email.length > 255 || typeof proof !== 'string' || !/^(?:\d{6}|[A-Za-z0-9_-]{43})$/.test(proof)) throw new Error(invalid);
     const users = await database.query('SELECT ma_nguoi_dung FROM nguoi_dung WHERE LOWER(google_email) = $1 AND google_sub IS NOT NULL', [email]);
     if (users.length !== 1) throw new Error(invalid);
     const id = users[0].ma_nguoi_dung;
-    const hash = await bcrypt.hash(password, 10);
+    const hash = await hashPassword(password);
     const ok = await database.transaction(async tx => {
       const user = await tx.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1 FOR UPDATE', [id]);
       const item = await tx.queryOne('SELECT * FROM password_recovery WHERE user_id = $1', [id]);

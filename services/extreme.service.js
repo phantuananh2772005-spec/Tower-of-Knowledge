@@ -5,8 +5,64 @@
  */
 
 const db = require('../database/db');
-const { mutateCoins, addExperience } = require('./economy.service');
-const { evaluateQuizSubmission } = require('../core/rules/progression.rules');
+const { randomUUID } = require('node:crypto');
+const { mutateCoinsInTransaction, addExperienceInTransaction, withUserLock } = require('./economy.service');
+const sessions = new Map();
+const SESSION_TTL = 2 * 60 * 60 * 1000;
+
+function requireSession(id, userId) {
+  const session = sessions.get(id);
+  if (!session || session.userId !== (userId || null) || Date.now() >= session.expires) {
+    throw new Error('Phiên Cực hạn đã hết hạn. Hãy bắt đầu lượt mới.');
+  }
+  return session;
+}
+
+function openSession(userId, course, pool) {
+  const now = Date.now();
+  for (const [id, session] of sessions) if (session.expires <= now) sessions.delete(id);
+  if (sessions.size >= 1000) throw new Error('Đấu trường đang bận. Hãy thử lại sau.');
+  const id = randomUUID();
+  sessions.set(id, {
+    userId: userId || null, course, expires: now + SESSION_TTL, startedAt: now,
+    allowed: new Set(pool.map(q => q.ma_cau_hoi)), seen: new Set(),
+    round: 1, lives: 5, streak: 0, maxStreak: 0, correct: 0, score: 0, answers: []
+  });
+  return id;
+}
+
+async function gradeSession(userId, id, index, questionId, answer, answerText) {
+  return withUserLock('extreme:' + id, async () => {
+    const session = requireSession(id, userId);
+    if (session.result) throw new Error('Phiên đã kết thúc.');
+    if (Number.isInteger(index) && index >= 0 && index < session.answers.length) {
+      const previous = session.answers[index];
+      if (previous.ma_cau_hoi === questionId) return previous.result;
+    }
+    if (index !== session.answers.length || !session.allowed.has(questionId)
+      || session.lives <= 0 || session.answers.length >= 1000) throw new Error('Lượt trả lời không hợp lệ.');
+    if (session.seen.size === session.allowed.size) {
+      session.seen.clear();
+      session.round++;
+    }
+    if (session.seen.has(questionId)) throw new Error('Câu hỏi đã được trả lời trong vòng này.');
+    const result = await checkAnswer(questionId, answer, answerText);
+    session.seen.add(questionId);
+    if (result.is_correct) {
+      session.correct++;
+      session.streak++;
+      session.maxStreak = Math.max(session.maxStreak, session.streak);
+      const multiplier = session.streak >= 10 ? 3 : session.streak >= 6 ? 2 : session.streak >= 3 ? 1.5 : 1;
+      session.score += Math.round(10 * multiplier * (1 + (session.round - 1) * 0.5));
+      if (session.streak % 10 === 0) session.lives = Math.min(5, session.lives + 1);
+    } else {
+      session.streak = 0;
+      session.lives--;
+    }
+    session.answers.push({ ma_cau_hoi: questionId, la_dung: result.is_correct, result });
+    return result;
+  });
+}
 
 /**
  * Format raw question from DB into a safe client format (NEVER reveal answer position)
@@ -110,6 +166,7 @@ async function startSession(ma_mon = 'mon_csdl', ma_nguoi_dung = null) {
   }
 
   return {
+    session_id: pool.length ? openSession(ma_nguoi_dung, resolvedMon, pool) : null,
     ma_mon: resolvedMon,
     ten_mon: course ? course.ten_mon : 'Cơ sở Dữ liệu',
     tong_so_cau_trong_kho: pool.length,
@@ -272,101 +329,38 @@ async function checkAnswer(ma_cau_hoi, tra_loi, tra_loi_text = null) {
  * Conclude an Extreme Survival Match
  * Computes rewards (Coins & EXP), records history, and returns performance summary
  */
-async function finishSession(ma_nguoi_dung, sessionData = {}) {
-  const {
-    ma_mon = 'mon_csdl',
-    thoi_gian_giay = sessionData.duration_seconds || sessionData.thoi_gian_giay || 0,
-    vong_lap = sessionData.loops_completed || sessionData.vong_lap || 1
-  } = sessionData;
+async function finishSession(ma_nguoi_dung, { session_id } = {}) {
+  return withUserLock('extreme:' + session_id, async () => {
+    const session = requireSession(session_id, ma_nguoi_dung);
+    if (session.result) return session.result;
 
-  const questionLog = Array.isArray(sessionData.danh_sach_cau_hoi) && sessionData.danh_sach_cau_hoi.length > 0
-    ? sessionData.danh_sach_cau_hoi 
-    : (Array.isArray(sessionData.questions) && sessionData.questions.length > 0 ? sessionData.questions : null);
+    const tong_so_cau_lam = session.answers.length;
+    const tong_so_cau_dung = session.correct;
+    const chuoi_dung_cao_nhat = session.maxStreak;
+    const tong_diem = session.score;
+    const thoi_gian_giay = Math.max(0, Math.round((Date.now() - session.startedAt) / 1000));
+    const vong_lap = session.round;
+    const earnedCoins = ma_nguoi_dung ? Math.min(250, Math.floor(tong_diem / 40) + tong_so_cau_dung * 2 + chuoi_dung_cao_nhat * 3) : 0;
+    let earnedExp = ma_nguoi_dung ? Math.min(600, tong_so_cau_dung * 6 + chuoi_dung_cao_nhat * 10 + (vong_lap - 1) * 60) : 0;
 
-  // XÁC THỰC PHÍA SERVER: Tính toán lại từ nhật ký câu hỏi đã làm thực tế để chống hack/spoofing
-  let verifiedTotal = 0;
-  let verifiedCorrect = 0;
-  let verifiedMaxStreak = 0;
-  let verifiedScore = 0;
-
-  if (Array.isArray(questionLog) && questionLog.length > 0) {
-    verifiedTotal = questionLog.length;
-    let currentStreak = 0;
-    for (const qItem of questionLog) {
-      if (qItem.la_dung === true || qItem.is_correct === true) {
-        verifiedCorrect++;
-        currentStreak++;
-        if (currentStreak > verifiedMaxStreak) verifiedMaxStreak = currentStreak;
-        let streakMult = 1.0;
-        if (currentStreak >= 10) streakMult = 3.0;
-        else if (currentStreak >= 6) streakMult = 2.0;
-        else if (currentStreak >= 3) streakMult = 1.5;
-        const loopMult = 1 + (Number(vong_lap || 1) - 1) * 0.5;
-        verifiedScore += Math.round(10 * streakMult * loopMult);
-      } else {
-        currentStreak = 0;
-      }
+    if (ma_nguoi_dung && tong_so_cau_lam) {
+      await db.transaction(async tx => {
+        const moc = await tx.queryOne(`
+          SELECT TOP 1 m.ma_moc FROM moc_bai_hoc m JOIN chuong_hoc c ON m.ma_chuong=c.ma_chuong
+          WHERE c.ma_mon=$1 ORDER BY c.thu_tu,m.thu_tu
+        `, [session.course]);
+        if (!moc) throw new Error('Không tìm thấy mốc để ghi kết quả.');
+        const details = session.answers.map(({ ma_cau_hoi, la_dung }) => ({ ma_cau_hoi, la_dung }));
+        await tx.execute(`
+          INSERT INTO lich_su_phien_hoc(ma_phien,ma_nguoi_dung,ma_moc,loai_phien,buoc_so,
+            thoi_gian_tong_giay,ti_le_dung,toc_do_trung_binh_giay,tong_so_lan_tra_cuu,chi_tiet_cau_hoi)
+          VALUES($1,$2,$3,'THI_DAU_CUC_HAN',$4,$5,$6,$7,0,$8)
+        `, ['ext_' + session_id, ma_nguoi_dung, moc.ma_moc, vong_lap, thoi_gian_giay,
+          Math.round(tong_so_cau_dung / tong_so_cau_lam * 100), thoi_gian_giay / tong_so_cau_lam, JSON.stringify(details)]);
+        if (earnedCoins) await mutateCoinsInTransaction(tx, ma_nguoi_dung, earnedCoins, 'THI_DAU_CUC_HAN', 'Thưởng Cực hạn');
+        if (earnedExp) earnedExp = (await addExperienceInTransaction(tx, ma_nguoi_dung, earnedExp, { repeat: true })).expAwarded;
+      });
     }
-  }
-
-  const tong_so_cau_lam = verifiedTotal > 0 ? verifiedTotal : (sessionData.total_answered || sessionData.tong_so_cau_lam || 0);
-  const tong_so_cau_dung = verifiedTotal > 0 ? verifiedCorrect : (sessionData.correct_count || sessionData.tong_so_cau_dung || 0);
-  const chuoi_dung_cao_nhat = verifiedTotal > 0 ? verifiedMaxStreak : (sessionData.max_streak || sessionData.chuoi_dung_cao_nhat || 0);
-  const tong_diem = verifiedTotal > 0 ? verifiedScore : (sessionData.total_score || sessionData.tong_diem || 0);
-
-  // Reward Calculations: Proportional to survival endurance
-  const earnedCoins = Math.min(250, Math.floor(tong_diem / 40) + tong_so_cau_dung * 2 + chuoi_dung_cao_nhat * 3);
-  const earnedExp = Math.min(600, tong_so_cau_dung * 6 + chuoi_dung_cao_nhat * 10 + (vong_lap - 1) * 60);
-
-  if (ma_nguoi_dung) {
-    if (earnedCoins > 0) {
-      await mutateCoins(ma_nguoi_dung, earnedCoins, 'THI_DAU_CUC_HAN', `Thưởng Sinh Tồn Cực Hạn (${tong_so_cau_dung} câu đúng)`);
-    }
-    if (earnedExp > 0) {
-      await addExperience(ma_nguoi_dung, earnedExp);
-    }
-
-    // Persist session telemetry
-    const sampleMoc = await db.queryOne(`
-      SELECT TOP 1 m.ma_moc 
-      FROM moc_bai_hoc m 
-      JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong 
-      WHERE c.ma_mon = $1 
-      ORDER BY m.thu_tu ASC
-    `, [ma_mon]);
-
-    const ma_phien = `sess_cuchan_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-    const accPct = tong_so_cau_lam > 0 ? Math.round((tong_so_cau_dung / tong_so_cau_lam) * 100) : 0;
-    const avgSec = tong_so_cau_lam > 0 ? Number((thoi_gian_giay / tong_so_cau_lam).toFixed(1)) : 0;
-
-    const questionLog = Array.isArray(sessionData.danh_sach_cau_hoi) && sessionData.danh_sach_cau_hoi.length > 0
-      ? sessionData.danh_sach_cau_hoi 
-      : (Array.isArray(sessionData.questions) && sessionData.questions.length > 0 ? sessionData.questions : null);
-
-    const detailPayload = questionLog || sessionData;
-
-    try {
-      await db.execute(`
-        INSERT INTO lich_su_phien_hoc (
-          ma_phien, ma_nguoi_dung, ma_moc, loai_phien, buoc_so,
-          thoi_gian_tong_giay, ti_le_dung, toc_do_trung_binh_giay, tong_so_lan_tra_cuu, chi_tiet_cau_hoi
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      `, [
-        ma_phien,
-        ma_nguoi_dung,
-        sampleMoc ? sampleMoc.ma_moc : 'moc_csdl_01_01',
-        'THI_DAU_CUC_HAN',
-        vong_lap,
-        thoi_gian_giay,
-        accPct,
-        avgSec,
-        0,
-        JSON.stringify(detailPayload)
-      ]);
-    } catch (errLog) {
-      console.warn('⚠️ Extreme session log notice:', errLog.message);
-    }
-  }
 
   // Determine achievement badge
   let badgeTitle = 'Tập Sự Cực Hạn';
@@ -375,7 +369,7 @@ async function finishSession(ma_nguoi_dung, sessionData = {}) {
   else if (tong_so_cau_dung >= 15) badgeTitle = 'Dũng Giả Bất Khuất';
   else if (tong_so_cau_dung >= 5) badgeTitle = 'Chiến Binh Sinh Tồn';
 
-  return {
+  session.result = {
     success: true,
     badgeTitle,
     earnedCoins,
@@ -399,11 +393,14 @@ async function finishSession(ma_nguoi_dung, sessionData = {}) {
       badge: badgeTitle
     }
   };
+    return session.result;
+  });
 }
 
 module.exports = {
   startSession,
   getNextBatch,
   checkAnswer,
+  gradeSession,
   finishSession
 };

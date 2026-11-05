@@ -1,15 +1,12 @@
 const assert=require('assert');
 const puppeteer=require('puppeteer-core');
 const db=require('../database/db');
-const fs=require('fs');
 const base=process.env.TEST_BASE_URL||'http://localhost:3001';
-const screenshots=process.env.TEST_SCREENSHOTS;
-const delay=ms=>new Promise(r=>setTimeout(r,ms));
 async function main(){
   assert(new URL(base).hostname==='localhost','Use a disposable local test account, never the production database.');
   const username='codex_tour_'+Date.now();let id;let browser;
   try{
-    const response=await fetch(base+'/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ten_dang_nhap:username,mat_khau:'TestTour123!',ten_hien_thi:'Kiểm thử hướng dẫn'})});
+    const response=await fetch(base+'/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ten_dang_nhap:username,mat_khau:'TestTour123!Fixture',ten_hien_thi:'Kiểm thử hướng dẫn'})});
     const result=await response.json();assert(result.success,JSON.stringify(result.error));id=result.data.nguoi_dung.ma_nguoi_dung;
     await db.execute('UPDATE nguoi_dung SET xu_tri_thuc = $1 WHERE ma_nguoi_dung = $2',[1000,id]);
     await require('../services/pet.service').buyPet('pyra_phoenix',id);
@@ -18,7 +15,6 @@ async function main(){
       const page=await browser.newPage();const errors=[];page.on('pageerror',err=>errors.push(err.message));
       await page.setViewport({width,height:850});
       await page.evaluateOnNewDocument(token=>{localStorage.setItem('tok_token',token);localStorage.setItem('tok_admin_token','stale-admin-token');},result.data.token);
-      await page.evaluateOnNewDocument(()=>{window.tourClickLog=[];document.addEventListener('click',e=>window.tourClickLog.push({id:e.target.closest('button')?.id||e.target.id||e.target.className,step:window.GuidedTour?.step}),true);});
       await page.goto(base,{waitUntil:'networkidle2'});await page.waitForFunction(()=>typeof GuidedTour!=='undefined'&&currentUserAccount?.userId);
       assert.strictEqual(await page.$eval('#topbar-title',el=>el.textContent),'Tổng quan','Initial home header incorrectly shows course chapter');
       assert(await page.$eval('#btn-topbar-admin-portal',el=>getComputedStyle(el).display==='none'),'Learner sees desktop Admin link');
@@ -40,57 +36,27 @@ async function main(){
         assert.strictEqual(await page.evaluate(()=>currentUserAccount.accessory?.id),'graduation_cap','Accessory lost after reload');
         assert(await page.$('#hub-pet-avatar .pet-accessory-badge'),'Equipped accessory missing from Pet display');
         assert(await page.evaluate(()=>!document.documentElement.classList.contains('dark')&&!audioSettings.quiz),'Settings lost after reload');
-        await page.evaluate(()=>{currentUserAccount.tourProgress=null;localStorage.removeItem('tok_tour_v2_'+currentUserAccount.userId);startPetOnboardingTour();});
-        await delay(250);await page.click('#btn_pet_tour_next');await delay(250);
-        await page.evaluate(async()=>{skipPetTour();await flushPreferences();});
-        await page.reload({waitUntil:'networkidle2'});await page.waitForFunction(()=>currentUserAccount?.userId);
-        await page.evaluate(()=>startPetOnboardingTour());await delay(250);
-        assert.strictEqual(await page.evaluate(()=>GuidedTour.step),'level','Tour did not resume saved step');
-        await page.evaluate(()=>skipPetTour());
       }
-      await page.evaluate(()=>{document.getElementById('modal-unboxing-pet').classList.add('hidden');currentUserAccount.tourProgress=null;localStorage.removeItem('tok_tour_v2_'+currentUserAccount.userId);startPetOnboardingTour();});
-      await delay(300);
-      assert.deepStrictEqual(await page.evaluate(()=>GuidedTour.steps.filter(step=>step.id.startsWith('audio-')&&step.id!=='audio-back').map(step=>step.id)),['audio-overview'],'Audio guide should contain one overview only');
-      assert(await page.evaluate(()=>!GuidedTour.steps.some(step=>step.id==='shop-admin')),'Guide introduces Admin pets');
-      const missing=[],overlap=[];
-      for(let n=0;n<130;n++){
-        await page.waitForFunction(()=>GuidedTour.target||!document.getElementById('btn_pet_tour_next').disabled,{timeout:6000});
-        await delay(180);
-        const before=await page.evaluate(()=>{
-          const t=GuidedTour.target,d=document.getElementById('pet-tour-dialog'),r=t?.getBoundingClientRect(),q=d.getBoundingClientRect();
-          return {step:GuidedTour.step,target:!!t,action:GuidedTour.steps.find(s=>s.id===GuidedTour.step)?.action,repeat:GuidedTour.steps.find(s=>s.id===GuidedTour.step)?.repeat,
-            rect:r?{x:r.x,y:r.y,w:r.width,h:r.height}:null,dialog:{x:q.x,y:q.y,w:q.width,h:q.height},
-            overlap:r?Math.max(0,Math.min(r.right,q.right)-Math.max(r.left,q.left))*Math.max(0,Math.min(r.bottom,q.bottom)-Math.max(r.top,q.top)):0};
-        });
-        if(before.step==='finish')break;
-        if(!before.target){missing.push(before.step);console.log('MISSING',width,before.step);}
-        if(before.overlap>80){overlap.push(before.step);console.log('OVERLAP',width,before.step,JSON.stringify({target:before.rect,dialog:before.dialog}));if(screenshots)await page.screenshot({path:screenshots+`/tour-overlap-${width}-${before.step}.png`});}
-        assert(before.dialog.x>=0&&before.dialog.y>=0&&before.dialog.x+before.dialog.w<=width+1&&before.dialog.y+before.dialog.h<=851,`Dialog leaves viewport: ${before.step}`);
-        if(screenshots&&['level','nav-catalog','pet-current','settings-audio','audio-overview','shop-card'].includes(before.step)){fs.mkdirSync(screenshots,{recursive:true});await page.screenshot({path:screenshots+`/tour-${width}-${before.step}.png`});}
-        if(before.action&&before.target){
-          const target=before.step==='lesson-answer'?await page.evaluateHandle(()=>{
-            const ms=currentQuizSession?.matchingState;
-            if(ms){
-              if(ms.isEvaluating)return null;
-              if(ms.selectedLeft)return [...document.querySelectorAll('#q-options-container button[data-side="right"]')].find(b=>b.dataset.item===ms.pairsMap[ms.selectedLeft]);
-              return document.querySelector('#q-options-container button[data-side="left"]:not([data-matched="true"])');
-            }
-            return document.querySelector('#q-options-container button:not([disabled])');
-          }):await page.evaluateHandle(()=>GuidedTour.target);
-          if(!target.asElement()){await target.dispose();await delay(300);continue;}
-          await target.asElement().click();await target.dispose();
-        }else await page.click('#btn_pet_tour_next');
-        if(before.repeat){await delay(450);continue;}
-        try{await page.waitForFunction(step=>GuidedTour.step!==step,{timeout:25000},before.step);}catch(err){
-          if(screenshots)await page.screenshot({path:screenshots+`/tour-failure-${width}.png`});
-          throw Error(`Tour stuck at ${width}px ${before.step}: ${JSON.stringify(await page.evaluate(()=>{const btn=document.getElementById('btn_pet_tour_next'),r=btn.getBoundingClientRect();return {view:currentAppView,active:GuidedTour.active,hint:document.getElementById('tour-action-hint').textContent,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.id,log:tourClickLog.slice(-5)};}))}; errors=${JSON.stringify(errors)}`);
-        }
-      }
-      console.log(JSON.stringify({width,steps:await page.evaluate(()=>GuidedTour.steps.length),last:await page.evaluate(()=>GuidedTour.step),missing,overlap,errors}));
+      await page.evaluate(()=>{
+        document.getElementById('modal-unboxing-pet').classList.add('hidden');
+        currentUserAccount.tourProgress=null;
+        localStorage.removeItem('tok_feature_tips_v1_'+currentUserAccount.userId);
+        navTo('catalog');
+      });
+      const tip='#view-catalog aside[aria-label="Gợi ý sử dụng"]';
+      await page.waitForSelector(tip,{visible:true});
+      assert(await page.$eval(tip,el=>{
+        const rect=el.getBoundingClientRect();
+        return rect.left>=0&&rect.right<=innerWidth+1;
+      }),'Gợi ý nằm ngoài chiều rộng màn hình');
+      await page.click(tip+' button');
+      await page.evaluate(()=>{navTo('hub');navTo('catalog');});
+      assert.strictEqual(await page.$(tip),null,'Gợi ý hiện lại sau khi đã đọc');
+      await page.evaluate(()=>{openSettingsModal();openSettingsAudioView();});
+      await page.waitForSelector('#settings-view-audio aside',{visible:true});
+      assert.strictEqual((await page.$$('#settings-view-audio aside')).length,1);
       assert.deepStrictEqual(errors,[],'Browser JavaScript errors');
-      assert.strictEqual(await page.evaluate(()=>GuidedTour.step),'finish','Tour did not reach completion');
-      assert.deepStrictEqual(missing,[],'Tour targets missing');
-      assert.deepStrictEqual(overlap,[],'Tour dialog obscures targets');
+      console.log('PASS contextual guide viewport',width);
       await page.close();
     }
   }finally{

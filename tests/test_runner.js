@@ -298,7 +298,7 @@ async function main() {
     const testUsername = `user_runner_${Date.now()}`;
     const regResult = await authService.register({
       ten_dang_nhap: testUsername,
-      mat_khau: 'Password123@',
+      mat_khau: 'Password123@TestFixture',
       ten_hien_thi: `Học Viên Runner ${Date.now()}`
     });
     const userId = regResult.nguoi_dung.ma_nguoi_dung;
@@ -409,7 +409,7 @@ async function main() {
     const uname = `streak_reg_${Date.now()}`;
     const reg = await authService.register({
       ten_dang_nhap: uname,
-      mat_khau: 'Streak123@',
+      mat_khau: 'Streak123@TestFixture',
       ten_hien_thi: 'Streak Tester'
     });
     const uid = reg.nguoi_dung.ma_nguoi_dung;
@@ -418,7 +418,7 @@ async function main() {
       // TC-001a: First login on Day 1 -> streak = 1, +5 coins
       const login1 = await authService.login({
         ten_dang_nhap: uname,
-        mat_khau: 'Streak123@',
+        mat_khau: 'Streak123@TestFixture',
         currentDate: '2026-10-20T09:00:00Z'
       });
       assert.strictEqual(login1.nguoi_dung.chuoi_streak_ngay, 1);
@@ -427,7 +427,7 @@ async function main() {
       // TC-001c: Second login on same Day 1 -> streak remains 1, no duplicate coins
       const login1b = await authService.login({
         ten_dang_nhap: uname,
-        mat_khau: 'Streak123@',
+        mat_khau: 'Streak123@TestFixture',
         currentDate: '2026-10-20T14:00:00Z'
       });
       assert.strictEqual(login1b.nguoi_dung.chuoi_streak_ngay, 1);
@@ -436,7 +436,7 @@ async function main() {
       // TC-001b: Consecutive Day 2 login -> streak = 2, +10 coins (total 15)
       const login2 = await authService.login({
         ten_dang_nhap: uname,
-        mat_khau: 'Streak123@',
+        mat_khau: 'Streak123@TestFixture',
         currentDate: '2026-10-21T09:00:00Z'
       });
       assert.strictEqual(login2.nguoi_dung.chuoi_streak_ngay, 2);
@@ -445,7 +445,7 @@ async function main() {
       // TC-001d: Missed 2 days (login on Oct 24) -> streak resets to 1, no streak increment reward
       const loginBroken = await authService.login({
         ten_dang_nhap: uname,
-        mat_khau: 'Streak123@',
+        mat_khau: 'Streak123@TestFixture',
         currentDate: '2026-10-24T09:00:00Z'
       });
       assert.strictEqual(loginBroken.nguoi_dung.chuoi_streak_ngay, 1);
@@ -460,7 +460,7 @@ async function main() {
     const uname = `step_reg_${Date.now()}`;
     const reg = await authService.register({
       ten_dang_nhap: uname,
-      mat_khau: 'Step123@',
+      mat_khau: 'Step123@TestFixture',
       ten_hien_thi: 'Step Tester'
     });
     const uid = reg.nguoi_dung.ma_nguoi_dung;
@@ -557,8 +557,8 @@ async function main() {
     const db = require('../database/db');
     const u1 = `pvp1_${Date.now()}`;
     const u2 = `pvp2_${Date.now()}`;
-    const reg1 = await authService.register({ ten_dang_nhap: u1, mat_khau: 'Pass123@', ten_hien_thi: 'P1' });
-    const reg2 = await authService.register({ ten_dang_nhap: u2, mat_khau: 'Pass123@', ten_hien_thi: 'P2' });
+    const reg1 = await authService.register({ ten_dang_nhap: u1, mat_khau: 'Pass123@TestFixture', ten_hien_thi: 'P1' });
+    const reg2 = await authService.register({ ten_dang_nhap: u2, mat_khau: 'Pass123@TestFixture', ten_hien_thi: 'P2' });
     const id1 = reg1.nguoi_dung.ma_nguoi_dung;
     const id2 = reg2.nguoi_dung.ma_nguoi_dung;
 
@@ -593,8 +593,8 @@ async function main() {
     const db = require('../database/db');
     const u1 = `adm_p1_${Date.now()}`;
     const u2 = `adm_p2_${Date.now()}`;
-    const reg1 = await authService.register({ ten_dang_nhap: u1, mat_khau: 'Pass123@', ten_hien_thi: 'P1' });
-    const reg2 = await authService.register({ ten_dang_nhap: u2, mat_khau: 'Pass123@', ten_hien_thi: 'P2' });
+    const reg1 = await authService.register({ ten_dang_nhap: u1, mat_khau: 'Pass123@TestFixture', ten_hien_thi: 'P1' });
+    const reg2 = await authService.register({ ten_dang_nhap: u2, mat_khau: 'Pass123@TestFixture', ten_hien_thi: 'P2' });
     const id1 = reg1.nguoi_dung.ma_nguoi_dung;
     const id2 = reg2.nguoi_dung.ma_nguoi_dung;
 
@@ -622,7 +622,7 @@ async function main() {
     const economyService = require('../services/economy.service');
     const db = require('../database/db');
     const uname = `econ_pet_${Date.now()}`;
-    const reg = await authService.register({ ten_dang_nhap: uname, mat_khau: 'Pass123@', ten_hien_thi: 'Econ Tester' });
+    const reg = await authService.register({ ten_dang_nhap: uname, mat_khau: 'Pass123@TestFixture', ten_hien_thi: 'Econ Tester' });
     const uid = reg.nguoi_dung.ma_nguoi_dung;
 
     try {
@@ -692,7 +692,7 @@ async function main() {
     const economyService = require('../services/economy.service');
     const db = require('../database/db');
     const uname = `quest_test_${Date.now()}`;
-    const reg = await authService.register({ ten_dang_nhap: uname, mat_khau: 'Pass123@', ten_hien_thi: 'Quest Tester' });
+    const reg = await authService.register({ ten_dang_nhap: uname, mat_khau: 'Pass123@TestFixture', ten_hien_thi: 'Quest Tester' });
     const uid = reg.nguoi_dung.ma_nguoi_dung;
 
     try {

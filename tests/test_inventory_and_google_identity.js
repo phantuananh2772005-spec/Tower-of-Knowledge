@@ -18,7 +18,7 @@ async function main(){
     return {body:{credential,csrf:challenge.csrf},cookie:challenge.cookie};
   }
   try{
-    const reg=await auth.register({ten_dang_nhap:'codex_inventory_'+stamp,mat_khau:'TestItems123!',ten_hien_thi:'Inventory test'});const userId=reg.nguoi_dung.ma_nguoi_dung;ids.push(userId);
+    const reg=await auth.register({ten_dang_nhap:'codex_inventory_'+stamp,mat_khau:'TestItems123!Demo',ten_hien_thi:'Inventory test'});const userId=reg.nguoi_dung.ma_nguoi_dung;ids.push(userId);
     await db.execute('UPDATE nguoi_dung SET xu_tri_thuc = $1 WHERE ma_nguoi_dung = $2',[300,userId]);
     await assert.rejects(inventory.equipItem(userId,'mini_crown'),/chưa sở hữu/);
     const bought=await Promise.all([inventory.purchaseItem(userId,'graduation_cap'),inventory.purchaseItem(userId,'graduation_cap')]);assert.strictEqual(bought.filter(x=>!x.alreadyOwned).length,1);
@@ -26,7 +26,7 @@ async function main(){
     await inventory.equipItem(userId,'graduation_cap');assert.strictEqual((await auth.getCurrentUser(userId)).phu_kien_dang_dung.id,'graduation_cap');
     assert.strictEqual((await inventory.listItems(userId)).filter(item=>item.owned).length,1);
     await inventory.equipItem(userId,null);assert.strictEqual((await auth.getCurrentUser(userId)).phu_kien_dang_dung,null);
-    const other=await auth.register({ten_dang_nhap:'codex_identity_'+stamp,mat_khau:'TestItems123!',ten_hien_thi:'Other user'});const otherId=other.nguoi_dung.ma_nguoi_dung;ids.push(otherId);
+    const other=await auth.register({ten_dang_nhap:'codex_identity_'+stamp,mat_khau:'TestItems123!Demo',ten_hien_thi:'Other user'});const otherId=other.nguoi_dung.ma_nguoi_dung;ids.push(otherId);
     assert(!(await inventory.listItems(otherId)).some(item=>item.owned));
 
     const badNonce=proof('sub_bad_'+stamp,`bad_${stamp}@gmail.com`,'login',null,{nonce:'wrong'});

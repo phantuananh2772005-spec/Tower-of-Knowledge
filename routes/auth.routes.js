@@ -1,3 +1,4 @@
+const { authAttemptLimit } = require('../middlewares/auth-attempt-limit');
 const express = require('express');
 const router = express.Router();
 const authService = require('../services/auth.service');
@@ -59,7 +60,7 @@ router.delete('/google/link',authenticate,async(req,res)=>{
   catch(error){return res.apiError(error.message,'GOOGLE_UNLINK_FAILED',400);}
 });
 
-router.post('/register', async (req, res) => {
+router.post('/register', authAttemptLimit, async (req, res) => {
   try {
     const result = await authService.register(req.body);
     return res.apiSuccess(result, 201);
@@ -68,7 +69,7 @@ router.post('/register', async (req, res) => {
   }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', authAttemptLimit, async (req, res) => {
   try {
     const result = await authService.login({ten_dang_nhap:req.body.ten_dang_nhap,mat_khau:req.body.mat_khau});
     return res.apiSuccess(result);
