@@ -1,6 +1,6 @@
 # Tháp Tri Thức — tài liệu tiếp quản
 
-Ảnh chụp mã nguồn ngày 06/11/2026, giờ Việt Nam. Mốc Git là `3762634`. Thư mục làm việc còn bản sửa điểm hạng và thưởng lý thuyết chưa triển khai. Đọc cột trạng thái trước khi suy luận hành vi trên website thật.
+Tài liệu lập ngày 06/11/2026, giờ Việt Nam. Chỉ mục nguồn lấy mốc Git `3762634`. Bản thay đổi về bảo mật, đấu trường và hướng dẫn đã lên Render ở `40bfa54` và các bản bổ sung đến `7c27c93`. Đọc [tình trạng bản triển khai](09-ux-security-review.md#trạng-thái-bản-triển-khai) trước khi dùng các bảng ghi nhận hiện trạng cũ.
 
 | Cần hiểu | Đọc |
 |---|---|

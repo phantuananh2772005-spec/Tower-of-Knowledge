@@ -2,15 +2,15 @@
 
 Rà mã nguồn ngày 06/11/2026. Các bảng dưới đây ghi lại hiện trạng trước đợt sửa.
 
-## Trạng thái bản sửa trong workspace
+## Trạng thái bản triển khai
 
 - Đăng ký, đổi và đặt lại mật khẩu dùng chung ngưỡng 15–128 ký tự, danh sách chặn cục bộ và scrypt. Đăng nhập vẫn đọc được hash bcrypt cũ. Giới hạn thử hiện theo tiến trình. Cần kiểm cấu hình JWT và proxy trên Render.
-- Hướng dẫn xuất hiện theo tính năng khi người học mở màn hình đó. Khu vực âm thanh có một gợi ý, còn nút sau khi mở quà dẫn tới Kho môn.
+- Hướng dẫn xuất hiện theo tính năng khi người học mở màn hình đó. Khu vực âm thanh có một gợi ý, còn nút sau khi mở quà dẫn tới mốc/lộ trình môn đang học hoặc Kho môn nếu chưa đăng ký.
 - Phản hồi 1v1 chỉ gửi dữ liệu đủ để làm câu hỏi. Máy chủ giữ đáp án, xác minh thành viên và thứ tự, lấy thời điểm từ máy chủ và khóa hàng trận khi ghi lượt. Điểm hạng chỉ đổi ở trận hạng giữa hai người chơi.
 - Cực Hạn xác nhận từng lượt và kết toán từ phiên của máy chủ. Phiên lưu trong RAM, hết hạn sau hai giờ và mất khi tiến trình khởi động lại.
 - EXP thi đấu lặp lại giới hạn 300/ngày và 1.500/tuần theo giờ Việt Nam. Thưởng hoàn thành lần đầu đi riêng.
 - API Pet Studio yêu cầu quản trị, giới hạn video trong thư mục cấu hình, giới hạn thông số xuất và có thời hạn cho tác vụ Python.
-- Kiểm thử dịch vụ đã chạy trên pg-mem và PGlite. PGlite chạy bộ máy PostgreSQL nhúng. Chrome 375 px và 1280 px đã kiểm gợi ý theo màn hình. Hai phiên Chrome tách biệt đã ghép và hoàn thành trận xếp hạng trên máy chủ local với PGlite. PostgreSQL 18.6 native đã chạy lại bài kiểm thử dịch vụ. Hai kết nối PostgreSQL độc lập gửi kết toán đồng thời và chỉ ghi một lần thưởng. Bản triển khai trên Render vẫn cần xác minh.
+- Kiểm thử dịch vụ đã chạy trên pg-mem và PGlite. PGlite chạy bộ máy PostgreSQL nhúng. Chrome 375 px và 1280 px đã kiểm gợi ý theo màn hình. Hai phiên Chrome tách biệt đã ghép và hoàn thành trận xếp hạng trên máy chủ local với PGlite. PostgreSQL 18.6 native đã chạy lại bài kiểm thử dịch vụ. Hai kết nối PostgreSQL độc lập gửi kết toán đồng thời và chỉ ghi một lần thưởng. Render đã triển khai `7c27c93` và trả về phiên bản `1.2.0-contextual-learning`. API công khai xác nhận có cấu hình Google và nhánh gửi mã email đang tắt.
 
 ## Mật khẩu và phiên
 
