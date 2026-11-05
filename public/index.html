@@ -2093,7 +2093,7 @@
 
     <!-- ================= MODAL TỔNG QUAN MỐC HỌC TẬP & LỘ TRÌNH 4 BƯỚC BLOOM DUOLINGO ================= -->
     <div id="modal-checkpoint" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs transition-opacity duration-200" onclick="if(event.target===this)closeCheckpointModal()">
-      <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl w-full max-w-lg p-6 sm:p-7 space-y-5 shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200 relative">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl w-full max-w-lg p-6 sm:p-7 space-y-5 shadow-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto animate-in fade-in zoom-in duration-200 relative">
         <button id="btn_close_cp_modal" onclick="closeCheckpointModal()" class="absolute top-5 right-5 text-[var(--muted-foreground)] hover:text-[var(--foreground)] text-lg cursor-pointer">✕</button>
 
         <div class="space-y-1.5 pr-6">
@@ -9493,7 +9493,18 @@
       localStorage.setItem('tok_unboxed_starter_pet', 'true');
       isUnboxingInProgress = false;
 
-      navTo('catalog');
+      const enrolled = myEnrolledCourses.find(course => course.slug === currentActiveCourseSlug)
+        || myEnrolledCourses[0];
+      if (enrolled?.slug) {
+        navTo('hub');
+        if (enrolled.slug === currentActiveCourseSlug && currentFocusMoc?.ma_moc) {
+          openCheckpointModal(currentFocusMoc.ma_moc);
+        } else {
+          openCourseRoadmap(enrolled.slug);
+        }
+      } else {
+        navTo('catalog');
+      }
       const token = localStorage.getItem('tok_token');
       if (token) fetch('/api/economy/onboarding-gift', {
         method: 'POST', headers: { Authorization: 'Bearer ' + token }
