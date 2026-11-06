@@ -12,8 +12,8 @@
       <div id="recovery-google-flow" hidden class="space-y-3"><p id="recovery-hint" class="text-xs break-all"></p><button id="recovery-google" type="button" class="w-full p-3 rounded-xl bg-emerald-600 text-white">Tiếp tục với Google</button><button id="recovery-back" type="button" class="w-full p-2 text-xs underline">Tìm tài khoản khác</button></div>
       <p id="recovery-verified" class="text-xs break-all" role="status"></p>
       <form id="recovery-form" class="space-y-3"><div id="recovery-password-flow" hidden class="space-y-3">
-        <label class="block text-xs">Mật khẩu mới (15–128 ký tự)<input id="recovery-password" type="password" autocomplete="new-password" minlength="15" required class="block w-full mt-1 p-3 rounded-xl border border-[var(--border)] bg-[var(--background)]"></label>
-        <label class="block text-xs">Nhập lại mật khẩu mới<input id="recovery-confirm" type="password" autocomplete="new-password" minlength="15" required class="block w-full mt-1 p-3 rounded-xl border border-[var(--border)] bg-[var(--background)]"></label>
+        <label class="block text-xs">Mật khẩu mới (8–128 ký tự)<input id="recovery-password" type="password" autocomplete="new-password" minlength="8" required class="block w-full mt-1 p-3 rounded-xl border border-[var(--border)] bg-[var(--background)]"></label>
+        <label class="block text-xs">Nhập lại mật khẩu mới<input id="recovery-confirm" type="password" autocomplete="new-password" minlength="8" required class="block w-full mt-1 p-3 rounded-xl border border-[var(--border)] bg-[var(--background)]"></label>
         <button id="recovery-submit" class="w-full p-3 rounded-xl bg-emerald-600 text-white">Lưu mật khẩu mới</button></div></form>
       <p id="recovery-status" role="status" aria-live="polite" class="text-xs"></p></section>`;
     const find=id=>panel.querySelector('#recovery-'+id);

@@ -4,7 +4,7 @@ Rà mã nguồn ngày 06/11/2026. Các bảng dưới đây ghi lại hiện tr�
 
 ## Trạng thái bản triển khai
 
-- Đăng ký, đổi và đặt lại mật khẩu dùng chung ngưỡng 15–128 ký tự, danh sách chặn cục bộ và scrypt. Đăng nhập vẫn đọc được hash bcrypt cũ. Giới hạn thử hiện theo tiến trình. Cần kiểm cấu hình JWT và proxy trên Render.
+- Đăng ký, đổi và đặt lại mật khẩu dùng chung ngưỡng 8–128 ký tự, danh sách chặn cục bộ và scrypt. Đăng nhập vẫn đọc được hash bcrypt cũ. Giới hạn thử hiện theo tiến trình. Cần kiểm cấu hình JWT và proxy trên Render.
 - Hướng dẫn xuất hiện theo tính năng khi người học mở màn hình đó. Khu vực âm thanh có một gợi ý, còn nút sau khi mở quà dẫn tới mốc/lộ trình môn đang học hoặc Kho môn nếu chưa đăng ký.
 - Phản hồi 1v1 chỉ gửi dữ liệu đủ để làm câu hỏi. Máy chủ giữ đáp án, xác minh thành viên và thứ tự, lấy thời điểm từ máy chủ và khóa hàng trận khi ghi lượt. Điểm hạng chỉ đổi ở trận hạng giữa hai người chơi.
 - Cực Hạn xác nhận từng lượt và kết toán từ phiên của máy chủ. Phiên lưu trong RAM, hết hạn sau hai giờ và mất khi tiến trình khởi động lại.

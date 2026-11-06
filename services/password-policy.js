@@ -15,7 +15,7 @@ const common = new Set([
 function validatePassword(value, identifiers = []) {
   if (typeof value !== 'string') throw new Error('Vui lòng nhập mật khẩu.');
   const length = [...value].length;
-  if (length < 15 || length > 128) throw new Error('Mật khẩu cần từ 15 đến 128 ký tự.');
+  if (length < 8 || length > 128) throw new Error('Mật khẩu cần từ 8 đến 128 ký tự.');
   const normalized = value.normalize('NFKC').trim().toLowerCase();
   const stem = normalized.replace(/[\d\p{P}\p{S}\s]+$/gu, '');
   const matchesAccount = identifiers.some(id => {
