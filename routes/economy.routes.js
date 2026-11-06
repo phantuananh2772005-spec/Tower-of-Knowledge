@@ -4,6 +4,14 @@ const economyService = require('../services/economy.service');
 const db = require('../database/db');
 const { authenticate } = require('../middlewares/auth.middleware');
 
+router.get('/repeat-exp-quota', authenticate, async (req, res) => {
+  try {
+    return res.apiSuccess(await economyService.getRepeatExperienceQuota(req.user.ma_nguoi_dung));
+  } catch (err) {
+    return res.apiError(err.message, 'FETCH_EXP_QUOTA_FAILED', 500);
+  }
+});
+
 router.get('/transactions', authenticate, async (req, res) => {
   try {
     const limit = req.query.limit || 20;

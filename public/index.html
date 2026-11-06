@@ -742,6 +742,7 @@
           </div>
           <p class="text-xs text-[var(--muted-foreground)] mt-1">Tranh tài kiến thức đối kháng thời gian thực, rèn luyện phản xạ và giải trí cùng Linh thú</p>
           <p class="text-xs text-[var(--muted-foreground)] mt-1">EXP từ thi đấu tối đa 300/ngày và 1.500/tuần.</p>
+          <p id="arena-exp-quota" data-exp-quota hidden class="text-xs font-semibold text-[var(--foreground)] mt-1" aria-live="polite"></p>
         </div>
         <div class="flex items-center gap-2">
           <button id="btn_bxh_dautruong" onclick="arenaTab('rank')" class="px-3.5 py-2 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-amber-500/10 hover:border-amber-500/30 text-amber-500 font-semibold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Bảng xếp hạng đấu trường">
@@ -1180,6 +1181,7 @@
           </div>
 
           <!-- 3. Thông tin kết quả trận đấu: Tỉ số · Số câu đúng · Combo cao nhất -->
+          <p data-exp-quota hidden class="relative z-10 text-center text-xs text-cyan-200"></p>
           <div id="b-result-stats" class="relative z-10 flex items-center justify-center gap-3 text-xs bg-slate-900/90 border border-slate-700/60 rounded-2xl py-2 px-3 shadow-inner">
             <div class="flex items-center gap-1 font-mono font-black text-sm">
               <span id="res-stat-score" class="text-emerald-400">40 – 0</span>
@@ -2131,9 +2133,22 @@
           <button id="btn-cp-primary-action" onclick="startActiveStepFromModal()" class="w-full py-3 rounded-2xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition shadow-md cursor-pointer flex items-center justify-center gap-2">
             <span>Bắt đầu Luyện tập Bước 1</span> <span>→</span>
           </button>
+          <button id="btn-cp-practice-secondary" hidden class="mt-2 w-full py-2 text-xs font-semibold text-emerald-600 hover:underline">Luyện tập chặng 1</button>
         </div>
       </div>
     </div>
+
+    <dialog id="step-review-dialog" aria-labelledby="step-review-title" class="m-auto w-[calc(100%-2rem)] max-w-lg max-h-[85dvh] overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] p-5 backdrop:bg-black/60">
+      <h2 id="step-review-title" class="text-lg font-bold">Kết quả luyện tập</h2>
+      <p id="step-review-score" class="mt-1 text-sm"></p>
+      <details id="step-review-mistakes" class="mt-4 text-sm">
+        <summary class="cursor-pointer font-semibold text-emerald-600"></summary>
+        <ol class="mt-2 list-decimal space-y-3 pl-5"></ol>
+      </details>
+      <form method="dialog" class="mt-4">
+        <button class="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white">Về bản đồ</button>
+      </form>
+    </dialog>
 
     <!-- ================= MODAL CHÚC MỪNG HOÀN THÀNH MỐC HỌC (VICTORY MODAL) ================= -->
     <div id="modal-moc-congrats" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm transition-opacity duration-200">
@@ -2517,6 +2532,8 @@
         </div>
 
         <p class="text-xs text-[var(--muted-foreground)] text-center">Giới hạn EXP thi đấu dùng chung với 1v1 · 300/ngày và 1.500/tuần.</p>
+
+        <p data-exp-quota hidden class="text-center text-xs font-semibold"></p>
 
         <!-- Action Buttons -->
         <div class="space-y-2 pt-1">
@@ -2932,6 +2949,7 @@
 
       if (viewName === 'minigame') {
         if (typeof arenaTab === 'function') arenaTab('fight');
+        refreshArenaExpQuota();
       }
       if (viewName === 'saga') {
         window.refreshLearningGardenArt?.();
@@ -2942,6 +2960,25 @@
       syncAllPetDisplays();
       window.GuidedTour?.close();
       window.GuidedTour?.view(viewName);
+    }
+
+    async function refreshArenaExpQuota() {
+      const labels = document.querySelectorAll('[data-exp-quota]');
+      const token = localStorage.getItem('tok_token');
+      labels.forEach(label => { label.hidden = true; });
+      if (!token) return;
+      try {
+        const response = await fetch('/api/economy/repeat-exp-quota', {
+          headers: { Authorization: 'Bearer ' + token },
+          cache: 'no-store'
+        });
+        const { success, data } = await response.json();
+        if (!success || token !== localStorage.getItem('tok_token')) return;
+        const message = data.weeklyRemaining === 0 ? 'Đã đạt giới hạn EXP tuần này'
+          : data.dailyRemaining === 0 ? 'Đã đạt giới hạn EXP hôm nay'
+          : `Hôm nay còn ${Math.min(data.dailyRemaining, data.weeklyRemaining)} EXP thi đấu`;
+        labels.forEach(label => { label.textContent = message; label.hidden = false; });
+      } catch {}
     }
 
     function scrollToActiveNode(smooth = true) {
@@ -5001,6 +5038,7 @@
       const userMaxCombo = Math.max(B.maxCombo || 0, B.combo || 0, win ? (userCorrect > 3 ? 3 : 1) : 0);
 
       const savedPlayer=settledPlayer;
+      if (savedPlayer) refreshArenaExpQuota();
       const coinsReward=Number(savedPlayer?.xu_nhan_duoc||0),expReward=Number(savedPlayer?.exp_nhan_duoc||0);
       const curExp = (currentUserAccount && typeof currentUserAccount.exp === 'number') ? currentUserAccount.exp : 155;
       const expLevel = LevelRules.progress(curExp);
@@ -7426,12 +7464,22 @@
           const primaryBtn = document.getElementById('btn-cp-primary-action');
           if (primaryBtn) {
             const activeBuoc = Math.min(totalSteps, d.buoc_hien_tai || 1);
+            const practiceButton = document.getElementById('btn-cp-practice-secondary');
+            practiceButton.hidden = true;
             if (d.trang_thai === 'DA_HOAN_THANH' || d.buoc_hien_tai > totalSteps) {
-              primaryBtn.textContent = 'Ôn tập từ chặng 1';
+              primaryBtn.textContent = 'Ôn tập';
               primaryBtn.onclick = () => startStepPlay(d.ma_moc, 1, d.tieu_de);
             } else {
-              primaryBtn.innerHTML = `Luyện tập chặng ${activeBuoc} →`;
-              primaryBtn.onclick = () => startStepPlay(d.ma_moc, activeBuoc, d.tieu_de);
+              const hasTheory = Boolean(d.noi_dung_ly_thuyet?.trim());
+              const theoryFirst = activeBuoc === 1 && hasTheory;
+              practiceButton.hidden = !theoryFirst;
+              practiceButton.onclick = () => startStepPlay(d.ma_moc, 1, d.tieu_de);
+              primaryBtn.textContent = theoryFirst ? 'Xem lý thuyết' : `Tiếp tục chặng ${activeBuoc}`;
+              if (theoryFirst) {
+                primaryBtn.onclick = openTheoryFromCheckpoint;
+              } else {
+                primaryBtn.onclick = () => startStepPlay(d.ma_moc, activeBuoc, d.tieu_de);
+              }
             }
           }
 
@@ -8233,9 +8281,34 @@
 
     // --- 2e. Duolingo Step Completion Handler ---
 
+    function showStepReview(session, result) {
+      const questions = new Map(session.questions.map(question => [question.ma_cau_hoi, question]));
+      const mistakes = (result.details || []).filter(detail => !detail.la_dung && questions.has(detail.ma_cau_hoi));
+      const dialog = document.getElementById('step-review-dialog');
+      document.getElementById('step-review-score').textContent =
+        `Chặng ${session.step} · ${result.correctCount}/${result.totalQuestions} câu đúng`;
+      const toggle = document.getElementById('step-review-mistakes');
+      toggle.hidden = mistakes.length === 0;
+      toggle.open = false;
+      toggle.querySelector('summary').textContent = `Ôn lại ${mistakes.length} câu sai`;
+      toggle.querySelector('ol').replaceChildren(...mistakes.map(detail => {
+        const item = document.createElement('li');
+        const prompt = document.createElement('strong');
+        const explanation = document.createElement('p');
+        prompt.textContent = questions.get(detail.ma_cau_hoi).noi_dung;
+        explanation.textContent = detail.giai_thich || 'Xem lại lý thuyết của mốc này.';
+        item.append(prompt, explanation);
+        return item;
+      }));
+      if (!dialog.open) dialog.showModal();
+    }
+
     async function finishAndSubmitStep() {
       if (!currentQuizSession) return;
-      const { mocId, step, submissions, tieuDe } = currentQuizSession;
+      const session = currentQuizSession;
+      if (session.submitting) return;
+      session.submitting = true;
+      const { mocId, step, submissions } = session;
       const token = localStorage.getItem('tok_token');
 
       try {
@@ -8258,7 +8331,7 @@
 
           if (isPassed) {
             if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-correct');
-            showToast(`🎉 VƯỢT QUA CHẶNG ${step}/${totalSteps}! ${scorePercentage}% điểm (+${earnedCoins || 5} 🪙, +${earnedExp || 10} ⭐ EXP)`);
+            showToast(`🎉 VƯỢT QUA CHẶNG ${step}/${totalSteps}! ${scorePercentage}% điểm (+${earnedCoins ?? 0} 🪙, +${earnedExp ?? 0} ⭐ EXP)`);
             if (moc_hoan_thanh) {
               const isBossMoc = (currentQuizSession && (currentQuizSession.loaiMoc === 'THU_THACH_BOSS' || String(currentQuizSession.mocId).endsWith('_05')));
               setTimeout(() => {
@@ -8288,15 +8361,19 @@
             refreshUserData(),
             loadCourseRoadmap()
           ]);
+          if (currentQuizSession !== session) return;
+          currentQuizSession = null;
+          closePlay();
+          showStepReview(session, res.data);
         } else {
           showToast(res.error?.message || 'Lỗi khi nộp bài tập!', 'error');
         }
       } catch (err) {
         showToast('Lỗi kết nối khi nộp bài tập!', 'error');
+      } finally {
+        session.submitting = false;
       }
 
-      currentQuizSession = null;
-      closePlay();
     }
 
     let currentTheoryLookupOpenedAt = null;
@@ -10363,6 +10440,7 @@
         if (!res.ok || !res.data) throw new Error('Chưa xác nhận được kết quả.');
         clearExtremeSessionStorage();
         const summary = res.data.summary;
+        refreshArenaExpQuota();
 
         const answeredCount = summary?.total_answered ?? 0;
         const correctCount = summary?.correct_count ?? 0;
