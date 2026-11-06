@@ -211,6 +211,30 @@
 <script src="/js/scenic-skin.js"></script>
 <link rel="stylesheet" href="/css/scenic-skin.css">
 <link rel="stylesheet" href="/css/arena-garden.css">
+  <style>
+    #current-pet-icon-large > .sparky-witch-idle {
+      width: 84px;
+      height: 108px;
+      max-width: none;
+      image-rendering: pixelated;
+    }
+    .sparky-witch-item-icon {
+      width: 44px;
+      height: 29px;
+      flex-shrink: 0;
+      object-fit: contain;
+      image-rendering: pixelated;
+    }
+    .sparky-witch-badge {
+      position: absolute;
+      top: 0;
+      right: 0;
+      z-index: 1;
+      width: 22px;
+      height: 15px;
+      pointer-events: none;
+    }
+  </style>
 </head>
 <body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen flex font-sans">
 

@@ -1,3 +1,15 @@
+const sparkyWitchHatId = 'sparky_witch_hat';
+const sparkyWitchAssets = '/assets/accessories/sparky-witch-v7/';
+const sparkyWitchIdle = sparkyWitchAssets + 'sparky-witch-v7.gif';
+
+function createWitchHatIcon() {
+  const image = document.createElement('img');
+  image.src = sparkyWitchAssets + 'witch-hat-v7.png';
+  image.alt = '';
+  image.className = 'sparky-witch-item-icon';
+  return image;
+}
+
 let accessoryCatalog=[];
 let accessoryRequestPending=false;
 function applyRoomInvitationFromUrl(){
@@ -10,10 +22,35 @@ function applyRoomInvitationFromUrl(){
 }
 function renderAccessoryOverlays(){
   const item=currentUserAccount?.accessory;
+  const sparkyWearsHat = item?.id === sparkyWitchHatId && currentEquippedPet?.id === 'dragon';
+  const portrait = document.querySelector('#current-pet-icon-large > img');
+  if (portrait) {
+    if (sparkyWearsHat) {
+      if (!portrait.dataset.originalPetImage) {
+        portrait.dataset.originalPetImage = portrait.getAttribute('src');
+        portrait.src = sparkyWitchIdle;
+        portrait.classList.add('sparky-witch-idle');
+      }
+    } else if (portrait.dataset.originalPetImage) {
+      portrait.src = portrait.dataset.originalPetImage;
+      delete portrait.dataset.originalPetImage;
+      portrait.classList.remove('sparky-witch-idle');
+    }
+  }
   for(const id of ['current-pet-icon-large','hub-pet-avatar','sidebar-pet-avatar','arena-lobby-pet','casual-lobby-pet','my-pet']){
     const host=document.getElementById(id);if(!host)continue;
     host.querySelector('.pet-accessory-badge')?.remove();
     if(!item)continue;
+    if (item.id === sparkyWitchHatId) {
+      if (sparkyWearsHat && id !== 'current-pet-icon-large') {
+        if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+        const hat = createWitchHatIcon();
+        hat.classList.add('pet-accessory-badge', 'sparky-witch-badge');
+        hat.alt = item.name;
+        host.appendChild(hat);
+      }
+      continue;
+    }
     if(getComputedStyle(host).position==='static')host.style.position='relative';
     const badge=document.createElement('span');badge.className='pet-accessory-badge';badge.textContent=item.icon;
     badge.title='Phụ kiện: '+item.name;badge.setAttribute('aria-label','Phụ kiện: '+item.name);host.appendChild(badge);
@@ -25,7 +62,11 @@ function renderAccessories(){
   for(const item of accessoryCatalog){
     const card=document.createElement('div');card.dataset.itemId=item.id;
     card.className='bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 flex items-center gap-3';
-    const icon=document.createElement('span');icon.className='text-2xl';icon.textContent=item.icon;
+    const icon = item.id === sparkyWitchHatId ? createWitchHatIcon() : document.createElement('span');
+    if (item.id !== sparkyWitchHatId) {
+      icon.className = 'text-2xl';
+      icon.textContent = item.icon;
+    }
     const info=document.createElement('div');info.className='min-w-0 flex-1';
     const name=document.createElement('strong');name.className='block text-xs';name.textContent=item.name;
     const detail=document.createElement('p');detail.className='text-[10px] text-[var(--muted-foreground)] mt-1';detail.textContent=item.description;
@@ -44,7 +85,7 @@ async function loadRealItems(){
     const response=await fetch('/api/items',{headers:{Authorization:'Bearer '+token}}),result=await response.json();
     if(!result.success)throw Error(result.error?.message||'Không tải được phụ kiện.');
     if(token!==localStorage.getItem('tok_token'))return;
-    accessoryCatalog=result.data;currentUserAccount.accessory=accessoryCatalog.find(item=>item.equipped)||null;
+    accessoryCatalog=result.data;currentUserAccount.accessory=accessoryCatalog.find(item=>item.owned&&item.equipped)||null;
     renderAccessories();renderAccessoryOverlays();
   }catch(error){showToast(error.message||'Không tải được phụ kiện.','error');}
 }
