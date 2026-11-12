@@ -102,12 +102,13 @@ async function getMatchState(ma_tran) {
   const players = await db.query(`
     SELECT p.ma_nguoi_choi_trong_tran, p.ma_nguoi_dung, u.ten_dang_nhap, u.ten_hien_thi, u.khung_avatar,
            p.mau_hien_tai, p.mau_toi_da, p.tong_sat_thuong_gay_ra, p.ket_qua, p.xu_nhan_duoc, p.exp_nhan_duoc, p.diem_hang_thay_doi,
-           tc.ma_thu_cung, tc.ten_thu_cung, tc.he_so_sat_thuong
+           tc.ma_thu_cung, tc.ten_thu_cung, tc.he_so_sat_thuong, r.diem AS diem_hang
     FROM nguoi_choi_trong_tran p
     JOIN nguoi_dung u ON p.ma_nguoi_dung = u.ma_nguoi_dung
     LEFT JOIN thu_cung tc ON p.ma_thu_cung = tc.ma_thu_cung
+    LEFT JOIN diem_dau_hang r ON r.ma_nguoi_dung=p.ma_nguoi_dung AND r.ma_mon=$2
     WHERE p.ma_tran = $1
-  `, [ma_tran]);
+  `, [ma_tran, match.ma_mon]);
 
   const questionsInMatch = await db.query(`
     SELECT qm.ma_cau_trong_tran, qm.thu_tu_cau, q.ma_cau_hoi, q.noi_dung, q.loai_cau_hoi,
@@ -146,6 +147,7 @@ async function getMatchState(ma_tran) {
       mau_toi_da: p.mau_toi_da,
       tong_sat_thuong_gay_ra: p.tong_sat_thuong_gay_ra,
       ket_qua: p.ket_qua,
+      diem_hang: Number(p.diem_hang || 0),
       xu_nhan_duoc:p.xu_nhan_duoc,exp_nhan_duoc:p.exp_nhan_duoc,diem_hang_thay_doi:p.diem_hang_thay_doi,
       thu_cung: p.ma_thu_cung ? {
         ma_thu_cung: p.ma_thu_cung,

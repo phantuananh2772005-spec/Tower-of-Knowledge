@@ -29,7 +29,8 @@
     const label = division === null ? name : name + ' ' + ['III', 'II', 'I'][division];
     const floor = minimum + (division === null ? 0 : division * divisionSize);
     const next = division !== null && division < 2 ? floor + divisionSize : tiers[index + 1]?.[0];
-    return { label, percent: next ? Math.floor(100 * (score - floor) / (next - floor)) : 100 };
+    const badge = ['tan-thu', 'tap-su', 'chuyen-can', 'thong-thai', 'uyen-bac', 'dai-su'][index];
+    return { label, badge, percent: next ? Math.floor(100 * (score - floor) / (next - floor)) : 100 };
   }
 
   return { progress, rewards, delta };

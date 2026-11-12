@@ -235,6 +235,19 @@
       pointer-events: none;
     }
   </style>
+  <style>
+    .arena-rank-badge { display:inline-flex; align-items:center; gap:.3em; min-width:0; vertical-align:middle; }
+    .arena-rank-badge img { flex:none; width:var(--rank-icon-size); height:var(--rank-icon-size); object-fit:contain; }
+    .arena-rank-badge.compact .arena-rank-label { white-space:nowrap; }
+    @media (max-width: 520px) {
+      #rank-list .arena-rank-label { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+      #rank-list .arena-rank-division { display:inline; }
+    }
+    @media (min-width: 521px) {
+      .arena-rank-division { display:none; }
+    }
+    .arena-rank-badge:not(.compact) .arena-rank-division { display:none; }
+  </style>
 </head>
 <body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen flex font-sans">
 
@@ -3510,9 +3523,12 @@
   const THI_THRESH = [0, 500, 1000, 1500, 2000];
   const THI_NAMES = ['🌱 Khởi nguyên', '🔥 Bứt phá', '⚡ Tinh thông', '🌟 Xuất chúng', '👑 Đỉnh cao'];
 
-  function tierOf(p, isOverall) {
-    return ArenaRules.progress(p).label;
+  function arenaRankBadge(points, size, compact = false) {
+    const { badge, label } = ArenaRules.progress(points);
+    const division = compact ? label.match(/ (III|II|I)$/)?.[1] : '';
+    return `<span class="arena-rank-badge ${compact ? 'compact' : ''}" style="--rank-icon-size:${size}px" title="${label}"><img src="/assets/rank/${badge}.webp" alt="" width="${size}" height="${size}" decoding="async"><span class="arena-rank-label">${label}</span>${division ? `<span class="arena-rank-division" aria-hidden="true">${division}</span>` : ''}</span>`;
   }
+
   function tierProgress(p, isOverall) { return ArenaRules.progress(p).percent; }
 
   function arenaTab(t) {
@@ -3620,9 +3636,9 @@
   }
   function renderLobby() {
     const sub = document.getElementById('lobby-subject').value;
-    document.getElementById('lobby-sub-tier').textContent = tierOf(RANKS[sub], false);
+    document.getElementById('lobby-sub-tier').innerHTML = arenaRankBadge(RANKS[sub], 24);
     document.getElementById('lobby-sub-pts').textContent = (RANKS[sub] || 0) + ' điểm';
-    document.getElementById('lobby-all-tier').textContent = tierOf(overallPts(), true);
+    document.getElementById('lobby-all-tier').innerHTML = arenaRankBadge(overallPts(), 24);
     document.getElementById('lobby-all-pts').textContent = overallPts() + ' điểm';
   }
   function setRank(t) { rankType = t; renderRank(); }
@@ -3649,8 +3665,8 @@
       return `<div class="flex items-center gap-3 px-4 py-3 text-xs ${me ? 'bg-emerald-500/10' : ''}">
         <span class="w-6 text-center font-bold ${i < 3 ? 'text-base' : 'text-[var(--muted-foreground)]'}">${i < 3 ? medals[i] : i + 1}</span>
         <span class="w-7 h-7 flex items-center justify-center text-2xl shrink-0">${petThumb}</span>
-        <span class="flex-1 font-semibold ${me ? 'text-emerald-600 dark:text-emerald-400' : ''}">${escapeHtml(String(r[0]))}</span>
-        <span class="text-[var(--muted-foreground)]">${r[2]}</span>
+        <span class="flex-1 min-w-0 truncate font-semibold ${me ? 'text-emerald-600 dark:text-emerald-400' : ''}">${escapeHtml(String(r[0]))}</span>
+        <span class="text-[var(--muted-foreground)]">${arenaRankBadge(r[2], 20, true)}</span>
         <span class="font-mono font-bold min-w-16 text-right">${valDisplay}</span>
       </div>`;
     }).join('');
@@ -4358,9 +4374,16 @@
     const opPetName = document.getElementById('vs-op-pet-name');
     if (opPetName) opPetName.textContent = '🐾 ' + (opponent.petName || 'Linh vật đối thủ');
     const opTier = document.getElementById('vs-op-tier');
-    if (opTier) opTier.textContent = (matchData?.che_do === 'PRACTICE' || opponent.isBot || matchData?.doi_thu_la_bot)
-      ? 'Đấu tập · Không tính điểm hạng'
-      : (opponent.tier || '🌱 Khởi nguyên I');
+    if (opTier) {
+      if (matchData?.che_do === 'RANKED') {
+        const opponentPlayer = matchData.nguoi_choi?.find(player => player.ma_nguoi_dung === opponent.id);
+        opTier.innerHTML = arenaRankBadge(opponentPlayer?.diem_hang, 20);
+      } else {
+        opTier.textContent = (matchData?.che_do === 'PRACTICE' || opponent.isBot || matchData?.doi_thu_la_bot)
+          ? 'Đấu tập · Không tính điểm hạng'
+          : (opponent.tier || '');
+      }
+    }
 
     // Chạy thanh tiến trình 2.2s
     const pBar = document.getElementById('vs-progress-bar');
@@ -5236,7 +5259,7 @@
 
       const elRankSummary = document.getElementById('res-rank-summary');
       if (elRankSummary) {
-        elRankSummary.textContent = delta === 0 ? 'Điểm hạng giữ nguyên' : 'Điểm hạng '+deltaTxt;
+        elRankSummary.innerHTML = `${arenaRankBadge(RANKS[sub], 20)} · ${delta === 0 ? 'Điểm hạng giữ nguyên' : 'Điểm hạng ' + deltaTxt}`;
       }
 
       // Backward compatibility placeholders
@@ -5248,7 +5271,7 @@
         elSubDelta.className = 'text-xs font-mono font-extrabold ' + deltaColor;
       }
       const elSubTier = document.getElementById('res-sub-tier');
-      if (elSubTier) elSubTier.textContent = tierOf(RANKS[sub], false);
+      if (elSubTier) elSubTier.innerHTML = arenaRankBadge(RANKS[sub], 20);
       const elSubPts = document.getElementById('res-sub-pts');
       if (elSubPts) elSubPts.innerHTML = `${RANKS[sub]} <span class="text-[10px] text-slate-400 font-normal">điểm</span>`;
       const elSubBar = document.getElementById('res-sub-bar');
@@ -5263,7 +5286,7 @@
         elAllDelta.className = 'text-xs font-mono font-extrabold ' + deltaColor;
       }
       const elAllTier = document.getElementById('res-all-tier');
-      if (elAllTier) elAllTier.textContent = tierOf(overallPts(), true);
+      if (elAllTier) elAllTier.innerHTML = arenaRankBadge(overallPts(), 20);
       const elAllPts = document.getElementById('res-all-pts');
       if (elAllPts) elAllPts.innerHTML = `${overallPts()} <span class="text-[10px] text-slate-400 font-normal">điểm</span>`;
       const elAllBar = document.getElementById('res-all-bar');
@@ -8687,7 +8710,7 @@
           const rows={hang:[],speed:[],acc:[],streak:[]};
           for(const user of users){
             const points=scope==='all'?Object.values(user.diem_dau_hang||{}).reduce((n,p)=>n+Number(p||0),0):Number(user.diem_dau_hang?.['mon_'+scope]||0);
-            const prefix=[user.ten_hien_thi||user.ten_dang_nhap,'',tierOf(points,true)];
+            const prefix=[user.ten_hien_thi||user.ten_dang_nhap,'',points];
             const row=value=>[...prefix,String(value),user.ma_nguoi_dung,user.ten_dang_nhap,user.thu_cung?.anh_dai_dien||'/assets/navigation/pet.webp'];
             rows.hang.push(row(points));
             rows.streak.push(row(user.chuoi_dau_hang?.[scope]||0));

@@ -12,6 +12,10 @@ function render(){
    return `<article class="earned"><strong>🏅 Top ${group} mùa ${Number(award.mua)}</strong><small>Hạng ${position} · +${Number(award.xu_thuong)} Xu</small></article>`;
   }).join(''));
  }
+ const rank = document.createElement('p');
+ rank.className = 'journey-caption';
+ rank.innerHTML = 'Đấu hạng · ' + arenaRankBadge(overallPts(), 28);
+ host.querySelector('.journey-exp').after(rank);
  applyAvatarUI();host.querySelector('.journey-avatar').onclick=openAvatarPopover;
  host.querySelectorAll('[data-filter]').forEach(b=>b.onclick=()=>{filter=b.dataset.filter;renderCourses()});
  host.querySelectorAll('[data-days]').forEach(b=>b.onclick=()=>renderChart(Number(b.dataset.days)));
