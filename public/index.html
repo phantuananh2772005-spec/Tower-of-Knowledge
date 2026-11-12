@@ -262,6 +262,17 @@
     }
     .battle-match-column button { overflow-wrap: anywhere; }
   </style>
+  <style>
+    .battle-match-column .pair-matched { visibility:hidden; }
+    .battle-match-column .pair-wrong { animation:arena-pair-wrong .32s ease; }
+    @keyframes arena-pair-wrong {
+      25%, 75% { transform:translateX(-3px); background:#fecaca; border-color:#e11d48; }
+      50% { transform:translateX(3px); background:#fecaca; border-color:#e11d48; }
+    }
+    @media (prefers-reduced-motion:reduce) {
+      .battle-match-column .pair-wrong { animation:none; background:#fecaca; border-color:#e11d48; }
+    }
+  </style>
 </head>
 <body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen flex font-sans">
 
@@ -4351,19 +4362,16 @@
             B.maxCombo = Math.max(B.maxCombo || 0, B.combo);
             anim('my-pet', 'do-lunge');
             if (audioSettings && audioSettings.battle) playAdvancedSound('sfx-slash');
-            setTimeout(() => {
-              anim('op-pet', 'do-shake');
-              popFloat('op-float', '-' + d);
-              // Đồng bộ máu đối thủ chính xác từ máy chủ
-              const opPlayer = (data.trang_thai_tran?.nguoi_choi || []).find(p => p.ma_nguoi_dung !== B.myUserId);
-              if (opPlayer && typeof opPlayer.mau_hien_tai === 'number') {
-                B.op = opPlayer.mau_hien_tai;
-              } else {
-                B.op = Math.max(0, B.op - d);
-              }
-              updHp();
-              checkEnd();
-            }, 200);
+            anim('op-pet', 'do-shake');
+            popFloat('op-float', '-' + d);
+            // Đồng bộ máu đối thủ chính xác từ máy chủ
+            const opPlayer = (data.trang_thai_tran?.nguoi_choi || []).find(p => p.ma_nguoi_dung !== B.myUserId);
+            if (opPlayer && typeof opPlayer.mau_hien_tai === 'number') {
+              B.op = opPlayer.mau_hien_tai;
+            } else {
+              B.op = Math.max(0, B.op - d);
+            }
+            updHp();
             if (botStatus) {
               botStatus.textContent = `⚡ Đánh trúng (-${d} HP)`;
               botStatus.className = 'text-[9.5px] text-center font-bold text-emerald-400 transition-all truncate';
@@ -4375,6 +4383,7 @@
               botStatus.className = 'text-[9.5px] text-center font-medium text-rose-400 transition-all truncate';
             }
           }
+          checkEnd();
           roundCheck();
         } else {
           // --- ĐỐI THỦ TẤN CÔNG (Defender) ---
@@ -4391,19 +4400,16 @@
               }
             } else {
               anim('op-pet', 'do-lungeL');
-              setTimeout(() => {
-                anim('my-pet', 'do-shake');
-                popFloat('my-float', '-' + d);
-                // Đồng bộ máu của mình chính xác từ máy chủ
-                const myPlayer = (data.trang_thai_tran?.nguoi_choi || []).find(p => p.ma_nguoi_dung === B.myUserId);
-                if (myPlayer && typeof myPlayer.mau_hien_tai === 'number') {
-                  B.my = myPlayer.mau_hien_tai;
-                } else {
-                  B.my = Math.max(0, B.my - d);
-                }
-                updHp();
-                checkEnd();
-              }, 200);
+              anim('my-pet', 'do-shake');
+              popFloat('my-float', '-' + d);
+              // Đồng bộ máu của mình chính xác từ máy chủ
+              const myPlayer = (data.trang_thai_tran?.nguoi_choi || []).find(p => p.ma_nguoi_dung === B.myUserId);
+              if (myPlayer && typeof myPlayer.mau_hien_tai === 'number') {
+                B.my = myPlayer.mau_hien_tai;
+              } else {
+                B.my = Math.max(0, B.my - d);
+              }
+              updHp();
               if (botStatus) {
                 botStatus.textContent = `⚡ Bị đánh trúng (-${d} HP)`;
                 botStatus.className = 'text-[9.5px] text-center font-bold text-rose-400 animate-pulse transition-all truncate';
@@ -4415,6 +4421,7 @@
               botStatus.className = 'text-[9.5px] text-center font-medium text-slate-400 transition-all truncate';
             }
           }
+          checkEnd();
           roundCheck();
         }
     };
@@ -4600,6 +4607,9 @@
         const rightItems = (q.data?.right || pairs.map(p => p.right)).map((text, id) => ({ id, text })).sort(() => Math.random() - 0.5);
 
         let selectedLeft = null;
+        let checkingPair = false;
+        const matchId = currentLiveMatch?.ma_tran;
+        const round = B.qi;
         let matchedCount = 0;
         const matchedPairs = [];
         const totalPairs = leftItems.length;
@@ -4624,7 +4634,7 @@
           btn.className = "w-full text-left p-2 sm:p-3 rounded-xl border border-slate-300 dark:border-[var(--border)] bg-white dark:bg-[var(--card)] hover:border-cyan-500 active:scale-[0.98] transition font-bold cursor-pointer text-[11px] sm:text-xs leading-snug break-words hyphens-auto min-h-[46px] flex flex-col justify-center select-none text-slate-800 dark:text-slate-100 shadow-xs";
           btn.textContent = item.text;
           btn.onclick = () => {
-            if (B.pDone || B.answerPending || B.over || btn.disabled) return;
+            if (checkingPair || B.pDone || B.answerPending || B.over || btn.disabled) return;
             document.querySelectorAll('#col-left button').forEach(b => {
               if (!b.disabled) {
                 b.className = "w-full text-left p-2 sm:p-3 rounded-xl border border-slate-300 dark:border-[var(--border)] bg-white dark:bg-[var(--card)] hover:border-cyan-500 active:scale-[0.98] transition font-bold cursor-pointer text-[11px] sm:text-xs leading-snug break-words hyphens-auto min-h-[46px] flex flex-col justify-center select-none text-slate-800 dark:text-slate-100 shadow-xs";
@@ -4641,30 +4651,46 @@
           btn.id = `pair-right-${item.id}`;
           btn.className = "w-full text-left p-2 sm:p-3 rounded-xl border border-slate-300 dark:border-[var(--border)] bg-white dark:bg-[var(--card)] hover:border-indigo-500 active:scale-[0.98] transition font-medium cursor-pointer text-[11px] sm:text-xs leading-snug break-words hyphens-auto min-h-[46px] flex flex-col justify-center select-none text-slate-800 dark:text-slate-100 shadow-xs";
           btn.textContent = item.text;
-          btn.onclick = () => {
-            if (B.pDone || B.answerPending || B.over || btn.disabled || selectedLeft === null) return;
+          btn.onclick = async () => {
+            if (checkingPair || B.pDone || B.answerPending || B.over || btn.disabled || selectedLeft === null) return;
             const leftBtn = document.getElementById(`pair-left-${selectedLeft}`);
-            if (currentLiveMatch?.ma_tran || selectedLeft === item.id) {
+            const pair = { left: leftBtn.textContent, right: item.text };
+            checkingPair = true;
+            try {
+              const response = await fetch(`/api/arena/${matchId}/pair`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: 'Bearer ' + localStorage.getItem('tok_token')
+                },
+                body: JSON.stringify({ round, ...pair })
+              });
+              const result = await response.json();
+              if (currentLiveMatch?.ma_tran !== matchId || B.qi !== round || B.over || B.pDone || B.answerPending) return;
+              if (!result.success) throw new Error(result.error?.message || 'Chưa kiểm tra được cặp.');
+              if (!result.data.correct) {
+                for (const card of [leftBtn, btn]) {
+                  card.classList.add('pair-wrong');
+                  setTimeout(() => card.classList.remove('pair-wrong'), 330);
+                }
+                return;
+              }
+              matchedPairs.push(pair);
               matchedCount++;
-              matchedPairs.push({ left: leftBtn ? leftBtn.textContent : '', right: item.text });
-              leftBtn.disabled = true;
-              btn.disabled = true;
-              const matchedStyle = "w-full text-left p-2 sm:p-3 rounded-xl border-emerald-500 bg-emerald-50 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 font-bold opacity-90 cursor-default text-[11px] sm:text-xs leading-snug break-words hyphens-auto min-h-[46px] flex flex-col justify-center select-none shadow-xs";
-              const pairStyle = currentLiveMatch?.ma_tran
-                ? matchedStyle.replaceAll('emerald', 'indigo')
-                : matchedStyle;
-              leftBtn.className = pairStyle;
-              btn.className = pairStyle;
+              for (const card of [leftBtn, btn]) {
+                card.disabled = true;
+                card.classList.add('pair-matched');
+              }
               selectedLeft = null;
               if (audioSettings.battle) playAdvancedSound('click');
-              if (matchedCount >= totalPairs) {
-                playerAnswer(1, q, null, { matched_pairs: matchedPairs, cap_ghep: matchedPairs, isCorrect: true });
+              if (matchedCount === totalPairs) playerAnswer(null, q, null, { matched_pairs: matchedPairs });
+            } catch (error) {
+              if (currentLiveMatch?.ma_tran === matchId && B.qi === round && !B.over) {
+                const status = document.getElementById('b-bot-status');
+                if (status) status.textContent = error.message;
               }
-            } else {
-              btn.classList.add('border-rose-500', 'bg-rose-50', 'dark:bg-rose-500/20', 'text-rose-800', 'dark:text-rose-300');
-              setTimeout(() => {
-                btn.classList.remove('border-rose-500', 'bg-rose-50', 'dark:bg-rose-500/20', 'text-rose-800', 'dark:text-rose-300');
-              }, 400);
+            } finally {
+              checkingPair = false;
             }
           };
           rightCol.appendChild(btn);
@@ -4798,12 +4824,6 @@
     }
   }
 
-  function dmgFor(ms) {
-    if (ms < 3500) return 15; // Chí mạng (dưới 3.5s)
-    if (ms < 8000) return 12; // Chuẩn (dưới 8s)
-    return 8;                 // Muộn (sau 8s)
-  }
-
   function popFloat(id, txt) {
     const el = document.getElementById(id);
     if (!el) return;
@@ -4867,7 +4887,7 @@
       clearInterval(B.tick);
       setTimeout(() => {
         if (!B.over) nextRound();
-      }, 1400);
+      }, 600);
     }
   }
 

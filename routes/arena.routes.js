@@ -126,6 +126,17 @@ router.get('/:matchId', authenticate, async (req, res) => {
   }
 });
 
+router.post('/:matchId/pair', authenticate, async (req, res) => {
+  try {
+    const result = await arenaService.checkArenaPair(
+      req.params.matchId, req.user.ma_nguoi_dung, req.body.round, req.body
+    );
+    return res.apiSuccess(result);
+  } catch (error) {
+    return res.apiError(error.message, 'CHECK_PAIR_FAILED', 400);
+  }
+});
+
 router.post('/:matchId/turn', authenticate, async (req, res) => {
   try {
     const { thu_tu_cau, vi_tri_dap_an_chon, cau_tra_loi, thoi_gian_giay } = req.body;

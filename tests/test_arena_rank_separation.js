@@ -139,6 +139,11 @@ async function run() {
   assert.equal(replay.la_dap_an_dung, firstTurn.la_dap_an_dung);
   assert.equal(replay.sat_thuong_gay_ra, firstTurn.sat_thuong_gay_ra);
   await submit('b', 1, 0);
+  if (native || pg) {
+    await assert.rejects(arena.checkArenaPair('live', 'outsider', 2, { left: 'L', right: 'R' }), /chưa tới lượt/);
+    assert.deepEqual(await arena.checkArenaPair('live', 'a', 2, { left: 'L', right: 'wrong' }), { correct: false });
+    assert.deepEqual(await arena.checkArenaPair('live', 'a', 2, { left: 'L', right: 'R' }), { correct: true });
+  }
   const secondTurn = await submit('a', 2, 1, { matched_pairs: [{ left: 'L', right: 'R' }] });
   assert.equal(secondTurn.la_dap_an_dung, true);
   assert.equal((await submit('b', 2, -1)).tran_ket_thuc, true);

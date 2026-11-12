@@ -202,6 +202,37 @@ async function getMatchState(ma_tran) {
 /**
  * Player submits an answer for a specific question in the match
  */
+const normalizePairText = value => String(value ?? '').trim().toLowerCase();
+function matchesPair(expected, chosen) {
+  return chosen && normalizePairText(expected.left) === normalizePairText(chosen.left)
+    && normalizePairText(expected.right) === normalizePairText(chosen.right);
+}
+
+async function checkArenaPair(matchId, userId, round, pair) {
+  if (!Number.isInteger(round) || round < 1 || typeof pair?.left !== 'string'
+    || typeof pair?.right !== 'string' || pair.left.length > 1500 || pair.right.length > 1500) {
+    throw new Error('Cặp trả lời không hợp lệ.');
+  }
+  const question = await db.queryOne(`
+    SELECT q.du_lieu_cau_hoi
+    FROM tran_dau_1v1 t
+    JOIN nguoi_choi_trong_tran p ON p.ma_tran=t.ma_tran AND p.ma_nguoi_dung=$2
+    JOIN cau_hoi_trong_tran qm ON qm.ma_tran=t.ma_tran AND qm.thu_tu_cau=$3
+    JOIN cau_hoi q ON q.ma_cau_hoi=qm.ma_cau_hoi
+    LEFT JOIN luot_tra_loi l ON l.ma_cau_trong_tran=qm.ma_cau_trong_tran
+      AND l.ma_nguoi_choi_trong_tran=p.ma_nguoi_choi_trong_tran
+    WHERE t.ma_tran=$1 AND t.trang_thai='DANG_THI_DAU' AND q.loai_cau_hoi='NOI_CAP'
+      AND l.ma_luot_tra_loi IS NULL AND
+      (SELECT COUNT(*) FROM luot_tra_loi prior
+        JOIN cau_hoi_trong_tran previous ON previous.ma_cau_trong_tran=prior.ma_cau_trong_tran
+        WHERE previous.ma_tran=t.ma_tran AND previous.thu_tu_cau<$3)=$4
+  `, [matchId, userId, round, (round - 1) * 2]);
+  if (!question) throw new Error('Câu nối cặp này chưa tới lượt hoặc đã hoàn thành.');
+  const raw = question.du_lieu_cau_hoi;
+  const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  return { correct: (data?.pairs || data?.cap_dung || []).some(expected => matchesPair(expected, pair)) };
+}
+
 async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap_an_chon, cau_tra_loi = null, thoi_gian_giay = 5 }) {
   const { player, isCorrect, damage, isCritical, newOpponentHp, replayed } = await db.transaction(async tx => {
     const match = await tx.queryOne('SELECT * FROM tran_dau_1v1 WHERE ma_tran = $1' + (db.isPostgres ? ' FOR UPDATE' : ''), [ma_tran]);
@@ -261,7 +292,7 @@ async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap
     const referenceTime = new Date(previousTurns.latest || match.thoi_gian_bat_dau).getTime();
     const elapsed = (Date.now() - referenceTime) / 1000;
     // The client starts after the match intro or the previous round animation.
-    const intro = thu_tu_cau === 1 ? 2.2 : 1.4;
+    const intro = thu_tu_cau === 1 ? 2.2 : 0.6;
     thoi_gian_giay = Number.isFinite(elapsed) ? Math.max(0, elapsed - intro) : 5;
 
     // Parse structured data if available
@@ -281,13 +312,7 @@ async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap
       const expectedPairs = parsed?.pairs || parsed?.cap_dung || [];
       const userPairs = cau_tra_loi?.matched_pairs || cau_tra_loi?.cap_ghep || (Array.isArray(cau_tra_loi) ? cau_tra_loi : []);
       if (expectedPairs.length > 0 && Array.isArray(userPairs) && userPairs.length === expectedPairs.length) {
-        isCorrect = expectedPairs.every(ep =>
-          userPairs.some(up =>
-            up &&
-            String(up.left ?? '').trim().toLowerCase() === String(ep.left ?? '').trim().toLowerCase() &&
-            String(up.right ?? '').trim().toLowerCase() === String(ep.right ?? '').trim().toLowerCase()
-          )
-        );
+        isCorrect = expectedPairs.every(expected => userPairs.some(chosen => matchesPair(expected, chosen)));
       }
     } else if (type === 'DIEN_TU') {
       const correctWord = String(parsed?.tu_dung || parsed?.blank_answer || '').trim().toLowerCase();
@@ -569,6 +594,7 @@ module.exports = {
   concludeIfResolved,
   getMatchState,
   submitTurnAnswer,
+  checkArenaPair,
   concludeMatch,
   surrenderMatch
 };
