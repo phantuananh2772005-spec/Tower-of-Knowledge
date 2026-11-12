@@ -170,7 +170,7 @@ async function getMatchState(ma_tran) {
         options = [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d].filter(Boolean);
       } else if (type === 'DIEN_TU') {
         options = [...(parsedData?.cac_tu_lua_chon || parsedData?.options || [])].sort();
-        data = { prompt: parsedData?.prompt };
+        data = { sentence_template: parsedData?.sentence_template };
       } else if (type === 'NOI_CAP') {
         const pairs = parsedData?.pairs || parsedData?.cap_dung || [];
         data = {

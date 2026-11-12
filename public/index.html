@@ -4561,13 +4561,12 @@
     // Thiết lập giao diện tùy chỉnh theo Dạng Câu Hỏi
     if (q.loai === 'DIEN_TU') {
       const template = q.data?.sentence_template || q.q || 'Điền từ thích hợp vào chỗ trống:';
-      const blankWord = (q.data?.blank_answer || (typeof q.a === 'string' ? q.a : '')).trim().toLowerCase();
       const options = (q.data?.options && q.data.options.length > 0) ? q.data.options : (q.o || []);
       const shuffledOptions = [...options].sort(() => Math.random() - 0.5);
 
       if (promptEl) {
         promptEl.innerHTML = `<div class="p-3.5 rounded-xl bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700 text-sm leading-relaxed text-slate-800 dark:text-slate-200">
-          ${template.replace(/\{blank\}/g, `<span id="arena-blank-target" class="inline-block px-3 py-1 mx-1 rounded-lg border-2 border-dashed border-cyan-500 bg-cyan-100/70 dark:bg-cyan-950/50 text-cyan-900 dark:text-cyan-300 font-bold min-w-[90px] text-center">_____</span>`)}
+          ${escapeHtml(template).replace(/\{blank\}/g, `<span id="arena-blank-target" class="inline-block px-3 py-1 mx-1 rounded-lg border-2 border-dashed border-cyan-500 bg-cyan-100/70 dark:bg-cyan-950/50 text-cyan-900 dark:text-cyan-300 font-bold min-w-[90px] text-center">_____</span>`)}
         </div>`;
       }
 
@@ -4588,8 +4587,7 @@
               target.textContent = word;
               target.className = "inline-block px-3 py-1 mx-1 rounded-lg border-2 border-solid border-cyan-500 bg-cyan-100 dark:bg-cyan-500/20 text-cyan-900 dark:text-cyan-200 font-bold min-w-[90px] text-center";
             }
-            const isOk = (word.trim().toLowerCase() === blankWord);
-            playerAnswer(isOk ? 1 : 0, q, btn, { tu_chon: word, isCorrect: isOk });
+            playerAnswer(null, q, btn, { tu_chon: word });
           };
           chipsBox.appendChild(btn);
         });
