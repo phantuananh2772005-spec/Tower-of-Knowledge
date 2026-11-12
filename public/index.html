@@ -9266,28 +9266,35 @@
     }
 
     function handleCasualRoomUpdated(data) {
-      if (!data) return;
       const myId = currentUserAccount?.userId;
+      if (!data || !myId) return;
+      const previousPartner = currentCasualParty.roomCode === data.roomCode
+        ? currentCasualParty.partner
+        : null;
 
-      if (data.host && data.host.userId === myId) {
-        // Bản thân là Chủ phòng
+      if (data.host?.userId === myId) {
         currentCasualParty.isHost = true;
         currentCasualParty.roomCode = data.roomCode;
         if (data.guest) {
           setCasualPartner(data.guest, true);
-          if (audioSettings && audioSettings.battle) playAdvancedSound('pair-match');
-          showToast(`🎉 ${data.guest.name} đã vào đội cùng bạn! Bấm [Khai chiến] để bắt đầu!`, 'success');
+          if (previousPartner?.userId !== data.guest.userId) {
+            if (audioSettings?.battle) playAdvancedSound('pair-match');
+            showToast(`${data.guest.name} đã vào phòng. Bấm Khai chiến để bắt đầu.`, 'success');
+          }
         } else {
           clearCasualPartner();
-          showToast('Bạn bè đã rời khỏi đội.', 'info');
+          if (previousPartner && !previousPartner.isBot) {
+            showToast(`${previousPartner.name} đã rời phòng.`, 'info');
+          }
         }
-      } else if (data.guest && data.guest.userId === myId) {
-        // Bản thân là Khách vào phòng bạn bè
+      } else if (data.guest?.userId === myId && data.host) {
         currentCasualParty.isHost = false;
         currentCasualParty.roomCode = data.roomCode;
         setCasualPartner(data.host, false);
-        if (audioSettings && audioSettings.battle) playAdvancedSound('pair-match');
-        showToast(`🎉 Đã tham gia vào đội của ${data.host.name}! Chờ chủ phòng bắt đầu trận...`, 'success');
+        if (previousPartner?.userId !== data.host.userId) {
+          if (audioSettings?.battle) playAdvancedSound('pair-match');
+          showToast(`Đã vào phòng của ${data.host.name}. Chờ chủ phòng bắt đầu trận.`, 'success');
+        }
       }
     }
 
