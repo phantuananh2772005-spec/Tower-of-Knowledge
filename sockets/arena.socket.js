@@ -310,6 +310,7 @@ function initArenaSocket(io) {
             socketId: socket.id,
             name: playerInfo.name || socket.user.ten_dang_nhap || 'Chủ phòng',
             petIcon: playerInfo.petIcon || '🦉',
+            image: /^\/assets\/[a-z0-9_./-]+\.(?:gif|png|webp)$/i.test(playerInfo.image) ? playerInfo.image : null,
             petName: playerInfo.petName || 'Linh Thú',
             tier: playerInfo.tier || '🌱 Khởi nguyên I'
           },
@@ -339,37 +340,10 @@ function initArenaSocket(io) {
         socket.emit('casual_error', 'Vui lòng nhập mã phòng hợp lệ!');
         return;
       }
-      const normCode = roomCode.trim().toUpperCase();
+      const normCode = String(roomCode || '').trim().toUpperCase();
       const room = casualRoomsMap.get(normCode);
 
       if (!room) {
-        // Kiểm tra xem có phải mã Bot tập luyện không (hỗ trợ nhập BOT, AI hoặc khi test offline)
-        if (normCode.includes('BOT') || normCode === 'AI') {
-          const botGuest = {
-            userId: 'usr_bot_001',
-            socketId: null,
-            name: 'Đấu Sĩ Tập Sự (AI)',
-            petIcon: '🦊',
-            petName: 'Hồ Ly Kitsune',
-            tier: '🌱 Khởi nguyên II',
-            isBot: true
-          };
-          socket.emit('casual_room_updated', {
-            roomCode: normCode,
-            host: {
-              userId,
-              socketId: socket.id,
-              name: playerInfo.name || socket.user.ten_dang_nhap || 'Bạn',
-              petIcon: playerInfo.petIcon || '🦉',
-              petName: playerInfo.petName || 'Linh Thú',
-              tier: playerInfo.tier || '🌱 Khởi nguyên I'
-            },
-            guest: botGuest,
-            status: 'READY'
-          });
-          return;
-        }
-
         socket.emit('casual_error', `Không tìm thấy phòng "${normCode}". Hãy đảm bảo chủ phòng đang mở sảnh giao hữu!`);
         return;
       }
@@ -386,6 +360,7 @@ function initArenaSocket(io) {
         socketId: socket.id,
         name: playerInfo.name || socket.user.ten_dang_nhap || 'Bạn Giao Hữu',
         petIcon: playerInfo.petIcon || '🦊',
+        image: /^\/assets\/[a-z0-9_./-]+\.(?:gif|png|webp)$/i.test(playerInfo.image) ? playerInfo.image : null,
         petName: playerInfo.petName || 'Hồ Ly Kitsune',
         tier: playerInfo.tier || '🌱 Khởi nguyên II'
       };

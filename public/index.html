@@ -949,7 +949,7 @@
           </div>
 
           <!-- Khối Giao Diện Ghép Đấu Tương Tự Đấu Hạng (VS Matchmaking Layout) -->
-          <div class="flex items-center justify-center gap-6 sm:gap-14 text-6xl sm:text-7xl select-none py-2 sm:py-3 my-auto shrink-0">
+          <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-2 sm:gap-6 w-full max-w-xl mx-auto select-none py-2 sm:py-3 shrink-0">
             <!-- Player 1 (Bạn / Chủ phòng) -->
             <div onclick="navTo('pet')" title="Đổi linh vật ra trận" class="cursor-pointer group flex flex-col items-center">
               <div id="casual-lobby-pet" class="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center select-none group-hover:scale-105 transition">
@@ -958,12 +958,12 @@
               <div class="text-center mt-1 space-y-0.5">
                 <span id="casual-lobby-p1-name" class="user-display-name text-xs font-bold text-[var(--foreground)] block">Bạn</span>
                 <span id="casual-lobby-pet-name" class="text-[10px] font-semibold text-cyan-600 block">🐾 Rồng Nhỏ Sparky</span>
-                <span id="casual-lobby-p1-role" class="text-[9px] font-bold text-amber-500 font-mono">👑 CHỦ PHÒNG</span>
+                <span id="casual-lobby-p1-role" class="block text-[9px] font-bold text-amber-500 font-mono">👑 CHỦ PHÒNG</span>
               </div>
             </div>
 
             <!-- VS Badge -->
-            <div id="casual-lobby-vs-container" class="flex flex-col items-center">
+            <div id="casual-lobby-vs-container" class="flex flex-col items-center pt-6 sm:pt-8">
               <span id="casual-lobby-vs-icon" class="text-2xl sm:text-3xl text-[var(--muted-foreground)] font-black transition-all">VS</span>
               <span id="casual-lobby-vs-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 font-bold uppercase mt-1">Giao hữu</span>
             </div>
@@ -983,12 +983,10 @@
 
               <!-- Trạng thái 2: Đã có bạn bè trong đội (Hiển thị Pet + Tên bạn bè) -->
               <div id="casual-p2-occupied" class="hidden flex flex-col items-center animate-in zoom-in-95 duration-200">
-                <div id="casual-lobby-p2-pet" class="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center select-none text-6xl sm:text-7xl">
-                  <span class="pet-animated">🦊</span>
-                </div>
+                <div id="casual-lobby-p2-pet" class="w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center select-none"></div>
                 <div class="text-center mt-1 space-y-0.5">
-                  <span id="casual-lobby-p2-name" class="text-xs font-bold text-[var(--foreground)] block">Bạn Giao Hữu</span>
-                  <span id="casual-lobby-p2-pet-name" class="text-[10px] font-semibold text-cyan-600 block">🐾 Hồ Ly Kitsune</span>
+                  <span id="casual-lobby-p2-name" class="text-xs font-bold text-[var(--foreground)] block"></span>
+                  <span id="casual-lobby-p2-pet-name" class="text-[10px] font-semibold text-cyan-600 block"></span>
                   <div class="flex items-center justify-center gap-1.5 pt-0.5">
                     <span id="casual-lobby-p2-badge" class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-mono">
                       ● ĐÃ VÀO ĐỘI
@@ -3673,7 +3671,7 @@
   }
 
   // ===== Trận đấu pet =====
-  const B = { my:100, op:100, combo:0, qi:0, list:[], t0:0, tick:null, botT:null, pDone:false, bDone:false, shield:false, shieldUsed:false, over:false, locked:false };
+  const B = { my:100, op:100, combo:0, qi:0, list:[], t0:0, tick:null, pDone:false, bDone:false, shield:false, shieldUsed:false, over:false, locked:false };
   window.B = B;
 
   let matchmakingInterval = null;
@@ -4054,129 +4052,6 @@
       updateBadgeCard('badge-card-dot-pha', compMocs >= 4, 'Đột Phá', '👑', 'Cần hoàn thành 4 mốc học');
     }
 
-  // Bộ câu hỏi dự phòng CSDL chuẩn học thuật cho Đấu trường 1v1 (15 câu toàn diện)
-  const FALLBACK_BATTLE_QUESTIONS = [
-    {
-      q: 'Trong CSDL quan hệ, Khóa chính (Primary Key) có đặc điểm bắt buộc nào sau đây?',
-      o: ['Có thể chứa giá trị NULL', 'Duy nhất (Unique) và không được NULL', 'Có thể trùng lặp nếu bảng dưới 100 dòng', 'Chỉ được là kiểu số nguyên'],
-      a: 1
-    },
-    {
-      q: 'Phép toán nào trong SQL dùng để kết hợp dữ liệu từ hai hay nhiều bảng dựa trên điều kiện quan hệ?',
-      o: ['JOIN', 'GROUP BY', 'DISTINCT', 'HAVING'],
-      a: 0
-    },
-    {
-      q: 'Dạng chuẩn 1NF (First Normal Form) yêu cầu mọi thuộc tính trong quan hệ phải thỏa mãn điều kiện gì?',
-      o: ['Không chứa khóa ngoại', 'Mỗi thuộc tính phải mang giá trị nguyên tử (Atomic)', 'Phụ thuộc hàm đầy đủ vào khóa chính', 'Không có phụ thuộc bắc cầu'],
-      a: 1
-    },
-    {
-      q: 'Mệnh đề nào trong SQL được dùng để lọc dữ liệu sau khi đã thực hiện gom nhóm (GROUP BY)?',
-      o: ['WHERE', 'HAVING', 'ORDER BY', 'LIMIT'],
-      a: 1
-    },
-    {
-      q: 'Ràng buộc toàn vẹn tham chiếu (Referential Integrity) được hiện thực hóa qua đối tượng nào?',
-      o: ['Foreign Key (Khóa ngoại)', 'Check Constraint', 'Default Constraint', 'Unique Index'],
-      a: 0
-    },
-    {
-      q: 'Mô hình Dữ liệu Quan hệ (Relational Model) ban đầu do ai đề xuất vào năm 1970?',
-      o: ['E.F. Codd (Edgar Frank Codd)', 'Alan Turing', 'Tim Berners-Lee', 'Linus Torvalds'],
-      a: 0
-    },
-    {
-      q: 'Trong kiến trúc ANSI/SPARC 3 mức của DBMS, mức nào thể hiện góc nhìn cá nhân của từng nhóm người dùng?',
-      o: ['Mức ngoài (External / View Level)', 'Mức quan niệm (Conceptual Level)', 'Mức trong (Internal Level)', 'Mức mạng (Network Level)'],
-      a: 0
-    },
-    {
-      q: 'Mục đích chính của việc tạo INDEX (Chỉ mục) trên một cột trong CSDL là gì?',
-      o: ['Tăng tốc độ truy vấn tìm kiếm dữ liệu', 'Giảm dung lượng lưu trữ của bảng', 'Tự động sao lưu dữ liệu', 'Khóa bảng khi có người truy cập'],
-      a: 0
-    },
-    {
-      q: 'Trong mô hình giao dịch CSDL (Transaction), chữ cái "A" trong từ viết tắt ACID đại diện cho tính chất nào?',
-      o: ['Atomicity (Tính nguyên tố / toàn vẹn)', 'Accuracy (Tính chính xác)', 'Availability (Tính sẵn sàng)', 'Authorization (Tính phân quyền)'],
-      a: 0
-    },
-    {
-      q: 'Hàm tổng hợp nào trong SQL dùng để đếm số lượng bản ghi thỏa mãn điều kiện lọc?',
-      o: ['COUNT()', 'SUM()', 'TOTAL()', 'NUMBER()'],
-      a: 0
-    },
-    {
-      q: 'Dạng chuẩn 2NF (Second Normal Form) khắc phục nhược điểm nào so với dạng chuẩn 1NF?',
-      o: ['Loại bỏ phụ thuộc hàm một phần vào khóa chính', 'Loại bỏ phụ thuộc bắc cầu', 'Loại bỏ giá trị đa trị', 'Loại bỏ khóa ngoại'],
-      a: 0
-    },
-    {
-      q: 'Dạng chuẩn 3NF (Third Normal Form) yêu cầu quan hệ không được chứa loại phụ thuộc nào?',
-      o: ['Phụ thuộc hàm bắc cầu (Transitive Dependency)', 'Phụ thuộc hàm đầy đủ', 'Phụ thuộc phản xạ', 'Phụ thuộc nối'],
-      a: 0
-    },
-    {
-      q: 'Lệnh nào trong SQL xóa toàn bộ dữ liệu trong bảng nhanh hơn và không ghi log từng dòng đơn lẻ?',
-      o: ['TRUNCATE TABLE', 'DELETE FROM', 'DROP TABLE', 'CLEAR TABLE'],
-      a: 0
-    },
-    {
-      q: 'Kết quả của phép LEFT OUTER JOIN sẽ giữ lại toàn bộ các dòng của bảng nào?',
-      o: ['Bảng bên trái (bảng đứng trước mệnh đề JOIN)', 'Bảng bên phải', 'Chỉ các dòng khớp ở cả 2 bảng', 'Tất cả các dòng của cả 2 bảng không điều kiện'],
-      a: 0
-    },
-    {
-      q: 'Khi một bảng B tham chiếu đến khóa chính của bảng A, bảng B được gọi là gì?',
-      o: ['Bảng con (Child table / Foreign table)', 'Bảng cha (Parent table)', 'Bảng tạm thời (Temporary table)', 'Bảng độc lập'],
-      a: 0
-    }
-  ];
-
-  /**
-   * Công thức tính toán tốc độ phản xạ và độ chính xác thích ứng động của Bot (Dynamic Adaptive AI)
-   */
-  function calculateClientBotTurnParams({ questionContent, myHp, botHp, userCombo }) {
-    const qLen = (questionContent || '').length;
-    // Thời gian đọc đề tự nhiên theo độ dài câu hỏi (~22ms/ký tự)
-    const baseReadingTimeSec = Math.min(2.8, Math.max(1.2, 0.8 + qLen * 0.022));
-
-    const hpDiff = myHp - botHp; // Dương: người chơi đang dẫn trước; Âm: bot đang dẫn
-    let willAnswerCorrectly = true;
-    let thinkDurationSec = 2.0;
-    let isAggressive = false;
-
-    // TÌNH HUỐNG 1: Người chơi đang dẫn trước (hpDiff >= 20) hoặc người chơi có chuỗi Combo (userCombo >= 2)
-    // => Bot kích hoạt chế độ "RƯỢT ĐUỔI / GÂY ÁP LỰC": Trả lời nhanh chớp nhoáng, tỉ lệ đúng 85%
-    if (hpDiff >= 20 || userCombo >= 2) {
-      isAggressive = true;
-      willAnswerCorrectly = Math.random() < 0.85;
-      thinkDurationSec = 0.8 + Math.random() * 1.4; // 0.8s - 2.2s suy nghĩ
-    }
-    // TÌNH HUỐNG 2: Người chơi đang gặp nguy hiểm (myHp <= 35) hoặc Bot đang dẫn trước sâu (hpDiff <= -25)
-    // => Bot kích hoạt chế độ "DO DỰ / SƠ HỞ": Giảm tốc độ, tỉ lệ đúng 52%, tạo cơ hội Lội ngược dòng (Comeback)
-    else if (myHp <= 35 || hpDiff <= -25) {
-      willAnswerCorrectly = Math.random() < 0.52;
-      thinkDurationSec = 3.2 + Math.random() * 2.8; // 3.2s - 6.0s suy nghĩ
-    }
-    // TÌNH HUỐNG 3: Trận đấu cân bằng (-20 < hpDiff < 20)
-    // => Bot thi đấu chuẩn mực học viên: tỉ lệ đúng 72%, nhịp suy nghĩ trung bình
-    else {
-      willAnswerCorrectly = Math.random() < 0.72;
-      thinkDurationSec = 1.8 + Math.random() * 2.2;
-    }
-
-    const totalDelaySec = Math.min(8.8, Math.max(2.0, baseReadingTimeSec + thinkDurationSec));
-    const delayMs = Math.round(totalDelaySec * 1000);
-
-    return {
-      delayMs,
-      totalDelaySec,
-      willAnswerCorrectly,
-      isAggressive
-    };
-  }
-
   // ================= QUẢN LÝ ĐẦU HÀNG TRẬN ĐẤU (SURRENDER) =================
   function openSurrenderModal() {
     if (B.over) return;
@@ -4288,7 +4163,7 @@
 
         const myId = B.myUserId || currentUserAccount?.userId;
         const opUser = (data.nguoi_choi || []).find(p => p.ma_nguoi_dung !== myId) || (data.nguoi_choi || [])[1] || (data.nguoi_choi || [])[0] || {};
-        matchedOpponent = {
+        matchedOpponent = arenaBots.find(bot => bot.id === opUser.ma_nguoi_dung) || {
           id: opUser.ma_nguoi_dung,
           name: opUser.ten_hien_thi || (data.doi_thu_la_bot ? 'Đấu Sĩ Tập Sự' : 'Chiến Binh Lữ Khách'),
           petIcon: opUser.thu_cung?.ten_thu_cung?.includes('Hồ Ly') ? '🦊' : (opUser.thu_cung?.ten_thu_cung?.includes('Thạch') ? '🗿' : '🐉'),
@@ -4308,34 +4183,10 @@
       });
     }
 
-    // 2. Cơ chế Bảo vệ Chờ đợi (Safe Fallback Protection):
-    // Nếu máy chủ không trả trận đúng hạn, mở lượt đấu tập cục bộ
     matchmakingTimeout = setTimeout(() => {
       if (socketMatched) return;
-      socketMatched = true;
-      liveSocket?.emit('leave_queue');
-      clearInterval(matchmakingInterval);
-      if (statusEl) statusEl.textContent = 'Đấu tập với bot · Không tính điểm hạng';
-      if (audioSettings && audioSettings.battle) playAdvancedSound('click');
-
-      const botPool = [
-        { id: 'usr_bot_001', name: 'Đấu Sĩ Tập Sự (Bot)', petIcon: '💧', petName: 'Slime Mọt Sách Gloop', tier: '🌱 Khởi nguyên I', image: '/assets/pets/bot_gloop/03_spritesheet/bot_gloop_idle.gif' },
-        { id: 'usr_bot_002', name: 'Chiến Binh Đồng Hồ (Bot)', petIcon: '⚙️', petName: 'Cú Cót Tickbot', tier: '⚡ Tinh thông II', image: '/assets/pets/bot_tickbot/03_spritesheet/bot_tickbot_idle.gif' },
-        { id: 'usr_bot_003', name: 'Bóng Ma Mạng (Bot)', petIcon: '👾', petName: 'Bóng Ma Lỗi Glitchy', tier: '🌟 Xuất chúng III', image: '/assets/pets/bot_glitchy/03_spritesheet/bot_glitchy_idle.gif' },
-        { id: 'usr_bot_004', name: 'Trùm Cơ Khí Dracobot (Boss)', petIcon: '🐲', petName: 'Long Giáp Dracobot', tier: '👑 Đỉnh cao', image: '/assets/pets/bot_dracobot/03_spritesheet/bot_dracobot_idle.gif' }
-      ];
-      const chosenBot = {
-        ...botPool[Math.floor(Math.random() * botPool.length)],
-        isBot: true,
-        isCasual: true,
-        isFriendMatch: false
-      };
-
-      matchedOpponent = chosenBot;
-      setTimeout(() => {
-        if (mmModal) mmModal.classList.add('hidden');
-        showVersusScreen(matchedOpponent, null);
-      }, 400);
+      cancelMatchmaking();
+      showToast('Chưa kết nối được trận đấu. Hãy thử tìm trận lại.', 'error');
     }, 18000);
   }
 
@@ -4351,7 +4202,22 @@
     showToast('Đã hủy tìm kiếm trận đấu.');
   }
 
+  const arenaBots = [
+    { id: 'usr_bot_001', name: 'Đấu Sĩ Tập Sự', petName: 'Slime Mọt Sách Gloop', sprite: 'bot_gloop' },
+    { id: 'usr_bot_002', name: 'Chiến Binh Lữ Khách', petName: 'Cú Cót Tickbot', sprite: 'bot_tickbot' },
+    { id: 'usr_bot_003', name: 'Hộ Vệ Tri Thức', petName: 'Bóng Ma Lỗi Glitchy', sprite: 'bot_glitchy' }
+  ].map(bot => ({
+    ...bot,
+    userId: bot.id,
+    image: `/assets/pets/${bot.sprite}/03_spritesheet/${bot.sprite}_idle.gif`,
+    isBot: true
+  }));
+
   function showVersusScreen(opponent, matchData) {
+    if (!matchData?.ma_tran || !matchData.cau_hoi?.length) {
+      showToast('Chưa tải được trận đấu. Hãy thử lại.', 'error');
+      return;
+    }
     const vsModal = document.getElementById('modal-versus');
     if (!vsModal) return;
     vsModal.classList.remove('hidden');
@@ -4427,22 +4293,17 @@
     B.myUserId = matchData?.my_user_id || B.myUserId || currentUserAccount?.userId;
 
     // Trích xuất ngân hàng câu hỏi đầy đủ 4 dạng từ Backend CSDL thật
-    if (matchData && matchData.cau_hoi && Array.isArray(matchData.cau_hoi) && matchData.cau_hoi.length > 0) {
-      currentLiveMatch = matchData;
-      B.list = matchData.cau_hoi.map(q => ({
-        q: q.noi_dung,
-        loai: q.loai_cau_hoi || 'TRAC_NGHIEM_4',
-        data: q.du_lieu_cau_hoi || null,
-        bloom: q.muc_bloom || 'NHO',
-        do_kho: q.do_kho || 'TRUNG_BINH',
-        o: q.dap_an || [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d].filter(Boolean),
-        a: q.vi_tri_dap_an_dung,
-        ma_cau_trong_tran: q.ma_cau_trong_tran
-      }));
-    } else {
-      currentLiveMatch = null;
-      B.list = [...FALLBACK_BATTLE_QUESTIONS].sort(() => Math.random() - 0.5);
-    }
+    currentLiveMatch = matchData;
+    B.list = matchData.cau_hoi.map(q => ({
+      q: q.noi_dung,
+      loai: q.loai_cau_hoi || 'TRAC_NGHIEM_4',
+      data: q.du_lieu_cau_hoi || null,
+      bloom: q.muc_bloom || 'NHO',
+      do_kho: q.do_kho || 'TRUNG_BINH',
+      o: q.dap_an || [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d].filter(Boolean),
+      a: q.vi_tri_dap_an_dung,
+      ma_cau_trong_tran: q.ma_cau_trong_tran
+    }));
 
     window.BattleReactions?.start(liveSocket, matchData?.ma_tran, B.myUserId, B.isBot);
 
@@ -4599,7 +4460,6 @@
   function clearBattleTimers() {
     window.BattleReactions?.stop();
     clearInterval(B.tick);
-    clearTimeout(B.botT);
   }
 
   function leaveBattle() {
@@ -4915,47 +4775,10 @@
       }
     }, 100);
 
-    clearTimeout(B.botT);
     const botStatus = document.getElementById('b-bot-status');
-
-    if (B.isBot && !currentLiveMatch?.ma_tran) {
-      // Tính toán thông số Bot thích ứng động theo diễn biến trận đấu
-      const botParams = calculateClientBotTurnParams({
-        questionContent: q.q,
-        myHp: B.my,
-        botHp: B.op,
-        userCombo: B.combo
-      });
-
-      if (botStatus) {
-        if (botParams.isAggressive) {
-          botStatus.textContent = '⚡ đang ra chiêu!';
-          botStatus.className = 'text-[9.5px] text-center font-bold text-amber-500 animate-pulse transition-all truncate';
-          anim('op-pet', 'do-shake-light');
-        } else if (B.my <= 35) {
-          botStatus.textContent = '🤔 đang đắn đo...';
-          botStatus.className = 'text-[9.5px] text-center font-medium text-emerald-400 transition-all truncate';
-        } else {
-          botStatus.textContent = '💭 đang suy nghĩ...';
-          botStatus.className = 'text-[9.5px] text-center font-medium text-[var(--muted-foreground)] transition-all truncate';
-        }
-      }
-
-      // Điều chỉnh độ trễ của Bot tương xứng độ khó của dạng câu
-      const botDelay = q.loai === 'TRAC_NGHIEM_4' ? botParams.delayMs : Math.min(roundDurationMs - 1500, botParams.delayMs + 2000);
-      B.botT = setTimeout(() => {
-        if (botStatus) {
-          botStatus.textContent = '🎯 đã chốt đáp án!';
-          botStatus.className = 'text-[9.5px] text-center font-semibold text-cyan-400 transition-all truncate';
-        }
-        botAnswer(botParams.willAnswerCorrectly, botDelay);
-      }, botDelay);
-    } else {
-      // Đối thủ là NGƯỜI CHƠI THỰC (PvP): hoàn toàn đợi sự kiện Socket từ đối phương
-      if (botStatus) {
-        botStatus.textContent = '⚔️ đang suy nghĩ...';
-        botStatus.className = 'text-[9.5px] text-center font-medium text-[var(--muted-foreground)] transition-all truncate';
-      }
+    if (botStatus) {
+      botStatus.textContent = '⚔️ đang suy nghĩ...';
+      botStatus.className = 'text-[9.5px] text-center font-medium text-[var(--muted-foreground)] transition-all truncate';
     }
   }
 
@@ -5059,32 +4882,6 @@
       updHp();
     }
 
-    roundCheck();
-  }
-
-  function botAnswer(ok, ms) {
-    if (B.over || !B.isBot) return;
-    B.bDone = true;
-
-    if (ok) {
-      if (B.shield) {
-        B.shield = false;
-        const shieldEl = document.getElementById('my-shield');
-        if (shieldEl) shieldEl.classList.add('hidden');
-        popFloat('my-float', '🛡️ Chặn!');
-        if (audioSettings.battle) playAdvancedSound('click');
-      } else {
-        const d = dmgFor(ms);
-        B.my = Math.max(0, B.my - d);
-        anim('op-pet', 'do-lungeL');
-        setTimeout(() => {
-          anim('my-pet', 'do-shake');
-          popFloat('my-float', '-' + d);
-          updHp();
-          checkEnd();
-        }, 220);
-      }
-    }
     roundCheck();
   }
 
@@ -9050,6 +8847,7 @@
         userId: currentUserAccount?.userId || ('usr_guest_' + Date.now().toString(36)),
         name: currentUserAccount?.displayName || 'Bạn',
         petIcon,
+        image: pet.image,
         petName,
         tier: currentUserAccount?.rankTitle || '🌱 Khởi nguyên I'
       };
@@ -9129,12 +8927,16 @@
       // Điền Pet và thông tin bạn bè vào ô slot 2
       const p2Pet = document.getElementById('casual-lobby-p2-pet');
       if (p2Pet) {
-        p2Pet.innerHTML = `<span class="pet-animated text-7xl select-none inline-block">${partner.petIcon || '🦊'}</span>`;
+        const image = document.createElement('img');
+        image.src = partner.image || '/assets/navigation/pet.webp';
+        image.alt = partner.petName || '';
+        image.className = 'w-full h-full object-contain pixel-art select-none';
+        p2Pet.replaceChildren(image);
       }
       const p2Name = document.getElementById('casual-lobby-p2-name');
       if (p2Name) p2Name.textContent = partner.name || 'Bạn Giao Hữu';
       const p2PetName = document.getElementById('casual-lobby-p2-pet-name');
-      if (p2PetName) p2PetName.textContent = '🐾 ' + (partner.petName || 'Hồ Ly Kitsune');
+      if (p2PetName) p2PetName.textContent = '🐾 ' + (partner.petName || 'Linh thú đồng hành');
       const p2Badge = document.getElementById('casual-lobby-p2-badge');
       if (p2Badge) {
         p2Badge.textContent = partner.isBot ? '● BOT SẴN SÀNG' : '● ĐÃ VÀO ĐỘI';
@@ -9211,58 +9013,29 @@
     }
 
     function addBotToCasualParty() {
-      const chosenBot = {
-        userId: 'usr_bot_001',
-        name: 'Đấu Sĩ Tập Sự (Bot AI)',
-        petIcon: '🦊',
-        petName: 'Hồ Ly Kitsune',
-        tier: '🌱 Khởi nguyên II',
-        isBot: true
-      };
-      setCasualPartner(chosenBot, true);
-      if (audioSettings && audioSettings.battle) playAdvancedSound('click');
-      showToast('🤖 Đã mời Đấu Sĩ Tập Sự (Bot AI) vào đội! Bấm [Khai chiến] để bắt đầu trận đấu!', 'success');
+      if (currentCasualParty.partner && !currentCasualParty.partner.isBot) {
+        showToast('Phòng đã có bạn chơi.', 'info');
+        return;
+      }
+      setCasualPartner(arenaBots[0], true);
+      if (audioSettings?.battle) playAdvancedSound('click');
     }
 
     function joinCasualFriendRoom() {
-      const input = document.getElementById('input_casual_room_code');
-      const code = input ? input.value.trim().toUpperCase() : '';
-      if (!code) {
-        showToast('Vui lòng nhập mã phòng hợp lệ từ bạn bè (VD: TOK-8842)', 'warning');
+      const code = document.getElementById('input_casual_room_code')?.value.trim().toUpperCase();
+      if (!/^TOK-[A-Z0-9]{4,12}$/.test(code || '')) {
+        showToast('Nhập mã phòng hợp lệ, ví dụ TOK-8842.', 'warning');
         return;
       }
-
       if (code === currentCasualRoomCode) {
-        showToast('⚠️ Đây là mã phòng của chính bạn! Hãy gửi mã này cho bạn bè hoặc nhập mã từ bạn bè nhé.', 'warning');
+        showToast('Đây là mã phòng của bạn. Hãy chia sẻ mã này cho bạn bè.', 'warning');
         return;
       }
-
-      // Nếu người dùng nhập mã Bot/AI để đấu thử
-      if (code.includes('BOT') || code === 'AI') {
-        addBotToCasualParty();
+      if (!liveSocket?.connected) {
+        showToast('Mất kết nối. Hãy thử vào phòng lại.', 'error');
         return;
       }
-
-      showToast('⚔️ Đang kết nối vào phòng ' + code + '...', 'info');
-
-      if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected) {
-        liveSocket.emit('casual_join_room', {
-          roomCode: code,
-          playerInfo: getMyCasualPlayerInfo()
-        });
-      } else {
-        // Fallback mô phỏng nếu mất mạng
-        showToast('⚠️ Chưa kết nối Socket! Tự động kết nối đối thủ phòng ' + code, 'info');
-        const simulatedFriend = {
-          userId: 'usr_friend_' + code.toLowerCase().replace(/[^a-z0-9]/g, ''),
-          name: 'Bạn Giao Hữu (' + code + ')',
-          petIcon: '🦊',
-          petName: 'Hồ Ly Kitsune',
-          tier: '🌱 Khởi nguyên II',
-          isBot: true
-        };
-        setCasualPartner(simulatedFriend, true);
-      }
+      liveSocket.emit('casual_join_room', { roomCode: code, playerInfo: getMyCasualPlayerInfo() });
     }
 
     function handleCasualRoomUpdated(data) {
@@ -9322,8 +9095,8 @@
 
       const myId = B.myUserId || currentUserAccount?.userId;
       const opUser = (data.nguoi_choi || []).find(p => p.ma_nguoi_dung !== myId) || (data.nguoi_choi || [])[1] || (data.nguoi_choi || [])[0] || {};
-      const opponent = {
-        id: opUser.ma_nguoi_dung || 'usr_friend',
+      const opponent = arenaBots.find(bot => bot.id === opUser.ma_nguoi_dung) || {
+        id: opUser.ma_nguoi_dung,
         name: opUser.ten_hien_thi || 'Bạn Giao Hữu',
         petIcon: opUser.thu_cung?.ten_thu_cung?.includes('Hồ Ly') ? '🦊' : (opUser.thu_cung?.ten_thu_cung?.includes('Thạch') ? '🗿' : '🐉'),
         petName: opUser.thu_cung?.ten_thu_cung || 'Linh Thú Đối Thủ',
@@ -9358,66 +9131,44 @@
 
       if (partner.isBot) {
         // Đấu cùng Bot AI
-        startCasualFriendMatch(targetRoom, partner);
+        startCasualFriendMatch(partner);
       } else {
         // Đấu người thật qua Socket
         if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected) {
           showToast('⚔️ Đang kích hoạt trận đấu giao hữu cho cả hai người chơi...', 'info');
           liveSocket.emit('casual_start_match', { roomCode: targetRoom });
         } else {
-          startCasualFriendMatch(targetRoom, partner);
+          showToast('Mất kết nối. Hãy thử bắt đầu trận lại.', 'error');
         }
       }
     }
 
-    async function startCasualFriendMatch(roomCode, customPartner) {
-      clearBattleTimers();
-      trackDailyQuestAction('dau_truong');
-      const mmModal = document.getElementById('modal-matchmaking');
-      if (mmModal) mmModal.classList.add('hidden');
-      const targetRoom = roomCode || currentCasualParty.roomCode || currentCasualRoomCode;
-      const subCode = document.getElementById('casual-subject') ? document.getElementById('casual-subject').value : 'csdl';
-      const maMon = subCode.startsWith('mon_') ? subCode : ('mon_' + subCode);
-      const token = localStorage.getItem('tok_token');
-
-      const opponent = customPartner || currentCasualParty.partner || {
-        id: 'usr_friend_' + targetRoom.replace(/[^a-zA-Z0-9]/g, '').toLowerCase(),
-        name: 'Bạn Giao Hữu (' + targetRoom + ')',
-        petIcon: '🦊',
-        petName: 'Hồ Ly Kitsune',
-        tier: '🌱 Khởi nguyên II',
-        isBot: true,
-        isCasual: true,
-        isFriendMatch: true
-      };
-
-      opponent.isCasual = true;
-      opponent.isFriendMatch = true;
-
-      let liveMatchData = null;
-      try {
-        const resp = await fetch('/api/arena/create-match', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
-          },
-          body: JSON.stringify({
-            doi_thu_id: opponent.userId || opponent.id || 'usr_bot_001',
-            ma_mon: maMon
-          })
-        });
-        const res = await resp.json();
-        if (res.success && res.data) {
-          liveMatchData = res.data;
-          currentLiveMatch = res.data;
-        }
-      } catch (e) {
-        console.warn('Friend match fallback:', e);
+    async function startCasualFriendMatch(partner = currentCasualParty.partner) {
+      if (!partner?.isBot) {
+        handleCasualStartClick();
+        return;
       }
-
-      showToast('⚔️ Đang khởi tạo trận giao hữu phòng ' + targetRoom + '!', 'success');
-      showVersusScreen(opponent, liveMatchData);
+      const token = localStorage.getItem('tok_token');
+      if (!token || !liveSocket?.connected) {
+        showToast('Mất kết nối. Hãy thử bắt đầu trận lại.', 'error');
+        return;
+      }
+      const subject = document.getElementById('casual-subject').value || 'csdl';
+      const maMon = subject.startsWith('mon_') ? subject : 'mon_' + subject;
+      try {
+        const response = await fetch('/api/arena/create-match', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ doi_thu_id: partner.id, ma_mon: maMon })
+        });
+        const result = await response.json();
+        if (!result.success || !result.data) throw new Error(result.error?.message || 'Không thể bắt đầu trận.');
+        if (token !== localStorage.getItem('tok_token')) return;
+        clearBattleTimers();
+        showVersusScreen({ ...partner, isCasual: true, isFriendMatch: partner === currentCasualParty.partner }, result.data);
+      } catch (error) {
+        showToast(error.message || 'Không thể bắt đầu trận.', 'error');
+      }
     }
 
     function renderCasualLobby() {
@@ -9529,52 +9280,8 @@
       }
     }
 
-    async function startBotPractice() {
-      clearBattleTimers();
-      trackDailyQuestAction('dau_truong');
-      const mmModal = document.getElementById('modal-matchmaking');
-      if (mmModal) mmModal.classList.add('hidden');
-      
-      const botPool = [
-        { id: 'usr_bot_001', name: 'Đấu Sĩ Tập Sự (Bot)', petIcon: '💧', petName: 'Slime Mọt Sách Gloop', tier: '🌱 Khởi nguyên I', image: '/assets/pets/bot_gloop/03_spritesheet/bot_gloop_idle.gif' },
-        { id: 'usr_bot_002', name: 'Chiến Binh Đồng Hồ (Bot)', petIcon: '⚙️', petName: 'Cú Cót Tickbot', tier: '⚡ Tinh thông II', image: '/assets/pets/bot_tickbot/03_spritesheet/bot_tickbot_idle.gif' },
-        { id: 'usr_bot_003', name: 'Bóng Ma Mạng (Bot)', petIcon: '👾', petName: 'Bóng Ma Lỗi Glitchy', tier: '🌟 Xuất chúng III', image: '/assets/pets/bot_glitchy/03_spritesheet/bot_glitchy_idle.gif' },
-        { id: 'usr_bot_004', name: 'Trùm Cơ Khí Dracobot (Boss)', petIcon: '🐲', petName: 'Long Giáp Dracobot', tier: '👑 Đỉnh cao', image: '/assets/pets/bot_dracobot/03_spritesheet/bot_dracobot_idle.gif' }
-      ];
-      const chosenBot = {
-        ...botPool[Math.floor(Math.random() * botPool.length)],
-        isBot: true,
-        isCasual: true,
-        isFriendMatch: false
-      };
-      const token = localStorage.getItem('tok_token');
-      const subCode = document.getElementById('lobby-subject') ? document.getElementById('lobby-subject').value : 'csdl';
-      const maMon = subCode.startsWith('mon_') ? subCode : ('mon_' + subCode);
-
-      let liveMatchData = null;
-      try {
-        const resp = await fetch('/api/arena/create-match', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
-          },
-          body: JSON.stringify({
-            doi_thu_id: chosenBot.id,
-            ma_mon: maMon
-          })
-        });
-        const res = await resp.json();
-        if (res.success && res.data) {
-          liveMatchData = res.data;
-          currentLiveMatch = res.data;
-        }
-      } catch (e) {
-        console.warn('Practice match fallback:', e);
-      }
-
-      showToast('🥊 Bắt đầu trận đấu tập luyện cùng ' + chosenBot.name + '!', 'info');
-      showVersusScreen(chosenBot, liveMatchData);
+    function startBotPractice() {
+      return startCasualFriendMatch(arenaBots[Math.floor(Math.random() * arenaBots.length)]);
     }
 
     function previewArcadeModes() {
