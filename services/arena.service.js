@@ -203,9 +203,9 @@ async function getMatchState(ma_tran) {
  * Player submits an answer for a specific question in the match
  */
 async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap_an_chon, cau_tra_loi = null, thoi_gian_giay = 5 }) {
-  const { player, isCorrect, damage, isCritical, newOpponentHp } = await db.transaction(async tx => {
+  const { player, isCorrect, damage, isCritical, newOpponentHp, replayed } = await db.transaction(async tx => {
     const match = await tx.queryOne('SELECT * FROM tran_dau_1v1 WHERE ma_tran = $1' + (db.isPostgres ? ' FOR UPDATE' : ''), [ma_tran]);
-    if (!match || match.trang_thai !== 'DANG_THI_DAU') {
+    if (!match) {
       throw new Error('Trận đấu không tồn tại hoặc đã kết thúc.');
     }
 
@@ -218,17 +218,36 @@ async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap
     `, [ma_tran, ma_nguoi_dung]);
     if (!player) throw new Error('Người chơi không thuộc trận đấu này.');
 
+    if (!Number.isInteger(thu_tu_cau) || thu_tu_cau < 1) {
+      throw new Error('Thứ tự câu hỏi không hợp lệ.');
+    }
+
+    // Get question in match with correct answer
+    const questionInMatch = await tx.queryOne(`
+      SELECT qm.ma_cau_trong_tran, q.loai_cau_hoi, q.vi_tri_dap_an_dung, q.du_lieu_cau_hoi
+      FROM cau_hoi_trong_tran qm
+      JOIN cau_hoi q ON qm.ma_cau_hoi = q.ma_cau_hoi
+      WHERE qm.ma_tran = $1 AND qm.thu_tu_cau = $2
+    `, [ma_tran, thu_tu_cau]);
+    if (!questionInMatch) throw new Error('Không tìm thấy câu hỏi này trong trận.');
+
+    // Check if already answered
+    const alreadyAnswered = await tx.queryOne(
+      'SELECT la_dap_an_dung, sat_thuong_gay_ra FROM luot_tra_loi WHERE ma_cau_trong_tran = $1 AND ma_nguoi_choi_trong_tran = $2',
+      [questionInMatch.ma_cau_trong_tran, player.ma_nguoi_choi_trong_tran]
+    );
+    if (alreadyAnswered) {
+      return { player, isCorrect: Boolean(alreadyAnswered.la_dap_an_dung), damage: alreadyAnswered.sat_thuong_gay_ra, isCritical: false, replayed: true };
+    }
+
     // Get opponent
     const opponent = await tx.queryOne(
       'SELECT * FROM nguoi_choi_trong_tran WHERE ma_tran = $1 AND ma_nguoi_dung != $2',
       [ma_tran, ma_nguoi_dung]
     );
 
-    if (!opponent || opponent.mau_hien_tai <= 0 || player.mau_hien_tai <= 0) {
+    if (match.trang_thai !== 'DANG_THI_DAU' || !opponent || opponent.mau_hien_tai <= 0 || player.mau_hien_tai <= 0) {
       throw new Error('Trận đấu đã kết thúc.');
-    }
-    if (!Number.isInteger(thu_tu_cau) || thu_tu_cau < 1) {
-      throw new Error('Thứ tự câu hỏi không hợp lệ.');
     }
     const previousTurns = await tx.queryOne(`
       SELECT COUNT(*) AS total, MAX(l.thoi_diem_tra_loi) AS latest
@@ -244,24 +263,6 @@ async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap
     // The client starts after the match intro or the previous round animation.
     const intro = thu_tu_cau === 1 ? 2.2 : 1.4;
     thoi_gian_giay = Number.isFinite(elapsed) ? Math.max(0, elapsed - intro) : 5;
-
-    // Get question in match with correct answer
-    const questionInMatch = await tx.queryOne(`
-      SELECT qm.ma_cau_trong_tran, q.loai_cau_hoi, q.vi_tri_dap_an_dung, q.du_lieu_cau_hoi
-      FROM cau_hoi_trong_tran qm
-      JOIN cau_hoi q ON qm.ma_cau_hoi = q.ma_cau_hoi
-      WHERE qm.ma_tran = $1 AND qm.thu_tu_cau = $2
-    `, [ma_tran, thu_tu_cau]);
-    if (!questionInMatch) throw new Error('Không tìm thấy câu hỏi này trong trận.');
-
-    // Check if already answered
-    const alreadyAnswered = await tx.queryOne(
-      'SELECT ma_luot_tra_loi FROM luot_tra_loi WHERE ma_cau_trong_tran = $1 AND ma_nguoi_choi_trong_tran = $2',
-      [questionInMatch.ma_cau_trong_tran, player.ma_nguoi_choi_trong_tran]
-    );
-    if (alreadyAnswered) {
-      throw new Error('Bạn đã trả lời câu hỏi này rồi.');
-    }
 
     // Parse structured data if available
     let parsed = null;
@@ -365,6 +366,14 @@ async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap
 
     return { player, isCorrect, damage, isCritical, newOpponentHp };
   });
+
+  if (replayed) {
+    const state = await getMatchState(ma_tran);
+    return {
+      la_dap_an_dung: isCorrect, sat_thuong_gay_ra: damage, la_chi_mang: isCritical,
+      tran_ket_thuc: state.trang_thai === 'KET_THUC', trang_thai_tran: state, replayed: true
+    };
+  }
 
   // Check match conclusion (either K.O. or last question completed by both)
   let matchEnded = false;

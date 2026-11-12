@@ -4342,6 +4342,7 @@
         if (isMe) {
           // --- BẢN THÂN VỪA TẤN CÔNG (Attacker) ---
           B.pDone = true;
+          document.getElementById('b-retry-answer')?.remove();
           const box = document.getElementById('b-options');
           box?.classList.add('ring-2', data.la_dap_an_dung ? 'ring-emerald-500' : 'ring-rose-500', 'rounded-2xl');
           if (data.la_dap_an_dung) {
@@ -4531,6 +4532,8 @@
     const q = B.list[B.qi % B.list.length];
     B.qi++;
     B.pDone = false;
+    B.answerPending = false;
+    document.getElementById('b-retry-answer')?.remove();
     B.bDone = false;
     B.locked = false;
 
@@ -4579,7 +4582,7 @@
           btn.className = "px-4 py-2.5 rounded-xl border border-slate-300 dark:border-[var(--border)] bg-white dark:bg-[var(--card)] hover:border-cyan-500 hover:bg-cyan-500/10 transition text-xs font-bold text-slate-850 dark:text-cyan-200 cursor-pointer shadow-sm";
           btn.textContent = word;
           btn.onclick = () => {
-            if (B.pDone || B.over) return;
+            if (B.pDone || B.answerPending || B.over) return;
             const target = document.getElementById('arena-blank-target');
             if (target) {
               target.textContent = word;
@@ -4623,7 +4626,7 @@
           btn.className = "w-full text-left p-2 sm:p-3 rounded-xl border border-slate-300 dark:border-[var(--border)] bg-white dark:bg-[var(--card)] hover:border-cyan-500 active:scale-[0.98] transition font-bold cursor-pointer text-[11px] sm:text-xs leading-snug break-words hyphens-auto min-h-[46px] flex flex-col justify-center select-none text-slate-800 dark:text-slate-100 shadow-xs";
           btn.textContent = item.text;
           btn.onclick = () => {
-            if (B.pDone || B.over || btn.disabled) return;
+            if (B.pDone || B.answerPending || B.over || btn.disabled) return;
             document.querySelectorAll('#col-left button').forEach(b => {
               if (!b.disabled) {
                 b.className = "w-full text-left p-2 sm:p-3 rounded-xl border border-slate-300 dark:border-[var(--border)] bg-white dark:bg-[var(--card)] hover:border-cyan-500 active:scale-[0.98] transition font-bold cursor-pointer text-[11px] sm:text-xs leading-snug break-words hyphens-auto min-h-[46px] flex flex-col justify-center select-none text-slate-800 dark:text-slate-100 shadow-xs";
@@ -4641,7 +4644,7 @@
           btn.className = "w-full text-left p-2 sm:p-3 rounded-xl border border-slate-300 dark:border-[var(--border)] bg-white dark:bg-[var(--card)] hover:border-indigo-500 active:scale-[0.98] transition font-medium cursor-pointer text-[11px] sm:text-xs leading-snug break-words hyphens-auto min-h-[46px] flex flex-col justify-center select-none text-slate-800 dark:text-slate-100 shadow-xs";
           btn.textContent = item.text;
           btn.onclick = () => {
-            if (B.pDone || B.over || btn.disabled || selectedLeft === null) return;
+            if (B.pDone || B.answerPending || B.over || btn.disabled || selectedLeft === null) return;
             const leftBtn = document.getElementById(`pair-left-${selectedLeft}`);
             if (currentLiveMatch?.ma_tran || selectedLeft === item.id) {
               matchedCount++;
@@ -4706,7 +4709,7 @@
               chip.className = "px-2.5 py-1.5 rounded-lg bg-indigo-100 dark:bg-indigo-600/30 border border-indigo-400 text-indigo-950 dark:text-indigo-200 text-xs font-bold cursor-pointer hover:bg-rose-100 dark:hover:bg-rose-500/20 hover:border-rose-500 hover:text-rose-800 dark:hover:text-rose-300 transition";
               chip.textContent = word + ' ✕';
               chip.onclick = () => {
-                if (B.pDone || B.over) return;
+                if (B.pDone || B.answerPending || B.over) return;
                 placedWords.splice(idx, 1);
                 renderDrop();
                 renderBank();
@@ -4735,7 +4738,7 @@
             b.className = "px-3 py-2 rounded-xl border border-slate-300 dark:border-[var(--border)] bg-white dark:bg-[var(--card)] hover:border-indigo-400 hover:bg-indigo-500/10 text-xs font-bold text-slate-800 dark:text-slate-100 transition cursor-pointer shadow-xs";
             b.textContent = word;
             b.onclick = () => {
-              if (B.pDone || B.over) return;
+              if (B.pDone || B.answerPending || B.over) return;
               placedWords.push(word);
               renderDrop();
               renderBank();
@@ -4745,14 +4748,14 @@
         };
 
         resetBtn.onclick = () => {
-          if (B.pDone || B.over) return;
+          if (B.pDone || B.answerPending || B.over) return;
           placedWords = [];
           renderDrop();
           renderBank();
         };
 
         submitBtn.onclick = () => {
-          if (B.pDone || B.over) return;
+          if (B.pDone || B.answerPending || B.over) return;
           const userSentence = placedWords.join(' ').trim().toLowerCase().replace(/\s+/g, ' ');
           const correctSentence = correctWords.join(' ').trim().toLowerCase().replace(/\s+/g, ' ');
           const isOk = (userSentence === correctSentence);
@@ -4786,7 +4789,7 @@
       if (bar) bar.style.width = ((left / roundDurationMs) * 100) + '%';
       if (left <= 0) {
         clearInterval(B.tick);
-        if (!B.pDone) playerAnswer(-1, q, null, { isTimeout: true, isCorrect: false });
+        if (!B.pDone && !B.answerPending && !document.getElementById('b-retry-answer')) playerAnswer(-1, q, null, { isTimeout: true, isCorrect: false });
       }
     }, 100);
 
@@ -4821,83 +4824,43 @@
   }
 
   function playerAnswer(i, q, btn, payload = null) {
-    if (B.pDone || B.over) return;
-    B.pDone = true;
-    const ms = Date.now() - B.t0;
+    if (B.pDone || B.answerPending || B.over || !currentLiveMatch?.ma_tran) return;
+    const matchId = currentLiveMatch.ma_tran;
+    const round = B.qi;
+    const token = localStorage.getItem('tok_token');
+    const { isCorrect, ...answer } = payload || { vi_tri_chon: i };
+    const body = JSON.stringify({ thu_tu_cau: round, vi_tri_dap_an_chon: i, cau_tra_loi: answer });
+    const active = () => currentLiveMatch?.ma_tran === matchId && B.qi === round && !B.over;
+    const status = document.getElementById('b-bot-status');
 
-    if (currentLiveMatch?.ma_tran) {
-      const matchId = currentLiveMatch.ma_tran;
-      const round = B.qi;
-      const token = localStorage.getItem('tok_token');
-      const { isCorrect, ...answer } = payload || { vi_tri_chon: i };
-      fetch(`/api/arena/${matchId}/turn`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-        body: JSON.stringify({
-          thu_tu_cau: round,
-          vi_tri_dap_an_chon: i,
-          cau_tra_loi: answer,
-          thoi_gian_giay: ms / 1000
-        })
-      }).then(response => response.json()).then(result => {
-        if (!result.success) throw new Error(result.message || 'Không gửi được câu trả lời.');
-        if (currentLiveMatch?.ma_tran === matchId) {
-          B.onTurnResolved({ ...result.data, thu_tu_cau: round, nguoi_tra_loi: B.myUserId });
-        }
-      }).catch(error => {
-        if (currentLiveMatch?.ma_tran !== matchId || B.qi !== round || B.over) return;
-        B.pDone = false;
-        const status = document.getElementById('b-bot-status');
+    async function send() {
+      if (!active() || B.pDone || B.answerPending) return;
+      B.answerPending = true;
+      document.getElementById('b-retry-answer')?.remove();
+      try {
+        const response = await fetch(`/api/arena/${matchId}/turn`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error?.message || 'Không gửi được câu trả lời.');
+        if (active()) B.onTurnResolved({ ...result.data, thu_tu_cau: round, nguoi_tra_loi: B.myUserId });
+      } catch (error) {
+        if (!active() || B.pDone) return;
         if (status) status.textContent = error.message;
-      });
-      return;
-    }
-
-    let ok = false;
-    if (payload && typeof payload.isCorrect === 'boolean') {
-      ok = payload.isCorrect;
-    } else {
-      ok = (Number(i) === Number(q.a));
-    }
-
-    if (q.loai === 'TRAC_NGHIEM_4') {
-      document.querySelectorAll('#b-options button').forEach((b, k) => {
-        b.disabled = true;
-        if (k === q.a) b.classList.add('border-emerald-500', 'bg-emerald-500/10', 'text-emerald-600', 'font-bold');
-        else if (k === i) b.classList.add('border-rose-500', 'bg-rose-500/10', 'text-rose-600');
-        else b.classList.add('opacity-40');
-      });
-    } else {
-      const box = document.getElementById('b-options');
-      if (box) {
-        box.classList.add(ok ? 'ring-2' : 'ring-2', ok ? 'ring-emerald-500' : 'ring-rose-500', 'rounded-2xl', 'p-2');
+        const retry = document.createElement('button');
+        retry.id = 'b-retry-answer';
+        retry.type = 'button';
+        retry.className = 'mt-2 rounded-xl border border-[var(--border)] px-3 py-2 text-xs font-semibold';
+        retry.textContent = 'Gửi lại câu trả lời';
+        retry.onclick = send;
+        document.getElementById('b-options').after(retry);
+      } finally {
+        if (active()) B.answerPending = false;
       }
     }
-
-    if (ok) {
-      B.userCorrectCount = (B.userCorrectCount || 0) + 1;
-      B.combo++;
-      B.maxCombo = Math.max(B.maxCombo || 0, B.combo);
-      let d = dmgFor(ms);
-      const petMult = (typeof currentEquippedPet !== 'undefined' && currentEquippedPet?.id === 'fox') ? 1.2 : 1.15;
-      d = Math.round(d * petMult);
-      if (B.combo >= 3) d = Math.round(d * 1.3);
-
-      B.op = Math.max(0, B.op - d);
-      anim('my-pet', 'do-lunge');
-      if (audioSettings.battle) playAdvancedSound('sfx-slash');
-      setTimeout(() => {
-        anim('op-pet', 'do-shake');
-        popFloat('op-float', '-' + d);
-        updHp();
-        checkEnd();
-      }, 220);
-    } else {
-      B.combo = 0;
-      updHp();
-    }
-
-    roundCheck();
+    send();
   }
 
   function roundCheck() {

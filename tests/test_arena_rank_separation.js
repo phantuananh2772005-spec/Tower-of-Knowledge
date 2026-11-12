@@ -134,7 +134,10 @@ async function run() {
   const firstTurn = await submit('a', 1, 1);
   assert.equal(firstTurn.la_dap_an_dung, true);
   assert.doesNotMatch(JSON.stringify(firstTurn), /secret|vi_tri_dap_an_dung|vi_tri_dap_an_chon/);
-  await assert.rejects(submit('a', 1, 1), /đã trả lời/);
+  const replay = await submit('a', 1, 0);
+  assert.equal(replay.replayed, true);
+  assert.equal(replay.la_dap_an_dung, firstTurn.la_dap_an_dung);
+  assert.equal(replay.sat_thuong_gay_ra, firstTurn.sat_thuong_gay_ra);
   await submit('b', 1, 0);
   const secondTurn = await submit('a', 2, 1, { matched_pairs: [{ left: 'L', right: 'R' }] });
   assert.equal(secondTurn.la_dap_an_dung, true);

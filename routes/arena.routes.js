@@ -139,7 +139,7 @@ router.post('/:matchId/turn', authenticate, async (req, res) => {
     });
 
     const io = req.app.get('io');
-    if (io) {
+    if (io && !result.replayed) {
       const roomName = `room_${req.params.matchId}`;
       io.to(roomName).emit('turn_resolved', {
         nguoi_tra_loi: req.user.ma_nguoi_dung,
