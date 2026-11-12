@@ -7,6 +7,7 @@ const db = require('../database/db');
 const { calculateDamage, applyDamage, resolveMatchOutcome } = require('../core/rules/combat.rules');
 const { mutateCoinsInTransaction, addExperienceInTransaction } = require('./economy.service');
 const arenaRules=require('../public/js/arena-rules');
+const { syncArenaSeason } = require('./arena-season.service');
 
 /**
  * Create a new 1v1 match between 2 players
@@ -414,6 +415,8 @@ async function concludeMatch(matchId, winnerUserId, reason = 'KO_VICTORY') {
     if (players.length !== 2 || (winnerUserId && !players.some(p => p.ma_nguoi_dung === winnerUserId))) {
       throw new Error('Kết quả trận đấu không hợp lệ.');
     }
+
+    if (match.che_do === 'RANKED') await syncArenaSeason(tx);
 
     // Stable lock order keeps simultaneous settlements for the same users consistent.
     for (const player of players) {

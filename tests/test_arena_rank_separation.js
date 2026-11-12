@@ -166,7 +166,8 @@ async function run() {
 
   const { addExperienceInTransaction } = require('../services/economy.service');
   const award = (repeat) => adapter.transaction(tx => addExperienceInTransaction(tx, 'b', 999, { repeat }));
-  assert.ok((await award(true)).expAwarded < 300);
+  assert.equal((await award(true)).expAwarded, 999);
+  assert.ok((await award(true)).expAwarded < 501);
   assert.equal((await award(true)).expAwarded, 0);
   assert.equal((await award(false)).expAwarded, 999);
   await query("DELETE FROM exp_lap_lai WHERE ma_nguoi_dung='usr_bot_test'");
@@ -197,6 +198,27 @@ async function run() {
     ]);
     assert.equal((await adapter.queryOne("SELECT xu_tri_thuc FROM nguoi_dung WHERE ma_nguoi_dung='a'")).xu_tri_thuc, 50);
     console.log('PASS independent PostgreSQL connections settle the same match once');
+  }
+  if (native || pg) {
+    const { arenaSeasonAt, syncArenaSeason } = require('../services/arena-season.service');
+    const first = arenaSeasonAt(Date.parse('2026-11-09T00:00:00+07:00'));
+    assert.equal(Date.parse(first.endsAt) - Date.parse(first.startsAt), 56 * 86400000);
+    assert.equal(arenaSeasonAt(Date.parse(first.endsAt) - 1).number, 1);
+    assert.equal(arenaSeasonAt(Date.parse(first.endsAt)).number, 2);
+    await query("ALTER TABLE nguoi_dung ADD COLUMN vai_tro TEXT DEFAULT 'HOC_VIEN'");
+    await query("UPDATE tran_dau_1v1 SET thoi_gian_ket_thuc=$1 WHERE ma_tran='rank'", ['2026-11-20T00:00:00Z']);
+    const pointsBefore = await points();
+    const coins = async () => (await adapter.queryOne("SELECT xu_tri_thuc FROM nguoi_dung WHERE ma_nguoi_dung='a'")).xu_tri_thuc;
+    const before = await coins();
+    const close = () => adapter.transaction(tx => syncArenaSeason(tx, Date.parse(first.endsAt)));
+    await close();
+    await close();
+    const saved = await adapter.queryOne("SELECT diem,vi_tri,xu_thuong FROM lich_su_mua_dau_hang WHERE mua=1 AND ma_nguoi_dung='a'");
+    assert.equal(saved.diem, pointsBefore.reduce((total, row) => total + row.diem, 0));
+    assert.equal(saved.xu_thuong, 150);
+    assert.equal(await coins(), before + 150);
+    assert.deepEqual(await points(), pointsBefore.map(row => ({...row, diem: Math.floor(row.diem / 2)})));
+    console.log('PASS 56-day season boundary, archive, top award once and 50% carryover');
   }
   console.log('PASS ranked/casual/practice, per-course points, replay settlement, draw, early surrender unauthorized surrender theory replay, live grading, turn order, Extreme and repeat XP caps');
 }

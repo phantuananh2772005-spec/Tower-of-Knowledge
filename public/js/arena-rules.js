@@ -18,7 +18,18 @@
   }
 
   function progress(points) {
-    return { label: Number(points) > 0 ? 'Đã xếp hạng' : 'Chưa có điểm hạng', percent: 0 };
+    const score = Math.max(0, Number(points) || 0);
+    const tiers = [
+      [0, 'Tân thủ'], [90, 'Tập sự', 40], [210, 'Chuyên cần', 50],
+      [360, 'Thông thái', 60], [540, 'Uyên bác', 120], [900, 'Đại sư']
+    ];
+    const index = tiers.findLastIndex(([minimum]) => score >= minimum);
+    const [minimum, name, divisionSize] = tiers[index];
+    const division = divisionSize ? Math.min(2, Math.floor((score - minimum) / divisionSize)) : null;
+    const label = division === null ? name : name + ' ' + ['III', 'II', 'I'][division];
+    const floor = minimum + (division === null ? 0 : division * divisionSize);
+    const next = division !== null && division < 2 ? floor + divisionSize : tiers[index + 1]?.[0];
+    return { label, percent: next ? Math.floor(100 * (score - floor) / (next - floor)) : 100 };
   }
 
   return { progress, rewards, delta };

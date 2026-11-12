@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const arenaService = require('../services/arena.service');
+const { getArenaSeason } = require('../services/arena-season.service');
 const { authenticate } = require('../middlewares/auth.middleware');
 router.get('/room-qr.png',async(req,res)=>{
   const code=String(req.query.code||'').toUpperCase();
@@ -29,10 +30,19 @@ router.post('/create-match', authenticate, async (req, res) => {
   }
 });
 
+router.get('/season', async (req, res) => {
+  try {
+    return res.apiSuccess(await getArenaSeason());
+  } catch (err) {
+    return res.apiError(err.message, 'FETCH_SEASON_FAILED', 500);
+  }
+});
+
 // Leaderboard from real database users
 router.get('/leaderboard', async (req, res) => {
   try {
     const db = require('../database/db');
+    const season = await getArenaSeason();
     const { deriveRankTitle } = require('../core/rules/economy.rules');
     const users = await db.query(`
       SELECT u.ma_nguoi_dung, u.ten_dang_nhap, u.ten_hien_thi, u.tong_diem_kinh_nghiem, u.chuoi_streak_ngay,
@@ -66,15 +76,17 @@ router.get('/leaderboard', async (req, res) => {
       JOIN nguoi_choi_trong_tran p ON p.ma_nguoi_choi_trong_tran = a.ma_nguoi_choi_trong_tran
       JOIN tran_dau_1v1 t ON t.ma_tran = p.ma_tran
       WHERE t.che_do='RANKED' AND t.trang_thai='KET_THUC' AND p.xu_nhan_duoc>0
-      GROUP BY p.ma_nguoi_dung, t.ma_mon`, [true]);
+      AND t.thoi_gian_ket_thuc >= $2 AND t.thoi_gian_ket_thuc < $3
+      GROUP BY p.ma_nguoi_dung, t.ma_mon`, [true, season.startsAt, season.endsAt]);
     const enrollments = await db.query('SELECT ma_nguoi_dung, ma_mon FROM tien_do_mon_hoc');
     const ratings=await db.query('SELECT ma_nguoi_dung,ma_mon,diem FROM diem_dau_hang');
     const results=await db.query(`
       SELECT p.ma_nguoi_dung,t.ma_mon,p.ket_qua
       FROM nguoi_choi_trong_tran p JOIN tran_dau_1v1 t ON t.ma_tran=p.ma_tran
       WHERE t.che_do='RANKED' AND t.trang_thai='KET_THUC' AND p.xu_nhan_duoc>0
+      AND t.thoi_gian_ket_thuc >= $1 AND t.thoi_gian_ket_thuc < $2
       ORDER BY t.thoi_gian_ket_thuc,t.ma_tran
-    `);
+    `, [season.startsAt, season.endsAt]);
     const streaks=new Map();
     for(const result of results){
       if(!streaks.has(result.ma_nguoi_dung))streaks.set(result.ma_nguoi_dung,{});

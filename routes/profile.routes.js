@@ -15,6 +15,11 @@ router.get('/profile/journey',authenticate,async(req,res)=>{
   const activity=await db.query(`SELECT (tao_luc AT TIME ZONE 'Asia/Ho_Chi_Minh')::date::text AS day,COUNT(*)::int AS sessions
     FROM lich_su_phien_hoc WHERE ma_nguoi_dung=$1 AND tao_luc>=NOW()-INTERVAL '90 days'
     GROUP BY 1 ORDER BY 1`,[id]);
-  res.set('Cache-Control','no-store');return res.apiSuccess({courses,activity});
+  await require('../services/arena-season.service').getArenaSeason();
+  const seasonAwards = await db.query(
+    'SELECT mua, vi_tri, xu_thuong FROM lich_su_mua_dau_hang WHERE ma_nguoi_dung=$1 AND xu_thuong>0 ORDER BY mua DESC',
+    [id]
+  );
+  res.set('Cache-Control','no-store');return res.apiSuccess({courses,activity,seasonAwards});
  }catch(error){console.error('[profile journey]',error.message);return res.apiError('Không tải được hành trình. Vui lòng thử lại.','PROFILE_FAILED',500)}
 });module.exports=router;

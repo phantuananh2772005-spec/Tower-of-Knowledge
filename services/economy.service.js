@@ -105,9 +105,8 @@ async function getRepeatExperienceQuota(userId, connection = db) {
     'SELECT ngay_vn,exp FROM exp_lap_lai WHERE ma_nguoi_dung=$1 AND ngay_vn >= $2 AND ngay_vn <= $3',
     [userId, monday, today]
   );
-  const day = rows.filter(row => row.ngay_vn === today).reduce((n,row) => n + Number(row.exp), 0);
   const week = rows.reduce((n,row) => n + Number(row.exp), 0);
-  return { today, dailyRemaining: Math.max(0, 300 - day), weeklyRemaining: Math.max(0, 1500 - week) };
+  return { today, weeklyEarned: week, weeklyLimit: 1500, weeklyRemaining: Math.max(0, 1500 - week) };
 }
 
 async function addExperienceInTransaction(tx, userId, expToAdd, { repeat = false } = {}) {
@@ -115,8 +114,8 @@ async function addExperienceInTransaction(tx, userId, expToAdd, { repeat = false
   const user=await tx.queryOne('SELECT tong_diem_kinh_nghiem FROM nguoi_dung WHERE ma_nguoi_dung = $1'+(db.isPostgres?' FOR UPDATE':''),[userId]);
   if(!user)throw new Error('Người dùng không tồn tại.');
   if (repeat && delta > 0) {
-    const { today, dailyRemaining, weeklyRemaining } = await getRepeatExperienceQuota(userId, tx);
-    delta = Math.min(delta, dailyRemaining, weeklyRemaining);
+    const { today, weeklyRemaining } = await getRepeatExperienceQuota(userId, tx);
+    delta = Math.min(delta, weeklyRemaining);
     if (delta) await tx.execute('INSERT INTO exp_lap_lai(ma_giao_dich,ma_nguoi_dung,ngay_vn,exp) VALUES($1,$2,$3,$4)',
       [randomUUID(), userId, today, delta]);
   }

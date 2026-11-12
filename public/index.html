@@ -762,11 +762,8 @@
           <div class="flex items-center gap-2">
             <span class="text-2xl"><img class="function-art" data-seasonal-source="/assets/functions/arena.webp" data-seasonal-icon="arena" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="42" height="42" style="--art-size:42px" decoding="async"></span>
             <h2 class="text-xl font-bold tracking-tight">Sảnh Đấu Trường Mini Game</h2>
-            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">MÙA GIẢI 1</span>
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" id="arena-season-label" hidden></span>
           </div>
-          <p class="text-xs text-[var(--muted-foreground)] mt-1">Tranh tài kiến thức đối kháng thời gian thực, rèn luyện phản xạ và giải trí cùng Linh thú</p>
-          <p class="text-xs text-[var(--muted-foreground)] mt-1">EXP từ thi đấu tối đa 300/ngày và 1.500/tuần.</p>
-          <p id="arena-exp-quota" data-exp-quota hidden class="text-xs font-semibold text-[var(--foreground)] mt-1" aria-live="polite"></p>
         </div>
         <div class="flex items-center gap-2">
           <button id="btn_bxh_dautruong" onclick="arenaTab('rank')" class="px-3.5 py-2 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-amber-500/10 hover:border-amber-500/30 text-amber-500 font-semibold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Bảng xếp hạng đấu trường">
@@ -1100,8 +1097,7 @@
         </div>
         <div id="rank-list" class="bg-[var(--card)] border border-[var(--border)] rounded-2xl overflow-hidden divide-y divide-[var(--border)]"></div>
         <div class="flex items-center justify-between text-[11px] text-[var(--muted-foreground)] px-1">
-          <span>Mùa giải kết thúc sau 4 ngày</span>
-          <span>Số trận mùa này: <b class="text-[var(--foreground)]">7</b> / tối thiểu 5 ✓</span>
+          <div class="space-y-1"><p id="arena-season-end"></p><p>Cuối mùa giữ 50% điểm mỗi môn. Top 1, Top 3 và Top 10 bảng tổng nhận huy hiệu và Xu.</p></div>
         </div>
         <div class="pt-2 pb-6 flex items-center justify-center">
           <button id="btn_ve_sanh_dau_bottom" onclick="arenaTab('fight')" class="px-5 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--background)] hover:border-emerald-500/40 text-xs font-bold text-[var(--foreground)] flex items-center gap-2 transition cursor-pointer shadow-xs">
@@ -2574,7 +2570,6 @@
           </div>
         </div>
 
-        <p class="text-xs text-[var(--muted-foreground)] text-center">Giới hạn EXP thi đấu dùng chung với 1v1 · 300/ngày và 1.500/tuần.</p>
 
         <p data-exp-quota hidden class="text-center text-xs font-semibold"></p>
 
@@ -2992,7 +2987,7 @@
 
       if (viewName === 'minigame') {
         if (typeof arenaTab === 'function') arenaTab('fight');
-        refreshArenaExpQuota();
+        refreshArenaSeason();
       }
       if (viewName === 'saga') {
         window.refreshLearningGardenArt?.();
@@ -3003,6 +2998,21 @@
       syncAllPetDisplays();
       window.GuidedTour?.close();
       window.GuidedTour?.view(viewName);
+    }
+
+    async function refreshArenaSeason() {
+      try {
+        const response = await fetch('/api/arena/season', { cache: 'no-store' });
+        const { success, data } = await response.json();
+        if (!success) return;
+        const label = document.getElementById('arena-season-label');
+        label.textContent = `Mùa ${data.number} · 8 tuần`;
+        label.hidden = false;
+        const end = new Intl.DateTimeFormat('vi-VN', {
+          timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short'
+        }).format(new Date(data.endsAt));
+        document.getElementById('arena-season-end').textContent = `Kết thúc lúc ${end} (giờ Việt Nam)`;
+      } catch {}
     }
 
     async function refreshArenaExpQuota() {
@@ -3018,8 +3028,7 @@
         const { success, data } = await response.json();
         if (!success || token !== localStorage.getItem('tok_token')) return;
         const message = data.weeklyRemaining === 0 ? 'Đã đạt giới hạn EXP tuần này'
-          : data.dailyRemaining === 0 ? 'Đã đạt giới hạn EXP hôm nay'
-          : `Hôm nay còn ${Math.min(data.dailyRemaining, data.weeklyRemaining)} EXP thi đấu`;
+          : `EXP thi đấu tuần này · ${data.weeklyEarned.toLocaleString('vi-VN')} / ${data.weeklyLimit.toLocaleString('vi-VN')}`;
         labels.forEach(label => { label.textContent = message; label.hidden = false; });
       } catch {}
     }
