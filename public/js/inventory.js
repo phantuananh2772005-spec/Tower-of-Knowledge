@@ -21,7 +21,8 @@ function applyRoomInvitationFromUrl(){
   showToast('Đã điền mã '+code+'. Bấm Tham gia để vào phòng của bạn bè.','info');
 }
 function renderAccessoryOverlays(){
-  const item=currentUserAccount?.accessory;
+  const equippedItem = currentUserAccount?.accessory;
+  const item = equippedItem?.locked ? null : equippedItem;
   const sparkyWearsHat = item?.id === sparkyWitchHatId && currentEquippedPet?.id === 'dragon';
   const portrait = document.querySelector('#current-pet-icon-large > img');
   if (portrait) {
@@ -72,8 +73,8 @@ function renderAccessories(){
     const detail=document.createElement('p');detail.className='text-[10px] text-[var(--muted-foreground)] mt-1';detail.textContent=item.description;
     info.append(name,detail);
     const button=document.createElement('button');button.id='btn_item_'+item.id;button.className='shrink-0 px-3 py-2 rounded-xl border border-emerald-500/30 text-xs font-bold text-emerald-600';
-    button.textContent=item.equipped?'✓ Đang dùng':item.owned?'Trang bị':item.price+' 🪙';
-    button.disabled=accessoryRequestPending||item.equipped;button.onclick=()=>purchaseAccessory(item.id);
+    button.textContent=item.locked?'Tạm khóa':item.equipped?'✓ Đang dùng':item.owned?'Trang bị':item.price+' 🪙';
+    button.disabled=accessoryRequestPending||item.equipped||item.locked;button.onclick=()=>purchaseAccessory(item.id);
     card.append(icon,info,button);grid.appendChild(card);
   }
   const remove=document.getElementById('btn_remove_accessory');
@@ -91,7 +92,7 @@ async function loadRealItems(){
 }
 async function purchaseAccessory(id){
   const item=accessoryCatalog.find(row=>row.id===id),token=localStorage.getItem('tok_token');
-  if(!item||!token||accessoryRequestPending)return;
+  if(!item||item.locked||!token||accessoryRequestPending)return;
   if(!item.owned&&!confirm(`Mua ${item.name} với ${item.price} Xu?`))return;
   accessoryRequestPending=true;renderAccessories();
   try{

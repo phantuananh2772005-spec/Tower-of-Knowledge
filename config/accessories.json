@@ -1,6 +1,3 @@
 [
-  { "id": "graduation_cap", "name": "Mũ Cử Nhân", "icon": "🎓", "price": 50, "description": "Chiếc mũ đánh dấu tinh thần ham học." },
-  { "id": "sunglasses", "name": "Kính Râm Cực Ngầu", "icon": "🕶️", "price": 40, "description": "Điểm nhấn vui nhộn cho bạn đồng hành." },
-  { "id": "mini_crown", "name": "Vương Miện Mini", "icon": "👑", "price": 120, "description": "Phụ kiện trang trí cho linh vật của bạn." },
-  { "id": "sparky_witch_hat", "name": "Mũ Phù Thủy Sparky", "price": 50, "description": "Mũ pixel có chuyển động dành riêng cho Sparky." }
+  { "id": "sparky_witch_hat", "name": "Mũ Phù Thủy Sparky", "price": 50, "locked": true, "description": "Mũ pixel có chuyển động dành riêng cho Sparky." }
 ]

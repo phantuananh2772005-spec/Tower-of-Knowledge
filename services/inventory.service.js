@@ -10,6 +10,7 @@ async function listItems(userId){
 }
 async function purchaseItem(userId,itemId){
   const item=itemFor(itemId);if(!item)throw new Error('Không tìm thấy phụ kiện.');
+  if (item.locked) throw new Error('Phụ kiện đang tạm khóa.');
   return withUserLock(userId,()=>db.transaction(async tx=>{
     const user=await tx.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1'+(db.isPostgres?' FOR UPDATE':''),[userId]);
     if(!user)throw new Error('Người dùng không tồn tại.');
@@ -24,7 +25,9 @@ async function purchaseItem(userId,itemId){
   }));
 }
 async function equipItem(userId,itemId){
-  if(itemId!==null&&!itemFor(itemId))throw new Error('Không tìm thấy phụ kiện.');
+  const item = itemFor(itemId);
+  if (itemId !== null && !item) throw new Error('Không tìm thấy phụ kiện.');
+  if (item?.locked) throw new Error('Phụ kiện đang tạm khóa.');
   return withUserLock(userId,()=>db.transaction(async tx=>{
     const user=await tx.queryOne('SELECT ma_nguoi_dung FROM nguoi_dung WHERE ma_nguoi_dung = $1'+(db.isPostgres?' FOR UPDATE':''),[userId]);
     if(!user)throw new Error('Người dùng không tồn tại.');
