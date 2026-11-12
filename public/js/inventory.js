@@ -73,12 +73,45 @@ function renderAccessories(){
     const detail=document.createElement('p');detail.className='text-[10px] text-[var(--muted-foreground)] mt-1';detail.textContent=item.description;
     info.append(name,detail);
     const button=document.createElement('button');button.id='btn_item_'+item.id;button.className='shrink-0 px-3 py-2 rounded-xl border border-emerald-500/30 text-xs font-bold text-emerald-600';
-    button.textContent=item.locked?'Tạm khóa':item.equipped?'✓ Đang dùng':item.owned?'Trang bị':item.price+' 🪙';
-    button.disabled=accessoryRequestPending||item.equipped||item.locked;button.onclick=()=>purchaseAccessory(item.id);
+    button.textContent=item.locked?'Tạm khóa':item.equipped?'Đang trang bị':item.owned?'Đã sở hữu':item.price+' 🪙';
+    button.disabled=accessoryRequestPending||item.owned||item.locked;button.onclick=()=>purchaseAccessory(item.id);
     card.append(icon,info,button);grid.appendChild(card);
   }
-  const remove=document.getElementById('btn_remove_accessory');
-  if(remove)remove.hidden=!currentUserAccount?.accessory;
+  const collection = document.getElementById('owned-accessories');
+  const list = document.getElementById('owned-accessories-list');
+  const owned = accessoryCatalog.filter(item => item.owned);
+  collection.hidden = owned.length === 0;
+  list.replaceChildren(...owned.map(item => {
+    const row = document.createElement('div');
+    row.className = 'flex items-center justify-between gap-2 text-xs';
+    const name = document.createElement('span');
+    name.textContent = item.name;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'rounded-lg border border-[var(--border)] px-2 py-1 font-semibold';
+    button.textContent = item.equipped ? 'Tháo' : item.locked ? 'Tạm khóa' : 'Trang bị';
+    button.disabled = accessoryRequestPending || (item.locked && !item.equipped);
+    button.onclick = item.equipped ? removeAccessory : () => equipOwnedAccessory(item.id);
+    row.append(name, button);
+    return row;
+  }));
+}
+
+async function equipOwnedAccessory(id) {
+  const token = localStorage.getItem('tok_token');
+  const item = accessoryCatalog.find(entry => entry.id === id);
+  if (!token || !item?.owned || item.locked || accessoryRequestPending) return;
+  accessoryRequestPending = true;
+  renderAccessories();
+  try {
+    await setEquippedAccessory(id, token);
+    if (token === localStorage.getItem('tok_token')) showToast('Đã trang bị ' + item.name + '.', 'success');
+  } catch (error) {
+    showToast(error.message, 'error');
+  } finally {
+    accessoryRequestPending = false;
+    if (token === localStorage.getItem('tok_token')) await loadRealItems();
+  }
 }
 async function loadRealItems(){
   const token=localStorage.getItem('tok_token');if(!token)return;
@@ -92,18 +125,15 @@ async function loadRealItems(){
 }
 async function purchaseAccessory(id){
   const item=accessoryCatalog.find(row=>row.id===id),token=localStorage.getItem('tok_token');
-  if(!item||item.locked||!token||accessoryRequestPending)return;
-  if(!item.owned&&!confirm(`Mua ${item.name} với ${item.price} Xu?`))return;
+  if(!item||item.owned||item.locked||!token||accessoryRequestPending)return;
+  if(!confirm(`Mua ${item.name} với ${item.price} Xu?`))return;
   accessoryRequestPending=true;renderAccessories();
   try{
-    if(!item.owned){
-      const response=await fetch('/api/items/'+encodeURIComponent(id)+'/buy',{method:'POST',headers:{Authorization:'Bearer '+token}}),result=await response.json();
-      if(!result.success)throw Error(result.error?.message||'Không mua được phụ kiện.');
-      if(token!==localStorage.getItem('tok_token'))return;
-      userCoins=result.data.newCoins;updateCoinsUI();
-    }
-    await setEquippedAccessory(id,token);
-    showToast('Đã lưu phụ kiện '+item.name+'.','success');
+    const response=await fetch('/api/items/'+encodeURIComponent(id)+'/buy',{method:'POST',headers:{Authorization:'Bearer '+token}}),result=await response.json();
+    if(!result.success)throw Error(result.error?.message||'Không mua được phụ kiện.');
+    if(token!==localStorage.getItem('tok_token'))return;
+    userCoins=result.data.newCoins;updateCoinsUI();
+    showToast('Đã thêm '+item.name+' vào bộ sưu tập.','success');
   }catch(error){showToast(error.message||'Chưa lưu được phụ kiện.','error');}
   finally{accessoryRequestPending=false;if(token===localStorage.getItem('tok_token'))await loadRealItems();}
 }

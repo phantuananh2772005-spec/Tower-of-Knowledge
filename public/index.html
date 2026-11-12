@@ -1419,6 +1419,10 @@
             </button>
           </div>
 
+          <div id="owned-accessories" hidden class="space-y-2 border-t border-[var(--border)] pt-3">
+            <h3 class="text-xs font-bold">Phụ kiện đã sở hữu</h3>
+            <div id="owned-accessories-list" class="space-y-2"></div>
+          </div>
           <div id="owned-pets-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2.5">
             <div class="p-3 min-h-[58px] rounded-2xl border-2 border-emerald-500 bg-emerald-500/10 flex items-center gap-3 select-none">
               <div class="w-9 h-9 flex items-center justify-center shrink-0">
@@ -1451,13 +1455,28 @@
       </div>
 
       <div id="shop-accessories" class="space-y-3">
-        <div class="flex items-center justify-between gap-3"><h3 class="text-xs font-bold">✨ Ngoại trang & Phụ kiện</h3><button id="btn_remove_accessory" type="button" onclick="removeAccessory()" hidden class="text-xs font-semibold text-emerald-600">Tháo phụ kiện</button></div>
-        <p class="text-xs text-[var(--muted-foreground)]">Mua một lần, trang bị cho Pet bất cứ lúc nào. Phụ kiện chỉ dùng để trang trí.</p>
+        <h3 class="text-xs font-bold">✨ Ngoại trang & Phụ kiện</h3>
         <div id="shop-items-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
       </div>
     </section>
 
   
+    <dialog id="shop-pet-dialog" aria-labelledby="shop-pet-title" class="m-auto w-[calc(100%-2rem)] max-w-lg max-h-[85dvh] overflow-y-auto rounded-3xl border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] p-4 sm:p-6 shadow-xl backdrop:bg-black/60">
+      <form method="dialog" class="flex justify-end">
+        <button autofocus aria-label="Đóng chi tiết Pet" class="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm">✕</button>
+      </form>
+      <div class="grid gap-4 sm:grid-cols-[9rem_1fr] sm:items-center">
+        <div id="shop-pet-preview" class="min-h-32 rounded-2xl border border-[var(--border)] bg-[var(--background)] grid place-items-center"></div>
+        <div class="min-w-0 space-y-2">
+          <h2 id="shop-pet-title" class="text-lg font-bold"></h2>
+          <p id="shop-pet-description" class="text-sm text-[var(--muted-foreground)]"></p>
+          <p id="shop-pet-combat" hidden class="text-xs text-[var(--muted-foreground)]"></p>
+          <p id="shop-pet-status" role="status" class="text-xs font-semibold text-emerald-600"></p>
+        </div>
+      </div>
+      <button id="shop-pet-action" type="button" class="mt-4 w-full rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"></button>
+    </dialog>
+
     <!-- ================= MODAL TRANG CÁ NHÂN (RỘNG RÃI, THUẦN NỘI DUNG, KHÔNG CUỘN) ================= -->
     <div id="modal-profile" class="hidden" role="dialog" aria-modal="true" aria-label="Hành trình của tôi">
       <div class="journey-top"><button id="btn_profile_close" onclick="closeProfileModal()" aria-label="Quay lại">← Quay lại</button><strong>Hành trình của tôi</strong><button id="btn_profile_open_settings" onclick="closeProfileModal();openSettingsModal()">Cài đặt</button></div>
@@ -3339,13 +3358,13 @@
         const isOwned = Boolean(ownedPets[p.id]);
         let btnHtml = '';
         if (isCur) {
-          btnHtml = `<button class="shrink-0 py-1.5 px-2.5 rounded-lg bg-emerald-600/20 text-emerald-600 border border-emerald-500/40 font-bold text-[11px] transition select-none">✓ Đang dùng</button>`;
+          btnHtml = `<span class="shrink-0 text-[11px] font-bold text-emerald-600">Đang đồng hành</span>`;
         } else if (!isOwned && Number(p.requiredLevel || 1) > Number(currentUserAccount.level || 1)) {
           btnHtml = `<span class="text-xs font-semibold text-[var(--muted-foreground)]">🔒 Cấp ${p.requiredLevel}</span>`;
         } else if (isOwned) {
-          btnHtml = `<button onclick="equipPet('${p.id}')" class="shrink-0 py-1.5 px-2.5 rounded-lg bg-emerald-600 text-white font-bold text-[11px] hover:bg-emerald-700 shadow-xs transition cursor-pointer whitespace-nowrap">Đổi sang</button>`;
+          btnHtml = `<span class="shrink-0 text-[11px] font-semibold text-[var(--muted-foreground)]">Đã sở hữu</span>`;
         } else {
-          btnHtml = `<button id="btn-buy-${p.id}" onclick="buyPet('${p.id}', '${p.name}', '${p.icon}', '${p.buff}', ${p.price})" class="shrink-0 py-1.5 px-2.5 rounded-lg bg-amber-600 text-white font-bold text-[11px] hover:bg-amber-700 transition cursor-pointer shadow-xs whitespace-nowrap">${p.price} 🪙</button>`;
+          btnHtml = `<button id="btn-buy-${p.id}" onclick="openShopPet('${p.id}')" class="shrink-0 py-1.5 px-2.5 rounded-lg bg-amber-600 text-white font-bold text-[11px] hover:bg-amber-700 transition cursor-pointer shadow-xs whitespace-nowrap">${p.price} 🪙</button>`;
         }
 
         const avatarThumb = p.image 
@@ -3358,17 +3377,17 @@
 
         return `
           <div data-pet-id="${p.id}" data-pet-role="${p.role || 'learner'}" class="bg-[var(--card)] border ${cardBorderClass} rounded-xl p-2.5 flex items-center justify-between gap-2 transition">
-            <div class="flex items-center gap-2.5 min-w-0">
+            <button type="button" aria-haspopup="dialog" onclick="openShopPet('${p.id}')" class="flex items-center gap-2.5 min-w-0 cursor-pointer hover:text-emerald-600">
               <div class="w-9 h-9 rounded-lg bg-[var(--background)] border-[var(--border)] border flex items-center justify-center shrink-0 select-none overflow-hidden shadow-xs">
                 ${avatarThumb}
               </div>
               <div class="min-w-0 text-left">
                 <div class="flex items-center gap-1.5">
-                  <h4 class="font-bold text-xs truncate leading-tight text-[var(--foreground)]">${p.name}</h4>
+                  <span class="font-bold text-xs truncate leading-tight text-[var(--foreground)]">${p.name}</span>
                 </div>
                 <p class="text-[10px] text-[var(--muted-foreground)] truncate mt-0.5">${p.buff}</p>
               </div>
-            </div>
+            </button>
             ${btnHtml}
           </div>
         `;
@@ -3377,6 +3396,47 @@
 
     function updateShopPetButtons() {
       renderShopPets();
+    }
+
+    function openShopPet(petId) {
+      const pet = allPets.find(entry => entry.id === petId && entry.role !== 'admin');
+      if (!pet) return;
+      const dialog = document.getElementById('shop-pet-dialog');
+      const preview = document.getElementById('shop-pet-preview');
+      if (dialog.dataset.petId !== petId || !dialog.open) {
+        const art = document.createElement(pet.image ? 'img' : 'span');
+        if (pet.image) {
+          art.src = pet.image;
+          art.alt = pet.name;
+          art.className = 'w-28 h-28 object-contain pixel-art';
+        } else {
+          art.textContent = pet.icon;
+          art.className = 'text-6xl';
+        }
+        preview.replaceChildren(art);
+      }
+      dialog.dataset.petId = petId;
+      document.getElementById('shop-pet-title').textContent = pet.name;
+      document.getElementById('shop-pet-description').textContent = pet.buff;
+      const combat = document.getElementById('shop-pet-combat');
+      combat.hidden = !pet.damageMultiplier || pet.damageMultiplier === 1;
+      combat.textContent = `Sát thương trong trận 1v1 ×${pet.damageMultiplier}`;
+      const status = document.getElementById('shop-pet-status');
+      const action = document.getElementById('shop-pet-action');
+      const owned = Boolean(ownedPets[petId]);
+      const active = currentEquippedPet?.id === petId;
+      const locked = !owned && Number(pet.requiredLevel || 1) > Number(currentUserAccount.level || 1);
+      status.textContent = active ? 'Đang đồng hành' : owned ? 'Đã sở hữu' : locked ? `Mở ở cấp ${pet.requiredLevel}` : '';
+      action.disabled = locked || petMutationPending;
+      action.textContent = owned ? 'Xem trong bộ sưu tập' : `Mua · ${pet.price} Xu`;
+      action.onclick = owned ? () => {
+        dialog.close();
+        navTo('pet');
+        const card = document.querySelector(`#owned-pets-list [data-pet-id="${petId}"]`);
+        card?.focus({ preventScroll: true });
+        card?.scrollIntoView({ block: 'nearest' });
+      } : () => buyPet(petId);
+      if (!dialog.open) dialog.showModal();
     }
 
     function renderEquippedPet(petId, name, icon, buff, image = null) {
@@ -3405,13 +3465,13 @@
         const avatarThumb = p.image 
           ? `<img src="${p.image}" class="w-8 h-8 object-contain pixel-art select-none" />`
           : `<span class="text-3xl select-none">${p.icon}</span>`;
-        return `<div data-pet-id="${p.id}" role="button" tabindex="0" onclick="equipPet('${p.id}')" class="p-3 min-h-[58px] rounded-2xl border-2 ${isCur ? 'border-emerald-500 bg-emerald-500/10 shadow-xs' : 'border-[var(--border)] bg-[var(--background)] hover:border-emerald-500/40 shadow-xs'} flex items-center gap-3 cursor-pointer transition select-none">
+        return `<div data-pet-id="${p.id}" tabindex="-1" class="p-3 min-h-[58px] rounded-2xl border-2 ${isCur ? 'border-emerald-500 bg-emerald-500/10 shadow-xs' : 'border-[var(--border)] bg-[var(--background)] hover:border-emerald-500/40 shadow-xs'} flex items-center gap-3 transition select-none">
           <div class="w-9 h-9 flex items-center justify-center shrink-0">${avatarThumb}</div>
           <div class="flex-1 min-w-0 text-left">
             <p class="font-bold text-xs truncate ${isCur ? 'text-emerald-600' : ''}">${p.name}</p>
             <p class="text-[10px] text-[var(--muted-foreground)] truncate">${p.buff}</p>
-            ${isCur ? '<span class="text-[10px] text-emerald-600 font-bold block leading-tight mt-0.5">Đang dùng ✓</span>' : ''}
           </div>
+          ${isCur ? '<span class="text-[10px] font-semibold text-emerald-600 shrink-0">Đang đồng hành</span>' : `<button type="button" onclick="equipPet('${p.id}')" class="shrink-0 rounded-lg border border-emerald-500/40 px-2 py-1 text-[11px] font-semibold text-emerald-600">Mang theo</button>`}
         </div>`;
       }).join('');
     }
@@ -8547,7 +8607,7 @@
         Object.keys(ownedPets).forEach(id => delete ownedPets[id]);
         allPets = res.data.map(p => ({id:p.frontend_id, serverId:p.ma_thu_cung, name:p.ten_thu_cung,
           icon:p.icon, buff:p.mo_ta, price:Number(p.gia_xu), requiredLevel:p.cap_do_yeu_cau,
-          image:p.anh_dai_dien, role:p.role}));
+          image:p.anh_dai_dien, role:p.role, damageMultiplier:Number(p.he_so_sat_thuong)}));
         for (const p of res.data) {
           ownedPets[p.frontend_id] = Boolean(p.da_so_huu);
           if (p.dang_kich_hoat) renderEquippedPet(p.frontend_id,p.ten_thu_cung,p.icon,p.mo_ta,p.anh_dai_dien);
@@ -8580,10 +8640,10 @@
       const pet = allPets.find(p => p.id === petId);
       const token = localStorage.getItem('tok_token');
       if (!pet || !token || petMutationPending) return;
-      if (ownedPets[petId]) return equipPet(petId);
+      if (ownedPets[petId]) return;
       if (!confirm('Mở khóa ' + pet.name + ' với ' + pet.price + ' Xu?')) return;
       petMutationPending = true;
-      let purchased = false;
+      openShopPet(petId);
       try {
         const resp = await fetch('/api/pets/' + encodeURIComponent(pet.serverId) + '/buy', {
           method:'POST',headers:{Authorization:'Bearer ' + token}
@@ -8591,11 +8651,20 @@
         const res = await resp.json();
         if (!res.success) throw new Error(res.error?.message || 'Không mua được Pet.');
         if (token !== localStorage.getItem('tok_token')) return;
-        purchased = true;
-        await refreshUserData(); await loadRealPets();
+        ownedPets[petId] = true;
+        if (Number.isFinite(res.data?.newCoins)) userCoins = res.data.newCoins;
+        updateCoinsUI();
+        renderShopPets();
+        renderOwnedPets();
+        showToast('Đã thêm ' + pet.name + ' vào bộ sưu tập.', 'success');
       } catch (err) { showToast(err.message || 'Mất kết nối. Chưa thể xác nhận giao dịch.', 'error'); }
-      finally { petMutationPending = false; }
-      if (purchased) await equipPet(petId);
+      finally {
+        petMutationPending = false;
+        const dialog = document.getElementById('shop-pet-dialog');
+        if (token === localStorage.getItem('tok_token') && dialog.open && dialog.dataset.petId === petId) {
+          openShopPet(petId);
+        }
+      }
     }
 
     // --- 5. Real Leaderboard from SQL Server ---
