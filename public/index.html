@@ -1502,7 +1502,6 @@
         <div class="min-w-0 space-y-2">
           <h2 id="shop-pet-title" class="text-lg font-bold"></h2>
           <p id="shop-pet-description" class="text-sm text-[var(--muted-foreground)]"></p>
-          <p id="shop-pet-combat" hidden class="text-xs text-[var(--muted-foreground)]"></p>
           <p id="shop-pet-status" role="status" class="text-xs font-semibold text-emerald-600"></p>
         </div>
       </div>
@@ -3267,7 +3266,7 @@
         const result=await response.json();
         if(!result.success)throw Error(result.error?.message || 'Chưa chăm sóc được Pet.');
         if(token!==localStorage.getItem('tok_token'))return;
-        userCoins=result.data.newCoins;updateCoinsUI();
+        userCoins=result.data.coin_balance;updateCoinsUI();
         document.getElementById('pet-mood-txt').textContent='Pet rất vui!';
         document.getElementById('pet-mood-bar').style.width='100%';
         await loadDailyQuests();
@@ -3289,9 +3288,9 @@
       const largeIconEl = document.getElementById('current-pet-icon-large');
       if (largeIconEl) {
         if (image) {
-          largeIconEl.innerHTML = `<img src="${image}" alt="${name}" class="w-28 h-28 object-contain pixel-art mx-auto filter drop-shadow-md select-none" />`;
+          largeIconEl.innerHTML = `<img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" class="w-28 h-28 object-contain pixel-art mx-auto filter drop-shadow-md select-none" />`;
         } else {
-          largeIconEl.innerHTML = `<span class="text-7xl pet-animated block select-none">${icon}</span>`;
+          largeIconEl.innerHTML = `<span class="text-7xl pet-animated block select-none">${escapeHtml(icon)}</span>`;
         }
       }
       const curNameEl = document.getElementById('current-pet-name');
@@ -3303,9 +3302,9 @@
       const sideAvatar = document.getElementById('sidebar-pet-avatar');
       if (sideAvatar) {
         if (image) {
-          sideAvatar.innerHTML = `<img src="${image}" alt="${name}" class="w-7 h-7 object-contain pixel-art select-none" />`;
+          sideAvatar.innerHTML = `<img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" class="w-7 h-7 object-contain pixel-art select-none" />`;
         } else {
-          sideAvatar.innerHTML = `<span class="select-none text-base">${icon}</span>`;
+          sideAvatar.innerHTML = `<span class="select-none text-base">${escapeHtml(icon)}</span>`;
         }
       }
       const sideName = document.getElementById('sidebar-pet-name');
@@ -3317,9 +3316,9 @@
       const activePetNode = document.getElementById('roadmap-pet-avatar');
       if (activePetNode) {
         if (image) {
-          activePetNode.innerHTML = `<img src="${image}" alt="${name}" class="w-12 h-12 object-contain pixel-art filter drop-shadow-sm select-none" />`;
+          activePetNode.innerHTML = `<img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" class="w-12 h-12 object-contain pixel-art filter drop-shadow-sm select-none" />`;
         } else {
-          activePetNode.innerHTML = `<span class="text-3xl pet-animated select-none filter drop-shadow-sm">${icon}</span>`;
+          activePetNode.innerHTML = `<span class="text-3xl pet-animated select-none filter drop-shadow-sm">${escapeHtml(icon)}</span>`;
         }
       }
 
@@ -3327,9 +3326,9 @@
       const hubPetAvatar = document.getElementById('hub-pet-avatar');
       if (hubPetAvatar) {
         if (image) {
-          hubPetAvatar.innerHTML = `<img src="${image}" alt="${name}" class="w-24 h-24 sm:w-28 sm:h-28 object-contain pixel-art filter drop-shadow-md select-none" />`;
+          hubPetAvatar.innerHTML = `<img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" class="w-24 h-24 sm:w-28 sm:h-28 object-contain pixel-art filter drop-shadow-md select-none" />`;
         } else {
-          hubPetAvatar.innerHTML = `<span class="text-6xl sm:text-7xl pet-animated select-none">${icon}</span>`;
+          hubPetAvatar.innerHTML = `<span class="text-6xl sm:text-7xl pet-animated select-none">${escapeHtml(icon)}</span>`;
         }
       }
       const hubPetName = document.getElementById('hub-pet-name');
@@ -3339,9 +3338,9 @@
       const arenaLobbyPet = document.getElementById('arena-lobby-pet');
       if (arenaLobbyPet) {
         if (image) {
-          arenaLobbyPet.innerHTML = `<img src="${image}" alt="${name}" class="w-24 h-24 object-contain pixel-art select-none filter drop-shadow-md" />`;
+          arenaLobbyPet.innerHTML = `<img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" class="w-24 h-24 object-contain pixel-art select-none filter drop-shadow-md" />`;
         } else {
-          arenaLobbyPet.innerHTML = `<span class="text-7xl pet-animated select-none">${icon}</span>`;
+          arenaLobbyPet.innerHTML = `<span class="text-7xl pet-animated select-none">${escapeHtml(icon)}</span>`;
         }
       }
       const arenaLobbyName = document.getElementById('arena-lobby-pet-name');
@@ -3351,9 +3350,9 @@
       const casualLobbyPet = document.getElementById('casual-lobby-pet');
       if (casualLobbyPet) {
         if (image) {
-          casualLobbyPet.innerHTML = `<img src="${image}" alt="${name}" class="w-24 h-24 object-contain pixel-art select-none filter drop-shadow-md" />`;
+          casualLobbyPet.innerHTML = `<img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" class="w-24 h-24 object-contain pixel-art select-none filter drop-shadow-md" />`;
         } else {
-          casualLobbyPet.innerHTML = `<span class="text-7xl pet-animated select-none">${icon}</span>`;
+          casualLobbyPet.innerHTML = `<span class="text-7xl pet-animated select-none">${escapeHtml(icon)}</span>`;
         }
       }
       const casualLobbyName = document.getElementById('casual-lobby-pet-name');
@@ -3363,9 +3362,9 @@
       const battlePet = document.getElementById('my-pet');
       if (battlePet) {
         if (image) {
-          battlePet.innerHTML = `<img src="${image}" alt="${name}" class="w-16 h-16 object-contain pixel-art select-none" />`;
+          battlePet.innerHTML = `<img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" class="w-16 h-16 object-contain pixel-art select-none" />`;
         } else {
-          battlePet.innerHTML = `<span class="text-5xl select-none">${icon}</span>`;
+          battlePet.innerHTML = `<span class="text-5xl select-none">${escapeHtml(icon)}</span>`;
         }
       }
 
@@ -3373,9 +3372,9 @@
       const vsMyPet = document.getElementById('vs-my-pet');
       if (vsMyPet) {
         if (image) {
-          vsMyPet.innerHTML = `<img src="${image}" alt="${name}" class="w-24 h-24 sm:w-28 sm:h-28 object-contain pixel-art drop-shadow-xl select-none" />`;
+          vsMyPet.innerHTML = `<img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" class="w-24 h-24 sm:w-28 sm:h-28 object-contain pixel-art drop-shadow-xl select-none" />`;
         } else {
-          vsMyPet.innerHTML = `<span class="text-6xl sm:text-7xl select-none pet-animated block">${icon}</span>`;
+          vsMyPet.innerHTML = `<span class="text-6xl sm:text-7xl select-none pet-animated block">${escapeHtml(icon)}</span>`;
         }
       }
       const vsMyPetName = document.getElementById('vs-my-pet-name');
@@ -3398,9 +3397,10 @@
     function renderShopPets() {
       const container = document.getElementById('shop-pets-grid');
       if (!container) return;
-      container.innerHTML = allPets.filter(p => p.role !== 'admin').map(p => {
+      container.innerHTML = allPets.filter(p => p.role !== 'admin' && (p.status === 'ACTIVE' || ownedPets[p.id])).map(p => {
         const isCur = currentEquippedPet && currentEquippedPet.id === p.id;
         const isOwned = Boolean(ownedPets[p.id]);
+        const petActionArg = escapeHtml(JSON.stringify(p.id));
         let btnHtml = '';
         if (isCur) {
           btnHtml = `<span class="shrink-0 text-[11px] font-bold text-emerald-600">Đang đồng hành</span>`;
@@ -3409,28 +3409,28 @@
         } else if (isOwned) {
           btnHtml = `<span class="shrink-0 text-[11px] font-semibold text-[var(--muted-foreground)]">Đã sở hữu</span>`;
         } else {
-          btnHtml = `<button id="btn-buy-${p.id}" onclick="openShopPet('${p.id}')" class="shrink-0 py-1.5 px-2.5 rounded-lg bg-amber-600 text-white font-bold text-[11px] hover:bg-amber-700 transition cursor-pointer shadow-xs whitespace-nowrap">${p.price} 🪙</button>`;
+          btnHtml = `<button id="btn-buy-${escapeHtml(p.id)}" onclick="openShopPet(${petActionArg})" class="shrink-0 py-1.5 px-2.5 rounded-lg bg-amber-600 text-white font-bold text-[11px] hover:bg-amber-700 transition cursor-pointer shadow-xs whitespace-nowrap">${p.price} 🪙</button>`;
         }
 
         const avatarThumb = p.image 
-          ? `<img src="${p.image}" alt="${p.name}" class="w-8 h-8 object-contain pixel-art select-none" />`
-          : `<span class="text-2xl select-none">${p.icon}</span>`;
+          ? `<img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" class="w-8 h-8 object-contain pixel-art select-none" />`
+          : `<span class="text-2xl select-none">${escapeHtml(p.icon)}</span>`;
 
         const cardBorderClass = isCur 
           ? 'border-emerald-500 bg-emerald-500/5 shadow-xs' 
           : 'border-[var(--border)] hover:border-emerald-500/40';
 
         return `
-          <div data-pet-id="${p.id}" data-pet-role="${p.role || 'learner'}" class="bg-[var(--card)] border ${cardBorderClass} rounded-xl p-2.5 flex items-center justify-between gap-2 transition">
-            <button type="button" aria-haspopup="dialog" onclick="openShopPet('${p.id}')" class="flex items-center gap-2.5 min-w-0 cursor-pointer hover:text-emerald-600">
+          <div data-pet-id="${escapeHtml(p.id)}" data-pet-role="${p.role || 'learner'}" class="bg-[var(--card)] border ${cardBorderClass} rounded-xl p-2.5 flex items-center justify-between gap-2 transition">
+            <button type="button" aria-haspopup="dialog" onclick="openShopPet(${petActionArg})" class="flex items-center gap-2.5 min-w-0 cursor-pointer hover:text-emerald-600">
               <div class="w-9 h-9 rounded-lg bg-[var(--background)] border-[var(--border)] border flex items-center justify-center shrink-0 select-none overflow-hidden shadow-xs">
                 ${avatarThumb}
               </div>
               <div class="min-w-0 text-left">
                 <div class="flex items-center gap-1.5">
-                  <span class="font-bold text-xs truncate leading-tight text-[var(--foreground)]">${p.name}</span>
+                  <span class="font-bold text-xs truncate leading-tight text-[var(--foreground)]">${escapeHtml(p.name)}</span>
                 </div>
-                <p class="text-[10px] text-[var(--muted-foreground)] truncate mt-0.5">${p.buff}</p>
+                <p class="text-[10px] text-[var(--muted-foreground)] truncate mt-0.5">${escapeHtml(p.buff)}</p>
               </div>
             </button>
             ${btnHtml}
@@ -3463,21 +3463,18 @@
       dialog.dataset.petId = petId;
       document.getElementById('shop-pet-title').textContent = pet.name;
       document.getElementById('shop-pet-description').textContent = pet.buff;
-      const combat = document.getElementById('shop-pet-combat');
-      combat.hidden = !pet.damageMultiplier || pet.damageMultiplier === 1;
-      combat.textContent = `Sát thương trong trận 1v1 ×${pet.damageMultiplier}`;
       const status = document.getElementById('shop-pet-status');
       const action = document.getElementById('shop-pet-action');
       const owned = Boolean(ownedPets[petId]);
       const active = currentEquippedPet?.id === petId;
-      const locked = !owned && Number(pet.requiredLevel || 1) > Number(currentUserAccount.level || 1);
-      status.textContent = active ? 'Đang đồng hành' : owned ? 'Đã sở hữu' : locked ? `Mở ở cấp ${pet.requiredLevel}` : '';
+      const locked = !owned && (pet.status !== 'ACTIVE' || pet.requiredLevel > Number(currentUserAccount.level || 1));
+      status.textContent = active ? 'Đang đồng hành' : owned ? 'Đã sở hữu' : locked ? (pet.status === 'ACTIVE' ? `Mở ở cấp ${pet.requiredLevel}` : 'Tạm khóa') : '';
       action.disabled = locked || petMutationPending;
       action.textContent = owned ? 'Xem trong bộ sưu tập' : `Mua · ${pet.price} Xu`;
       action.onclick = owned ? () => {
         dialog.close();
         navTo('pet');
-        const card = document.querySelector(`#owned-pets-list [data-pet-id="${petId}"]`);
+        const card = document.querySelector(`#owned-pets-list [data-pet-id="${CSS.escape(petId)}"]`);
         card?.focus({ preventScroll: true });
         card?.scrollIntoView({ block: 'nearest' });
       } : () => buyPet(petId);
@@ -3508,15 +3505,15 @@
       }).map(p => {
         const isCur = currentEquippedPet && currentEquippedPet.id === p.id;
         const avatarThumb = p.image 
-          ? `<img src="${p.image}" class="w-8 h-8 object-contain pixel-art select-none" />`
-          : `<span class="text-3xl select-none">${p.icon}</span>`;
-        return `<div data-pet-id="${p.id}" tabindex="-1" class="p-3 min-h-[58px] rounded-2xl border-2 ${isCur ? 'border-emerald-500 bg-emerald-500/10 shadow-xs' : 'border-[var(--border)] bg-[var(--background)] hover:border-emerald-500/40 shadow-xs'} flex items-center gap-3 transition select-none">
+          ? `<img src="${escapeHtml(p.image)}" class="w-8 h-8 object-contain pixel-art select-none" />`
+          : `<span class="text-3xl select-none">${escapeHtml(p.icon)}</span>`;
+        return `<div data-pet-id="${escapeHtml(p.id)}" tabindex="-1" class="p-3 min-h-[58px] rounded-2xl border-2 ${isCur ? 'border-emerald-500 bg-emerald-500/10 shadow-xs' : 'border-[var(--border)] bg-[var(--background)] hover:border-emerald-500/40 shadow-xs'} flex items-center gap-3 transition select-none">
           <div class="w-9 h-9 flex items-center justify-center shrink-0">${avatarThumb}</div>
           <div class="flex-1 min-w-0 text-left">
-            <p class="font-bold text-xs truncate ${isCur ? 'text-emerald-600' : ''}">${p.name}</p>
-            <p class="text-[10px] text-[var(--muted-foreground)] truncate">${p.buff}</p>
+            <p class="font-bold text-xs truncate ${isCur ? 'text-emerald-600' : ''}">${escapeHtml(p.name)}</p>
+            <p class="text-[10px] text-[var(--muted-foreground)] truncate">${escapeHtml(p.buff)}</p>
           </div>
-          ${isCur ? '<span class="text-[10px] font-semibold text-emerald-600 shrink-0">Đang đồng hành</span>' : `<button type="button" onclick="equipPet('${p.id}')" class="shrink-0 rounded-lg border border-emerald-500/40 px-2 py-1 text-[11px] font-semibold text-emerald-600">Mang theo</button>`}
+          ${isCur ? '<span class="text-[10px] font-semibold text-emerald-600 shrink-0">Đang đồng hành</span>' : `<button type="button" onclick="equipPet(${escapeHtml(JSON.stringify(p.id))})" class="shrink-0 rounded-lg border border-emerald-500/40 px-2 py-1 text-[11px] font-semibold text-emerald-600">Mang theo</button>`}
         </div>`;
       }).join('');
     }
@@ -6376,10 +6373,6 @@
       currentUserAccount.accessory = user.equipped_accessory || null;
       currentUserAccount.userId = user.id;
       currentUserAccount.role = user.role;
-      if (currentUserAccount.role === 'ADMIN') {
-        ownedPets['admin_aurum'] = true;
-        ownedPets['admin_nguyet'] = true;
-      }
       currentUserAccount.exp = user.xp || 0;
       currentUserAccount.rankTitle = LevelRules.progress(currentUserAccount.exp).label;
       userCoins = typeof user.coin_balance === 'number' ? user.coin_balance : 0;
@@ -8424,12 +8417,14 @@
         if (!res.success || !Array.isArray(res.data)) throw new Error(res.error?.message || 'Không tải được danh mục Pet.');
         if (token !== localStorage.getItem('tok_token')) return;
         Object.keys(ownedPets).forEach(id => delete ownedPets[id]);
-        allPets = res.data.map(p => ({id:p.frontend_id, serverId:p.ma_thu_cung, name:p.ten_thu_cung,
-          icon:p.icon, buff:p.mo_ta, price:Number(p.gia_xu), requiredLevel:p.cap_do_yeu_cau,
-          image:p.anh_dai_dien, role:p.role, damageMultiplier:Number(p.he_so_sat_thuong)}));
+        allPets = res.data.map(p => ({
+          id: p.frontend_id, serverId: p.id, name: p.name, icon: p.icon, buff: p.description,
+          price: p.price_coins, requiredLevel: p.minimum_level, image: p.image_path,
+          role: p.required_role === 'ADMIN' ? 'admin' : 'learner', status: p.status
+        }));
         for (const p of res.data) {
-          ownedPets[p.frontend_id] = Boolean(p.da_so_huu);
-          if (p.dang_kich_hoat) renderEquippedPet(p.frontend_id,p.ten_thu_cung,p.icon,p.mo_ta,p.anh_dai_dien);
+          ownedPets[p.frontend_id] = p.owned;
+          if (p.equipped) renderEquippedPet(p.frontend_id, p.name, p.icon, p.description, p.image_path);
         }
         renderShopPets(); renderOwnedPets(); syncAllPetDisplays();
       } catch (err) { showToast(err.message || 'Không tải được danh mục linh thú.', 'error'); }
@@ -8447,7 +8442,8 @@
         const res = await resp.json();
         if (!res.success) throw new Error(res.error?.message || 'Chưa lưu được Pet.');
         if (token !== localStorage.getItem('tok_token')) return false;
-        renderEquippedPet(pet.id,pet.name,pet.icon,pet.buff,pet.image);
+        const equipped = res.data.equipped_pet;
+        renderEquippedPet(equipped.frontend_id, equipped.name, equipped.icon, equipped.description, equipped.image_path);
         renderOwnedPets(); renderShopPets();
         showToast('Đã lưu ' + pet.name + ' làm bạn đồng hành!', 'success');
         return true;
@@ -8471,7 +8467,7 @@
         if (!res.success) throw new Error(res.error?.message || 'Không mua được Pet.');
         if (token !== localStorage.getItem('tok_token')) return;
         ownedPets[petId] = true;
-        if (Number.isFinite(res.data?.newCoins)) userCoins = res.data.newCoins;
+        if (Number.isFinite(res.data?.coin_balance)) userCoins = res.data.coin_balance;
         updateCoinsUI();
         renderShopPets();
         renderOwnedPets();

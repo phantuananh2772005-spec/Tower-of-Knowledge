@@ -1,80 +1,132 @@
-const crypto = require('crypto');
 const db = require('../database/db');
-const catalog = require('../config/pets.json');
+const petPresentation = require('../config/pets.json');
 const { deriveUserLevel } = require('../core/rules/economy.rules');
-const { withUserLock } = require('./economy.service');
+const { mutateCoinsInTransaction } = require('./wallet.service');
 
-const configFor = id => catalog.find(p => p.serverId === id || p.id === id);
-const isAdmin = user => user?.vai_tro === 'QUAN_TRI_VIEN';
 function formatPet(pet) {
-  if (!pet) return null;
-  const config = configFor(pet.ma_thu_cung);
-  return { ...pet, frontend_id: config?.id || pet.ma_thu_cung,
-    icon: config?.icon || '🐾', role: config?.role || 'learner',
-    ten_thu_cung: config?.name || pet.ten_thu_cung, mo_ta: config?.buff || pet.mo_ta,
-    anh_dai_dien: config?.image || pet.anh_dai_dien, spritesheet_url: config?.image || pet.spritesheet_url };
+  if (!pet?.id) return null;
+  const presentation = petPresentation.find(entry => entry.serverId === pet.id);
+  return {
+    ...pet,
+    frontend_id: presentation?.id ?? pet.id,
+    icon: presentation?.icon ?? '🐾'
+  };
 }
-async function lockUser(tx, id) {
-  const user = await tx.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1' + (db.isPostgres ? ' FOR UPDATE' : ''), [id]);
-  if (!user) throw new Error('Người dùng không tồn tại.');
+
+async function lockUser(tx, userId) {
+  const user = await tx.queryOne(
+    'SELECT id, role, xp, coin_balance, disabled_at FROM users WHERE id = $1 FOR UPDATE',
+    [userId]
+  );
+  if (!user || user.disabled_at != null || user.role === 'SYSTEM') {
+    throw new Error('Tài khoản không khả dụng.');
+  }
   return user;
 }
-async function grantOwned(tx, userId, petId) {
-  const existing = await tx.queryOne('SELECT ma_so_huu FROM thu_cung_so_huu WHERE ma_nguoi_dung = $1 AND ma_thu_cung = $2', [userId, petId]);
-  if (!existing) await tx.execute(`INSERT INTO thu_cung_so_huu (ma_so_huu,ma_nguoi_dung,ma_thu_cung,dang_kich_hoat)
-    VALUES ($1,$2,$3,$4)`, [crypto.randomUUID(), userId, petId, false]);
+
+async function lockPet(tx, petId) {
+  const pet = await tx.queryOne('SELECT * FROM pets WHERE id = $1 FOR SHARE', [petId]);
+  if (!pet) throw new Error('Không tìm thấy linh thú này.');
+  return pet;
 }
-async function listPets(userId) {
-  const pets = await db.query('SELECT * FROM thu_cung ORDER BY gia_xu ASC');
-  let owned = [];
-  if (userId) {
-    await withUserLock(userId, () => db.transaction(async tx => {
-      const user = await lockUser(tx, userId);
-      if (isAdmin(user)) for (const p of catalog.filter(p => p.role === 'admin')) {
-        if (pets.some(row => row.ma_thu_cung === p.serverId)) await grantOwned(tx, userId, p.serverId);
-      }
-    }));
-    owned = await db.query('SELECT ma_thu_cung,dang_kich_hoat FROM thu_cung_so_huu WHERE ma_nguoi_dung = $1', [userId]);
+
+function checkRequiredRole(user, pet) {
+  if (pet.required_role !== null && user.role !== pet.required_role) {
+    throw new Error('Linh thú này dành riêng cho Quản trị viên.');
   }
-  return pets.filter(p => configFor(p.ma_thu_cung)).map(p => {
-    const own = owned.find(o => o.ma_thu_cung === p.ma_thu_cung);
-    return { ...formatPet(p), da_so_huu: Boolean(own), dang_kich_hoat: Boolean(own?.dang_kich_hoat) };
+}
+
+async function readCatalog(conn, userId) {
+  const pets = await conn.query(`
+    SELECT p.*, up.user_id IS NOT NULL AS owned,
+           COALESCE(u.equipped_pet_id = p.id, false) AS equipped
+    FROM pets AS p
+    LEFT JOIN users AS u ON u.id = $1
+    LEFT JOIN user_pets AS up ON up.user_id = u.id AND up.pet_id = p.id
+    WHERE p.status = 'ACTIVE' OR up.user_id IS NOT NULL
+    ORDER BY p.price_coins, p.id
+  `, [userId]);
+  return pets.map(formatPet);
+}
+
+async function listPets(userId = null) {
+  if (userId === null) return readCatalog(db, null);
+  return db.transaction(async tx => {
+    const user = await lockUser(tx, userId);
+    if (user.role === 'ADMIN') {
+      // The role grants eligible catalog pets without creating a purchase.
+      await tx.execute(`
+        INSERT INTO user_pets (user_id, pet_id)
+        SELECT $1, p.id
+        FROM pets AS p
+        WHERE required_role = 'ADMIN' AND status = 'ACTIVE' AND minimum_level <= $2
+        ORDER BY p.id
+        FOR SHARE OF p
+        ON CONFLICT (user_id, pet_id) DO NOTHING
+      `, [user.id, deriveUserLevel(user.xp)]);
+    }
+    return readCatalog(tx, userId);
   });
 }
-async function buyPet(id, userId) {
-  return withUserLock(userId, () => db.transaction(async tx => {
+
+async function buyPet(petId, userId) {
+  return db.transaction(async tx => {
     const user = await lockUser(tx, userId);
-    const config = configFor(id);
-    if (!config) throw new Error('Không tìm thấy linh thú này.');
-    if (config.role === 'admin' && !isAdmin(user)) throw new Error('Linh thú này dành riêng cho Quản trị viên.');
-    const pet = await tx.queryOne('SELECT * FROM thu_cung WHERE ma_thu_cung = $1', [config.serverId]);
-    if (!pet) throw new Error('Linh thú chưa có trong danh mục máy chủ.');
-    const own = await tx.queryOne('SELECT ma_so_huu FROM thu_cung_so_huu WHERE ma_nguoi_dung = $1 AND ma_thu_cung = $2', [userId, pet.ma_thu_cung]);
-    if (own) return { thanh_cong: true, alreadyOwned: true, ma_thu_cung: pet.ma_thu_cung };
-    if (deriveUserLevel(user.tong_diem_kinh_nghiem) < pet.cap_do_yeu_cau) throw new Error(`Cần đạt Cấp ${pet.cap_do_yeu_cau} để mở khóa linh thú này.`);
-    const price = config.role === 'admin' ? 0 : Number(pet.gia_xu);
-    if (user.xu_tri_thuc < price) throw new Error(`Bạn cần thêm ${price - user.xu_tri_thuc} Xu.`);
-    if (price > 0) {
-      await tx.execute('UPDATE nguoi_dung SET xu_tri_thuc = xu_tri_thuc + $1, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $2', [-price, userId]);
-      await tx.execute(`INSERT INTO giao_dich_xu (ma_giao_dich,ma_nguoi_dung,so_luong,so_du_sau,nguon_giao_dich,mo_ta)
-        VALUES ($1,$2,$3,$4,$5,$6)`, [crypto.randomUUID(),userId,-price,user.xu_tri_thuc-price,'MUA_THU_CUNG',`Mua linh thú: ${pet.ten_thu_cung}`]);
+    const pet = await lockPet(tx, petId);
+    checkRequiredRole(user, pet);
+
+    const alreadyOwned = { pet_id: pet.id, already_owned: true, coin_balance: user.coin_balance };
+    if (await tx.queryOne('SELECT pet_id FROM user_pets WHERE user_id = $1 AND pet_id = $2', [userId, petId])) {
+      return alreadyOwned;
     }
-    await grantOwned(tx,userId,pet.ma_thu_cung);
-    return { thanh_cong: true, ma_thu_cung: pet.ma_thu_cung, newCoins: user.xu_tri_thuc-price };
-  }));
+    if (pet.status !== 'ACTIVE') throw new Error('Linh thú này đã ngừng bán.');
+    if (deriveUserLevel(user.xp) < pet.minimum_level) {
+      throw new Error(`Cần đạt Cấp ${pet.minimum_level} để mở khóa linh thú này.`);
+    }
+
+    const price = pet.required_role === 'ADMIN' ? 0 : pet.price_coins;
+    if (user.coin_balance < price) throw new Error(`Bạn cần thêm ${price - user.coin_balance} Xu.`);
+
+    const ownership = await tx.queryOne(`
+      INSERT INTO user_pets (user_id, pet_id)
+      VALUES ($1, $2)
+      ON CONFLICT (user_id, pet_id) DO NOTHING
+      RETURNING pet_id
+    `, [user.id, pet.id]);
+    if (!ownership) return alreadyOwned;
+
+    const wallet = price > 0
+      ? await mutateCoinsInTransaction(tx, user.id, -price, 'PET_PURCHASE', { note: `Mua linh thú: ${pet.name}` })
+      : user;
+    return { pet_id: pet.id, already_owned: false, coin_balance: wallet.coin_balance };
+  });
 }
-async function equipPet(id, userId) {
-  return withUserLock(userId, () => db.transaction(async tx => {
-    const user = await lockUser(tx,userId);
-    const config = configFor(id);
-    if (!config) throw new Error('Không tìm thấy linh thú này.');
-    if (config.role === 'admin' && !isAdmin(user)) throw new Error('Linh thú này dành riêng cho Quản trị viên.');
-    if (config.role === 'admin') await grantOwned(tx,userId,config.serverId);
-    const own = await tx.queryOne('SELECT ma_so_huu FROM thu_cung_so_huu WHERE ma_nguoi_dung = $1 AND ma_thu_cung = $2', [userId,config.serverId]);
-    if (!own) throw new Error('Bạn chưa sở hữu linh thú này.');
-    await tx.execute('UPDATE thu_cung_so_huu SET dang_kich_hoat = $1 WHERE ma_nguoi_dung = $2', [false,userId]);
-    await tx.execute('UPDATE thu_cung_so_huu SET dang_kich_hoat = $1 WHERE ma_nguoi_dung = $2 AND ma_thu_cung = $3',[true,userId,config.serverId]);
-    return { thanh_cong: true, thu_cung_dang_dung: formatPet(await tx.queryOne('SELECT * FROM thu_cung WHERE ma_thu_cung = $1',[config.serverId])) };
-  }));
+
+async function equipPet(petId, userId) {
+  return db.transaction(async tx => {
+    const user = await lockUser(tx, userId);
+    const pet = await lockPet(tx, petId);
+    checkRequiredRole(user, pet);
+
+    const owned = await tx.queryOne('SELECT pet_id FROM user_pets WHERE user_id = $1 AND pet_id = $2', [userId, petId]);
+    if (!owned) throw new Error('Bạn chưa sở hữu linh thú này.');
+    await tx.execute('UPDATE users SET equipped_pet_id = $1 WHERE id = $2', [pet.id, user.id]);
+    return { equipped_pet: formatPet(pet) };
+  });
 }
-module.exports = { listPets, buyPet, equipPet, formatPet };
+
+async function carePet(userId, action) {
+  if (action !== 'feed' && action !== 'pet') throw new Error('Thao tác chăm sóc không hợp lệ.');
+  return db.transaction(async tx => {
+    const user = await lockUser(tx, userId);
+    const feeding = action === 'feed';
+    if (feeding && user.coin_balance < 10) throw new Error('Bạn cần 10 Xu để cho Pet ăn.');
+    const { coin_balance } = await mutateCoinsInTransaction(
+      tx, user.id, feeding ? -10 : 0, feeding ? 'PET_FEED' : 'PET_STROKE',
+      { note: feeding ? 'Cho Pet ăn' : 'Vuốt ve Pet' }
+    );
+    return { action, coin_balance };
+  });
+}
+
+module.exports = { listPets, buyPet, equipPet, carePet, formatPet };

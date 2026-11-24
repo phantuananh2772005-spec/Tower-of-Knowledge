@@ -1,40 +1,93 @@
-const crypto=require('crypto');
-const db=require('../database/db');
-const catalog=require('../config/accessories.json');
-const {withUserLock}=require('./economy.service');
-const itemFor=id=>catalog.find(item=>item.id===id)||null;
-async function listItems(userId){
-  const user=await db.queryOne('SELECT phu_kien_dang_dung FROM nguoi_dung WHERE ma_nguoi_dung = $1',[userId]);
-  const owned=await db.query('SELECT ma_vat_pham FROM vat_pham_so_huu WHERE ma_nguoi_dung = $1',[userId]);
-  return catalog.map(item=>({...item,owned:owned.some(o=>o.ma_vat_pham===item.id),equipped:user?.phu_kien_dang_dung===item.id}));
+const db = require('../database/db');
+const { deriveUserLevel } = require('../core/rules/economy.rules');
+const { mutateCoinsInTransaction } = require('./wallet.service');
+
+async function lockUser(tx, userId) {
+  const user = await tx.queryOne(
+    'SELECT xp, coin_balance FROM users WHERE id = $1 AND disabled_at IS NULL FOR UPDATE',
+    [userId]
+  );
+  if (!user) throw new Error('Người dùng không tồn tại.');
+  return user;
 }
-async function purchaseItem(userId,itemId){
-  const item=itemFor(itemId);if(!item)throw new Error('Không tìm thấy phụ kiện.');
-  if (item.locked) throw new Error('Phụ kiện đang tạm khóa.');
-  return withUserLock(userId,()=>db.transaction(async tx=>{
-    const user=await tx.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1'+(db.isPostgres?' FOR UPDATE':''),[userId]);
-    if(!user)throw new Error('Người dùng không tồn tại.');
-    const existing=await tx.queryOne('SELECT ma_so_huu FROM vat_pham_so_huu WHERE ma_nguoi_dung = $1 AND ma_vat_pham = $2',[userId,itemId]);
-    if(existing)return {alreadyOwned:true,newCoins:user.xu_tri_thuc};
-    if(user.xu_tri_thuc<item.price)throw new Error(`Bạn cần thêm ${item.price-user.xu_tri_thuc} Xu để mở khóa phụ kiện này.`);
-    await tx.execute('UPDATE nguoi_dung SET xu_tri_thuc = xu_tri_thuc + $1, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $2',[-item.price,userId]);
-    await tx.execute(`INSERT INTO giao_dich_xu (ma_giao_dich,ma_nguoi_dung,so_luong,so_du_sau,nguon_giao_dich,mo_ta)
-      VALUES ($1,$2,$3,$4,$5,$6)`,[crypto.randomUUID(),userId,-item.price,user.xu_tri_thuc-item.price,'MUA_PHU_KIEN',`Mua phụ kiện: ${item.name}`]);
-    await tx.execute('INSERT INTO vat_pham_so_huu (ma_so_huu,ma_nguoi_dung,ma_vat_pham) VALUES ($1,$2,$3)',[crypto.randomUUID(),userId,itemId]);
-    return {alreadyOwned:false,newCoins:user.xu_tri_thuc-item.price};
-  }));
+
+async function readActiveAccessory(tx, accessoryId) {
+  if (typeof accessoryId !== 'string' || !accessoryId.trim()) {
+    throw new Error('Mã phụ kiện không hợp lệ.');
+  }
+  const accessory = await tx.queryOne(
+    'SELECT id, name, description, price_coins, minimum_level, status FROM accessories WHERE id = $1 FOR SHARE',
+    [accessoryId]
+  );
+  if (!accessory) throw new Error('Không tìm thấy phụ kiện.');
+  if (accessory.status !== 'ACTIVE') throw new Error('Phụ kiện đang tạm khóa.');
+  return accessory;
 }
-async function equipItem(userId,itemId){
-  const item = itemFor(itemId);
-  if (itemId !== null && !item) throw new Error('Không tìm thấy phụ kiện.');
-  if (item?.locked) throw new Error('Phụ kiện đang tạm khóa.');
-  return withUserLock(userId,()=>db.transaction(async tx=>{
-    const user=await tx.queryOne('SELECT ma_nguoi_dung FROM nguoi_dung WHERE ma_nguoi_dung = $1'+(db.isPostgres?' FOR UPDATE':''),[userId]);
-    if(!user)throw new Error('Người dùng không tồn tại.');
-    if(itemId){const owned=await tx.queryOne('SELECT ma_so_huu FROM vat_pham_so_huu WHERE ma_nguoi_dung = $1 AND ma_vat_pham = $2',[userId,itemId]);
-      if(!owned)throw new Error('Bạn chưa sở hữu phụ kiện này.');}
-    await tx.execute('UPDATE nguoi_dung SET phu_kien_dang_dung = $1, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $2',[itemId,userId]);
-    return {equipped:itemFor(itemId)};
-  }));
+
+async function listItems(userId) {
+  return db.query(
+    `SELECT a.id, a.name, a.description, a.price_coins, a.minimum_level, a.status,
+            ua.accessory_id IS NOT NULL AS owned,
+            u.equipped_accessory_id IS NOT DISTINCT FROM a.id AS equipped
+     FROM users AS u
+     CROSS JOIN accessories AS a
+     LEFT JOIN user_accessories AS ua ON ua.user_id = u.id AND ua.accessory_id = a.id
+     WHERE u.id = $1 AND u.disabled_at IS NULL
+     ORDER BY a.status, a.price_coins, a.id`,
+    [userId]
+  );
 }
-module.exports={itemFor,listItems,purchaseItem,equipItem};
+
+async function purchaseItem(userId, accessoryId) {
+  return db.transaction(async tx => {
+    const user = await lockUser(tx, userId);
+    const item = await readActiveAccessory(tx, accessoryId);
+    const owned = await tx.queryOne(
+      'SELECT 1 FROM user_accessories WHERE user_id = $1 AND accessory_id = $2',
+      [userId, accessoryId]
+    );
+    if (owned) return { already_owned: true, coin_balance: user.coin_balance };
+
+    if (deriveUserLevel(user.xp) < item.minimum_level) {
+      throw new Error(`Cần đạt Cấp ${item.minimum_level} để mở khóa phụ kiện này.`);
+    }
+    if (user.coin_balance < item.price_coins) {
+      throw new Error(`Bạn cần thêm ${item.price_coins - user.coin_balance} Xu để mở khóa phụ kiện này.`);
+    }
+
+    let coinBalance = user.coin_balance;
+    if (item.price_coins > 0) {
+      const wallet = await mutateCoinsInTransaction(tx, userId, -item.price_coins, 'ACCESSORY_PURCHASE', {
+        note: `Mua phụ kiện: ${item.name}`
+      });
+      coinBalance = wallet.coin_balance;
+    }
+    await tx.execute(
+      'INSERT INTO user_accessories (user_id, accessory_id) VALUES ($1, $2)',
+      [userId, accessoryId]
+    );
+    return { already_owned: false, coin_balance: coinBalance };
+  });
+}
+
+async function equipItem(userId, accessoryId) {
+  return db.transaction(async tx => {
+    await lockUser(tx, userId);
+    let accessory = null;
+    if (accessoryId !== null) {
+      accessory = await readActiveAccessory(tx, accessoryId);
+      const owned = await tx.queryOne(
+        'SELECT 1 FROM user_accessories WHERE user_id = $1 AND accessory_id = $2',
+        [userId, accessoryId]
+      );
+      if (!owned) throw new Error('Bạn chưa sở hữu phụ kiện này.');
+    }
+    await tx.execute(
+      'UPDATE users SET equipped_accessory_id = $1 WHERE id = $2',
+      [accessoryId, userId]
+    );
+    return { equipped_accessory: accessory };
+  });
+}
+
+module.exports = { listItems, purchaseItem, equipItem };

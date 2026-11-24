@@ -22,7 +22,7 @@ function applyRoomInvitationFromUrl(){
 }
 function renderAccessoryOverlays(){
   const equippedItem = currentUserAccount?.accessory;
-  const item = equippedItem?.locked ? null : equippedItem;
+  const item = equippedItem?.status === 'ACTIVE' ? equippedItem : null;
   const sparkyWearsHat = item?.id === sparkyWitchHatId && currentEquippedPet?.id === 'dragon';
   const portrait = document.querySelector('#current-pet-icon-large > img');
   if (portrait) {
@@ -53,7 +53,7 @@ function renderAccessoryOverlays(){
       continue;
     }
     if(getComputedStyle(host).position==='static')host.style.position='relative';
-    const badge=document.createElement('span');badge.className='pet-accessory-badge';badge.textContent=item.icon;
+    const badge=document.createElement('span');badge.className='pet-accessory-badge';badge.textContent='✨';
     badge.title='Phụ kiện: '+item.name;badge.setAttribute('aria-label','Phụ kiện: '+item.name);host.appendChild(badge);
   }
 }
@@ -66,15 +66,18 @@ function renderAccessories(){
     const icon = item.id === sparkyWitchHatId ? createWitchHatIcon() : document.createElement('span');
     if (item.id !== sparkyWitchHatId) {
       icon.className = 'text-2xl';
-      icon.textContent = item.icon;
+      icon.textContent = '✨';
     }
     const info=document.createElement('div');info.className='min-w-0 flex-1';
     const name=document.createElement('strong');name.className='block text-xs';name.textContent=item.name;
     const detail=document.createElement('p');detail.className='text-[10px] text-[var(--muted-foreground)] mt-1';detail.textContent=item.description;
     info.append(name,detail);
     const button=document.createElement('button');button.id='btn_item_'+item.id;button.className='shrink-0 px-3 py-2 rounded-xl border border-emerald-500/30 text-xs font-bold text-emerald-600';
-    button.textContent=item.locked?'Tạm khóa':item.equipped?'Đang trang bị':item.owned?'Đã sở hữu':item.price+' 🪙';
-    button.disabled=accessoryRequestPending||item.owned||item.locked;button.onclick=()=>purchaseAccessory(item.id);
+    const locked = item.status !== 'ACTIVE';
+    const levelRequired = item.minimum_level > Number(currentUserAccount.level || 1);
+    button.textContent = locked ? 'Tạm khóa' : item.equipped ? 'Đang trang bị' : item.owned ? 'Đã sở hữu'
+      : levelRequired ? `Cấp ${item.minimum_level}` : item.price_coins + ' 🪙';
+    button.disabled = accessoryRequestPending || item.owned || locked || levelRequired;button.onclick=()=>purchaseAccessory(item.id);
     card.append(icon,info,button);grid.appendChild(card);
   }
   const collection = document.getElementById('owned-accessories');
@@ -89,8 +92,8 @@ function renderAccessories(){
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'rounded-lg border border-[var(--border)] px-2 py-1 font-semibold';
-    button.textContent = item.equipped ? 'Tháo' : item.locked ? 'Tạm khóa' : 'Trang bị';
-    button.disabled = accessoryRequestPending || (item.locked && !item.equipped);
+    button.textContent = item.equipped ? 'Tháo' : item.status !== 'ACTIVE' ? 'Tạm khóa' : 'Trang bị';
+    button.disabled = accessoryRequestPending || (item.status !== 'ACTIVE' && !item.equipped);
     button.onclick = item.equipped ? removeAccessory : () => equipOwnedAccessory(item.id);
     row.append(name, button);
     return row;
@@ -100,7 +103,7 @@ function renderAccessories(){
 async function equipOwnedAccessory(id) {
   const token = localStorage.getItem('tok_token');
   const item = accessoryCatalog.find(entry => entry.id === id);
-  if (!token || !item?.owned || item.locked || accessoryRequestPending) return;
+  if (!token || !item?.owned || item.status !== 'ACTIVE' || accessoryRequestPending) return;
   accessoryRequestPending = true;
   renderAccessories();
   try {
@@ -125,23 +128,23 @@ async function loadRealItems(){
 }
 async function purchaseAccessory(id){
   const item=accessoryCatalog.find(row=>row.id===id),token=localStorage.getItem('tok_token');
-  if(!item||item.owned||item.locked||!token||accessoryRequestPending)return;
-  if(!confirm(`Mua ${item.name} với ${item.price} Xu?`))return;
+  if(!item || item.owned || item.status !== 'ACTIVE' || !token || accessoryRequestPending)return;
+  if(!confirm(`Mua ${item.name} với ${item.price_coins} Xu?`))return;
   accessoryRequestPending=true;renderAccessories();
   try{
     const response=await fetch('/api/items/'+encodeURIComponent(id)+'/buy',{method:'POST',headers:{Authorization:'Bearer '+token}}),result=await response.json();
     if(!result.success)throw Error(result.error?.message||'Không mua được phụ kiện.');
     if(token!==localStorage.getItem('tok_token'))return;
-    userCoins=result.data.newCoins;updateCoinsUI();
+    userCoins=result.data.coin_balance;updateCoinsUI();
     showToast('Đã thêm '+item.name+' vào bộ sưu tập.','success');
   }catch(error){showToast(error.message||'Chưa lưu được phụ kiện.','error');}
   finally{accessoryRequestPending=false;if(token===localStorage.getItem('tok_token'))await loadRealItems();}
 }
 async function setEquippedAccessory(id,token=localStorage.getItem('tok_token')){
-  const response=await fetch('/api/items/equipped',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({itemId:id})}),result=await response.json();
+  const response=await fetch('/api/items/equipped',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({accessory_id:id})}),result=await response.json();
   if(!result.success)throw Error(result.error?.message||'Không trang bị được phụ kiện.');
   if(token!==localStorage.getItem('tok_token'))return;
-  currentUserAccount.accessory=result.data.equipped;renderAccessoryOverlays();
+  currentUserAccount.accessory=result.data.equipped_accessory;renderAccessoryOverlays();
 }
 async function removeAccessory(){
   if(accessoryRequestPending)return;accessoryRequestPending=true;

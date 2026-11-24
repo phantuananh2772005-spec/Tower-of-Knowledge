@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const db = require('../database/db');
-const petCatalog = require('../config/pets.json');
+const { formatPet } = require('./pet.service');
 const { validatePassword, hashPassword, verifyPassword } = require('./password-policy');
 const { evaluateStreak, toVietnamDateString } = require('../core/rules/streak.rules');
 const { deriveRankTitle, deriveUserLevel, levelProgress } = require('../core/rules/economy.rules');
@@ -60,8 +60,6 @@ async function formatUserResponse(user, connection = db) {
     bestWinStreak = Math.max(bestWinStreak, winStreak);
   }
 
-  const equippedPet = details?.equipped_pet ?? null;
-  const petDisplay = equippedPet && petCatalog.find(pet => pet.serverId === equippedPet.id);
   return {
     id: user.id,
     username: user.username,
@@ -84,7 +82,7 @@ async function formatUserResponse(user, connection = db) {
     rank_scores: details.rank_scores,
     rank_win_streak: winStreak,
     rank_best_win_streak: bestWinStreak,
-    equipped_pet: equippedPet && { ...equippedPet, frontend_id: petDisplay?.id ?? equippedPet.id, icon: petDisplay?.icon ?? '🐾' },
+    equipped_pet: formatPet(details?.equipped_pet),
     equipped_accessory: details?.equipped_accessory ?? null,
     theme: details?.theme ?? 'DARK',
     sound_enabled: details?.sound_enabled ?? true,
