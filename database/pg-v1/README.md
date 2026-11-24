@@ -1,6 +1,6 @@
 # PostgreSQL V1 local · Tháp Tri Thức
 
-Bộ SQL dành cho PostgreSQL **16**, cơ sở dữ liệu **thaptrithuc_v1**, schema **app_v1**. Chạy bằng role quản trị local để tạo schema và role quyền **thaptrithuc_v1_runtime**. Role này không có quyền đăng nhập. Khi làm Bước 4, liên kết tài khoản PostgreSQL của ứng dụng với role runtime rồi đặt search_path của tài khoản vào **app_v1, pg_catalog**, hoặc gọi bảng và hàm theo tên schema.
+Bộ SQL dành cho PostgreSQL **16**, cơ sở dữ liệu **thaptrithuc_v1**, schema **app_v1**. Chạy bằng role quản trị local để tạo schema và role quyền **thaptrithuc_v1_runtime**. Role này không có quyền đăng nhập. Ứng dụng dùng login riêng **thaptrithuc_v1_app** với quyền thừa hưởng từ role runtime.
 
 ## Chạy bằng Docker trên Windows
 
@@ -37,6 +37,19 @@ docker exec -it thaptrithuc-pg-v1 psql -X -U postgres -d thaptrithuc_v1
 ```
 
 Trong psql, nhập `\dt app_v1.*` để liệt kê bảng và `\dv app_v1.*` để liệt kê view. Để xem định nghĩa một bảng, dùng `\d app_v1.questions`.
+
+## Login ứng dụng local
+
+Sau khi áp DDL, dùng psql với quyền quản trị **local** và chạy một lần. Lệnh `\password` hỏi mật khẩu riêng của login ứng dụng.
+
+```sql
+CREATE ROLE thaptrithuc_v1_app LOGIN INHERIT NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+GRANT thaptrithuc_v1_runtime TO thaptrithuc_v1_app;
+ALTER ROLE thaptrithuc_v1_app IN DATABASE thaptrithuc_v1 SET search_path TO app_v1, pg_catalog;
+\password thaptrithuc_v1_app
+```
+
+Tạo `.env.local` ở thư mục gốc từ `.env.local.example`. Điền mật khẩu của login ứng dụng đã mã hóa theo cú pháp URL và một `JWT_SECRET` riêng cho local. Chạy `npm ci`, `node --test tests/test_db_adapter.js` rồi `npm start`. Server nghe loopback tại cổng `PORT` trong tệp.
 
 ## Chạy với PostgreSQL cài local
 

@@ -1,26 +1,44 @@
+const assert = require('node:assert/strict');
+const { after, test } = require('node:test');
 const db = require('../database/db');
 
-async function main() {
-  console.log('Testing unified db adapter...');
-  const user = await db.queryOne('SELECT * FROM nguoi_dung WHERE ten_dang_nhap = $1', ['demo_user']);
-  console.log('User found:', user.ten_hien_thi, '| Xu:', user.xu_tri_thuc, '| Streak:', user.chuoi_streak_ngay);
+after(() => db.close());
 
-  const questions = await db.query('SELECT ma_cau_hoi, noi_dung FROM cau_hoi WHERE ma_moc = $1', ['moc_csdl_01_02']);
-  console.log('Questions found for moc_csdl_01_02:', questions.length);
+test('uses a dedicated PostgreSQL V1 runtime login and search path', async () => {
+  const session = await db.verifyRuntime();
+  assert.notEqual(session.login, 'postgres');
+  assert.deepEqual(session.schemas, ['app_v1', 'pg_catalog']);
+  assert.equal(session.has_runtime_role, true);
+  assert.equal(session.can_create, false);
+  assert.equal(session.privileged, false);
 
-  const course = await db.queryOne('SELECT * FROM mon_hoc WHERE slug = $1', ['co-so-du-lieu']);
-  console.log('Course found:', course.ten_mon);
+  const sparky = await db.queryOne('SELECT id FROM pets WHERE id = $1', ['pet_sparky']);
+  assert.deepEqual(sparky, { id: 'pet_sparky' });
+});
 
-  const chapters = await db.query('SELECT * FROM chuong_hoc WHERE ma_mon = $1 ORDER BY thu_tu', [course.ma_mon]);
-  console.log('Chapters found:', chapters.length);
-  for (const c of chapters) {
-    console.log(` - ${c.tieu_de}`);
-  }
+test('reads constants from the approved schema', async () => {
+  const rules = await db.loadRuleConstants();
+  assert.equal(rules.season_days, 56);
+  assert.equal(rules.weekly_xp_limit, 1500);
+  assert.equal(rules.initial_hp, 100);
+  assert.equal(rules.base_damage, 12);
+  assert.equal(rules.fast_bonus, 3);
+  assert.equal(rules.fast_answer_seconds, 5);
+});
 
-  console.log('\nDB ADAPTER TEST PASSED 100%!');
-}
+test('runs a PostgreSQL transaction with rollback on error', async () => {
+  await assert.rejects(db.transaction(async tx => {
+    await tx.execute('CREATE TEMP TABLE config_v1_probe (id int) ON COMMIT DROP');
+    await tx.execute('INSERT INTO config_v1_probe VALUES ($1)', [7]);
+    assert.deepEqual(await tx.queryOne('SELECT id FROM config_v1_probe'), { id: 7 });
+    throw new Error('rollback config probe');
+  }), { message: 'rollback config probe' });
+  assert.equal(await db.queryOne("SELECT to_regclass('pg_temp.config_v1_probe') AS probe")
+    .then(result => result.probe), null);
+});
 
-main().catch(err => {
-  console.error('Test failed:', err);
-  process.exit(1);
+test('rejects DDL writes to the application schema as runtime', async () => {
+  await assert.rejects(db.transaction(tx =>
+    tx.execute('CREATE TABLE app_v1.config_v1_forbidden_probe (id int)')
+  ), { code: '42501' });
 });

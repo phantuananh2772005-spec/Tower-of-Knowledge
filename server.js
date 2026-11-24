@@ -1,12 +1,10 @@
 /**
  * Tower of Knowledge - Main Server
- * Express 4 + Socket.IO + PostgreSQL / MSSQL
+ * Express 4 + Socket.IO + local PostgreSQL V1
  */
 
-require('dotenv').config();
-if ((process.env.RENDER || process.env.NODE_ENV === 'production') && !process.env.JWT_SECRET?.trim()) {
-  throw new Error('JWT_SECRET is required in production.');
-}
+const { port } = require('./config/local-env');
+const db = require('./database/db');
 const http = require('http');
 const path = require('path');
 const express = require('express');
@@ -27,7 +25,6 @@ const extremeRoutes = require('./routes/extreme.routes');
 const petStudioRoutes = require('./routes/petStudioRoutes');
 
 const app = express();
-if (process.env.RENDER) app.set('trust proxy', 1);
 const server = http.createServer(app);
 
 // Initialize Socket.IO
@@ -60,7 +57,7 @@ app.get('/health', (req, res) => {
   res.apiSuccess({
     status: 'HEALTHY',
     version: '1.2.0-contextual-learning',
-    database: process.env.DATABASE_URL ? 'PostgreSQL' : 'MSSQL'
+    database: 'PostgreSQL'
   });
 });
 
@@ -94,37 +91,18 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
-Promise.all([
-  require('./database/sync_pet_catalog').syncPetCatalog(),
-  require('./database/init_user_preferences').initUserPreferences(),
-  require('./database/init_inventory').initInventory(),
-  require('./database/init_identity').initIdentity(),
-  require('./database/init_arena_ranking').initArenaRanking(),
-  require('./database/init_repeat_experience').initRepeatExperience(),
-  require('./database/init_password_recovery').initPasswordRecovery()
-]).then(() => require('./database/init_telemetry').initTelemetrySchema()).then(() => server.listen(PORT, () => {
-  console.log(`================================================================`);
-  console.log(`🚀 TOWER OF KNOWLEDGE SERVER IS RUNNING ON PORT ${PORT}`);
-  console.log(`📚 Learner UI: http://localhost:${PORT}/`);
-  console.log(`🛡️ Admin Portal: http://localhost:${PORT}/admin/`);
-  console.log(`📖 API Health: http://localhost:${PORT}/health`);
-  console.log(`================================================================`);
+async function start() {
+  await db.verifyRuntime();
+  app.set('ruleConstants', await db.loadRuleConstants());
+  server.listen(port, '127.0.0.1', () => {
+    console.log('Tower of Knowledge is running at http://127.0.0.1:' + port);
+  });
+}
 
-  // Ensure Chapter 1 has 5 checkpoints and full question set (self-healing seed)
-  setTimeout(() => {
-    try {
-      const ch1Seeder = require('./scripts/seed_chapter1_5levels');
-      ch1Seeder.runSeed()
-        .then(() => console.log('✅ [STARTUP] Chapter 1 5-level database sync completed!'))
-        .catch(err => console.warn('⚠️ [STARTUP] Chapter 1 seed notice:', err.message));
-    } catch (e) {
-      console.warn('⚠️ [STARTUP] Chapter 1 seeder load notice:', e.message);
-    }
-  }, 1000);
-})).catch(err => {
-  console.error('[STARTUP] Initialization failed:', err.message);
-  process.exit(1);
+start().catch(async error => {
+  console.error('[STARTUP] PostgreSQL V1 initialization failed:', error.message);
+  await db.close();
+  process.exitCode = 1;
 });
 
 module.exports = { app, server };
