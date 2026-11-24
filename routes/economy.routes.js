@@ -6,7 +6,7 @@ const { authenticate } = require('../middlewares/auth.middleware');
 
 router.get('/repeat-exp-quota', authenticate, async (req, res) => {
   try {
-    return res.apiSuccess(await economyService.getRepeatExperienceQuota(req.user.ma_nguoi_dung));
+    return res.apiSuccess(await economyService.getRepeatExperienceQuota(req.user.id));
   } catch (err) {
     return res.apiError(err.message, 'FETCH_EXP_QUOTA_FAILED', 500);
   }
@@ -15,7 +15,7 @@ router.get('/repeat-exp-quota', authenticate, async (req, res) => {
 router.get('/transactions', authenticate, async (req, res) => {
   try {
     const limit = req.query.limit || 20;
-    const history = await economyService.getTransactionHistory(req.user.ma_nguoi_dung, limit);
+    const history = await economyService.getTransactionHistory(req.user.id, limit);
     return res.apiSuccess(history);
   } catch (err) {
     return res.apiError(err.message, 'FETCH_TRANSACTIONS_FAILED', 500);
@@ -24,15 +24,15 @@ router.get('/transactions', authenticate, async (req, res) => {
 
 const quests = require('../services/quest.service');
 router.get('/quests-status', authenticate, async (req,res) => {
-  try { return res.apiSuccess(await quests.getStatus(req.user.ma_nguoi_dung)); }
+  try { return res.apiSuccess(await quests.getStatus(req.user.id)); }
   catch(err) { return res.apiError(err.message,'FETCH_QUESTS_STATUS_FAILED',500); }
 });
 router.post('/claim-quest', authenticate, async (req,res) => {
-  try { return res.apiSuccess(await quests.award(req.user.ma_nguoi_dung,req.body.questId)); }
+  try { return res.apiSuccess(await quests.award(req.user.id,req.body.questId)); }
   catch(err) { return res.apiError(err.message,'CLAIM_QUEST_FAILED',400); }
 });
 router.post('/onboarding-gift', authenticate, async (req,res) => {
-  try { return res.apiSuccess(await quests.award(req.user.ma_nguoi_dung,'onboarding')); }
+  try { return res.apiSuccess(await quests.award(req.user.id,'onboarding')); }
   catch(err) { return res.apiError(err.message,'ONBOARDING_GIFT_FAILED',400); }
 });
 module.exports=router;

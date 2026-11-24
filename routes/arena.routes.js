@@ -18,7 +18,7 @@ router.get('/room-qr.png',async(req,res)=>{
 // Create a match (e.g. against bot or invited user)
 router.post('/create-match', authenticate, async (req, res) => {
   try {
-    const player1Id = req.user.ma_nguoi_dung;
+    const player1Id = req.user.id;
     // Default opponent can be bot if not specified
     const opponentId = req.body.doi_thu_id || 'usr_bot_003';
     const ma_mon = req.body.ma_mon || 'mon_csdl';
@@ -117,7 +117,7 @@ router.get('/leaderboard', async (req, res) => {
 router.get('/:matchId', authenticate, async (req, res) => {
   try {
     const matchState = await arenaService.getMatchState(req.params.matchId);
-    if (!matchState.nguoi_choi.some(player => player.ma_nguoi_dung === req.user.ma_nguoi_dung)) {
+    if (!matchState.nguoi_choi.some(player => player.ma_nguoi_dung === req.user.id)) {
       return res.apiError("Bạn không tham gia trận này.", "MATCH_FORBIDDEN", 403);
     }
     return res.apiSuccess(matchState);
@@ -129,7 +129,7 @@ router.get('/:matchId', authenticate, async (req, res) => {
 router.post('/:matchId/pair', authenticate, async (req, res) => {
   try {
     const result = await arenaService.checkArenaPair(
-      req.params.matchId, req.user.ma_nguoi_dung, req.body.round, req.body
+      req.params.matchId, req.user.id, req.body.round, req.body
     );
     return res.apiSuccess(result);
   } catch (error) {
@@ -142,7 +142,7 @@ router.post('/:matchId/turn', authenticate, async (req, res) => {
     const { thu_tu_cau, vi_tri_dap_an_chon, cau_tra_loi, thoi_gian_giay } = req.body;
     const result = await arenaService.submitTurnAnswer({
       ma_tran: req.params.matchId,
-      ma_nguoi_dung: req.user.ma_nguoi_dung,
+      ma_nguoi_dung: req.user.id,
       thu_tu_cau: parseInt(thu_tu_cau, 10),
       vi_tri_dap_an_chon: vi_tri_dap_an_chon !== undefined ? vi_tri_dap_an_chon : null,
       cau_tra_loi,
@@ -153,7 +153,7 @@ router.post('/:matchId/turn', authenticate, async (req, res) => {
     if (io && !result.replayed) {
       const roomName = `room_${req.params.matchId}`;
       io.to(roomName).emit('turn_resolved', {
-        nguoi_tra_loi: req.user.ma_nguoi_dung,
+        nguoi_tra_loi: req.user.id,
         thu_tu_cau: parseInt(thu_tu_cau, 10),
         la_dap_an_dung: result.la_dap_an_dung,
         sat_thuong_gay_ra: result.sat_thuong_gay_ra,
@@ -179,7 +179,7 @@ router.post('/:matchId/turn', authenticate, async (req, res) => {
 
 router.post('/:matchId/surrender', authenticate, async (req, res) => {
   try {
-    const updatedState = await arenaService.surrenderMatch(req.params.matchId, req.user.ma_nguoi_dung);
+    const updatedState = await arenaService.surrenderMatch(req.params.matchId, req.user.id);
     const io = req.app.get('io');
     if (io) {
       const roomName = `room_${req.params.matchId}`;
@@ -199,7 +199,7 @@ router.post('/:matchId/surrender', authenticate, async (req, res) => {
 
 router.post('/:matchId/conclude', authenticate, async (req, res) => {
   try {
-    const updatedState = await arenaService.concludeIfResolved(req.params.matchId,req.user.ma_nguoi_dung);
+    const updatedState = await arenaService.concludeIfResolved(req.params.matchId,req.user.id);
     const io = req.app.get('io');
     if (io) {
       io.emit('leaderboard_updated', { timestamp: Date.now(), ma_tran: req.params.matchId });

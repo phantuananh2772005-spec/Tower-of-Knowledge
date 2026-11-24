@@ -1,7 +1,7 @@
 const ALLOWED = new Set(['hello','cheer','nice','thanks','wow','respect']);
 
 module.exports = function registerReactions(io, socket, db, cooldowns) {
-  const userId = socket.user.ma_nguoi_dung;
+  const userId = socket.user.id;
   if (socket.user.isGuest) return;
   socket.join('reaction-user:'+userId);
   socket.on('match_reaction', async (payload, reply) => {

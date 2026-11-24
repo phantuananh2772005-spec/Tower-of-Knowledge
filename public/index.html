@@ -2922,7 +2922,7 @@
         if (typeof renderDailyQuests === 'function') renderDailyQuests();
         const adminBtn = document.getElementById('btn_m_more_admin');
         if (adminBtn) {
-          if (typeof currentUser !== 'undefined' && currentUser && currentUser.vai_tro === 'QUAN_TRI_VIEN') {
+          if (typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'ADMIN') {
             adminBtn.classList.remove('hidden');
             adminBtn.classList.add('flex');
           } else {
@@ -3501,7 +3501,7 @@
     function renderOwnedPets() {
       const container = document.getElementById('owned-pets-list');
       if (!container) return;
-      const isAdminUser = Boolean(currentUserAccount && currentUserAccount.vai_tro === 'QUAN_TRI_VIEN');
+      const isAdminUser = Boolean(currentUserAccount && currentUserAccount.role === 'ADMIN');
       container.innerHTML = allPets.filter(p => {
         if (p.role === 'admin' && !isAdminUser) return false;
         return ownedPets[p.id];
@@ -5205,7 +5205,7 @@
         if (btn) btn.title = 'Đang ở chế độ Sáng (☀️) - Bấm để chuyển sang Tối (🌙)';
         localStorage.setItem('app-theme', 'light');
       }
-      if (!window.applyingSavedPreferences) queuePreferenceSave({che_do_giao_dien: document.documentElement.classList.contains('dark') ? 'TOI' : 'SANG'});
+      if (!window.applyingSavedPreferences) queuePreferenceSave({theme: document.documentElement.classList.contains('dark') ? 'DARK' : 'LIGHT'});
     }
 
         let audioSettings = {
@@ -5841,7 +5841,7 @@
     function updateAudioSetting(key, enabled) {
       audioSettings[key] = enabled;
       syncAudioSummary();
-      queuePreferenceSave({cai_dat_am_thanh: {...audioSettings}, bat_am_thanh: Object.values(audioSettings).some(Boolean)});
+      queuePreferenceSave({sound_config: {...audioSettings}, sound_enabled: Object.values(audioSettings).some(Boolean)});
       showToast((enabled ? 'Đã bật: ' : 'Đã tắt: ') + getAudioName(key));
     }
 
@@ -5955,12 +5955,12 @@
         if(!result.success)throw Error(result.error?.message || 'Không lưu được thông tin.');
         if(token!==localStorage.getItem('tok_token'))return;
         localStorage.setItem('tok_token',result.data.token);
-        applyUserData(result.data.nguoi_dung);openSettingsAuthView();
+        applyUserData(result.data.user);openSettingsAuthView();
         showToast('Đã lưu thông tin tài khoản trên máy chủ.','success');
       }catch(error){showToast(error.message || 'Lỗi kết nối.','error');}
     }
-    function saveEditName(){return saveAccountField('ten_hien_thi',document.getElementById('input-edit-name').value.trim());}
-    function saveEditUsername(){return saveAccountField('ten_dang_nhap',document.getElementById('input-edit-username').value.trim().replace(/^@/,''));}
+    function saveEditName(){return saveAccountField('display_name',document.getElementById('input-edit-name').value.trim());}
+    function saveEditUsername(){return saveAccountField('username',document.getElementById('input-edit-username').value.trim().replace(/^@/,''));}
     async function saveEditPassword(){
       const oldPassword=document.getElementById('input-edit-pwd-old');
       const newPassword=document.getElementById('input-edit-pwd-new');
@@ -5968,9 +5968,15 @@
       if(newPassword.value!==confirmPassword.value){showToast('Xác nhận mật khẩu mới không khớp.','error');return;}
       const token=localStorage.getItem('tok_token');
       try{
-        const response=await fetch('/api/auth/password',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({mat_khau_hien_tai:oldPassword.value,mat_khau_moi:newPassword.value})});
+        const response=await fetch('/api/auth/password',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({current_password:oldPassword.value,new_password:newPassword.value})});
         const result=await response.json();if(!result.success)throw Error(result.error?.message||'Không đổi được mật khẩu.');
-        oldPassword.value='';newPassword.value='';confirmPassword.value='';toggleEditField('password');showToast('Đã đổi mật khẩu. Dùng mật khẩu mới cho lần đăng nhập tiếp theo.','success');
+        if (token !== localStorage.getItem('tok_token')) return;
+        localStorage.setItem('tok_token',result.data.token);
+        if (currentUserAccount.role === 'ADMIN') localStorage.setItem('tok_admin_token', result.data.token);
+        oldPassword.value='';newPassword.value='';confirmPassword.value='';
+        toggleEditField('password');
+        await refreshUserData();
+        showToast('Đã đổi mật khẩu.','success');
       }catch(error){showToast(error.message||'Lỗi kết nối.','error');}
     }
 
@@ -6294,15 +6300,15 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              ten_dang_nhap: username,
-              mat_khau: password,
-              ten_hien_thi: username
+              username,
+              password,
+              display_name: username
             })
           });
           const res = await resp.json();
           if (res.success && res.data) {
             localStorage.setItem('tok_token', res.data.token);
-            applyUserData(res.data.nguoi_dung);
+            applyUserData(res.data.user);
             if (typeof dailyQuestsState !== 'undefined') {
               dailyQuestsState.onboardingClaimed = false;
               dailyQuestsState.claimed = {};
@@ -6321,19 +6327,7 @@
             showToast(res.error?.message || 'Không thể tạo tài khoản!', 'error');
           }
         } catch (err) {
-          currentUserAccount.username = username;
-          currentUserAccount.displayName = username;
-          if (typeof dailyQuestsState !== 'undefined') {
-            dailyQuestsState.onboardingClaimed = false;
-            dailyQuestsState.claimed = {};
-          }
-          localStorage.removeItem('tok_onboarding_completed');
-          syncUserDataToUI();
-          closeAuthModal();
-          showToast('Đã lưu tài khoản ngoại tuyến!');
-          if (!navigator.webdriver) {
-            setTimeout(openNewbiePetUnboxing, 350);
-          }
+          showToast('Lỗi kết nối máy chủ! Không thể tạo tài khoản.', 'error');
         }
       } else {
         try {
@@ -6341,15 +6335,15 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              ten_dang_nhap: username,
-              mat_khau: password
+              username,
+              password
             })
           });
           const res = await resp.json();
           if (res.success && res.data) {
-            const userObj = res.data.nguoi_dung || res.data;
+            const userObj = res.data.user;
             localStorage.setItem('tok_token', res.data.token);
-            if (userObj.vai_tro === 'QUAN_TRI_VIEN') {
+            if (userObj.role === 'ADMIN') {
               localStorage.setItem('tok_admin_token', res.data.token);
               showToast('🛡️ Chào mừng Quản trị viên! Đang chuyển thẳng sang Cổng Quản Trị...', 'success');
               closeAuthModal(true);
@@ -6375,46 +6369,46 @@
 
     function applyUserData(user) {
       if (!user) return;
-      if(currentUserAccount.userId !== user.ma_nguoi_dung) Object.keys(ownedPets).forEach(id=>delete ownedPets[id]);
-      currentUserAccount.displayName = user.ten_hien_thi || user.ten_dang_nhap;
-      currentUserAccount.username = user.ten_dang_nhap;
+      if(currentUserAccount.userId !== user.id) Object.keys(ownedPets).forEach(id=>delete ownedPets[id]);
+      currentUserAccount.displayName = user.display_name || user.username;
+      currentUserAccount.username = user.username;
       currentUserAccount.email = user.email || '';
-      currentUserAccount.accessory = user.phu_kien_dang_dung || null;
-      currentUserAccount.userId = user.ma_nguoi_dung;
-      currentUserAccount.vai_tro = user.vai_tro || 'NGUOI_HOC';
-      if (currentUserAccount.vai_tro === 'QUAN_TRI_VIEN') {
+      currentUserAccount.accessory = user.equipped_accessory || null;
+      currentUserAccount.userId = user.id;
+      currentUserAccount.role = user.role;
+      if (currentUserAccount.role === 'ADMIN') {
         ownedPets['admin_aurum'] = true;
         ownedPets['admin_nguyet'] = true;
       }
-      currentUserAccount.exp = user.tong_diem_kinh_nghiem || 0;
+      currentUserAccount.exp = user.xp || 0;
       currentUserAccount.rankTitle = LevelRules.progress(currentUserAccount.exp).label;
-      userCoins = typeof user.xu_tri_thuc === 'number' ? user.xu_tri_thuc : 0;
-      userStreak = typeof user.chuoi_streak_ngay === 'number' ? user.chuoi_streak_ngay : 0;
-      userArenaWinStreak = typeof user.chuoi_thang_arena === 'number' ? user.chuoi_thang_arena : 0;
+      userCoins = typeof user.coin_balance === 'number' ? user.coin_balance : 0;
+      userStreak = typeof user.streak_days === 'number' ? user.streak_days : 0;
+      userArenaWinStreak = typeof user.rank_win_streak === 'number' ? user.rank_win_streak : 0;
       currentUserAccount.arenaWinStreak = userArenaWinStreak;
 
-      currentUserAccount.hasGoogleLinked = Boolean(user.google_lien_ket);
-      currentUserAccount.googleEmail = user.google_email || '';
-      currentUserAccount.hasPassword = user.co_mat_khau !== false;
+      currentUserAccount.hasGoogleLinked = Boolean(user.google_linked);
+      currentUserAccount.googleEmail = user.google_verified_email || '';
+      currentUserAccount.hasPassword = Boolean(user.has_password);
       const oldPasswordInput = document.getElementById('input-edit-pwd-old');
       if(oldPasswordInput) oldPasswordInput.hidden = !currentUserAccount.hasPassword;
 
-      const activePet = user.thu_cung_dang_dung;
+      const activePet = user.equipped_pet;
       if (activePet) {
-        const petId = activePet.frontend_id || ({pet_sparky:'dragon',pet_kitsune:'fox',pet_golem:'stone_golem'})[activePet.ma_thu_cung] || activePet.ma_thu_cung.replace(/^pet_/, '');
-        renderEquippedPet(petId, activePet.ten_thu_cung, activePet.icon || '🐾', activePet.mo_ta, activePet.anh_dai_dien);
+        const petId = activePet.frontend_id || activePet.id;
+        renderEquippedPet(petId, activePet.name, activePet.icon || '🐾', activePet.description, activePet.image_path);
       } else {
         renderEquippedPet('dragon', 'Rồng Nhỏ Sparky', '🐉', 'Đồng hành cùng bạn', SPARKY_ANIM_GIF);
       }
       currentUserAccount.levelProgress = LevelRules.progress(currentUserAccount.exp);
       currentUserAccount.level = currentUserAccount.levelProgress.level;
-      currentUserAccount.tourProgress = user.tien_do_huong_dan || null;
-      if (currentUserAccount.vai_tro !== 'QUAN_TRI_VIEN') localStorage.removeItem('tok_admin_token');
+      currentUserAccount.tourProgress = user.tutorial_progress || null;
+      if (currentUserAccount.role !== 'ADMIN') localStorage.removeItem('tok_admin_token');
       applySavedPreferences(user);
 
       if (typeof RANKS !== 'undefined') {
         Object.keys(RANKS).forEach(key=>RANKS[key]=0);
-        Object.entries(user.diem_dau_hang||{}).forEach(([course,points])=>RANKS[course.replace(/^mon_/,'')]=Number(points)||0);
+        Object.entries(user.rank_scores || {}).forEach(([subject, points]) => { RANKS[subject] = Number(points) || 0; });
         renderLobby();
       }
 
@@ -6449,13 +6443,13 @@
       const rankEl = document.getElementById('sidebar-user-rank');
       if (rankEl) rankEl.textContent = currentUserAccount.rankTitle || '🌱 Khởi nguyên I';
       const adminBtn = document.getElementById('nav-admin');
-      if (adminBtn) adminBtn.classList.toggle('hidden', currentUserAccount.vai_tro !== 'QUAN_TRI_VIEN');
+      if (adminBtn) adminBtn.classList.toggle('hidden', currentUserAccount.role !== 'ADMIN');
       const topbarAdminBtn = document.getElementById('btn-topbar-admin-portal');
-      if (topbarAdminBtn) topbarAdminBtn.style.display = currentUserAccount.vai_tro === 'QUAN_TRI_VIEN' && innerWidth >= 768 ? 'flex' : 'none';
+      if (topbarAdminBtn) topbarAdminBtn.style.display = currentUserAccount.role === 'ADMIN' && innerWidth >= 768 ? 'flex' : 'none';
       const previewBanner=document.getElementById('admin-preview-banner');
-      if(previewBanner && currentUserAccount.vai_tro!=='QUAN_TRI_VIEN')previewBanner.classList.add('hidden');
+      if(previewBanner && currentUserAccount.role!=='ADMIN')previewBanner.classList.add('hidden');
       const mobileAdmin = document.getElementById('btn_m_more_admin');
-      if (mobileAdmin) mobileAdmin.style.display = currentUserAccount.vai_tro === 'QUAN_TRI_VIEN' ? 'flex' : 'none';
+      if (mobileAdmin) mobileAdmin.style.display = currentUserAccount.role === 'ADMIN' ? 'flex' : 'none';
       renderLevelProgress();
     }
 
@@ -8527,7 +8521,7 @@
         });
         const res = await resp.json();
         if (res.success && res.data) {
-          applyUserData(res.data.nguoi_dung || res.data);
+          applyUserData(res.data);
           await reloadAllAccountData();
         }
       } catch (err) {}
@@ -8547,8 +8541,8 @@
           });
           const res = await resp.json();
           if (res.success && res.data) {
-            const userObj = res.data.nguoi_dung || res.data;
-            if (userObj.vai_tro === 'QUAN_TRI_VIEN') {
+            const userObj = res.data;
+            if (userObj.role === 'ADMIN') {
               localStorage.setItem('tok_admin_token', token);
               if (!isPreview) {
                 window.location.href = '/admin/';

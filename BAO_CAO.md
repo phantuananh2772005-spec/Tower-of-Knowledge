@@ -16,6 +16,7 @@ Nhánh `local-pg-v1` tách từ `main` tại `fe206d3`. [Luật nghiệp vụ](L
 | Nhóm | Kết quả | Bằng chứng |
 |---|---|---|
 | 1 · Config | **PASS** | `node --test tests/test_db_adapter.js` đạt 4/4. Xác nhận login riêng thuộc role runtime và đúng search_path, đọc được hằng số V1, rollback probe và bị từ chối CREATE trong app_v1. Khởi động server và gọi `/health` trên loopback thành công ngay cả khi tiến trình cha có DATABASE_URL khác. |
+| 2 · Auth và users | **PASS** | `node --test tests/test_auth_pg_v1.js` đạt 2/2 kịch bản trên PostgreSQL. Đăng ký cấp Sparky, đăng nhập và thưởng streak đúng một lần, lưu cài đặt, đổi mật khẩu thu hồi phiên cũ và chặn tài khoản vô hiệu. Google và gửi mã dùng giả lập. Lượt ghi kiểm thử được rollback. |
 
 Không có thay đổi trên `main` hoặc máy chủ Render. Máy local dùng container `thaptrithuc-pg-v1` với cổng loopback 55432, database `thaptrithuc_v1`. Script quản trị chạy qua socket trong container.
 

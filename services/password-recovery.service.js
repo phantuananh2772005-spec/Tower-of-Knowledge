@@ -1,92 +1,190 @@
-const { validatePassword, hashPassword, verifyPassword } = require('./password-policy');
-const crypto = require('crypto');
+const crypto = require('node:crypto');
+const jwt = require('jsonwebtoken');
 const db = require('../database/db');
 const mail = require('./recovery-mail.service');
-const jwt = require('jsonwebtoken');
-function recoverySecret(){const value=process.env.PASSWORD_RECOVERY_SECRET||process.env.JWT_SECRET;if(!value)throw new Error('Chưa cấu hình bảo mật khôi phục mật khẩu.');return value;}
-function maskEmail(email){const [name,domain]=email.split('@');return (name.length>2?name.slice(0,2):'')+'***'+(name.length>4?name.slice(-1):'')+'@'+domain;}
-async function lookup({username}){
-  const name=typeof username==='string'?username.trim().toLowerCase():'';
-  if(!name||name.length>100)throw new Error('Nhập tên đăng nhập của tài khoản cần tìm.');
-  const user=await db.queryOne('SELECT ma_nguoi_dung,google_sub,google_email,session_version FROM nguoi_dung WHERE LOWER(ten_dang_nhap)=$1',[name]);
-  if(!user?.google_sub||!user.google_email)throw new Error('Tài khoản không tồn tại hoặc chưa liên kết Google.');
-  return {maskedEmail:maskEmail(user.google_email),lookupToken:jwt.sign({purpose:'recovery-lookup',userId:user.ma_nguoi_dung,version:Number(user.session_version||0)},recoverySecret(),{expiresIn:'10m'})};
-}
-function readLookup(token){try{const data=jwt.verify(token,recoverySecret());if(data.purpose!=='recovery-lookup')throw Error();return data;}catch{throw new Error('Phiên tìm tài khoản đã hết hạn. Hãy tìm lại tài khoản.');}}
-const generic = { message: 'Nếu Gmail này đã liên kết với tài khoản đã đăng ký, mã khôi phục sẽ được gửi. Kiểm tra cả thư rác. Mã có hiệu lực 10 phút.' };
+const { validatePassword, hashPassword, verifyPassword } = require('./password-policy');
+
+const ttlMs = 10 * 60 * 1000;
+const cooldownMs = 60 * 1000;
+const maxAttempts = 5;
+const generic = {
+  message: 'Nếu Gmail này đã liên kết với tài khoản đã đăng ký, mã khôi phục sẽ được gửi. Kiểm tra cả thư rác. Mã có hiệu lực 10 phút.'
+};
 const invalid = 'Mã không đúng, đã hết hạn hoặc đã được sử dụng. Hãy yêu cầu mã mới.';
-function normalize(value) { return typeof value === 'string' ? value.trim().toLowerCase() : ''; }
-function createRecoveryService({ database = db, transport = mail, now = Date.now } = {}) {
-  function digest(id, code) {
-    const secret = process.env.PASSWORD_RECOVERY_SECRET || process.env.JWT_SECRET;
-    if (!secret) throw new Error('Chưa cấu hình bảo mật khôi phục mật khẩu.');
-    return crypto.createHmac('sha256', secret).update(`${id}:${code}`).digest('hex');
+const unavailable = 'Tài khoản không tồn tại hoặc chưa liên kết Google.';
+const proofNotLinked = 'Tài khoản Google này chưa được liên kết. Vui lòng chọn lại.';
+
+function recoverySecret() {
+  const secret = process.env.PASSWORD_RECOVERY_SECRET || process.env.JWT_SECRET;
+  if (!secret) throw new Error('Chưa cấu hình bảo mật khôi phục mật khẩu.');
+  return secret;
+}
+
+function normalize(value) {
+  return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+function isEmail(value) {
+  return value.length <= 255 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function maskEmail(email) {
+  const [name, domain] = email.split('@');
+  return (name.length > 2 ? name.slice(0, 2) : '') + '***' + (name.length > 4 ? name.slice(-1) : '') + '@' + domain;
+}
+
+function signBinding(purpose, user, proof = null) {
+  return crypto.createHmac('sha256', recoverySecret())
+    .update(JSON.stringify([purpose, user.id, user.google_sub, user.google_verified_email, proof]))
+    .digest('hex');
+}
+
+function sameDigest(left, right) {
+  return typeof left === 'string' && /^[0-9a-f]{64}$/.test(left) &&
+    crypto.timingSafeEqual(Buffer.from(left, 'hex'), Buffer.from(right, 'hex'));
+}
+
+function readLookup(token) {
+  try {
+    const data = jwt.verify(token, recoverySecret(), { algorithms: ['HS256'] });
+    if (data.purpose !== 'recovery-lookup' || typeof data.userId !== 'string' ||
+        !Number.isInteger(data.version) || data.version < 0 ||
+        typeof data.binding !== 'string' || !/^[0-9a-f]{64}$/.test(data.binding)) {
+      throw new Error('Invalid account lookup proof');
+    }
+    return data;
+  } catch {
+    throw new Error('Phiên tìm tài khoản đã hết hạn. Hãy tìm lại tài khoản.');
   }
-  async function request({ email }) {
+}
+
+function isEligible(user) {
+  return Boolean(user && user.disabled_at == null && user.role !== 'SYSTEM' &&
+    user.google_sub && isEmail(normalize(user.google_verified_email)));
+}
+
+function createRecoveryService({ database = db, transport = mail, now } = {}) {
+  async function getTime(tx) {
+    if (now) return new Date(now()).getTime();
+    const row = await tx.queryOne('SELECT clock_timestamp() AS instant');
+    return new Date(row.instant).getTime();
+  }
+
+  async function findVerifiedEmail(connection, email, lock = false) {
+    const candidates = await connection.query(
+      'SELECT * FROM users WHERE google_verified_email = $1 AND google_sub IS NOT NULL '
+        + 'ORDER BY id LIMIT 2' + (lock ? ' FOR UPDATE' : ''),
+      [email]
+    );
+    return candidates.length === 1 && isEligible(candidates[0]) ? candidates[0] : null;
+  }
+
+  async function lookup({ username } = {}) {
+    const name = normalize(username);
+    if (!name || name.length > 100) throw new Error('Nhập tên đăng nhập của tài khoản cần tìm.');
+    const user = await database.queryOne(
+      'SELECT id, role, disabled_at, google_sub, google_verified_email, session_version FROM users WHERE username = $1',
+      [name]
+    );
+    if (!isEligible(user)) throw new Error(unavailable);
+    const unique = await findVerifiedEmail(database, user.google_verified_email);
+    if (unique?.id !== user.id) throw new Error(unavailable);
+    const lookupToken = jwt.sign({
+      purpose: 'recovery-lookup',
+      userId: user.id,
+      version: user.session_version,
+      binding: signBinding('recovery-lookup', user)
+    }, recoverySecret(), { algorithm: 'HS256', expiresIn: '10m' });
+    return { maskedEmail: maskEmail(user.google_verified_email), lookupToken };
+  }
+
+  async function replaceChallenge(tx, user, proof, issuedAt) {
+    await tx.execute(
+      'INSERT INTO password_resets (user_id, google_sub, code_hash, expires_at, attempts) '
+        + 'VALUES ($1, $2, $3, $4, 0) ON CONFLICT (user_id) DO UPDATE '
+        + 'SET google_sub = EXCLUDED.google_sub, code_hash = EXCLUDED.code_hash, '
+        + 'expires_at = EXCLUDED.expires_at, attempts = EXCLUDED.attempts',
+      [user.id, user.google_sub, signBinding('password-reset', user, proof), new Date(issuedAt + ttlMs)]
+    );
+  }
+
+  async function request({ email } = {}) {
     email = normalize(email);
-    if (!email || email.length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Nhập email Google đã liên kết với tài khoản.');
-    if (!database.isPostgres || !transport.configured()) throw new Error('Gửi mã email chưa được cấu hình. Bạn có thể đăng nhập bằng Google đã liên kết để vào tài khoản.');
-    // Only the Google-verified address is trusted; a registration email alone is insufficient.
-    const users = await database.query('SELECT ma_nguoi_dung FROM nguoi_dung WHERE LOWER(google_email) = $1 AND google_sub IS NOT NULL', [email]);
-    if (users.length !== 1) return generic;
-    const id = users[0].ma_nguoi_dung;
+    if (!isEmail(email)) throw new Error('Nhập email Google đã liên kết với tài khoản.');
+    if (!transport.configured()) {
+      throw new Error('Gửi mã email chưa được cấu hình. Bạn có thể đăng nhập bằng Google đã liên kết để vào tài khoản.');
+    }
     await database.transaction(async tx => {
-      const user = await tx.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1 FOR UPDATE', [id]);
-      if (!user.google_sub || normalize(user.google_email) !== email) return;
-      const old = await tx.queryOne('SELECT * FROM password_recovery WHERE user_id = $1', [id]);
-      if (old && now() - Number(old.sent_at) < 60000) return;
+      const user = await findVerifiedEmail(tx, email, true);
+      if (!user) return;
+      const challenge = await tx.queryOne('SELECT expires_at FROM password_resets WHERE user_id = $1', [user.id]);
+      const instant = await getTime(tx);
+      if (challenge && instant - (new Date(challenge.expires_at).getTime() - ttlMs) < cooldownMs) return;
+
       const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
-      const hash = digest(id, code);
-      await tx.execute('DELETE FROM password_recovery WHERE user_id = $1', [id]);
-      await tx.execute('INSERT INTO password_recovery(user_id,email,google_sub,code_hash,expires_at,sent_at,attempts) VALUES($1,$2,$3,$4,$5,$6,0)', [id,email,user.google_sub,hash,now()+600000,now()]);
-      // Failure rolls back the replacement, keeping an earlier valid code usable.
+      await replaceChallenge(tx, user, code, instant);
+      // Delivery failure rolls back the replacement, keeping an earlier valid code usable.
       await transport.sendCode(email, code);
     });
     return generic;
   }
-  async function googleProof(identity,target=null) {
-    if (!database.isPostgres) throw new Error('Khôi phục mật khẩu cần cơ sở dữ liệu PostgreSQL.');
-    const token=crypto.randomBytes(32).toString('base64url');
-    await database.transaction(async tx=>{
-      const user=await tx.queryOne('SELECT * FROM nguoi_dung WHERE google_sub = $1 FOR UPDATE',[identity.sub]);
-      if(!user || normalize(user.google_email)!==normalize(identity.email)) throw new Error('Tài khoản Google này chưa được liên kết. Vui lòng chọn lại.');
-      if(target&&(user.ma_nguoi_dung!==target.userId||Number(user.session_version||0)!==target.version))throw new Error('Tài khoản Google không khớp. Vui lòng chọn đúng email được gợi ý.');
-      await tx.execute('DELETE FROM password_recovery WHERE user_id = $1',[user.ma_nguoi_dung]);
-      await tx.execute('INSERT INTO password_recovery(user_id,email,google_sub,code_hash,expires_at,sent_at,attempts) VALUES($1,$2,$3,$4,$5,$6,0)',[user.ma_nguoi_dung,normalize(identity.email),identity.sub,digest(user.ma_nguoi_dung,token),now()+600000,now()]);
-    });
-    return {recoveryToken:token,email:normalize(identity.email)};
-  }
-  async function reset({ email, code, recovery_token, password }) {
-    email = normalize(email);
-    if (!database.isPostgres) throw new Error('Khôi phục mật khẩu cần cơ sở dữ liệu PostgreSQL.');
-    validatePassword(password, [email]);
-    const proof=typeof recovery_token==='string'&&/^[A-Za-z0-9_-]{43}$/.test(recovery_token)?recovery_token:code;
-    if (!email || email.length > 255 || typeof proof !== 'string' || !/^(?:\d{6}|[A-Za-z0-9_-]{43})$/.test(proof)) throw new Error(invalid);
-    const users = await database.query('SELECT ma_nguoi_dung FROM nguoi_dung WHERE LOWER(google_email) = $1 AND google_sub IS NOT NULL', [email]);
-    if (users.length !== 1) throw new Error(invalid);
-    const id = users[0].ma_nguoi_dung;
-    const ok = await database.transaction(async tx => {
-      const user = await tx.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1 FOR UPDATE', [id]);
-      const item = await tx.queryOne('SELECT * FROM password_recovery WHERE user_id = $1', [id]);
-      if (!item || !user.google_sub || user.google_sub !== item.google_sub || normalize(user.google_email) !== email || item.email !== email || Number(item.expires_at) <= now() || item.attempts >= 5) return false;
-      const matches = crypto.timingSafeEqual(Buffer.from(item.code_hash,'hex'),Buffer.from(digest(id,proof),'hex'));
-      if (!matches) {
-        await tx.execute('UPDATE password_recovery SET attempts = attempts + 1 WHERE user_id = $1', [id]);
-        return false; // Commit the failed attempt; throwing inside the transaction would undo it.
+
+  async function googleProof(identity, target = null) {
+    const email = normalize(identity?.email);
+    if (typeof identity?.sub !== 'string' || !identity.sub || !isEmail(email)) throw new Error(proofNotLinked);
+    const token = crypto.randomBytes(32).toString('base64url');
+    await database.transaction(async tx => {
+      const user = await findVerifiedEmail(tx, email, true);
+      if (!user || user.google_sub !== identity.sub) throw new Error(proofNotLinked);
+      if (target && (user.id !== target.userId || user.session_version !== target.version ||
+          !sameDigest(target.binding, signBinding('recovery-lookup', user)))) {
+        throw new Error('Tài khoản Google không khớp. Vui lòng chọn đúng email được gợi ý.');
       }
-      validatePassword(password, [user.ten_dang_nhap, user.email, email]);
-      if (user.co_mat_khau && await verifyPassword(password, user.mat_khau_hash)) {
+      await replaceChallenge(tx, user, token, await getTime(tx));
+    });
+    return { recoveryToken: token, email };
+  }
+
+  async function reset({ email, code, recovery_token: recoveryToken, password } = {}) {
+    email = normalize(email);
+    const proof = typeof recoveryToken === 'string' && /^[A-Za-z0-9_-]{43}$/.test(recoveryToken)
+      ? recoveryToken
+      : code;
+    if (!isEmail(email) || typeof proof !== 'string' || !/^(?:\d{6}|[A-Za-z0-9_-]{43})$/.test(proof)) {
+      throw new Error(invalid);
+    }
+    validatePassword(password, [email]);
+
+    const updated = await database.transaction(async tx => {
+      const user = await findVerifiedEmail(tx, email, true);
+      if (!user) return false;
+      const challenge = await tx.queryOne('SELECT * FROM password_resets WHERE user_id = $1', [user.id]);
+      const instant = await getTime(tx);
+      if (!challenge || challenge.google_sub !== user.google_sub ||
+          !(new Date(challenge.expires_at).getTime() > instant) || challenge.attempts >= maxAttempts) {
+        return false;
+      }
+      if (!sameDigest(challenge.code_hash, signBinding('password-reset', user, proof))) {
+        await tx.execute('UPDATE password_resets SET attempts = attempts + 1 WHERE user_id = $1', [user.id]);
+        return false;
+      }
+
+      validatePassword(password, [user.username, user.email, email]);
+      if (user.password_hash && await verifyPassword(password, user.password_hash)) {
         throw new Error('Hãy chọn mật khẩu khác mật khẩu hiện tại.');
       }
-      const hash = await hashPassword(password);
-      await tx.execute('UPDATE nguoi_dung SET mat_khau_hash = $1, co_mat_khau = $2, session_version = session_version + 1, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $3', [hash,true,id]);
-      await tx.execute('DELETE FROM password_recovery WHERE user_id = $1', [id]);
+      await tx.execute(
+        'UPDATE users SET password_hash = $1, session_version = session_version + 1 WHERE id = $2',
+        [await hashPassword(password), user.id]
+      );
+      await tx.execute('DELETE FROM password_resets WHERE user_id = $1', [user.id]);
       return true;
     });
-    if (!ok) throw new Error(invalid);
+    if (!updated) throw new Error(invalid);
     return { message: 'Đã đặt lại mật khẩu. Hãy đăng nhập bằng mật khẩu mới.' };
   }
-  return { request, reset, googleProof };
-}
-module.exports = { ...createRecoveryService(), createRecoveryService, lookup, readLookup, maskEmail };
 
+  return { lookup, request, reset, googleProof };
+}
+
+module.exports = { ...createRecoveryService(), createRecoveryService, readLookup, maskEmail };

@@ -1277,14 +1277,14 @@
       }
       try {
         currentAdminUser = await apiFetch('/api/auth/me');
-        if (currentAdminUser.vai_tro !== 'QUAN_TRI_VIEN') {
+        if (currentAdminUser.role !== 'ADMIN') {
           showToast('Tài khoản này không có quyền quản trị viên.', true);
           handleAdminLogout();
           setTimeout(() => { window.location.href = '/'; }, 1000);
           return;
         }
         document.getElementById('modal-admin-login').classList.add('hidden');
-        document.getElementById('admin-user-name').innerText = currentAdminUser.ten_hien_thi;
+        document.getElementById('admin-user-name').innerText = currentAdminUser.display_name;
         loadAnalytics();
         ensureCoursesAndMocsLoaded();
       } catch (err) {
@@ -1302,18 +1302,18 @@
       try {
         const data = await apiFetch('/api/auth/login', {
           method: 'POST',
-          body: JSON.stringify({ ten_dang_nhap: username, mat_khau: password })
+          body: JSON.stringify({ username, password })
         });
 
-        if (data.nguoi_dung.vai_tro !== 'QUAN_TRI_VIEN') {
+        if (data.user.role !== 'ADMIN') {
           throw new Error('Chỉ tài khoản Quản trị viên mới được đăng nhập vào đây.');
         }
 
         adminToken = data.token;
         localStorage.setItem('tok_admin_token', adminToken);
-        currentAdminUser = data.nguoi_dung;
+        currentAdminUser = data.user;
         document.getElementById('modal-admin-login').classList.add('hidden');
-        document.getElementById('admin-user-name').innerText = currentAdminUser.ten_hien_thi;
+        document.getElementById('admin-user-name').innerText = currentAdminUser.display_name;
         showToast('Đăng nhập Quản trị viên thành công!');
         loadAnalytics();
       } catch (err) {

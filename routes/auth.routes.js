@@ -37,7 +37,7 @@ for(const action of ['lookup','request','reset']) router.post('/password-recover
 router.get('/google/challenge',optionalAuthenticate,(req,res)=>{
   try{
     const mode=['link','recover'].includes(req.query.mode)?req.query.mode:'login';
-    const challenge=googleIdentity.challenge(mode,mode==='link'?req.user?.ma_nguoi_dung||null:null);
+    const challenge=googleIdentity.challenge(mode,mode === 'link' ? (req.user?.id ?? null) : null);
     res.setHeader('Cache-Control','no-store');res.cookie(challengeCookie,challenge.cookie,cookieOptions);
     return res.apiSuccess({clientId:challenge.clientId,nonce:challenge.nonce,csrf:challenge.csrf});
   }catch(error){return res.apiError(error.message,'GOOGLE_UNAVAILABLE',400);}
@@ -52,17 +52,18 @@ router.post('/google/recover',recoveryLimit,async(req,res)=>{
   catch(error){return res.apiError(error.message,'GOOGLE_RECOVERY_FAILED',400);}
 });
 router.post('/google/link',authenticate,async(req,res)=>{
-  try{assertSameOrigin(req);const result=await googleIdentity.link(req.user.ma_nguoi_dung,req.body,readChallenge(req));res.clearCookie(challengeCookie,{...cookieOptions,maxAge:0});return res.apiSuccess(result);}
+  try{assertSameOrigin(req);const result=await googleIdentity.link(req.user.id,req.body,readChallenge(req));res.clearCookie(challengeCookie,{...cookieOptions,maxAge:0});return res.apiSuccess(result);}
   catch(error){return res.apiError(error.message,'GOOGLE_LINK_FAILED',400);}
 });
 router.delete('/google/link',authenticate,async(req,res)=>{
-  try{return res.apiSuccess(await googleIdentity.unlink(req.user.ma_nguoi_dung));}
+  try{return res.apiSuccess(await googleIdentity.unlink(req.user.id));}
   catch(error){return res.apiError(error.message,'GOOGLE_UNLINK_FAILED',400);}
 });
 
 router.post('/register', authAttemptLimit, async (req, res) => {
   try {
-    const result = await authService.register(req.body);
+    const { username, email, password, display_name } = req.body || {};
+    const result = await authService.register({ username, email, password, display_name });
     return res.apiSuccess(result, 201);
   } catch (err) {
     return res.apiError(err.message, 'REGISTRATION_FAILED', 400);
@@ -71,7 +72,8 @@ router.post('/register', authAttemptLimit, async (req, res) => {
 
 router.post('/login', authAttemptLimit, async (req, res) => {
   try {
-    const result = await authService.login({ten_dang_nhap:req.body.ten_dang_nhap,mat_khau:req.body.mat_khau});
+    const { username, password } = req.body || {};
+    const result = await authService.login({ username, password });
     return res.apiSuccess(result);
   } catch (err) {
     return res.apiError(err.message, 'LOGIN_FAILED', 401);
@@ -80,7 +82,7 @@ router.post('/login', authAttemptLimit, async (req, res) => {
 
 router.get('/me', authenticate, async (req, res) => {
   try {
-    const user = await authService.getCurrentUser(req.user.ma_nguoi_dung);
+    const user = await authService.getCurrentUser(req.user.id);
     return res.apiSuccess(user);
   } catch (err) {
     return res.apiError(err.message, 'USER_NOT_FOUND', 404);
@@ -89,7 +91,10 @@ router.get('/me', authenticate, async (req, res) => {
 
 router.put('/settings', authenticate, async (req, res) => {
   try {
-    const updated = await authService.updateSettings(req.user.ma_nguoi_dung, req.body);
+    const { theme, sound_enabled, display_name, sound_config, tutorial_progress } = req.body || {};
+    const updated = await authService.updateSettings(req.user.id, {
+      theme, sound_enabled, display_name, sound_config, tutorial_progress
+    });
     return res.apiSuccess(updated);
   } catch (err) {
     return res.apiError(err.message, 'UPDATE_FAILED', 400);
@@ -97,11 +102,17 @@ router.put('/settings', authenticate, async (req, res) => {
 });
 
 router.put('/account', authenticate, async(req,res)=>{
-  try { return res.apiSuccess(await authService.updateAccount(req.user.ma_nguoi_dung,req.body)); }
+  try {
+    const { display_name, username } = req.body || {};
+    return res.apiSuccess(await authService.updateAccount(req.user.id, { display_name, username }));
+  }
   catch(err) { return res.apiError(err.message,'UPDATE_ACCOUNT_FAILED',400); }
 });
 router.put('/password', authenticate, async(req,res)=>{
-  try { return res.apiSuccess(await authService.changePassword(req.user.ma_nguoi_dung,req.body,req.user.iat)); }
+  try {
+    const { current_password, new_password } = req.body || {};
+    return res.apiSuccess(await authService.changePassword(req.user.id, { current_password, new_password }, req.user.iat, req.user.auth_method));
+  }
   catch(err) { return res.apiError(err.message,'CHANGE_PASSWORD_FAILED',400); }
 });
 module.exports = router;

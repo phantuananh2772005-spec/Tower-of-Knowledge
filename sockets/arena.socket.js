@@ -5,9 +5,8 @@
  * safe fallback timeouts, and dynamic adaptive bot turn resolution.
  */
 
-const jwt = require('jsonwebtoken');
+const { verifySessionToken } = require('../middlewares/auth.middleware');
 const arenaService = require('../services/arena.service');
-const JWT_SECRET = process.env.JWT_SECRET || 'tower_of_knowledge_ultra_secure_jwt_secret_2026';
 
 // In-memory matchmaking queue
 const matchmakingQueue = [];
@@ -71,27 +70,25 @@ function initArenaSocket(io) {
     const token = (socket.handshake.auth && socket.handshake.auth.token) || socket.handshake.query?.token;
     if (!token) {
       const guestId = `guest_${Math.random().toString(36).substring(2, 9)}`;
-      socket.user = { ma_nguoi_dung: guestId, ten_dang_nhap: 'Khách', isGuest: true };
+      socket.user = { id: guestId, username: 'Khách', isGuest: true };
       return next();
     }
     try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      await require('../services/session-validity.service').assertCurrentSession(decoded);
-      socket.user = decoded;
+      socket.user = await verifySessionToken(token);
       next();
     } catch (err) {
       const guestId = `guest_${Math.random().toString(36).substring(2, 9)}`;
-      socket.user = { ma_nguoi_dung: guestId, ten_dang_nhap: 'Khách', isGuest: true };
+      socket.user = { id: guestId, username: 'Khách', isGuest: true };
       next();
     }
   });
 
   io.on('connection', (socket) => {
-    const userId = socket.user.ma_nguoi_dung;
+    const userId = socket.user.id;
     socket.use(async (_packet, next) => {
       if (socket.user.isGuest) return next();
       try {
-        await require('../services/session-validity.service').assertCurrentSession(socket.user);
+        socket.user = await require('../services/session-validity.service').assertCurrentSession(socket.user);
         next();
       } catch {
         socket.disconnect(true);
@@ -308,7 +305,7 @@ function initArenaSocket(io) {
           host: {
             userId,
             socketId: socket.id,
-            name: playerInfo.name || socket.user.ten_dang_nhap || 'Chủ phòng',
+            name: playerInfo.name || socket.user.username || 'Chủ phòng',
             petIcon: playerInfo.petIcon || '🦉',
             image: /^\/assets\/[a-z0-9_./-]+\.(?:gif|png|webp)$/i.test(playerInfo.image) ? playerInfo.image : null,
             petName: playerInfo.petName || 'Linh Thú',
@@ -358,7 +355,7 @@ function initArenaSocket(io) {
       room.guest = {
         userId,
         socketId: socket.id,
-        name: playerInfo.name || socket.user.ten_dang_nhap || 'Bạn Giao Hữu',
+        name: playerInfo.name || socket.user.username || 'Bạn Giao Hữu',
         petIcon: playerInfo.petIcon || '🦊',
         image: /^\/assets\/[a-z0-9_./-]+\.(?:gif|png|webp)$/i.test(playerInfo.image) ? playerInfo.image : null,
         petName: playerInfo.petName || 'Hồ Ly Kitsune',

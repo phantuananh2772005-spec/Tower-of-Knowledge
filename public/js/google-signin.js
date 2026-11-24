@@ -40,8 +40,8 @@ async function openGoogleDialog(mode='login',recoveryLookupToken=null){
           if(token!==localStorage.getItem('tok_token'))return;
           applyUserData(result.data);renderGoogleAccountSettings();showToast('Đã lưu liên kết Google.','success');
         }else{
-          clearUserDataAndUI();localStorage.setItem('tok_token',result.data.token);applyUserData(result.data.nguoi_dung);closeAuthModal(true);
-          if(result.data.nguoi_dung.vai_tro==='QUAN_TRI_VIEN'){localStorage.setItem('tok_admin_token',result.data.token);location.href='/admin/';return;}
+          clearUserDataAndUI();localStorage.setItem('tok_token',result.data.token);applyUserData(result.data.user);closeAuthModal(true);
+          if(result.data.user.role==='ADMIN'){localStorage.setItem('tok_admin_token',result.data.token);location.href='/admin/';return;}
           navTo('hub');await reloadAllAccountData();showToast('Đã đăng nhập bằng tài khoản Google của bạn.','success');
         }
         closeGoogleDialog();

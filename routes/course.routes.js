@@ -6,7 +6,7 @@ const { authenticate, optionalAuthenticate } = require('../middlewares/auth.midd
 // 1. List all available system courses
 router.get('/courses', optionalAuthenticate, async (req, res) => {
   try {
-    const userId = req.user ? req.user.ma_nguoi_dung : null;
+    const userId = req.user ? req.user.id : null;
     const courses = await courseService.listCourses(userId);
     return res.apiSuccess(courses);
   } catch (err) {
@@ -17,7 +17,7 @@ router.get('/courses', optionalAuthenticate, async (req, res) => {
 // 2. List enrolled courses of the current user
 router.get('/my-courses', authenticate, async (req, res) => {
   try {
-    const courses = await courseService.listMyCourses(req.user.ma_nguoi_dung);
+    const courses = await courseService.listMyCourses(req.user.id);
     return res.apiSuccess(courses);
   } catch (err) {
     return res.apiError(err.message, 'FETCH_MY_COURSES_FAILED', 500);
@@ -27,7 +27,7 @@ router.get('/my-courses', authenticate, async (req, res) => {
 // 3. Explicit Course Enrollment
 router.post('/courses/:slug/enroll', authenticate, async (req, res) => {
   try {
-    const result = await courseService.enrollCourse(req.params.slug, req.user.ma_nguoi_dung);
+    const result = await courseService.enrollCourse(req.params.slug, req.user.id);
     return res.apiSuccess(result);
   } catch (err) {
     return res.apiError(err.message, 'ENROLL_FAILED', 400);
@@ -37,7 +37,7 @@ router.post('/courses/:slug/enroll', authenticate, async (req, res) => {
 // 4. Get course details and roadmap
 router.get('/courses/:slug', optionalAuthenticate, async (req, res) => {
   try {
-    const userId = req.user ? req.user.ma_nguoi_dung : null;
+    const userId = req.user ? req.user.id : null;
     const details = await courseService.getCourseDetails(req.params.slug, userId);
     const records=userId?await require('../services/checkpoint-records').records(userId):{};
     for(const ch of details.cac_chuong||[])for(const m of ch.cac_moc||[])m.ky_luc=records[m.ma_moc]||null;
@@ -52,8 +52,8 @@ router.get('/checkpoints/:id', authenticate, async (req, res) => {
   try {
     const step = req.query.step ? parseInt(req.query.step, 10) : undefined;
     const resumeIds = req.query.resume ? String(req.query.resume).split(',') : undefined;
-    const content = await courseService.getCheckpointContent(req.params.id, req.user.ma_nguoi_dung, step, resumeIds);
-    const records=await require('../services/checkpoint-records').records(req.user.ma_nguoi_dung);
+    const content = await courseService.getCheckpointContent(req.params.id, req.user.id, step, resumeIds);
+    const records=await require('../services/checkpoint-records').records(req.user.id);
     content.ky_luc=records[req.params.id]||null;
     return res.apiSuccess(content);
   } catch (err) {
@@ -64,7 +64,7 @@ router.get('/checkpoints/:id', authenticate, async (req, res) => {
 // 6. Complete theory checkpoint
 router.post('/checkpoints/:id/complete-theory', authenticate, async (req, res) => {
   try {
-    const result = await courseService.completeTheoreticalCheckpoint(req.params.id, req.user.ma_nguoi_dung);
+    const result = await courseService.completeTheoreticalCheckpoint(req.params.id, req.user.id);
     return res.apiSuccess(result);
   } catch (err) {
     return res.apiError(err.message, 'THEORY_COMPLETION_FAILED', 400);
@@ -78,7 +78,7 @@ router.post('/checkpoints/:id/submit-step', authenticate, async (req, res) => {
     if (!cau_tra_loi || !Array.isArray(cau_tra_loi)) {
       return res.apiError('Danh sách câu trả lời không hợp lệ.', 'INVALID_SUBMISSION', 400);
     }
-    const result = await courseService.submitStep(req.params.id, buoc, cau_tra_loi, req.user.ma_nguoi_dung);
+    const result = await courseService.submitStep(req.params.id, buoc, cau_tra_loi, req.user.id);
     return res.apiSuccess(result);
   } catch (err) {
     return res.apiError(err.message, 'SUBMIT_STEP_FAILED', 400);
@@ -92,7 +92,7 @@ router.post('/checkpoints/:id/abandon-step', authenticate, async (req, res) => {
     if (!cau_tra_loi || !Array.isArray(cau_tra_loi) || cau_tra_loi.length === 0) {
       return res.apiError('Danh sách câu trả lời trống.', 'INVALID_SUBMISSION', 400);
     }
-    const result = await courseService.saveAbandonedStep(req.params.id, buoc, cau_tra_loi, req.user.ma_nguoi_dung);
+    const result = await courseService.saveAbandonedStep(req.params.id, buoc, cau_tra_loi, req.user.id);
     return res.apiSuccess(result);
   } catch (err) {
     return res.apiError(err.message, 'ABANDON_STEP_FAILED', 400);
@@ -106,7 +106,7 @@ router.post('/checkpoints/:id/submit', authenticate, async (req, res) => {
     if (!cau_tra_loi || !Array.isArray(cau_tra_loi)) {
       return res.apiError('Danh sách câu trả lời không hợp lệ.', 'INVALID_SUBMISSION', 400);
     }
-    const result = await courseService.submitQuizCheckpoint(req.params.id, cau_tra_loi, req.user.ma_nguoi_dung);
+    const result = await courseService.submitQuizCheckpoint(req.params.id, cau_tra_loi, req.user.id);
     return res.apiSuccess(result);
   } catch (err) {
     return res.apiError(err.message, 'SUBMIT_FAILED', 400);

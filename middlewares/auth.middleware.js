@@ -1,73 +1,59 @@
 /**
- * Auth Middleware
- * Validates JWT bearer tokens and role-based permissions.
+ * Verifies Bearer tokens and resolves current authorization from PostgreSQL.
  */
 
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'tower_of_knowledge_ultra_secure_jwt_secret_2026';
+const { assertCurrentSession } = require('../services/session-validity.service');
 
-async function authenticate(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
-      success: false,
-      error: { code: 'UNAUTHORIZED', message: 'Yêu cầu đăng nhập để truy cập tài nguyên này.' },
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  const token = authHeader.substring(7);
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    await require('../services/session-validity.service').assertCurrentSession(decoded);
-    req.user = decoded;
-    next();
-  } catch (err) {
-    return res.status(401).json({
-      success: false,
-      error: { code: 'INVALID_TOKEN', message: 'Phiên đăng nhập đã hết hạn hoặc không hợp lệ.' },
-      timestamp: new Date().toISOString()
-    });
-  }
+function bearerToken(req) {
+  const header = req.headers.authorization;
+  return typeof header === 'string' ? /^Bearer (\S+)$/i.exec(header)?.[1] : undefined;
 }
 
-/**
- * Optional authentication: attaches req.user if token is present, continues otherwise
- */
-async function optionalAuthenticate(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.substring(7);
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      await require('../services/session-validity.service').assertCurrentSession(decoded);
-      req.user = decoded;
-    } catch (err) {
-      // Ignore invalid optional token
-    }
-  }
-  next();
+async function verifySessionToken(token) {
+  const claims = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+  return assertCurrentSession(claims);
 }
 
-/**
- * Requires admin role
- */
-function requireAdmin(req, res, next) {
-  authenticate(req, res, () => {
-    if (req.user && req.user.vai_tro === 'QUAN_TRI_VIEN') {
-      next();
-    } else {
-      res.status(403).json({
-        success: false,
-        error: { code: 'FORBIDDEN', message: 'Bạn không có quyền thực hiện thao tác quản trị này.' },
-        timestamp: new Date().toISOString()
-      });
-    }
+function authError(res, status, code, message) {
+  return res.status(status).json({
+    success: false,
+    error: { code, message },
+    timestamp: new Date().toISOString()
   });
 }
 
-module.exports = {
-  authenticate,
-  optionalAuthenticate,
-  requireAdmin
-};
+async function authenticate(req, res, next) {
+  const token = bearerToken(req);
+  if (!token) {
+    return authError(res, 401, 'UNAUTHORIZED', 'Yêu cầu đăng nhập để truy cập tài nguyên này.');
+  }
+
+  try {
+    req.user = await verifySessionToken(token);
+  } catch {
+    return authError(res, 401, 'INVALID_TOKEN', 'Phiên đăng nhập đã hết hạn hoặc không hợp lệ.');
+  }
+  return next();
+}
+
+async function optionalAuthenticate(req, res, next) {
+  const token = bearerToken(req);
+  if (token) {
+    try {
+      req.user = await verifySessionToken(token);
+    } catch {
+      // Public routes remain accessible without a valid session.
+    }
+  }
+  return next();
+}
+
+function requireAdmin(req, res, next) {
+  return authenticate(req, res, () => {
+    if (req.user.role === 'ADMIN') return next();
+    return authError(res, 403, 'FORBIDDEN', 'Bạn không có quyền thực hiện thao tác quản trị này.');
+  });
+}
+
+module.exports = { authenticate, optionalAuthenticate, requireAdmin, verifySessionToken };

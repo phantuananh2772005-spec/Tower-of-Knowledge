@@ -7,7 +7,7 @@ const { optionalAuthenticate } = require('../middlewares/auth.middleware');
 router.post('/start', optionalAuthenticate, async (req, res) => {
   try {
     const ma_mon = req.body.ma_mon || 'mon_csdl';
-    const userId = req.user ? req.user.ma_nguoi_dung : null;
+    const userId = req.user ? req.user.id : null;
     const session = await extremeService.startSession(ma_mon, userId);
     return res.apiSuccess(session);
   } catch (err) {
@@ -33,7 +33,7 @@ router.post('/check-answer', optionalAuthenticate, async (req, res) => {
     if (!ma_cau_hoi) {
       return res.apiError('Thiếu mã câu hỏi.', 'MISSING_QUESTION_ID', 400);
     }
-    const result = await extremeService.gradeSession(req.user?.ma_nguoi_dung, req.body.session_id,
+    const result = await extremeService.gradeSession(req.user?.id, req.body.session_id,
       req.body.answer_index, ma_cau_hoi, tra_loi, tra_loi_text || lua_chon_text);
     return res.apiSuccess(result);
   } catch (err) {
@@ -44,7 +44,7 @@ router.post('/check-answer', optionalAuthenticate, async (req, res) => {
 // 4. Finish session and claim rewards
 router.post('/finish', optionalAuthenticate, async (req, res) => {
   try {
-    const userId = req.user ? req.user.ma_nguoi_dung : null;
+    const userId = req.user ? req.user.id : null;
     const result = await extremeService.finishSession(userId, req.body);
     return res.apiSuccess(result);
   } catch (err) {

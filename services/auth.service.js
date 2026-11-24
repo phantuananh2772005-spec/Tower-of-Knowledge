@@ -1,263 +1,335 @@
-/**
- * Authentication & User Service
- * Handles registration, login, streak maintenance, and JWT tokens.
- */
-
-const { validatePassword, hashPassword, verifyPassword } = require('./password-policy');
 const jwt = require('jsonwebtoken');
 const db = require('../database/db');
+const petCatalog = require('../config/pets.json');
+const { validatePassword, hashPassword, verifyPassword } = require('./password-policy');
 const { evaluateStreak, toVietnamDateString } = require('../core/rules/streak.rules');
 const { deriveRankTitle, deriveUserLevel, levelProgress } = require('../core/rules/economy.rules');
-const { mutateCoinsInTransaction, withUserLock } = require('./economy.service');
+const { mutateCoinsInTransaction } = require('./wallet.service');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'tower_of_knowledge_ultra_secure_jwt_secret_2026';
-function parsePreference(value) {
-  try { return typeof value === 'string' ? JSON.parse(value) : value || null; } catch { return null; }
+const allowedAudioChannels = new Set(['quiz', 'reward', 'battle', 'outcome', 'bgm']);
+
+function generateToken(user, { auth_method } = {}) {
+  return jwt.sign({
+    username: user.username,
+    role: user.role,
+    session_version: user.session_version,
+    ...(auth_method ? { auth_method } : {})
+  }, process.env.JWT_SECRET, {
+    subject: user.id,
+    algorithm: 'HS256',
+    expiresIn: '7d'
+  });
 }
 
-/**
- * Generate JWT token
- */
-function generateToken(user) {
-  return jwt.sign(
-    {
-      ma_nguoi_dung: user.ma_nguoi_dung,
-      ten_dang_nhap: user.ten_dang_nhap,
-      vai_tro: user.vai_tro,
-      session_version: Number(user.session_version || 0)
-    },
-    JWT_SECRET,
-    { expiresIn: '7d' }
-  );
+function assertInteractiveUser(user) {
+  if (!user || user.disabled_at || user.role === 'SYSTEM') {
+    throw new Error('Tài khoản không khả dụng.');
+  }
 }
 
-/**
- * Format user DTO for API responses
- */
-async function formatUserResponse(user) {
-  // Fetch active pet
-  const activePet = await db.queryOne(`
-    SELECT tc.ma_thu_cung, tc.ten_thu_cung, tc.mo_ta, tc.anh_dai_dien, tc.spritesheet_url, tc.he_so_sat_thuong
-    FROM thu_cung_so_huu sh
-    JOIN thu_cung tc ON sh.ma_thu_cung = tc.ma_thu_cung
-    WHERE sh.ma_nguoi_dung = $1 AND sh.dang_kich_hoat = $2
-  `, [user.ma_nguoi_dung, true]);
+async function formatUserResponse(user, connection = db) {
+  const details = await connection.queryOne(`
+    WITH current_season AS (
+      SELECT season_no FROM v_season_calendar
+      WHERE CURRENT_TIMESTAMP >= starts_at AND CURRENT_TIMESTAMP < ends_at
+    )
+    SELECT s.theme, s.sound_enabled, s.sound_config, s.tutorial_progress,
+      to_jsonb(p) AS equipped_pet, to_jsonb(a) AS equipped_accessory,
+      COALESCE((
+        SELECT jsonb_object_agg(r.subject_id, r.points)
+        FROM rank_scores AS r JOIN current_season AS season USING (season_no)
+        WHERE r.user_id = u.id
+      ), '{}'::jsonb) AS rank_scores,
+      COALESCE((
+        SELECT jsonb_agg(mp.result ORDER BY m.finished_at, m.id)
+        FROM match_players AS mp JOIN matches AS m ON m.id = mp.match_id
+        JOIN current_season AS season ON season.season_no = m.season_no
+        JOIN coin_ledger AS c ON c.match_id = m.id AND c.user_id = mp.user_id AND c.kind = 'MATCH_REWARD'
+        WHERE mp.user_id = u.id AND m.mode = 'RANKED' AND m.status = 'FINISHED' AND mp.result IS NOT NULL
+      ), '[]'::jsonb) AS ranked_results
+    FROM users AS u LEFT JOIN user_settings AS s ON s.user_id = u.id
+    LEFT JOIN pets AS p ON p.id = u.equipped_pet_id
+    LEFT JOIN accessories AS a ON a.id = u.equipped_accessory_id
+    WHERE u.id = $1
+  `, [user.id]);
 
-  const ranked=await db.query('SELECT ma_mon,diem FROM diem_dau_hang WHERE ma_nguoi_dung=$1',[user.ma_nguoi_dung]);
+  let winStreak = 0;
+  let bestWinStreak = 0;
+  for (const result of details.ranked_results) {
+    winStreak = result === 'WIN' ? winStreak + 1 : 0;
+    bestWinStreak = Math.max(bestWinStreak, winStreak);
+  }
+
+  const equippedPet = details?.equipped_pet ?? null;
+  const petDisplay = equippedPet && petCatalog.find(pet => pet.serverId === equippedPet.id);
   return {
-    diem_dau_hang:Object.fromEntries(ranked.map(r=>[r.ma_mon,Number(r.diem)])),
-    ma_nguoi_dung: user.ma_nguoi_dung,
-    ten_dang_nhap: user.ten_dang_nhap,
+    id: user.id,
+    username: user.username,
     email: user.email,
-    ten_hien_thi: user.ten_hien_thi,
-    khung_avatar: user.khung_avatar,
-    google_lien_ket: Boolean(user.google_sub),
-    google_email: user.google_sub ? user.google_email : null,
-    co_mat_khau: user.co_mat_khau !== false && user.co_mat_khau !== 0,
-    phu_kien_dang_dung: require('./inventory.service').itemFor(user.phu_kien_dang_dung),
-    vai_tro: user.vai_tro,
-    tong_diem_kinh_nghiem: user.tong_diem_kinh_nghiem,
-    danh_hieu: deriveRankTitle(user.tong_diem_kinh_nghiem),
-    cap_do: deriveUserLevel(user.tong_diem_kinh_nghiem),
-    tien_do_cap_do: levelProgress(user.tong_diem_kinh_nghiem),
-    xu_tri_thuc: user.xu_tri_thuc,
-    chuoi_streak_ngay: user.chuoi_streak_ngay,
-    chuoi_thang_arena: typeof user.chuoi_thang_arena === 'number' ? user.chuoi_thang_arena : 0,
-    chuoi_thang_cao_nhat_arena: typeof user.chuoi_thang_cao_nhat_arena === 'number' ? user.chuoi_thang_cao_nhat_arena : 0,
-    ngay_hoat_dong_cuoi: user.ngay_hoat_dong_cuoi,
-    che_do_giao_dien: user.che_do_giao_dien,
-    bat_am_thanh: Boolean(user.bat_am_thanh),
-    cai_dat_am_thanh: parsePreference(user.cai_dat_am_thanh),
-    tien_do_huong_dan: parsePreference(user.tien_do_huong_dan),
-    thu_cung_dang_dung: require('./pet.service').formatPet(activePet)
+    display_name: user.display_name,
+    role: user.role,
+    created_at: user.created_at,
+    xp: user.xp,
+    coin_balance: user.coin_balance,
+    streak_days: user.streak_days,
+    last_active_date: user.last_active_date,
+    equipped_pet_id: user.equipped_pet_id,
+    equipped_accessory_id: user.equipped_accessory_id,
+    google_linked: Boolean(user.google_sub),
+    google_verified_email: user.google_verified_email,
+    has_password: user.password_hash !== null,
+    level: deriveUserLevel(user.xp),
+    level_progress: levelProgress(user.xp),
+    rank_title: deriveRankTitle(user.xp),
+    rank_scores: details.rank_scores,
+    rank_win_streak: winStreak,
+    rank_best_win_streak: bestWinStreak,
+    equipped_pet: equippedPet && { ...equippedPet, frontend_id: petDisplay?.id ?? equippedPet.id, icon: petDisplay?.icon ?? '🐾' },
+    equipped_accessory: details?.equipped_accessory ?? null,
+    theme: details?.theme ?? 'DARK',
+    sound_enabled: details?.sound_enabled ?? true,
+    sound_config: details?.sound_config ?? null,
+    tutorial_progress: details?.tutorial_progress ?? null
   };
 }
 
-/**
- * Register a new user
- */
-async function register({ ten_dang_nhap, email, mat_khau, ten_hien_thi }) {
-  if (!ten_dang_nhap || !mat_khau) {
-    throw new Error('Vui lòng điền đầy đủ tên đăng nhập hoặc email và mật khẩu.');
-  }
-
-  let finalUsername = String(ten_dang_nhap).trim().toLowerCase();
-  let finalEmail = (email || '').trim().toLowerCase();
-
-  // If user typed an email into username field
-  if (finalUsername.includes('@')) {
-    if (!finalEmail) finalEmail = finalUsername;
-    finalUsername = finalUsername.split('@')[0];
-  }
-
-  if (!finalEmail) {
-    finalEmail = `${finalUsername}@hocvien.tok.vn`;
-  }
-
-  // Check unique username & email (case-insensitive)
-  const existing = await db.queryOne(
-    'SELECT ma_nguoi_dung FROM nguoi_dung WHERE LOWER(ten_dang_nhap) = LOWER($1) OR LOWER(email) = LOWER($2)',
-    [finalUsername, finalEmail]
-  );
-  if (existing) {
-    throw new Error('Tên đăng nhập hoặc email đã được sử dụng.');
-  }
-
-  validatePassword(mat_khau, [finalUsername, finalEmail]);
-  const mat_khau_hash = await hashPassword(mat_khau);
-  const ma_nguoi_dung = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-  const displayName = ten_hien_thi ? String(ten_hien_thi).trim() : String(ten_dang_nhap).trim();
-
-  // Insert user: 0 EXP, 0 coins, 0 streak, NULL last active date until first login/activity
-  await db.execute(`
-    INSERT INTO nguoi_dung (
-      ma_nguoi_dung, ten_dang_nhap, email, mat_khau_hash, ten_hien_thi,
-      khung_avatar, vai_tro, tong_diem_kinh_nghiem, xu_tri_thuc, chuoi_streak_ngay,
-      ngay_hoat_dong_cuoi, che_do_giao_dien, bat_am_thanh
-    ) VALUES ($1, $2, $3, $4, $5, 'khung_khoi_dau', 'NGUOI_HOC', 0, 0, 0, NULL, 'TOI', $6)
-  `, [ma_nguoi_dung, finalUsername, finalEmail, mat_khau_hash, displayName, true]);
-
-  // Grant starting pet Sparky
-  const ma_so_huu = `own_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-  await db.execute(`
-    INSERT INTO thu_cung_so_huu (ma_so_huu, ma_nguoi_dung, ma_thu_cung, dang_kich_hoat)
-    VALUES ($1, $2, 'pet_sparky', $3)
-  `, [ma_so_huu, ma_nguoi_dung, true]);
-
-  const newUser = await db.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1', [ma_nguoi_dung]);
-  const token = generateToken(newUser);
-  const profile = await formatUserResponse(newUser);
-
-  return { token, nguoi_dung: profile };
+function normalizeIdentifier(value) {
+  return typeof value === 'string' ? value.trim().toLowerCase() : '';
 }
 
-/**
- * Login user and lazily evaluate streak
- */
-async function login({ ten_dang_nhap, mat_khau, currentDate }) {
-  if (!ten_dang_nhap || !mat_khau) {
+function validateDisplayName(value) {
+  const name = typeof value === 'string' ? value.trim() : '';
+  if (!name || name.length > 100) throw new Error('Tên hiển thị cần có từ 1 đến 100 ký tự.');
+  return name;
+}
+
+async function createAccount(tx, { username, email, display_name, password_hash = null,
+  google_sub = null, google_verified_email = null }) {
+  const user = await tx.queryOne(
+    'INSERT INTO users (username, email, display_name, password_hash, google_sub, google_verified_email)'
+      + ' VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+    [username, email, display_name, password_hash, google_sub, google_verified_email]
+  );
+  await tx.execute('INSERT INTO user_settings (user_id) VALUES ($1)', [user.id]);
+  await tx.execute("INSERT INTO user_pets (user_id, pet_id) VALUES ($1, 'pet_sparky')", [user.id]);
+  return tx.queryOne("UPDATE users SET equipped_pet_id = 'pet_sparky' WHERE id = $1 RETURNING *", [user.id]);
+}
+
+async function register({ username, email, password, display_name }) {
+  let accountName = normalizeIdentifier(username);
+  let accountEmail = normalizeIdentifier(email);
+  if (accountName.includes('@')) {
+    accountEmail ||= accountName;
+    accountName = accountName.split('@', 1)[0];
+  }
+  if (!accountName || accountName.length > 100) {
+    throw new Error('Vui lòng nhập tên đăng nhập hợp lệ.');
+  }
+  accountEmail ||= accountName + '@hocvien.tok.vn';
+  if (accountEmail.length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountEmail)) {
+    throw new Error('Vui lòng nhập email hợp lệ.');
+  }
+  const displayName = validateDisplayName(display_name || username);
+  validatePassword(password, [accountName, accountEmail]);
+  const passwordHash = await hashPassword(password);
+
+  try {
+    const user = await db.transaction(tx => createAccount(tx, {
+      username: accountName, email: accountEmail, display_name: displayName, password_hash: passwordHash
+    }));
+    return { token: generateToken(user, { auth_method: 'PASSWORD' }), user: await formatUserResponse(user) };
+  } catch (error) {
+    if (error.code === '23505' && ['users_username_key', 'users_email_key'].includes(error.constraint)) {
+      throw new Error('Tên đăng nhập hoặc email đã được sử dụng.');
+    }
+    throw error;
+  }
+}
+
+async function login({ username, password }) {
+  const identifier = normalizeIdentifier(username);
+  if (!identifier || typeof password !== 'string' || !password) {
     throw new Error('Vui lòng nhập tên đăng nhập hoặc email và mật khẩu.');
   }
-
-  const identifier = String(ten_dang_nhap).trim().toLowerCase();
-  const user = await db.queryOne('SELECT * FROM nguoi_dung WHERE LOWER(ten_dang_nhap) = LOWER($1) OR LOWER(email) = LOWER($1) ORDER BY tong_diem_kinh_nghiem DESC, tao_luc ASC', [identifier]);
-  if (!user) {
+  const user = await db.queryOne(
+    'SELECT * FROM users WHERE username = $1 OR email = $1 ORDER BY xp DESC, created_at, id LIMIT 1',
+    [identifier]
+  );
+  if (!user || user.disabled_at || user.role === 'SYSTEM' || !await verifyPassword(password, user.password_hash)) {
     throw new Error('Tài khoản hoặc mật khẩu không chính xác.');
   }
-
-  const isMatch = user.co_mat_khau !== false && user.co_mat_khau !== 0 && await verifyPassword(mat_khau, user.mat_khau_hash);
-  if (!isMatch) {
-    throw new Error('Tài khoản hoặc mật khẩu không chính xác.');
-  }
-
-  return issueSession(user,currentDate);
+  return issueSession(user, { auth_method: 'PASSWORD' });
 }
-async function issueSession(user,currentDate) {
-  const result = await withUserLock(user.ma_nguoi_dung, () => db.transaction(async tx => {
-    const freshUser = await tx.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1' + (db.isPostgres ? ' FOR UPDATE' : ''),[user.ma_nguoi_dung]);
-    if(!freshUser)throw new Error('Tài khoản không còn tồn tại.');
-    const today = toVietnamDateString(currentDate ? new Date(currentDate) : new Date());
-    const streak = evaluateStreak(freshUser.ngay_hoat_dong_cuoi,today,freshUser.chuoi_streak_ngay);
-    if(streak.shouldUpdateDate){
-      await tx.execute('UPDATE nguoi_dung SET chuoi_streak_ngay = $1, ngay_hoat_dong_cuoi = $2, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $3',[streak.newStreak,streak.todayStr,freshUser.ma_nguoi_dung]);
-      freshUser.chuoi_streak_ngay=streak.newStreak;freshUser.ngay_hoat_dong_cuoi=streak.todayStr;
-      if(streak.streakIncremented){
-        const reward=await mutateCoinsInTransaction(tx,freshUser.ma_nguoi_dung,5*streak.newStreak,'THUONG_STREAK','Thưởng chuỗi học '+streak.newStreak+' ngày liên tiếp');
-        freshUser.xu_tri_thuc=reward.newBalance;
+
+async function issueSession(user, options = {}) {
+  const result = await db.transaction(async tx => {
+    const current = await tx.queryOne('SELECT * FROM users WHERE id = $1 FOR UPDATE', [user.id]);
+    assertInteractiveUser(current);
+    if (current.session_version !== user.session_version || current.password_hash !== user.password_hash
+        || current.google_sub !== user.google_sub || current.google_verified_email !== user.google_verified_email) {
+      throw new Error('Thông tin đăng nhập đã thay đổi. Vui lòng đăng nhập lại.');
+    }
+
+    const { now } = await tx.queryOne('SELECT clock_timestamp() AS now');
+    const streak = evaluateStreak(current.last_active_date, toVietnamDateString(now), current.streak_days);
+    if (streak.shouldUpdateDate) {
+      await tx.execute('UPDATE users SET streak_days = $1, last_active_date = $2 WHERE id = $3',
+        [streak.newStreak, streak.todayStr, current.id]);
+      current.streak_days = streak.newStreak;
+      current.last_active_date = streak.todayStr;
+      if (streak.streakIncremented) {
+        const reward = await mutateCoinsInTransaction(tx, current.id, 5 * streak.newStreak, 'STREAK_REWARD', {
+          note: 'Thưởng chuỗi học ' + streak.newStreak + ' ngày liên tiếp',
+          occurred_at: now
+        });
+        current.coin_balance = reward.coin_balance;
       }
     }
-    return {user:freshUser,streak};
-  }));
-  return {token:generateToken(result.user),nguoi_dung:await formatUserResponse(result.user),streak_info:result.streak};
+    return { user: current, streak };
+  });
+
+  return {
+    token: generateToken(result.user, options),
+    user: await formatUserResponse(result.user),
+    streak_info: result.streak
+  };
 }
 
-/**
- * Get current profile by userId
- */
-async function getCurrentUser(ma_nguoi_dung) {
-  const user = await db.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1', [ma_nguoi_dung]);
-  if (!user) throw new Error('Không tìm thấy người dùng.');
-  return await formatUserResponse(user);
+async function getCurrentUser(userId) {
+  const user = await db.queryOne('SELECT * FROM users WHERE id = $1', [userId]);
+  assertInteractiveUser(user);
+  return formatUserResponse(user);
 }
 
-/**
- * Update user settings
- */
-async function updateSettings(ma_nguoi_dung, { che_do_giao_dien, bat_am_thanh, ten_hien_thi, cai_dat_am_thanh, tien_do_huong_dan }) {
-  return withUserLock(ma_nguoi_dung, async () => {
-  const user = await db.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1', [ma_nguoi_dung]);
-  if (!user) throw new Error('Người dùng không tồn tại.');
-
-  const newTheme = che_do_giao_dien || user.che_do_giao_dien;
-  if (!['TOI', 'SANG'].includes(newTheme)) throw new Error('Chế độ giao diện không hợp lệ.');
-  const newSound = bat_am_thanh !== undefined ? Boolean(bat_am_thanh) : Boolean(user.bat_am_thanh);
-  const newName = ten_hien_thi || user.ten_hien_thi;
-  if (cai_dat_am_thanh !== undefined) {
-    if (!cai_dat_am_thanh || typeof cai_dat_am_thanh !== 'object') throw new Error('Cài đặt âm thanh không hợp lệ.');
-    const audio = {};
-    for (const key of ['quiz','reward','battle','outcome','bgm']) if (typeof cai_dat_am_thanh[key] === 'boolean') audio[key] = cai_dat_am_thanh[key];
-    await db.execute('UPDATE nguoi_dung SET cai_dat_am_thanh = $1 WHERE ma_nguoi_dung = $2', [JSON.stringify(audio), ma_nguoi_dung]);
+function validateSoundConfig(config) {
+  if (config === null) return null;
+  if (typeof config !== 'object' || Array.isArray(config) ||
+      Object.entries(config).some(([key, value]) => !allowedAudioChannels.has(key) || typeof value !== 'boolean')) {
+    throw new Error('Cài đặt âm thanh không hợp lệ.');
   }
-  if (tien_do_huong_dan !== undefined) {
-    const tour = tien_do_huong_dan;
-    if (!tour || typeof tour.step !== 'string' || tour.step.length > 100 || !['desktop','mobile'].includes(tour.layout)) throw new Error('Tiến độ hướng dẫn không hợp lệ.');
-    if (tour.context && (typeof tour.context !== 'object' || Array.isArray(tour.context) || JSON.stringify(tour.context).length > 65536)) throw new Error('Tiến độ hướng dẫn quá lớn hoặc không hợp lệ.');
-    await db.execute('UPDATE nguoi_dung SET tien_do_huong_dan = $1 WHERE ma_nguoi_dung = $2',
-      [JSON.stringify({ version: 2, step: tour.step, layout: tour.layout, completed: Boolean(tour.completed),
-        context: tour.context || null }), ma_nguoi_dung]);
+  return config;
+}
+
+function validateTutorialProgress(progress) {
+  if (progress === null) return null;
+  if (!progress || typeof progress.step !== 'string' || !progress.step.trim() || progress.step.length > 100
+      || !['desktop', 'mobile'].includes(progress.layout)) {
+    throw new Error('Tiến độ hướng dẫn không hợp lệ.');
   }
+  const context = progress.context ?? null;
+  if (context !== null && (typeof context !== 'object' || Array.isArray(context)
+      || Buffer.byteLength(JSON.stringify(context), 'utf8') > 65536)) {
+    throw new Error('Tiến độ hướng dẫn quá lớn hoặc không hợp lệ.');
+  }
+  return { version: 2, step: progress.step, layout: progress.layout, completed: Boolean(progress.completed), context };
+}
 
-  await db.execute(`
-    UPDATE nguoi_dung 
-    SET che_do_giao_dien = $1, bat_am_thanh = $2, ten_hien_thi = $3, cap_nhat_luc = SYSDATETIME()
-    WHERE ma_nguoi_dung = $4
-  `, [newTheme, newSound, newName, ma_nguoi_dung]);
+async function updateSettings(userId, { theme, sound_enabled, display_name, sound_config, tutorial_progress }) {
+  if (theme !== undefined && !['LIGHT', 'DARK'].includes(theme)) {
+    throw new Error('Chế độ giao diện không hợp lệ.');
+  }
+  if (sound_enabled !== undefined && typeof sound_enabled !== 'boolean') {
+    throw new Error('Trạng thái âm thanh không hợp lệ.');
+  }
+  const settings = {
+    theme,
+    sound_enabled,
+    sound_config: sound_config === undefined ? undefined : validateSoundConfig(sound_config),
+    tutorial_progress: tutorial_progress === undefined ? undefined : validateTutorialProgress(tutorial_progress)
+  };
+  const displayName = display_name === undefined ? undefined : validateDisplayName(display_name);
 
-  return await getCurrentUser(ma_nguoi_dung);
+  return db.transaction(async tx => {
+    const user = await tx.queryOne('SELECT * FROM users WHERE id = $1 FOR UPDATE', [userId]);
+    assertInteractiveUser(user);
+    const current = await tx.queryOne(
+      'SELECT theme, sound_enabled, sound_config, tutorial_progress FROM user_settings WHERE user_id = $1',
+      [userId]
+    );
+    const next = {
+      theme: current?.theme ?? 'DARK',
+      sound_enabled: current?.sound_enabled ?? true,
+      sound_config: current?.sound_config ?? null,
+      tutorial_progress: current?.tutorial_progress ?? null
+    };
+    for (const [key, value] of Object.entries(settings)) {
+      if (value !== undefined) next[key] = value;
+    }
+    await tx.execute(
+      'INSERT INTO user_settings (user_id, theme, sound_enabled, sound_config, tutorial_progress)'
+        + ' VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id) DO UPDATE'
+        + ' SET theme = EXCLUDED.theme, sound_enabled = EXCLUDED.sound_enabled,'
+        + ' sound_config = EXCLUDED.sound_config, tutorial_progress = EXCLUDED.tutorial_progress',
+      [userId, next.theme, next.sound_enabled, next.sound_config, next.tutorial_progress]
+    );
+    if (displayName !== undefined) {
+      await tx.execute('UPDATE users SET display_name = $1 WHERE id = $2', [displayName, userId]);
+      user.display_name = displayName;
+    }
+    return formatUserResponse(user, tx);
   });
 }
 
-async function updateAccount(userId, {ten_hien_thi, ten_dang_nhap}) {
-  return withUserLock(userId, async () => {
-    const user = await db.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1',[userId]);
-    if (!user) throw new Error('Người dùng không tồn tại.');
-    const name = ten_hien_thi === undefined ? user.ten_hien_thi : String(ten_hien_thi).trim();
-    const username = ten_dang_nhap === undefined ? user.ten_dang_nhap : String(ten_dang_nhap).trim().toLowerCase();
-    if (!name || name.length > 100) throw new Error('Tên hiển thị cần có từ 1 đến 100 ký tự.');
-    if (!/^[a-z0-9_.-]{3,50}$/.test(username)) throw new Error('Tên đăng nhập gồm 3–50 chữ thường, số, dấu chấm, gạch dưới hoặc gạch ngang.');
-    const duplicate = await db.queryOne('SELECT ma_nguoi_dung FROM nguoi_dung WHERE LOWER(ten_dang_nhap) = $1 AND ma_nguoi_dung <> $2',[username,userId]);
-    if (duplicate) throw new Error('Tên đăng nhập đã được sử dụng.');
-    await db.execute('UPDATE nguoi_dung SET ten_hien_thi = $1, ten_dang_nhap = $2, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $3',[name,username,userId]);
-    const updated = {...user,ten_hien_thi:name,ten_dang_nhap:username};
-    return {nguoi_dung:await formatUserResponse(updated),token:generateToken(updated)};
-  });
+async function updateAccount(userId, { display_name, username }) {
+  const name = display_name === undefined ? undefined : validateDisplayName(display_name);
+  const accountName = username === undefined ? undefined : normalizeIdentifier(username);
+  if (accountName !== undefined && !/^[a-z0-9_.-]{3,50}$/.test(accountName)) {
+    throw new Error('Tên đăng nhập gồm 3–50 chữ thường, số, dấu chấm, gạch dưới hoặc gạch ngang.');
+  }
+  try {
+    const user = await db.transaction(async tx => {
+      const current = await tx.queryOne('SELECT * FROM users WHERE id = $1 FOR UPDATE', [userId]);
+      assertInteractiveUser(current);
+      return tx.queryOne('UPDATE users SET display_name = $1, username = $2 WHERE id = $3 RETURNING *',
+        [name ?? current.display_name, accountName ?? current.username, userId]);
+    });
+    return { user: await formatUserResponse(user), token: generateToken(user) };
+  } catch (error) {
+    if (error.code === '23505' && error.constraint === 'users_username_key') {
+      throw new Error('Tên đăng nhập đã được sử dụng.');
+    }
+    throw error;
+  }
 }
-async function changePassword(userId,{mat_khau_hien_tai,mat_khau_moi},sessionIssuedAt) {
-  return withUserLock(userId,()=>db.transaction(async tx=>{
-    const user = await tx.queryOne('SELECT * FROM nguoi_dung WHERE ma_nguoi_dung = $1'+(db.isPostgres?' FOR UPDATE':''),[userId]);
-    if (!user) throw new Error('Người dùng không tồn tại.');
-    const hasPassword = user.co_mat_khau !== false && user.co_mat_khau !== 0;
-    if (hasPassword && !await verifyPassword(mat_khau_hien_tai,user.mat_khau_hash)) throw new Error('Mật khẩu hiện tại không chính xác.');
-    if (!hasPassword && (!user.google_sub || !Number.isFinite(sessionIssuedAt) || Date.now()/1000-sessionIssuedAt>600)) throw new Error('Hãy đăng nhập lại bằng Google trước khi tạo mật khẩu.');
-    validatePassword(mat_khau_moi, [user.ten_dang_nhap, user.email]);
-    if (hasPassword && await verifyPassword(mat_khau_moi, user.mat_khau_hash)) {
+
+async function changePassword(userId, { current_password, new_password }, sessionIssuedAt, authMethod) {
+  const updated = await db.transaction(async tx => {
+    const user = await tx.queryOne('SELECT * FROM users WHERE id = $1 FOR UPDATE', [userId]);
+    assertInteractiveUser(user);
+    if (user.password_hash) {
+      if (!await verifyPassword(current_password, user.password_hash)) {
+        throw new Error('Mật khẩu hiện tại không chính xác.');
+      }
+    } else {
+      const elapsed = Date.now() / 1000 - sessionIssuedAt;
+      if (!user.google_sub || authMethod !== 'GOOGLE' || !Number.isFinite(elapsed) || elapsed < 0 || elapsed > 600) {
+        throw new Error('Hãy đăng nhập lại bằng Google trước khi tạo mật khẩu.');
+      }
+    }
+    validatePassword(new_password, [user.username, user.email, user.google_verified_email]);
+    if (user.password_hash && await verifyPassword(new_password, user.password_hash)) {
       throw new Error('Hãy chọn mật khẩu khác mật khẩu hiện tại.');
     }
-    const hash = await hashPassword(mat_khau_moi);
-    await tx.execute('UPDATE nguoi_dung SET mat_khau_hash = $1, co_mat_khau = $2, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $3',[hash,true,userId]);
-    if(db.isPostgres)await tx.execute('DELETE FROM password_recovery WHERE user_id = $1',[userId]);
-    return {updated:true};
-  }));
+    const passwordHash = await hashPassword(new_password);
+    const changedUser = await tx.queryOne(
+      'UPDATE users SET password_hash = $1, session_version = session_version + 1 WHERE id = $2 RETURNING *',
+      [passwordHash, userId]
+    );
+    await tx.execute('DELETE FROM password_resets WHERE user_id = $1', [userId]);
+    return changedUser;
+  });
+  return { updated: true, token: generateToken(updated, { auth_method: 'PASSWORD' }) };
 }
 
 module.exports = {
-  issueSession,
-  updateAccount,
   changePassword,
-  register,
-  login,
-  getCurrentUser,
-  updateSettings,
+  createAccount,
+  formatUserResponse,
   generateToken,
-  formatUserResponse
+  getCurrentUser,
+  issueSession,
+  login,
+  register,
+  updateAccount,
+  updateSettings
 };

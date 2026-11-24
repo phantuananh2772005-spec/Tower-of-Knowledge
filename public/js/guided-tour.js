@@ -62,7 +62,7 @@
       step: 'feature-tips', layout: innerWidth < 768 ? 'mobile' : 'desktop',
       completed: Boolean(progress?.completed), context: { featureTips: seen }
     };
-    queuePreferenceSave({ tien_do_huong_dan: account.tourProgress });
+    queuePreferenceSave({ tutorial_progress: account.tourProgress });
   }
 
   function view(key, force = false) {

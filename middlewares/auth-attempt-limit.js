@@ -10,8 +10,8 @@ function authAttemptLimit(req, res, next) {
     for (const [key, bucket] of buckets) if (bucket.until <= now) buckets.delete(key);
   }
 
-  const identity = typeof req.body?.ten_dang_nhap === 'string'
-    ? req.body.ten_dang_nhap.trim().toLowerCase().slice(0, 254) : '';
+  const identity = typeof req.body?.username === 'string'
+    ? req.body.username.trim().toLowerCase().slice(0, 254) : '';
   const registration = req.path === '/register';
   const limits = [[(registration ? 'register:' : 'login:') + req.ip, registration ? 8 : 40]];
   if (!registration && identity) limits.push(['account:' + identity, 10]);

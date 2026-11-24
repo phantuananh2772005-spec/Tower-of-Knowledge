@@ -3,7 +3,7 @@ const {authenticate}=require('../middlewares/auth.middleware');
 const db=require('../database/db');
 router.get('/profile/journey',authenticate,async(req,res)=>{
  try{
-  const id=req.user.ma_nguoi_dung;
+  const id=req.user.id;
   const courses=await db.query(`SELECT m.slug,m.ten_mon,p.ngay_bat_dau,p.ngay_hoan_thanh,
     COUNT(k.ma_moc)::int AS total,
     COUNT(CASE WHEN t.trang_thai IN ('HOAN_THANH','DA_HOAN_THANH') THEN 1 END)::int AS completed

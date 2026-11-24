@@ -41,11 +41,11 @@ function flushPreferences() {
 function applySavedPreferences(user) {
   window.applyingSavedPreferences = true;
   try {
-    const saved = user.cai_dat_am_thanh;
+    const saved = user.sound_config;
     const defaults = {quiz:true,reward:true,battle:true,outcome:true,bgm:false};
-    audioSettings = saved ? {...defaults,...saved} : Object.fromEntries(Object.entries(defaults).map(([key,value]) => [key, user.bat_am_thanh ? value : false]));
-    localStorage.setItem('app-theme',user.che_do_giao_dien === 'SANG' ? 'light' : 'dark');
-    document.documentElement.classList.toggle('dark',user.che_do_giao_dien !== 'SANG');
+    audioSettings = saved ? {...defaults,...saved} : Object.fromEntries(Object.entries(defaults).map(([key,value]) => [key, user.sound_enabled ? value : false]));
+    localStorage.setItem('app-theme',user.theme === 'LIGHT' ? 'light' : 'dark');
+    document.documentElement.classList.toggle('dark',user.theme !== 'LIGHT');
     syncAudioSummary();
   } finally { window.applyingSavedPreferences = false; }
 }
@@ -67,7 +67,7 @@ function renderLevelProgress() {
 window.addEventListener('resize', () => {
   if (typeof currentUserAccount === 'undefined') return;
   const admin = document.getElementById('btn-topbar-admin-portal');
-  if (admin) admin.style.display = currentUserAccount?.vai_tro === 'QUAN_TRI_VIEN' && innerWidth >= 768 ? 'flex' : 'none';
+  if (admin) admin.style.display = currentUserAccount?.role === 'ADMIN' && innerWidth >= 768 ? 'flex' : 'none';
 });
 document.addEventListener('keydown', event => {
   if ((event.key === 'Enter' || event.key === ' ') && event.target.matches('[role="button"][tabindex="0"]')) {
