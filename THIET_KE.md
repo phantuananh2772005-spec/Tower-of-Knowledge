@@ -1,6 +1,6 @@
 # Thiết kế PostgreSQL V1 · Tháp Tri Thức
 
-**Bước 1, bản chờ duyệt ngày 24/11/2026.** Đích là PostgreSQL local `thaptrithuc_v1` trên nhánh `local-pg-v1`. Thiết kế lấy nghiệp vụ từ [LUAT_NGHIEP_VU.md](LUAT_NGHIEP_VU.md). Quyết định đã chốt gồm ẩn khiên, sát thương chung cho mọi Pet, lưu từng lần làm và chi tiết đối chiếu Admin, giữ thưởng thực nhận theo trận, và chỉ cho mốc thuần lý thuyết hoàn thành qua phần đọc.
+**Bước 1, bản sửa chờ duyệt lần cuối ngày 24/11/2026.** Đích là PostgreSQL local `thaptrithuc_v1` trên nhánh `local-pg-v1`. Thiết kế lấy nghiệp vụ từ [LUAT_NGHIEP_VU.md](LUAT_NGHIEP_VU.md). Quyết định đã chốt gồm ẩn khiên, sát thương chung cho mọi Pet, lưu từng lần làm và chi tiết đối chiếu Admin, giữ thưởng thực nhận theo trận, và chỉ cho mốc thuần lý thuyết hoàn thành qua phần đọc.
 
 Thiết kế dùng các tính năng có trong PostgreSQL 16. Mọi tên vật lý là tiếng Anh, ASCII snake_case và tên bảng số nhiều. Bước này chỉ mô tả schema, cơ chế toàn vẹn và chuẩn kiểm thử. DDL, seed và sửa ứng dụng bắt đầu sau các điểm duyệt đã nêu trong yêu cầu.
 
@@ -11,9 +11,9 @@ Thiết kế dùng các tính năng có trong PostgreSQL 16. Mọi tên vật l�
 | **HP và tổng sát thương** | HP thực ra suy được từ 100 HP ban đầu, sát thương đã ghi của đối thủ và trạng thái đầu hàng. Khiên đã ẩn, sát thương không phụ thuộc Pet. Dùng view HP có sàn 0. Đây là chỗ chủ động bỏ cột `match_players.hp` để theo P2. Test sẽ chặn sát thương âm và xác nhận không thể ghi HP tùy ý qua view. |
 | **Xu thực nhận của trận, mùa và mốc** | Sổ Xu là nguồn duy nhất của khoản tiền thực đã cấp. FK có kiểu tới trận/người, mùa/người hoặc mốc cho phép lấy lại đúng khoản trên giao diện. Giữ EXP và delta hạng thực tế trong `match_players`, vì tổng tuần, tổng EXP và điểm hiện tại không tái tạo chúng. Giữ hạng đã công bố trong `season_results`, tính Xu khi đọc từ ledger. |
 | **Ngày và trạng thái tiến độ** | `milestone_progress.completed_at` đã phân biệt mở và xong. Cột `status` thứ hai và chuỗi “3/5” được suy trong view. Ngày ghi danh có chức năng sắp xếp nên được giữ. Mốc hoàn thành của môn không tạo thêm cột. |
-| **Câu đã phát và các lần trả lời** | Bổ sung quan hệ câu đã phát vì mẫu số chấm gồm cả câu bỏ trống. Lượt có khóa phiên–số lượt để giữ nhiều lần làm cùng câu. Tách dòng token/cặp và nhật ký tra cứu phục vụ Admin. Điều này giữ đủ dữ liệu gốc mà không mở rộng whitelist JSONB. |
+| **Câu đã phát và các lần trả lời** | Bổ sung quan hệ câu đã phát vì mẫu số chấm gồm cả câu bỏ trống. Lượt có khóa phiên–số lượt để giữ nhiều lần làm cùng câu. Token và cặp lưu trong JSONB response của lượt. Sự kiện tra cứu vẫn là dòng riêng để Admin xem từng thời điểm. Hai ngoại lệ JSONB đã được duyệt gồm response phi trắc nghiệm và cấu hình Bloom. |
 | **Google và khôi phục** | Lưu `google_verified_email` riêng vì tài khoản có thể liên kết địa chỉ khác. Hash nullable thay cờ có mật khẩu. Thử thách có một thời điểm hết hạn. Với TTL cố định 10 phút của V1, suy giờ cấp để giới hạn gửi lại 60 giây. |
-| **Cấu hình nội dung** | Giữ `milestones.kind` vì nó điều khiển đề boss và mốc lý thuyết. Cấu hình Bloom tùy chỉnh là hàng theo bước với ba tỷ lệ, vì whitelist cấm lưu nó bằng JSONB. Giữ thẻ bước của câu do Admin dùng dù truy vấn đề hiện chủ yếu lọc Bloom. Bỏ mô tả chương khỏi schema và form local nếu thiết kế được duyệt, vì chưa thấy chức năng đọc ngoài việc API trả cả bản ghi. |
+| **Cấu hình nội dung** | Giữ `milestones.kind` vì nó điều khiển đề boss và mốc lý thuyết. Cấu hình Bloom tùy chỉnh nằm ở milestones.bloom_config JSONB, mỗi bước có ba tỷ lệ cộng đúng 100. Giữ thẻ bước của câu do Admin dùng dù truy vấn đề hiện chủ yếu lọc Bloom. Bỏ mô tả chương khỏi schema và form local nếu thiết kế được duyệt, vì chưa thấy chức năng đọc ngoài việc API trả cả bản ghi. |
 | **Giá trị 0 và chấm bước** | Giá/thưởng 0 là giá/thưởng 0. Khi thưởng bước dương, giữ luật phân bổ, làm tròn và sàn hiện hành. Một bước mới chỉ tăng tiến độ nếu bằng bước đang mở. Ôn bước trước vẫn lưu lượt nhưng không trả lại thưởng. Đây là thay đổi chủ ý so với nhánh cũ chấp nhận bước lớn hơn bước đang mở. |
 | **Ghi danh và ngày nhiệm vụ** | Giữ khả năng tự ghi danh khi người đã xác thực xem lộ trình và giữ thứ tự mốc. Giữ tiêu chí nhiệm vụ theo code B0, kể cả phiên lưu dở, với tập dữ kiện thực sự đã lưu. Mốc thuần lý thuyết cập nhật tiến độ và thưởng, không tự tạo phiên giả để làm tăng nhiệm vụ. |
 
@@ -23,11 +23,11 @@ Thiết kế dùng các tính năng có trong PostgreSQL 16. Mọi tên vật l�
 |---|---:|---:|
 | Tài khoản | 3 | 27 |
 | Pet và phụ kiện | 4 | 18 |
-| Nội dung | 6 | 41 |
-| Học tập | 7 | 40 |
+| Nội dung | 5 | 37 |
+| Học tập | 6 | 36 |
 | Kinh tế | 4 | 18 |
 | Đấu trường | 7 | 33 |
-| **Tổng trước DDL** | **31** | **177** |
+| **Tổng trước DDL** | **29** | **169** |
 
 Quy ước trong danh mục. `?` là cột cho phép NULL, các cột còn lại bắt buộc. `PK` trên nhiều cột biểu thị một khóa ghép. `FK` có thể là thành phần của khóa ghép. Khóa UUID sinh cho thực thể có danh tính riêng và giữ nguyên khi đổi tên. Các quan hệ, suất đấu, hàng phiên và lượt dùng khóa nghiệp vụ ghép. `text` dùng miền CHECK thay vì lưu nhiều dạng enum cũ. Mọi timestamp là `timestamptz` và kết nối định dạng UTC. `date` dùng cho ngày địa phương khi bản chất nghiệp vụ là ngày.
 
@@ -113,17 +113,9 @@ Chương nằm trong một môn.
 
 Một mục học thuần lý thuyết, luyện tập hoặc boss.
 
-- Cột `id uuid PK`, `chapter_id uuid FK`, `title text`, `kind text`, `theory_markdown text?`, `status text`, `sort_order int`, `reward_xp int`, `reward_coins int`, `step_count smallint`, `questions_per_step smallint`.
-- Ràng buộc và căn cứ giữ cột. FK chapters RESTRICT. UNIQUE (chapter_id,sort_order). kind THEORY/QUIZ/BOSS. Thứ tự và thưởng ≥0. THEORY dùng 0 bước và 0 câu mỗi bước. QUIZ/BOSS dùng cả hai >0. Loại quyết định cách lấy đề và điều kiện hoàn thành. Thưởng và số lượng được đọc khi cấp đề/chấm thưởng. Tên, lý thuyết và thứ tự được hiển thị.
+- Cột `id uuid PK`, `chapter_id uuid FK`, `title text`, `kind text`, `theory_markdown text?`, `status text`, `sort_order int`, `reward_xp int`, `reward_coins int`, `step_count smallint`, `questions_per_step smallint`, `bloom_config jsonb?`.
+- Ràng buộc và căn cứ giữ cột. FK chapters RESTRICT. UNIQUE (chapter_id,sort_order). kind THEORY/QUIZ/BOSS. Thứ tự và thưởng ≥0. THEORY dùng 0 bước và 0 câu mỗi bước. QUIZ/BOSS dùng cả hai >0. Loại quyết định cách lấy đề và điều kiện hoàn thành. Thưởng và số lượng được đọc khi cấp đề/chấm thưởng. Tên, lý thuyết và thứ tự được hiển thị. bloom_config NULL dùng bộ mặc định. CHECK kiểm cấu hình cùng hàng với step_count theo mục Bloom bên dưới.
 - Đối chiếu `services/course.service.js:203–217,269–431,832–925`, `public/admin/index.html:725–747`.
-
-#### `milestone_bloom_overrides`
-
-Trọng số Bloom tùy chỉnh cho một bước, nếu có.
-
-- Cột `milestone_id uuid PK FK`, `step_no smallint PK`, `remember_pct smallint`, `understand_pct smallint`, `apply_pct smallint`.
-- Ràng buộc và căn cứ giữ cột. FK milestones CASCADE vì đây là cấu hình con thuần. CHECK các tỷ lệ 0..100 và tổng 100. Trigger khóa mốc và kiểm bước 1..step_count khi sửa tỷ lệ/số bước. Thiếu dòng dùng hồ sơ mặc định từ luật Bước 0, không lưu bản sao mặc định.
-- Đối chiếu `services/course.service.js:269–354,416–431`.
 
 #### `questions`
 
@@ -138,7 +130,7 @@ Một phiên bản câu dùng được trong học, arena và Cực Hạn.
 Một phương án trắc nghiệm tự nhiên theo vị trí.
 
 - Cột `question_id uuid PK FK`, `position smallint PK`, `text text`, `is_correct bool`.
-- Ràng buộc và căn cứ giữ cột. FK questions RESTRICT. position 0..3 và text có nội dung. Unique lọc question_id khi is_correct. Trigger hoãn kiểm đúng 4 phương án và đúng 1 lựa chọn đúng cho câu MCQ, 0 phương án cho loại khác. Phương án và dấu đúng là nguồn chấm có thật, không lưu chỉ số đáp án đúng ở questions.
+- Ràng buộc và căn cứ giữ cột. FK questions RESTRICT. position 0..3 và text có nội dung. Unique lọc question_id khi is_correct. Trigger hoãn bảo đảm đúng một phương án đúng cho câu MCQ. Backend kiểm đủ bốn phương án cho MCQ và không có phương án cho loại khác khi phát hành câu. Phương án và dấu đúng là nguồn chấm có thật, không lưu chỉ số đáp án đúng ở questions.
 - Đối chiếu `core/rules/progression.rules.js:89–99`, `services/course.service.js:476–486`.
 
 ### Học tập
@@ -156,7 +148,7 @@ Ghi danh của người học ở một môn.
 Tiến độ hiện hành và EXP thực nhận theo mốc.
 
 - Cột `user_id uuid PK FK`, `milestone_id uuid PK FK`, `current_step smallint?`, `xp_earned int`, `completed_at timestamptz?`, `memory jsonb?`.
-- Ràng buộc và căn cứ giữ cột. FK users/milestones RESTRICT. Index (user_id,completed_at) và milestone_id. Không có dòng là khóa, đã có dòng là mở, completed_at có giá trị là đã xong. Tránh lặp cột status và chuỗi số bước. current_step chỉ cần ở QUIZ/BOSS chưa xong. Trigger khóa mốc/ghi danh để kiểm phạm vi và step. EXP là khoản thực đã ghi theo mốc. Xu xem từ ledger có milestone_id. memory JSONB object per-question dùng ôn thích nghi.
+- Ràng buộc và căn cứ giữ cột. FK users/milestones RESTRICT. Index (user_id,completed_at) và milestone_id. Không có dòng là khóa, đã có dòng là mở, completed_at có giá trị là đã xong. Tránh lặp cột status và chuỗi số bước. current_step chỉ cần ở QUIZ/BOSS chưa xong. Backend khóa mốc và ghi danh trong transaction để kiểm phạm vi và giới hạn current_step. EXP là khoản thực đã ghi theo mốc. Xu xem từ ledger có milestone_id. memory JSONB object per-question dùng ôn thích nghi.
 - Đối chiếu `services/course.service.js:220–248,619–745,832–925`, `public/admin/index.html:2850–2875,2910–2934`.
 
 #### `study_sessions`
@@ -179,17 +171,9 @@ Danh sách câu chính thức được phát trong phiên.
 
 Một lượt trả lời thực tế, kể cả lần thử lại cùng câu.
 
-- Cột `session_id uuid PK FK`, `attempt_no int PK`, `question_position int FK`, `is_correct bool`, `seconds numeric(10,3)?`, `selected_option_position smallint?`, `submitted_text text?`.
-- Ràng buộc và căn cứ giữ cột. FK ghép (session_id,question_position) tới câu đã phát RESTRICT. attempt_no ≥1, seconds ≥0 nếu có, selected_option_position 0..3 nếu có. Trigger kiểm phương án thuộc câu đã phát. Lưu chỉ số khi là đáp án gốc MCQ, text khi điền từ hoặc Cực Hạn dùng lựa chọn chuyển thể. Nội dung cùng loại không ghi cả hai. Số lần tra cứu tính từ các dòng chi tiết. Không tạo lượt giả cho câu bỏ trống.
+- Cột `session_id uuid PK FK`, `attempt_no int PK`, `question_position int FK`, `is_correct bool`, `seconds numeric(10,3)?`, `selected_option_position smallint?`, `submitted_text text?`, `response jsonb?`.
+- Ràng buộc và căn cứ giữ cột. FK ghép (session_id,question_position) tới câu đã phát RESTRICT. attempt_no ≥1, seconds ≥0 nếu có, selected_option_position 0..3 nếu có. CHECK đúng một trong selected_option_position, submitted_text, response. Dạng MCQ gốc lưu chỉ số. Điền từ hoặc lựa chọn chuyển thể Cực Hạn lưu text. JSONB lưu token, cặp hoặc dấu TIMEOUT. Backend kiểm dạng đáp án và lựa chọn khớp câu đã phát trong cùng transaction. Số lần tra cứu tính từ các dòng chi tiết. Không tạo lượt giả cho câu bỏ trống.
 - Đối chiếu `public/index.html:7077–7080,7124–7136,8355–8382`, `services/admin.service.js:311–367`, `services/extreme.service.js:353–359`.
-
-#### `session_answer_items`
-
-Token đã sắp hoặc cặp đã nối của một lượt học.
-
-- Cột `session_id uuid PK FK`, `attempt_no int PK FK`, `item_no int PK`, `value_text text`, `paired_value_text text?`.
-- Ràng buộc và căn cứ giữ cột. FK ghép tới session_answers CASCADE vì dòng con thuần của lượt. CHECK item_no ≥1. Trigger kiểm kiểu câu. ORDERING có token và cặp thứ hai NULL. MATCHING dùng cả hai vế. Với các hình thức còn lại không có dòng con này. Admin dựng lại câu làm theo thứ tự mục.
-- Đối chiếu `public/admin/index.html:2771–2824`, `core/rules/progression.rules.js:49–88`.
 
 #### `session_answer_lookups`
 
@@ -203,10 +187,10 @@ Từng lần mở lý thuyết để tra cứu trong câu.
 
 #### `quests`
 
-Định nghĩa ba nhiệm vụ có chu kỳ ngày.
+Danh mục nhiệm vụ có chu kỳ ngày.
 
 - Cột `code text PK`, `reward_coins int`, `reward_xp int`.
-- Ràng buộc và căn cứ giữ cột. CHECK ba mã STUDY/BATTLE/PET_CARE và thưởng ≥0. Seed từ luật B0. Điều kiện thao tác do hàm claim kiểm ở DB. Quà tân thủ có quy tắc một lần riêng và không lặp theo ngày.
+- Ràng buộc và căn cứ giữ cột. PK code là danh mục mã hiệu lực. CHECK mã không rỗng và thưởng ≥0. Seed STUDY/BATTLE/PET_CARE từ Bước 0, không giới hạn cứng các mã này trong schema. Backend kiểm điều kiện theo mã rồi dùng FK từ quest_claims bảo đảm mã thuộc danh mục. Quà tân thủ có quy tắc một lần riêng.
 - Đối chiếu `services/quest.service.js:5–28`.
 
 #### `quest_claims`
@@ -214,7 +198,7 @@ Từng lần mở lý thuyết để tra cứu trong câu.
 Bằng chứng đã nhận một nhiệm vụ trong ngày Việt Nam.
 
 - Cột `user_id uuid PK FK`, `quest_code text PK FK`, `vn_date date PK`.
-- Ràng buộc và căn cứ giữ cột. FK users/quests RESTRICT. Index (vn_date,quest_code) cho báo cáo ngày và quest_code cho FK. vn_date lấy một lần từ thời điểm UTC do DB chọn lúc xử lý. Không cần thêm claimed_at vì UI chỉ quan tâm ngày. Chỉ hàm cấp thưởng được ghi khi đủ điều kiện.
+- Ràng buộc và căn cứ giữ cột. FK users/quests RESTRICT. Index (vn_date,quest_code) cho báo cáo ngày và quest_code cho FK. vn_date lấy một lần từ thời điểm UTC do DB chọn lúc xử lý. Không cần thêm claimed_at vì UI chỉ quan tâm ngày. Backend ghi sau khi kiểm đủ điều kiện và giữ khóa người dùng trong cùng transaction.
 - Đối chiếu `services/quest.service.js:7–39`, `public/index.html:8690–8725`.
 
 #### `weekly_xp_usage`
@@ -222,7 +206,7 @@ Bằng chứng đã nhận một nhiệm vụ trong ngày Việt Nam.
 EXP thi đấu đã được cấp trong tuần của một người.
 
 - Cột `user_id uuid PK FK`, `week_start date PK`, `xp int`.
-- Ràng buộc và căn cứ giữ cột. FK users RESTRICT. CHECK week_start là thứ Hai, xp 0..1500. Key người–tuần chặn trùng trạng thái. Append lịch nhiều tuần chỉ là kết quả tự nhiên của khóa tuần. XP tổng gồm nhóm ngoài quota, không dùng thay xp của tuần.
+- Ràng buộc và căn cứ giữ cột. FK users RESTRICT. CHECK week_start là thứ Hai và xp từ 0 đến giới hạn V1 ở mục Hằng số. Key người–tuần chặn trùng trạng thái. Append lịch nhiều tuần chỉ là kết quả tự nhiên của khóa tuần. XP tổng gồm nhóm ngoài quota, không dùng thay xp của tuần.
 - Đối chiếu `services/economy.service.js:99–124`, `public/index.html:3066–3067`.
 
 #### `coin_ledger`
@@ -264,7 +248,7 @@ Hạng đã công bố của một người đủ điều kiện khi chốt mùa
 Trận 1v1 đã mở và kết quả vòng đời của nó.
 
 - Cột `id uuid PK`, `subject_id uuid FK`, `season_no int? FK`, `mode text`, `status text`, `started_at timestamptz`, `finished_at timestamptz?`, `finish_reason text?`.
-- Ràng buộc và căn cứ giữ cột. FK subjects/seasons RESTRICT. Mode RANKED/CASUAL/PRACTICE. Trạng thái ACTIVE/FINISHED/CANCELLED. ACTIVE không có giờ/lý do chốt. Trạng thái cuối bắt buộc giờ và lý do hợp lệ. Chỉ trận RANKED FINISHED gắn mùa, trigger kiểm finished_at trong đúng cửa sổ. started_at dùng đồng hồ hiệp đầu. finished_at dùng nhiệm vụ, bảng hạng và rollover. Index (season_no,subject_id,finished_at), (status,finished_at). Người thắng lấy từ match_players.
+- Ràng buộc và căn cứ giữ cột. FK subjects/seasons RESTRICT. Mode RANKED/CASUAL/PRACTICE. Trạng thái ACTIVE/FINISHED/CANCELLED. ACTIVE không có giờ/lý do chốt. Trạng thái cuối bắt buộc giờ và lý do hợp lệ. CHECK bắt buộc mùa cho RANKED FINISHED và để NULL khi chưa có mùa theo quy tắc. Backend kiểm cửa sổ của finished_at dưới khóa mùa khi chốt. started_at dùng đồng hồ hiệp đầu. finished_at dùng nhiệm vụ, bảng hạng và rollover. Index (season_no,subject_id,finished_at), (status,finished_at). Người thắng lấy từ match_players.
 - Đối chiếu `services/arena.service.js:15–29,284–296,442–509`, `services/quest.service.js:16–17`.
 
 #### `match_players`
@@ -272,7 +256,7 @@ Trận 1v1 đã mở và kết quả vòng đời của nó.
 Hai suất của một trận và khoản thực cấp theo từng người.
 
 - Cột `match_id uuid PK FK`, `slot smallint PK`, `user_id uuid FK`, `result text?`, `xp_awarded int`, `rating_delta int`.
-- Ràng buộc và căn cứ giữ cột. FK matches/users RESTRICT. CHECK slot 1/2, xp_awarded ≥0. UNIQUE (match_id,user_id), unique lọc match_id khi WIN. Index (user_id,match_id). Trận mở/hủy không có result và thưởng. Chốt có WIN/LOSE hoặc DRAW/DRAW. XP thực nhận và delta có thể âm ở phần hạng, không suy được từ tổng tuần/điểm hiện tại. Xu từ ledger, HP từ view.
+- Ràng buộc và căn cứ giữ cột. FK matches/users RESTRICT. CHECK slot 1/2, xp_awarded ≥0. UNIQUE (match_id,user_id), unique lọc match_id khi WIN. Index (user_id,match_id). Trận mở/hủy không có result và thưởng. Chốt có WIN/LOSE hoặc DRAW/DRAW. XP thực nhận không âm và delta điểm hạng có thể âm. Hai giá trị không suy được từ tổng tuần hoặc điểm hiện tại. Xu từ ledger, HP từ view.
 - Đối chiếu `services/arena.service.js:442–509`, `public/index.html:4925–4951,5041`.
 
 #### `match_rounds`
@@ -280,7 +264,7 @@ Hai suất của một trận và khoản thực cấp theo từng người.
 Một câu được chọn ở một hiệp trong trận.
 
 - Cột `match_id uuid PK FK`, `round_no smallint PK`, `question_id uuid FK`.
-- Ràng buộc và căn cứ giữ cột. FK matches/questions RESTRICT. round_no 1..10, UNIQUE (match_id,question_id). Index question_id. Trigger kiểm đề thuộc môn trận, câu đang hoạt động lúc phát và hiệp liên tiếp. Lưu lịch sử câu bằng FK tới phiên bản bất biến.
+- Ràng buộc và căn cứ giữ cột. FK matches/questions RESTRICT. round_no 1..10, UNIQUE (match_id,question_id). Index question_id. Backend kiểm đề đúng môn, nội dung đang ACTIVE lúc phát và hiệp liên tiếp trong transaction. Lưu lịch sử câu bằng FK tới phiên bản bất biến.
 - Đối chiếu `services/arena.service.js:58–89,113–120`.
 
 #### `match_answers`
@@ -291,7 +275,21 @@ Lượt chấm của một suất trong một hiệp.
 - Ràng buộc và căn cứ giữ cột. Hai FK ghép tới round và player cùng match_id, RESTRICT. CHECK seconds và damage ≥0. Index (match_id,slot,round_no). is_correct, thời lượng và sát thương là kết quả server đã ghi khi chấm. answered_at làm mốc hiệp kế. Không giữ chỉ số lựa chọn vì lịch sử arena không hiển thị nó, khác Admin học.
 - Đối chiếu `services/arena.service.js:236–296,351–425`, `routes/arena.routes.js:72–109`.
 
-## Miền nghiệp vụ và cơ chế kiểm tại DB
+## Hằng số nguồn của V1
+
+Bước 2 sẽ khai báo các hằng số bằng hàm SQL `IMMUTABLE` mặc định `SECURITY INVOKER` ở đầu **`database/pg-v1/001_schema.sql`**, trước các bảng và CHECK dùng chúng. Tệp này dự kiến tạo sau duyệt. Không có bảng cấu hình mới. Backend đọc các hàm khi khởi động, truyền tham số vào luật thuần, và đưa giới hạn cần hiển thị ra DTO. View và CHECK gọi cùng nguồn DB. Thiếu hằng số thì dừng khởi động, tránh giá trị JS dự phòng bị lệch.
+
+| Hằng số | Giá trị | Hàm nguồn và nơi sử dụng |
+|---|---:|---|
+| Độ dài mùa | **56 ngày** | `v1_season_length_days()`. Backend chọn mùa và view lịch mùa dùng cùng hàm. Mốc đầu từ `v1_first_season_start()` là 09/11/2026 00:00 Việt Nam. Cộng số giây cố định theo UTC để cửa sổ mùa không phụ thuộc múi giờ của phiên kết nối. |
+| Hạn mức EXP thi đấu | **1.500 EXP/tuần** | `v1_weekly_xp_limit()`. CHECK của `weekly_xp_usage`, backend cấp EXP và DTO quota dùng cùng giá trị. Tuần bắt đầu thứ Hai theo ngày Việt Nam. |
+| HP ban đầu | **100** | `v1_arena_initial_hp()`. View HP, so chốt trận và thanh HP frontend qua DTO. |
+| Sát thương cơ bản | **12** | `v1_arena_base_damage()`. Backend áp khi chấm một lượt đúng. |
+| Thưởng sát thương nhanh | **+3** | `v1_arena_fast_bonus()` và `v1_arena_fast_answer_seconds()` bằng 5 giây. Backend áp ở lượt đúng có thời lượng ≤5 giây. Lượt sai có sát thương 0. |
+
+Đây là hằng số theo phiên bản. Nếu cần đổi sau V1, dùng migration có duyệt, rà lại CHECK, lịch mùa, kết quả đã lưu và khởi động lại backend. Sát thương từng lượt đã ghi giữ nguyên.
+
+## Miền nghiệp vụ và cơ chế kiểm
 
 ### Tài khoản, trang bị và thời gian
 
@@ -302,30 +300,45 @@ Lượt chấm của một suất trong một hiệp.
 
 ### Nội dung, đáp án và tính bất biến
 
-- Bảng nội dung và danh mục dùng `ACTIVE/ARCHIVED`. Dòng con hiển thị trong luồng mới khi nó và toàn bộ tổ tiên đều ACTIVE. Cờ con lưu quyết định riêng, việc ngừng môn không ghi đè cờ chương/mốc/câu. Chỉnh nội dung lộ trình giữ ID của môn/chương/mốc và thứ tự unique, không chuyển chương/mốc sang cha khác. Quy tắc không chuyển cha giữ tính đúng của FK và của lịch sử câu theo môn. Mốc đã có lượt hoặc tiến độ giữ loại và số bước. Các phép chỉnh không làm đổi tham chiếu lịch sử vẫn thực hiện qua nghiệp vụ quản trị.
-- Câu `MULTIPLE_CHOICE` có bốn hàng `question_options` vị trí 0–3. Unique lọc bảo đảm tối đa một hàng đúng. Constraint trigger DEFERRABLE INITIALLY DEFERRED kiểm số hàng và đúng một phương án đúng khi hoàn tất transaction. Câu phi trắc nghiệm phải có 0 phương án. Trigger chạy trên câu và phương án, ở lúc kiểm hoãn luôn đọc trạng thái cuối. Ghi/chỉnh cấu trúc lấy lock cùng một hàng câu. [Constraint trigger](https://www.postgresql.org/docs/16/sql-createtrigger.html), [partial unique index](https://www.postgresql.org/docs/16/indexes-partial.html).
+- Bảng nội dung và danh mục dùng `ACTIVE/ARCHIVED`. Dòng con hiển thị trong luồng mới khi nó và toàn bộ tổ tiên đều ACTIVE. Cờ con lưu quyết định riêng, việc ngừng môn không ghi đè cờ chương/mốc/câu. Chỉnh nội dung lộ trình giữ ID của môn/chương/mốc và thứ tự unique, không chuyển chương/mốc sang cha khác. Quyền UPDATE theo cột của role runtime loại trừ khóa chính và liên kết cha. Backend khóa mốc khi kiểm lịch sử và giữ nguyên loại, số bước nếu đã có lượt hoặc tiến độ. Các phép chỉnh không làm đổi tham chiếu lịch sử vẫn thực hiện qua nghiệp vụ quản trị.
+- Câu `MULTIPLE_CHOICE` có bốn hàng `question_options` vị trí 0–3. Unique lọc bảo đảm tối đa một hàng đúng. Constraint trigger DEFERRABLE INITIALLY DEFERRED bảo đảm câu MCQ còn đúng một hàng đúng khi hoàn tất transaction. Trigger trên câu và phương án đọc trạng thái cuối. Backend kiểm đủ bốn phương án cho MCQ và không có phương án cho loại khác trong transaction phát hành. [Constraint trigger](https://www.postgresql.org/docs/16/sql-createtrigger.html), [partial unique index](https://www.postgresql.org/docs/16/indexes-partial.html).
 - `questions.type` là `MULTIPLE_CHOICE/MATCHING/FILL_BLANK/ORDERING`. `bloom_level` là `REMEMBER/UNDERSTAND/APPLY`, chuyển alias THONG_HIEU và PHAN_TICH sang cấp chuẩn của luồng chọn đề. JSONB phi trắc nghiệm là object chuẩn theo loại. MATCHING có `pairs` gồm `left/right` và ít nhất một cặp. FILL_BLANK có `sentence_template`, `options`, `blank_answer` và đúng một chỗ `{blank}`. ORDERING có `prompt`, `correct_order` và `distractors`. Validator DB dùng dữ liệu cùng hàng, xác nhận kiểu và phần tử chuỗi bắt buộc. Dữ liệu seed/admin dùng cùng hình dạng.
-- Nội dung và phương án đã phát phải bất biến kể cả phiên đang mở. V1 dùng quy tắc đơn giản cho mọi câu đã ghi. Chỉnh cấu trúc luôn phát hành bản mới và ARCHIVED bản cũ trong một transaction, backend có quyền đổi trạng thái qua hàm thay bản. Hàng option ban đầu được tạo cùng transaction với câu, sau đó option chỉ đọc. RESTRICT từ round/phiên giữ câu cũ. Điều này bảo toàn cả kết quả đã chốt và người làm đang giữ ID đề. Trang quản trị xóa bằng ARCHIVED ở cả bốn cấp. Chỉ phiên và từng lượt hợp lệ được xử lý, đáp án đúng và giải thích không có trong payload phát đề. Học gửi một lượt để server kiểm và trả phản hồi, nên vẫn có phản hồi ngay.
-- Khoanh đúng phạm vi đề bằng trigger lúc phát. STEP và MILESTONE đọc câu của mốc, BOSS đọc các mốc cùng chương, EXTREME đọc cùng môn. Kiểm cây trạng thái ACTIVE trong cùng transaction. Phiên đã phát chỉ dùng đúng bộ `study_session_questions`. Khi chấm lại do gửi trùng, khóa phiên và trả kết quả của cùng `attempt_no`. Từ chối gửi trùng khóa với câu hoặc nội dung khác. Dữ liệu trả lời và tra cứu không đổi sau chốt, app không có quyền DELETE các hàng lịch sử.
-- MCQ thông thường dùng `selected_option_position` và kiểm đã có phương án ở đúng câu đã phát. Với `FILL_BLANK` và lựa chọn chuyển thể của Cực Hạn, lưu text thực người dùng chọn. Với `ORDERING/MATCHING` không chuyển thể, ghi các item theo thứ tự. Constraint trigger hoãn kiểm hình thức phù hợp khi lượt và items được ghi cùng transaction. Lượt hết giờ ghi `is_correct=false`, không nhận option/text/items. Đối chiếu chọn sai khác với hết giờ theo sự hiện diện dữ liệu nộp. Cực Hạn có thể làm lại câu ở vòng sau, vẫn tham chiếu cùng vị trí nguồn và có attempt_no mới.
-- Phiên có mốc kéo theo môn qua chương. Phiên EXTREME có subject_id trực tiếp. CHECK row-local dựa trên kind bắt đúng một liên kết và cột bước/started_at đi kèm. Trigger kiểm bước vừa phạm vi cập nhật mốc. Người chưa ghi danh không tạo phiên học có mốc hoặc tiến độ mốc. EXTREME không cần ghi danh. Khách Cực Hạn giữ phiên tạm thời và không ghi lịch sử/thưởng, phù hợp luồng hiện tại.
+- Nội dung và phương án đã phát phải bất biến kể cả phiên đang mở. V1 dùng quy tắc đơn giản cho mọi câu đã ghi. Chỉnh cấu trúc luôn phát hành bản mới và chuyển status bản cũ sang ARCHIVED trong một transaction backend. Role runtime chỉ có UPDATE(status) trên questions, có INSERT để khởi tạo câu và phương án, và không có UPDATE/DELETE trên question_options. Backend tạo trọn bộ phương án khi thêm câu và từ chối thêm phương án vào câu đã phát hành. RESTRICT từ round/phiên giữ câu cũ. Điều này bảo toàn cả kết quả đã chốt và người làm đang giữ ID đề. Trang quản trị xóa bằng ARCHIVED ở cả bốn cấp. Chỉ phiên và từng lượt hợp lệ được xử lý, đáp án đúng và giải thích không có trong payload phát đề. Học gửi một lượt để server kiểm và trả phản hồi, nên vẫn có phản hồi ngay.
+- Backend khoanh phạm vi đề và kiểm tổ tiên ACTIVE trong transaction khi phát. STEP và MILESTONE đọc câu của mốc. BOSS đọc các mốc cùng chương. EXTREME đọc cùng môn. Lấy khóa FOR SHARE trên tổ tiên và câu theo thứ tự nhất quán để thao tác đổi trạng thái phải chờ đến khi phát đề xong. FK ghép giới hạn lượt ở câu đã phát. Khi gửi lại, backend khóa phiên và trả kết quả của cùng `attempt_no`. Từ chối trùng khóa với câu hoặc nội dung khác. App chỉ ghi và chốt qua các đường nghiệp vụ.
+- Backend chấm và kiểm kiểu khớp câu trong giao dịch ghi lượt. MCQ gốc ghi vị trí chuẩn của option trong kho câu, không ghi chỉ số hiển thị sau khi xáo. Chuyển thể của Cực Hạn và điền từ ghi nội dung đã chọn. Ghép và sắp xếp ghi response JSONB. Cực Hạn có thể gặp lại câu ở vòng sau với cùng vị trí nguồn và attempt_no mới. Câu không chơi vẫn có trong bộ đề nhưng không sinh lượt.
+- Phiên có mốc kéo theo môn qua chương. Phiên EXTREME có subject_id trực tiếp. CHECK cùng hàng theo kind bắt đúng một liên kết và cột bước/started_at đi kèm. Backend khóa và kiểm giới hạn bước, ghi danh, thao tác chốt và cập nhật tiến độ trong cùng transaction. EXTREME không cần ghi danh. Khách Cực Hạn giữ phiên tạm thời và không ghi lịch sử/thưởng.
+
+### CHECK cho hai cột JSONB mới
+
+- `milestones.bloom_config` là SQL NULL khi dùng bộ mặc định. Khi có giá trị, đó là object với khóa số bước dạng chính tắc, ví dụ `{"1":{"remember_pct":70,"understand_pct":30,"apply_pct":0}}`. Bước phải nằm trong 1..step_count. Mỗi bước có đúng ba khóa, mỗi giá trị là số nguyên JSON từ 0 đến 100 và tổng đúng 100. Bước không cấu hình tiếp tục dùng preset. Mốc THEORY có cấu hình NULL. CHECK gọi bộ kiểm thuần cùng hàng, trả false khi sai kiểu hoặc thiếu trường.
+- `session_answers` dùng `num_nonnulls(selected_option_position, submitted_text, response) = 1`. Chỉ số MCQ có miền 0..3. Văn bản cần khác rỗng sau trim. JSONB chỉ nhận một trong ba dạng `{"kind":"ORDERING","tokens":["SELECT","FROM"]}`, `{"kind":"MATCHING","pairs":[{"left":"A","right":"B"}]}`, `{"kind":"TIMEOUT"}`. Mỗi dạng chỉ có các khóa đã liệt kê. Mảng token/cặp phải có phần tử và từng phần tử phải đúng kiểu. JSON literal null và dạng thiếu khóa bị từ chối. TIMEOUT không có nội dung khác và bắt buộc `is_correct = false`. CHECK phủ riêng trường hợp SQL NULL và ép kết quả validator sai kiểu/thiếu khóa thành false để giá trị UNKNOWN không qua kiểm. Backend xác minh dạng đã chọn phù hợp câu thực tế.
 
 ### Sổ Xu, thưởng, hạn mức
 
-- Hai quyền DB riêng. Role migration sở hữu schema. Role app không có quyền trực tiếp sửa `coin_balance`, hay INSERT/UPDATE/DELETE/TRUNCATE ledger. Hàm ghi sổ nội bộ lấy khóa row người dùng, cập nhật số dư và ghi ledger trong cùng transaction. Các hàm nghiệp vụ được cấp cho app gọi có tập thao tác đã xác định. Hàm nghiệp vụ ghi sổ dùng SECURITY DEFINER với search_path cố định, dùng tên schema rõ ràng và thu EXECUTE của PUBLIC. Thêm trigger chặn UPDATE/DELETE cho ledger để bảo vệ sổ ngay cả khi quyền được cấp nhầm.
+- Role migration sở hữu schema. Role runtime có SELECT và INSERT trên ledger cùng quyền cập nhật cột coin_balance ở users theo nghiệp vụ. Thu hồi UPDATE, DELETE và TRUNCATE trên ledger. Backend lấy khóa SELECT FOR UPDATE của dòng users, tính delta, ghi ledger và cập nhật coin_balance trong cùng transaction. Nếu lỗi ở một trong hai bước thì rollback cả hai. CHECK số dư ≥0 vẫn do DB bảo vệ. Không dùng SECURITY DEFINER hoặc hàm DB để ghi sổ.
 - Enum `coin_ledger.kind`. `STREAK_REWARD/MILESTONE_REWARD/MATCH_REWARD/EXTREME_REWARD/PET_PURCHASE/ACCESSORY_PURCHASE/DAILY_QUEST_REWARD/PET_FEED/PET_STROKE/ONBOARDING_REWARD/SEASON_REWARD/ADMIN_ADJUSTMENT`. CHECK kiểm dấu delta và xác định refs cho loại có khóa. Quà miễn phí cấp quyền trực tiếp. Chi ban đầu hoặc seed có số dư dương phải đi qua sổ. Hiển thị số dư hiện tại từ users, còn số dư sau ở lịch sử nếu giữ giao diện thì WINDOW SUM theo thứ tự ID trong phạm vi người dùng. Khóa người dùng trước khi cấp ID bảo toàn thứ tự sổ của cùng tài khoản.
-- Nhận nhiệm vụ giữ khóa người dùng. Kiểm các dữ kiện trong khoảng ngày đã tính rồi INSERT quest_claims. Chỉ giao dịch tạo được khóa người–nhiệm vụ–ngày mới cộng thưởng. Trùng key là kết quả đã nhận và không đổi số dư/EXP. Hàm app sử dụng đồng hồ DB. Bản kiểm thử có thể chọn instant bằng đầu vào đặc quyền fixture để kiểm ngày, runtime không có đầu vào đó. Quà tân thủ dựa vào unique lọc của ledger. Sự kiện vuốt Pet là `PET_STROKE` với delta 0, kiểm nhiệm vụ dựa vào loại sự kiện.
+- Backend nhận nhiệm vụ dưới khóa người dùng. Đọc mã và mức thưởng từ quests, kiểm điều kiện tương ứng theo nghiệp vụ, rồi INSERT quest_claims. Chỉ giao dịch tạo được khóa người–nhiệm vụ–ngày mới trả thưởng. Trùng khóa trả kết quả đã nhận và không đổi số dư/EXP. Mã mới có thể tồn tại trong danh mục trước khi backend hỗ trợ điều kiện, khi chưa có handler thì chưa được claim. Backend dùng một thời điểm DB cho ranh giới ngày. Fixture có thể cấp instant bên trong test, endpoint runtime không nhận thời điểm do client đưa. Quà tân thủ dùng unique lọc ledger. Vuốt Pet là PET_STROKE với delta 0.
 - Chỉ hai luồng trận và EXTREME dùng weekly_xp_usage. Bên giữ lock người dùng tính phần được cấp và đồng thời cập nhật quota và tổng XP. Báo cáo trận dùng amount thực cấp ở `match_players.xp_awarded`. Mốc thuần lý thuyết chỉ thưởng khi completed_at chuyển từ NULL sang có giờ. QUIZ/BOSS cập nhật ở bước hiện tại hoặc hoàn thành toàn mốc theo chấm hợp lệ. Số dư dương hay lịch sử chữ không được dùng như chứng từ chống nộp trùng.
 - Khoản Xu thưởng trận liên hệ cả người và trận qua FK ghép, và UNIQUE theo cặp ở loại MATCH_REWARD. Xu thưởng mùa tương tự với bản kết quả mùa. Xu theo mốc tính từ tổng ledger `MILESTONE_REWARD` của cặp người–mốc. Cột điểm hạng thay đổi giữ giá trị thực sau sàn và có thể âm.
 
 ### Trận, điểm và chốt mùa
 
 - Lock nhất quán theo thứ tự khóa chốt mùa nếu cần, trận, người dùng theo UUID tăng dần. Tạo trận ACTIVE cùng hai hàng slot 1 và 2 trong một transaction. PK hai slot chặn người thứ ba ngay. Trigger hoãn trên trận và thành viên bảo đảm đủ hai sau ghi. Chế độ RANKED chặn SYSTEM. PRACTICE dùng cả trường hợp có bot và đường luyện từ REST, còn CASUAL là hai người trong phòng. Không giữ mốc tạo sảnh hay hàng chờ trong DB.
-- Trước khi mở hiệp, kiểm question_id thuộc đúng môn qua mốc/chương và đang online ở thời điểm chọn. FK ghép của lượt cùng match_id ngăn đổi trận, người, hiệp. Trigger chặn đi vào hiệp sau khi hiệp trước chưa có hai lượt. Lượt chấm server dùng đồng hồ trận/lượt và luật 12 sát thương, thêm 3 nếu đúng dưới hoặc bằng 5 giây, sai bằng 0. Ghi lượt trước rồi mới phát dữ liệu sau commit. Lượt trùng khóa trả kết quả đã lưu. Luật hiển thị hết giờ theo loại giữ từ Bước 0. Ẩn nút khiên, không lưu trạng thái khiên, không có hệ số sát thương Pet.
-- Trạng thái cuối FINISHED có lý do `KNOCKOUT/FORFEIT/TIMEOUT/DRAW` theo B0. CANCELLED biểu diễn việc dừng có chủ đích, lý do `CANCELLED`, không thắng và không thưởng. Mất kết nối sau tạo trận tiếp tục là đầu hàng như code hiện hành. Trận chưa chốt không có kết quả người chơi. FINISHED chỉ có WIN + LOSE hoặc DRAW + DRAW. Unique lọc chỉ một WIN. Chặn thay đổi kết quả terminal. Giờ thua cuộc do đầu hàng không suy từ lượt cuối, vẫn phải lưu giờ chốt trận.
-- HP ở view là `max(0, 100 - tổng damage của đối thủ)`. Bên LOSE trong trận FORFEIT hiển thị 0. Sát thương áp dụng của lượt là dữ kiện lịch sử. Chốt theo HP rồi số câu đúng rồi sát thương, nếu bằng thì DRAW. Winner lấy suất WIN, không giữ thêm FK chiến thắng trên matches. View tổng hợp là read-only, ngay schema cơ sở không có cột HP để ghi giá trị âm.
-- Mùa 1 bắt đầu 00:00 ngày 09/11/2026 giờ Việt Nam, mỗi mùa 56 ngày. Hàm chọn mùa và view lịch mùa dùng một bộ hằng số cố định V1. Từ ngày đầu và số mùa suy cửa sổ `[start,end)`. Khóa tư vấn transaction duy nhất cho cả rollover và chốt trận hạng. Vừa qua rollover thì đóng mùa cũ, chốt RANK đồng điểm, ghi season_results và trả thưởng bằng ledger, tạo mùa mới trong cùng transaction. Giữ điểm mùa cũ, carry điểm từng môn sang mùa mới bằng `floor(points/2^min(31, khoảng cách mùa))`. Không cấp thưởng cho mùa trung gian chưa từng mở. Khóa ghép user–subject–season chặn điểm trùng. Trận chốt hạng gắn mùa đang có hiệu lực lúc chốt, kể cả mở trước nửa đêm.
+- Backend khóa hàng trận, giữ khóa FOR SHARE trên nội dung được chọn theo cùng thứ tự với luồng học, rồi xác nhận câu thuộc môn và các cấp còn ACTIVE lúc phát. Kiểm hiệp liền kề và không nhận lượt hiệp sau khi hiệp trước chưa đủ hai lượt. FK ghép của lượt cùng match_id vẫn bảo đảm đúng trận, người và hiệp. Chấm server dùng hằng số V1 và đồng hồ trận/lượt. Ghi lượt trước, phát dữ liệu sau commit. Lượt trùng khóa trả kết quả đã lưu. Hết giờ theo loại giữ luật hiển thị từ Bước 0. V1 ẩn nút khiên và dùng sát thương chung.
+- CHECK cùng hàng buộc lý do, thời điểm chốt và sự hiện diện của mùa theo trạng thái và chế độ. FINISHED có KNOCKOUT/FORFEIT/TIMEOUT/DRAW. CANCELLED có lý do CANCELLED và không thưởng. Backend kiểm cặp kết quả khi giữ khóa trận. ACTIVE/CANCELLED không có kết quả, FINISHED dùng WIN + LOSE hoặc DRAW + DRAW. Unique lọc DB chặn hai WIN. Backend từ chối đổi kết quả terminal hoặc thưởng lần hai. Mất kết nối sau khi tạo trận vẫn xử lý như đầu hàng.
+- HP ở view là `greatest(0, v1_arena_initial_hp() - tổng damage của đối thủ)`. Bên LOSE trong trận FORFEIT hiển thị 0. Sát thương áp dụng của lượt là dữ kiện lịch sử. Chốt theo HP rồi số câu đúng rồi sát thương, nếu bằng thì DRAW. Winner lấy suất WIN, không giữ thêm FK chiến thắng trên matches. View tổng hợp là read-only, ngay schema cơ sở không có cột HP để ghi giá trị âm.
+- Mùa 1 bắt đầu 00:00 ngày 09/11/2026 giờ Việt Nam, mỗi mùa 56 ngày. Backend chọn mùa và view lịch mùa đọc bộ hằng số V1 ở trên. Từ ngày đầu và số mùa suy cửa sổ `[start,end)`. Khóa tư vấn transaction duy nhất cho cả rollover và chốt trận hạng. Vừa qua rollover thì đóng mùa cũ, chốt RANK đồng điểm, ghi season_results và trả thưởng bằng ledger, tạo mùa mới trong cùng transaction. Giữ điểm mùa cũ, carry điểm từng môn sang mùa mới bằng `floor(points/2^min(31, khoảng cách mùa))`. Không cấp thưởng cho mùa trung gian chưa từng mở. Khóa ghép user–subject–season chặn điểm trùng. Trận chốt hạng gắn mùa đang có hiệu lực lúc chốt, kể cả mở trước nửa đêm.
 - Giữ tier, thưởng, tiêu chí đủ lượt, loại bot/admin khỏi bảng công khai, đồng hạng và chuỗi thắng theo [luật Bước 0](LUAT_NGHIEP_VU.md). Chuỗi thắng và thống kê bảng hạng tính trên trận hạng đủ lượt đã chốt trong mùa. Khi tra lịch sử, bảng phiên/đấu/quỹ không loại bản ghi chỉ vì nội dung hoặc người dùng đã ngừng.
+
+## Ba nhóm trigger giữ lại
+
+| Nhóm | Cơ chế giữ | Vì sao FK hoặc CHECK chưa đủ |
+|---|---|---|
+| **Đúng một đáp án đúng mỗi câu MCQ** | FK tới câu, PK vị trí 0..3 và unique lọc ngăn nhiều hơn một đáp án đúng. Dùng một hàm kiểm đúng một hàng có dấu đúng cho MCQ, với constraint trigger hoãn trên thay đổi ở `questions` và `question_options`. | FK chỉ kiểm hàng đích tồn tại. CHECK đọc từng hàng. Chúng không thể yêu cầu mỗi MCQ có ít nhất một dòng con đúng khi giao dịch hoàn thành. |
+| **Sổ Xu chặn UPDATE/DELETE** | Một trigger từ chối UPDATE hoặc DELETE trên `coin_ledger`, bổ sung cho quyền app chỉ đọc và INSERT. | FK và CHECK kiểm dữ liệu còn lại, không phân biệt lịch sử của một hàng hợp lệ có bị sửa hoặc xóa hay không. Quyền cũng chặn TRUNCATE ở app. |
+| **Đúng hai người trong trận** | PK (match_id,slot), CHECK slot 1/2, UNIQUE người theo trận và một hàm đếm được gọi bởi constraint trigger hoãn trên `matches` và `match_players`. | Các khóa chặn người thứ ba và trùng người. Chúng không bắt bản ghi trận phải có đủ hai dòng tham gia, kể cả khi tạo trận với 0 người hoặc xóa một người trước commit. |
+
+Tổng cộng có năm khai báo trigger trong ba nhóm. Nhóm thứ nhất và thứ ba mỗi nhóm có khai báo trên bảng cha và bảng con để bắt cả đường tạo cha lẫn thay đổi con. Trigger chỉ kiểm một đáp án đúng, sổ Xu chỉ ghi thêm và đủ hai suất. Backend kiểm số lượng phương án theo loại câu, cặp WIN/LOSE/DRAW, cửa sổ mùa, hiệp liền kề, đúng môn và điều kiện chốt thưởng trong giao dịch tương ứng. Các trường hợp FK, CHECK và UNIQUE xử lý được vẫn giữ trong DB. [Tài liệu PostgreSQL về CHECK và FK](https://www.postgresql.org/docs/16/ddl-constraints.html), [constraint trigger](https://www.postgresql.org/docs/16/sql-createtrigger.html).
 
 ## View và điểm tích hợp
 
@@ -357,7 +370,6 @@ erDiagram
     user_accessories o|--o| users : equipped_accessory
     subjects ||--o{ chapters : contains
     chapters ||--o{ milestones : contains
-    milestones ||--o{ milestone_bloom_overrides : custom_weights
     milestones ||--o{ questions : bank
     questions ||--o{ question_options : mcq_options
     users ||--o{ enrollments : enrolls
@@ -370,7 +382,6 @@ erDiagram
     study_sessions ||--o{ study_session_questions : assigns
     questions ||--o{ study_session_questions : historical_question
     study_session_questions ||--o{ session_answers : attempts
-    session_answers ||--o{ session_answer_items : response_parts
     session_answers ||--o{ session_answer_lookups : theory_lookups
     quests ||--o{ quest_claims : daily_rule
     users ||--o{ quest_claims : claims
@@ -394,21 +405,22 @@ erDiagram
     match_players ||--o{ match_answers : answers
 ```
 
-## Điểm yếu cũ và cách xác minh ở Bước 3
+## Kiểm chứng DB và giao dịch backend
 
-| Điểm yếu hoặc yêu cầu | Điều cần kiểm sau khi có DDL |
+| Điểm yếu hoặc yêu cầu | Cơ chế và ca kiểm |
 |---|---|
-| Quyền sở hữu Pet hoặc phụ kiện | Tạo account, cấp Sparky, trang bị trong transaction thành công. Đổi sang item chưa sở hữu bị FK ghép chặn. Trùng cặp người–item bị PK chặn. |
-| Trắc nghiệm thiếu hoặc nhiều đáp án đúng | Bốn option và đúng một correct qua kiểm. Tạo câu không có option, đủ option nhưng 0 correct và cấu hình có 2 correct đều bị chặn. Kiểm thêm payload JSONB sai kiểu và MCQ có payload phi trắc nghiệm. |
-| Câu đã dùng bị thay đổi | Gắn vào phiên/hiệp, thử sửa đề hoặc chỉnh option cũ phải bị từ chối. Chuyển ARCHIVED và tạo phiên bản mới trong cùng transaction, bài cũ đọc phiên bản cũ. Xóa cứng câu hoặc môn đã có lịch sử bị RESTRICT. |
-| Cực Hạn trước đây trỏ mốc đầu của môn | Ghi một phiên theo mốc và một phiên EXTREME trỏ môn không có mốc. Từ chối cả hai link, thiếu cả hai, hoặc gắn link sai loại. Thử một câu lặp tạo hai attempt hợp lệ và Admin thấy đủ. |
-| Nhận nhiệm vụ trùng hoặc sai ngày | Dùng cùng người và nhiệm vụ ở 16:59:59Z và 17:00:00Z để nhận hai ngày VN. Gửi lần hai vào một ngày chỉ có một claim và một lần thưởng. Kiểm thêm quà tân thủ theo người và chạm quota tuần. |
-| Trận nhận người thứ ba hoặc hai người thắng | Kiểm trận hợp lệ hai suất có hiệp và lượt, chốt WIN + LOSE. Thử người thứ ba, hai WIN, trận chưa đủ hai người và gửi lượt cùng người ở trận khác. Chốt hòa và đầu hàng qua cùng đường ghi. |
-| Câu khác môn bị phát, đổi cha làm lệch lịch sử | Từ chối FK logic ở hiệp và phát đề. Thử đổi cha của mốc/chương sau khi nội dung đã hình thành. |
-| HP, Xu, EXP, điểm âm và thứ tự trùng | Chặn ghi âm vào số dư, XP, quota, damage, điểm và giá. View HP kẹp 0 và từ chối ghi HP âm trực tiếp. Chương/mốc trùng vị trí cùng cha không chấp nhận. |
-| Vòng FK và con trỏ mùa | User tạo với slot NULL rồi cấp quyền. Người thắng chỉ sống ở dòng tham gia, không có vòng FK người thắng. Chốt mùa hai lần không thưởng lại, tối đa một mùa mở, rank_scores chặn trùng người–môn–mùa. Kiểm ngày cắt mùa và giữ điểm cũ. |
-| Xóa kéo theo lịch sử hoặc ghi sổ trái phép | FK lịch sử dùng RESTRICT. CASCADE chỉ cho cài đặt, thử thách, cấu hình Bloom và item/lookup của lượt. Kiểm không xóa nội dung có lịch sử và app role không được sửa, xóa hoặc truncate ledger. |
+| Quyền sở hữu Pet hoặc phụ kiện | **Bước 3.** Tạo account, cấp Sparky và trang bị hợp lệ. FK ghép chặn trang bị chưa sở hữu. PK chặn trùng cặp người–Pet/phụ kiện. |
+| Trắc nghiệm thiếu hoặc nhiều đáp án đúng | **Bước 3.** Câu MCQ có một phương án đúng qua kiểm. Buộc chạy trigger hoãn ở ca tạo MCQ không có phương án và ca có phương án nhưng đều sai. Unique lọc chặn hai phương án đúng. **Bước 4–5.** Giao dịch phát hành từ chối MCQ thiếu phương án và câu kiểu khác có phương án MCQ. |
+| Bảo toàn câu từng phát và cấu trúc môn | **Bước 3.** Role runtime không sửa cấu trúc câu, phương án hay FK cha của chương/mốc. FK RESTRICT của dữ liệu lịch sử chặn xóa câu/môn. **Bước 4–5.** Chuyển ARCHIVED và tạo bản mới trong một transaction, bài cũ vẫn đọc bản cũ. Chặn đổi loại hoặc số bước của mốc đã học. |
+| Phạm vi phiên và các lần làm lại | **Bước 3.** Phiên theo mốc hoặc EXTREME theo môn hợp lệ, thiếu cả hai, đồng thời có cả hai hoặc dùng sai loại đều bị CHECK từ chối. Hai attempt hợp lệ của cùng câu tồn tại riêng. FK ghép chặn lượt ngoài bộ đề. **Bước 4–5.** Admin thấy cả hai lần làm. Chọn đề lệch môn/mốc/chương, tổ tiên đã ARCHIVED hoặc sai bước bị từ chối qua service. |
+| Đáp án lưu đúng một dạng | **Bước 3.** Nhận MCQ, text, cặp nối, token hoặc TIMEOUT hợp lệ. Từ chối 0 hoặc nhiều dạng, JSON null, thiếu kind, sai kiểu phần tử và TIMEOUT có kết quả đúng. Kiểm cả payload phi trắc nghiệm của câu hỏi. **Bước 4–5.** Từ chối dạng không khớp câu đã phát và xác nhận chỉ số MCQ đã xáo được ánh xạ về vị trí gốc. |
+| Bloom theo bước | **Bước 3.** Nhận cấu hình có ba tỷ lệ hợp lệ tổng 100 và SQL NULL khi dùng mặc định. Từ chối thiếu/thừa khóa, tỷ lệ ngoài miền, chuỗi hoặc số lẻ, tổng khác 100, bước ngoài phạm vi và cấu hình trên mốc THEORY. **Bước 4–5.** Kiểm bộ phát đề đọc đúng override và quay về preset ở bước thiếu cấu hình. |
+| Danh mục nhiệm vụ và nhận thưởng | **Bước 3.** Thêm mã mới không cần đổi CHECK. FK chặn mã ngoài danh mục, PK chặn claim cùng ngày. **Bước 4–5.** Hai thời điểm 16:59:59Z và 17:00:00Z vào hai ngày Việt Nam, nhận đồng thời cùng ngày chỉ có một phần thưởng, mã mới chưa có điều kiện không claim được. Kiểm thêm quà tân thủ và quota theo tuần. |
+| Hai người, hiệp và kết quả trận | **Bước 3.** Nhận trận đủ hai suất, chặn trận có 0/1 người, xóa làm thiếu người hoặc chèn người thứ ba. Chặn hai WIN và lượt theo người/hiệp thuộc trận khác. **Bước 4–5.** Chặn câu khác môn, hiệp không liên tiếp và thay đổi trận đã chốt. Kiểm WIN + LOSE, DRAW + DRAW, đầu hàng, hủy và hết giờ. |
+| HP, Xu, EXP, điểm âm và thứ tự trùng | **Bước 3.** CHECK chặn giá trị âm ở cột có miền không âm và hạn mức EXP vượt 1.500. View kẹp HP ở 0, không có cột HP để ghi thủ công. UNIQUE chặn trùng thứ tự chương/mốc cùng cha. **Bước 4–5.** Kiểm sát thương 12/+3, hiển thị HP và nhận EXP khi chạm trần từ hai phiên đồng thời. |
+| Chốt mùa | **Bước 3.** Chặn hai mùa mở, trùng người–môn–mùa và trận có tham chiếu mùa không hợp lệ. **Bước 4–5.** Kiểm cửa sổ 56 ngày, ranh giới khi chốt trận, chốt mùa hai lần không thưởng lại và điểm cũ được giữ. |
+| Sổ Xu chỉ ghi thêm và số dư nhất quán | **Bước 3.** Role runtime không có quyền UPDATE, DELETE hoặc TRUNCATE trên ledger. Dùng role kiểm thử có quyền UPDATE/DELETE để xác minh trigger từ chối cả hai lệnh, rồi rollback. **Bước 4–5.** Cố ý gây lỗi giữa INSERT ledger và UPDATE số dư, cả hai phải rollback. Hai giao dịch cùng người nối tiếp theo khóa dòng, không mất cập nhật. |
 
-Bộ `verify_v1.sql` tương lai ghi PASS/FAIL theo tên ca, mỗi ca chạy trong transaction và rollback. Ca kiểm trigger hoãn phải buộc chạy `SET CONSTRAINTS ... IMMEDIATE` trước rollback. Test đồng thời dùng hai kết nối localhost riêng và giữ namespace test tách seed, xác nhận 0 dòng fixture sau kiểm. Thử quyền bằng role app, không dùng quyền owner để kết luận. Đường chạy Bước 2 gồm DDL, seed tham chiếu từ manifest repo và rollback theo thứ tự ngược, chạy lại an toàn trên đúng tên DB local. Không đặt thông tin Render trong cấu hình local.
+Bộ `verify_v1.sql` tương lai ghi PASS/FAIL cho các ca Bước 3. Mỗi ca có transaction và rollback, riêng ca trigger hoãn chạy `SET CONSTRAINTS ... IMMEDIATE` trước khi rollback. Dùng role runtime để kiểm quyền thực tế. Các quy tắc chuyển vào giao dịch backend, gồm câu khác môn trong trận, được xác minh ở Bước 4–5 qua đường ghi của ứng dụng. Ca đồng thời dùng hai kết nối localhost. Fixture thử tách seed và kiểm sạch sau rollback/dọn ca đồng thời. Đường chạy Bước 2 gồm DDL, seed từ manifest repo và rollback chạy lại được trên đúng tên DB local.
 
 **Điểm duyệt.** Danh mục ở trên là schema đích cần duyệt, gồm cả lựa chọn tính HP và thưởng Xu khi đọc. Sau khi duyệt mới viết DDL. Nếu qua Bước 3 phát hiện trường hợp thiết kế không mô tả được nghiệp vụ, đưa bằng chứng vào báo cáo để xem xét trước khi đổi schema.
