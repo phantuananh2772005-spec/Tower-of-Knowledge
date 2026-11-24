@@ -1,150 +1,63 @@
-const { randomUUID } = require('node:crypto');
-/**
- * Economy Service
- * Handles coin transactions, EXP accumulation, and rank progression.
- * Guarantees ACID ledger in `giao_dich_xu`.
- */
-
 const db = require('../database/db');
-const { canAfford, applyCoinChange, deriveRankTitle, deriveUserLevel } = require('../core/rules/economy.rules');
 
-// Per-user async mutex queue to serialize concurrent balance/EXP mutations and prevent race conditions (LOGIC-010)
-const userMutationLocks = new Map();
-
-async function withUserLock(ma_nguoi_dung, fn) {
-  const key = String(ma_nguoi_dung);
-  const prev = userMutationLocks.get(key) || Promise.resolve();
-  let release;
-  const next = new Promise(resolve => { release = resolve; });
-  const queued = prev.then(() => next, () => next);
-  userMutationLocks.set(key, queued);
-  await prev.catch(() => {});
-  try {
-    return await fn();
-  } finally {
-    release();
-    if (userMutationLocks.get(key) === queued) {
-      userMutationLocks.delete(key);
-    }
-  }
+async function getRepeatExperienceQuota(userId, connection = db, { occurred_at = null } = {}) {
+  return connection.queryOne(`
+    WITH quota AS (
+      SELECT date_trunc(
+          'week',
+          COALESCE($2::timestamptz, clock_timestamp()) AT TIME ZONE 'Asia/Ho_Chi_Minh'
+        )::date AS week_start,
+        v1_weekly_xp_limit() AS limit_xp
+    )
+    SELECT q.week_start::text, COALESCE(u.xp, 0) AS used_xp, q.limit_xp,
+      q.limit_xp - COALESCE(u.xp, 0) AS remaining_xp
+    FROM quota AS q
+    LEFT JOIN weekly_xp_usage AS u ON u.user_id = $1 AND u.week_start = q.week_start
+  `, [userId, occurred_at]);
 }
 
-/**
- * Adjust user's coin balance with ledger entry (Atomic & Concurrency-Safe)
- * @param {string} ma_nguoi_dung
- * @param {number} so_luong (positive for reward, negative for spend)
- * @param {string} nguon_giao_dich
- * @param {string} mo_ta
- * @returns {Promise<{ newBalance: number, transactionId: string }>}
- */
-async function mutateCoins(ma_nguoi_dung, so_luong, nguon_giao_dich, mo_ta = '') {
-  const delta = Number(so_luong) || 0;
-  if (delta === 0) {
-    const user = await db.queryOne('SELECT xu_tri_thuc FROM nguoi_dung WHERE ma_nguoi_dung = $1', [ma_nguoi_dung]);
-    return { newBalance: user ? user.xu_tri_thuc : 0, transactionId: null };
+async function awardRepeatXpInTransaction(tx, userId, requestedXp, { occurred_at = null } = {}) {
+  if (!Number.isSafeInteger(requestedXp) || requestedXp < 0) {
+    throw new TypeError('EXP thi đấu phải là số nguyên không âm.');
   }
 
-  return withUserLock(ma_nguoi_dung, () => db.transaction(tx =>
-    mutateCoinsInTransaction(tx, ma_nguoi_dung, delta, nguon_giao_dich, mo_ta)));
-}
+  // Use one database lock for both quota and total XP, across server processes.
+  const user = await tx.queryOne('SELECT xp FROM users WHERE id = $1 FOR UPDATE', [userId]);
+  if (!user) throw new Error('Không tìm thấy người dùng.');
 
-async function mutateCoinsInTransaction(tx, ma_nguoi_dung, delta, nguon_giao_dich, mo_ta = '') {
-    // Fetch current user inside serialized lock
-    const user = await tx.queryOne('SELECT xu_tri_thuc FROM nguoi_dung WHERE ma_nguoi_dung = $1' + (db.isPostgres ? ' FOR UPDATE' : ''), [ma_nguoi_dung]);
-    if (!user) {
-      throw new Error('Người dùng không tồn tại.');
-    }
+  const quota = await getRepeatExperienceQuota(userId, tx, { occurred_at });
+  const xpAwarded = Math.min(requestedXp, quota.remaining_xp);
+  if (xpAwarded > 0) {
+    await tx.execute(`
+      INSERT INTO weekly_xp_usage (user_id, week_start, xp) VALUES ($1, $2::date, $3)
+      ON CONFLICT (user_id, week_start)
+      DO UPDATE SET xp = weekly_xp_usage.xp + EXCLUDED.xp
+    `, [userId, quota.week_start, xpAwarded]);
 
-    if (delta < 0 && !canAfford(user.xu_tri_thuc, Math.abs(delta))) {
-      throw new Error(`Số dư không đủ. Cần ${Math.abs(delta)} xu nhưng hiện chỉ có ${user.xu_tri_thuc} xu.`);
-    }
-
-    const coinResult = applyCoinChange(user.xu_tri_thuc, delta);
-    if (!coinResult.isSuccess) {
-      throw new Error(coinResult.errorMessage || 'Số dư Xu Tri Thức không đủ để thực hiện giao dịch.');
-    }
-
-    const ma_giao_dich = `tx_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-
-    // Atomic relative update with non-negative balance guard in SQL
-    if (delta < 0) {
-      await tx.execute(
-        'UPDATE nguoi_dung SET xu_tri_thuc = xu_tri_thuc + $1, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $2 AND xu_tri_thuc + $1 >= 0',
-        [delta, ma_nguoi_dung]
-      );
-    } else {
-      await tx.execute(
-        'UPDATE nguoi_dung SET xu_tri_thuc = xu_tri_thuc + $1, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $2',
-        [delta, ma_nguoi_dung]
-      );
-    }
-
-    const updatedUser = await tx.queryOne('SELECT xu_tri_thuc FROM nguoi_dung WHERE ma_nguoi_dung = $1', [ma_nguoi_dung]);
-    const newBalance = updatedUser ? updatedUser.xu_tri_thuc : coinResult.newCoins;
-
-    await tx.execute(
-      'INSERT INTO giao_dich_xu (ma_giao_dich, ma_nguoi_dung, so_luong, so_du_sau, nguon_giao_dich, mo_ta, thoi_gian) VALUES ($1, $2, $3, $4, $5, $6, SYSDATETIME())',
-      [ma_giao_dich, ma_nguoi_dung, delta, newBalance, nguon_giao_dich, mo_ta]
-    );
-
-    return { newBalance, transactionId: ma_giao_dich };
-
-}
-
-/**
- * Add EXP to user and return new EXP, rank, and level
- * @param {string} ma_nguoi_dung
- * @param {number} expToAdd
- */
-async function getRepeatExperienceQuota(userId, connection = db) {
-  const local = new Date(Date.now() + 7 * 3600000);
-  const today = local.toISOString().slice(0, 10);
-  local.setUTCDate(local.getUTCDate() - ((local.getUTCDay() + 6) % 7));
-  const monday = local.toISOString().slice(0, 10);
-  const rows = await connection.query(
-    'SELECT ngay_vn,exp FROM exp_lap_lai WHERE ma_nguoi_dung=$1 AND ngay_vn >= $2 AND ngay_vn <= $3',
-    [userId, monday, today]
-  );
-  const week = rows.reduce((n,row) => n + Number(row.exp), 0);
-  return { today, weeklyEarned: week, weeklyLimit: 1500, weeklyRemaining: Math.max(0, 1500 - week) };
-}
-
-async function addExperienceInTransaction(tx, userId, expToAdd, { repeat = false } = {}) {
-  let delta=Math.max(0,Math.floor(Number(expToAdd)||0));
-  const user=await tx.queryOne('SELECT tong_diem_kinh_nghiem FROM nguoi_dung WHERE ma_nguoi_dung = $1'+(db.isPostgres?' FOR UPDATE':''),[userId]);
-  if(!user)throw new Error('Người dùng không tồn tại.');
-  if (repeat && delta > 0) {
-    const { today, weeklyRemaining } = await getRepeatExperienceQuota(userId, tx);
-    delta = Math.min(delta, weeklyRemaining);
-    if (delta) await tx.execute('INSERT INTO exp_lap_lai(ma_giao_dich,ma_nguoi_dung,ngay_vn,exp) VALUES($1,$2,$3,$4)',
-      [randomUUID(), userId, today, delta]);
+    await tx.execute('UPDATE users SET xp = xp + $2 WHERE id = $1', [userId, xpAwarded]);
   }
 
-  await tx.execute('UPDATE nguoi_dung SET tong_diem_kinh_nghiem = tong_diem_kinh_nghiem + $1, cap_nhat_luc = SYSDATETIME() WHERE ma_nguoi_dung = $2',[delta,userId]);
-  const newExp=Number(user.tong_diem_kinh_nghiem)+delta;
-  return {newExp,newRank:deriveRankTitle(newExp),newLevel:deriveUserLevel(newExp),expAwarded:delta};
-}
-async function addExperience(userId, expToAdd) {
-  if(!(Number(expToAdd)>0))return;
-  return withUserLock(userId,()=>db.transaction(tx=>addExperienceInTransaction(tx,userId,expToAdd)));
-}
-
-/**
- * Get coin transaction history for a user
- */
-async function getTransactionHistory(ma_nguoi_dung, limit = 20) {
-  return await db.query(
-    'SELECT TOP ' + Math.min(100, Math.max(1, parseInt(limit, 10) || 20)) + ' ma_giao_dich, so_luong, so_du_sau, nguon_giao_dich, mo_ta, thoi_gian FROM giao_dich_xu WHERE ma_nguoi_dung = $1 ORDER BY thoi_gian DESC',
-    [ma_nguoi_dung]
-  );
+  return {
+    week_start: quota.week_start,
+    used_xp: quota.used_xp + xpAwarded,
+    limit_xp: quota.limit_xp,
+    remaining_xp: quota.remaining_xp - xpAwarded,
+    xp_awarded: xpAwarded,
+    total_xp: user.xp + xpAwarded
+  };
 }
 
-module.exports = {
-  withUserLock,
-  mutateCoinsInTransaction,
-  mutateCoins,
-  addExperience,
-  addExperienceInTransaction,
-  getTransactionHistory,
-  getRepeatExperienceQuota
-};
+async function getTransactionHistory(userId, limit = 20) {
+  const parsedLimit = Number.parseInt(limit, 10);
+  const rowLimit = Number.isNaN(parsedLimit) ? 20 : Math.min(100, Math.max(1, parsedLimit));
+  const rows = await db.query(`
+    SELECT id, user_id, kind, delta, occurred_at, note, match_id, milestone_id, season_no, balance_after
+    FROM v_coin_history
+    WHERE user_id = $1
+    ORDER BY id DESC
+    LIMIT $2::integer
+  `, [userId, rowLimit]);
+  return rows.map(row => ({ ...row, balance_after: Number(row.balance_after) }));
+}
+
+module.exports = { getRepeatExperienceQuota, awardRepeatXpInTransaction, getTransactionHistory };

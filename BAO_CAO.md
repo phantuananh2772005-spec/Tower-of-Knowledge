@@ -19,6 +19,7 @@ Nhánh `local-pg-v1` tách từ `main` tại `fe206d3`. [Luật nghiệp vụ](L
 | 2 · Auth và users | **PASS** | `node --test tests/test_auth_pg_v1.js` đạt 2/2 kịch bản trên PostgreSQL. Đăng ký cấp Sparky, đăng nhập và thưởng streak đúng một lần, lưu cài đặt, đổi mật khẩu thu hồi phiên cũ và chặn tài khoản vô hiệu. Google và gửi mã dùng giả lập. Lượt ghi kiểm thử được rollback. |
 | 3 · Pet và inventory | **PASS** | `node --test tests/test_pet_inventory_pg_v1.js` đạt 2/2 kịch bản qua HTTP và PostgreSQL. Mua riêng, trang bị riêng, mũ Sparky tạm khóa, chăm Pet và chống trừ hai lần đều đạt. Mọi ví khớp tổng sổ Xu sau thưởng, mua và rollback. Fixture phụ kiện mở chỉ tồn tại trong transaction kiểm thử. |
 | 4 · Nội dung và course | **PASS** | `node --test tests/test_course_pg_v1.js` đạt 2/2 kịch bản qua HTTP và PostgreSQL. Kiểm ghi danh, khóa theo thứ tự, đề chưa lộ đáp án, cả bốn dạng câu, lượt làm lại và tra cứu, mở mốc qua chương, thưởng một lần, chỉ mốc THEORY chốt qua đọc. Kiểm Chrome local đi từ bản đồ đến nộp bài, xác nhận lưu hoàn thành. Dữ liệu thử đã rollback. |
+| 5 · Economy và quest | **PASS** | `node --test tests/test_economy_pg_v1.js` đạt 3/3 kịch bản qua HTTP và PostgreSQL. Giờ Việt Nam, cấp XP chạm trần 1.500, nhận một lần, quà tân thủ, lịch sử số dư và rollback đều đạt. Các luồng đã thử có 0 ví lệch với tổng sổ. |
 
 Không có thay đổi trên `main` hoặc máy chủ Render. Máy local dùng container `thaptrithuc-pg-v1` với cổng loopback 55432, database `thaptrithuc_v1`. Script quản trị chạy qua socket trong container.
 
