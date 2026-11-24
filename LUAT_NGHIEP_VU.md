@@ -132,10 +132,9 @@ Nguồn là worktree local tại commit `fe206d3`. Tên trường cũ dưới đ
 - Số dư sau giao dịch không lưu theo P2. Admin tiếp tục hiện số thay đổi và nguồn, có thể tính số dư từ sổ nếu xác định dữ liệu gốc và thứ tự đầy đủ trong DB mới. Không duy trì tên cũ hoặc một cột hậu kỳ để nuôi bảng Admin.
 - Code cũ nhận xét kéo dài về các lỗi như chấp nhận bước lớn hơn bước hiện tại và đường hủy trước lượt chỉ tồn tại trong helper. Các trường hợp này cần mô tả rõ trong thiết kế. Chúng không chứng minh có dữ liệu cần lưu riêng.
 
-### [HỎI] Khiên trong đấu trường
+### Khiên trong đấu trường
 
-Hiện máy chủ vẫn trừ HP đầy đủ. UI chỉ có nhánh dùng khiên một lần và đổi thông báo. Nếu cần khiên giảm sát thương thật, phải chốt cách kích hoạt và tỷ lệ trước khi quyết định dữ liệu nào cần giữ. Đã gửi câu hỏi riêng để chọn ẩn nút, giữ hiệu ứng thuần hình ảnh hoặc làm bảo vệ thật.
-
+Người dùng chốt ẩn nút khiên ở bản local V1 cho đến khi có luật máy chủ hoàn chỉnh. Hiện frontend đổi hiệu ứng, máy chủ vẫn trừ đủ HP. Schema V1 không cần dữ liệu sử dụng khiên.
 
 ## Kiểm kê API HTTP và trường phản hồi frontend đọc
 
