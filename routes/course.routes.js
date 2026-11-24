@@ -1,130 +1,84 @@
 const express = require('express');
-const router = express.Router();
 const courseService = require('../services/course.service');
+const courseSessions = require('../services/course-sessions.service');
+const { records } = require('../services/checkpoint-records');
 const { authenticate, optionalAuthenticate } = require('../middlewares/auth.middleware');
 
-// 1. List all available system courses
-router.get('/courses', optionalAuthenticate, async (req, res) => {
-  try {
-    const userId = req.user ? req.user.id : null;
-    const courses = await courseService.listCourses(userId);
-    return res.apiSuccess(courses);
-  } catch (err) {
-    return res.apiError(err.message, 'FETCH_COURSES_FAILED', 500);
-  }
-});
+const router = express.Router();
 
-// 2. List enrolled courses of the current user
-router.get('/my-courses', authenticate, async (req, res) => {
-  try {
-    const courses = await courseService.listMyCourses(req.user.id);
-    return res.apiSuccess(courses);
-  } catch (err) {
-    return res.apiError(err.message, 'FETCH_MY_COURSES_FAILED', 500);
-  }
-});
-
-// 3. Explicit Course Enrollment
-router.post('/courses/:slug/enroll', authenticate, async (req, res) => {
-  try {
-    const result = await courseService.enrollCourse(req.params.slug, req.user.id);
-    return res.apiSuccess(result);
-  } catch (err) {
-    return res.apiError(err.message, 'ENROLL_FAILED', 400);
-  }
-});
-
-// 4. Get course details and roadmap
-router.get('/courses/:slug', optionalAuthenticate, async (req, res) => {
-  try {
-    const userId = req.user ? req.user.id : null;
-    const details = await courseService.getCourseDetails(req.params.slug, userId);
-    const records=userId?await require('../services/checkpoint-records').records(userId):{};
-    for(const ch of details.cac_chuong||[])for(const m of ch.cac_moc||[])m.ky_luc=records[m.ma_moc]||null;
-    return res.apiSuccess(details);
-  } catch (err) {
-    return res.apiError(err.message, 'FETCH_COURSE_FAILED', 404);
-  }
-});
-
-// 5. Get checkpoint content (supports ?step=X)
-router.get('/checkpoints/:id', authenticate, async (req, res) => {
-  try {
-    const step = req.query.step ? parseInt(req.query.step, 10) : undefined;
-    const resumeIds = req.query.resume ? String(req.query.resume).split(',') : undefined;
-    const content = await courseService.getCheckpointContent(req.params.id, req.user.id, step, resumeIds);
-    const records=await require('../services/checkpoint-records').records(req.user.id);
-    content.ky_luc=records[req.params.id]||null;
-    return res.apiSuccess(content);
-  } catch (err) {
-    return res.apiError(err.message, 'CHECKPOINT_ACCESS_DENIED', 403);
-  }
-});
-
-// 6. Complete theory checkpoint
-router.post('/checkpoints/:id/complete-theory', authenticate, async (req, res) => {
-  try {
-    const result = await courseService.completeTheoreticalCheckpoint(req.params.id, req.user.id);
-    return res.apiSuccess(result);
-  } catch (err) {
-    return res.apiError(err.message, 'THEORY_COMPLETION_FAILED', 400);
-  }
-});
-
-// 7. Submit Duolingo Step answers
-router.post('/checkpoints/:id/submit-step', authenticate, async (req, res) => {
-  try {
-    const { buoc, cau_tra_loi } = req.body;
-    if (!cau_tra_loi || !Array.isArray(cau_tra_loi)) {
-      return res.apiError('Danh sách câu trả lời không hợp lệ.', 'INVALID_SUBMISSION', 400);
+function apiOperation(operation, errorCode, errorStatus) {
+  return async (req, res) => {
+    try {
+      res.apiSuccess(await operation(req));
+    } catch (error) {
+      res.apiError(error.message, errorCode, errorStatus);
     }
-    const result = await courseService.submitStep(req.params.id, buoc, cau_tra_loi, req.user.id);
-    return res.apiSuccess(result);
-  } catch (err) {
-    return res.apiError(err.message, 'SUBMIT_STEP_FAILED', 400);
-  }
-});
+  };
+}
 
-// 7b. Save partial/abandoned step session when learner quits midway
-router.post('/checkpoints/:id/abandon-step', authenticate, async (req, res) => {
-  try {
-    const { buoc, cau_tra_loi } = req.body;
-    if (!cau_tra_loi || !Array.isArray(cau_tra_loi) || cau_tra_loi.length === 0) {
-      return res.apiError('Danh sách câu trả lời trống.', 'INVALID_SUBMISSION', 400);
-    }
-    const result = await courseService.saveAbandonedStep(req.params.id, buoc, cau_tra_loi, req.user.id);
-    return res.apiSuccess(result);
-  } catch (err) {
-    return res.apiError(err.message, 'ABANDON_STEP_FAILED', 400);
-  }
-});
+router.get('/courses', optionalAuthenticate, apiOperation(
+  req => courseService.listCourses(req.user?.id ?? null), 'FETCH_COURSES_FAILED', 500
+));
 
-// 8. Submit checkpoint (completes checkpoint, unlocks next node, awards EXP and coins)
-router.post('/checkpoints/:id/submit', authenticate, async (req, res) => {
-  try {
-    const { cau_tra_loi } = req.body;
-    if (!cau_tra_loi || !Array.isArray(cau_tra_loi)) {
-      return res.apiError('Danh sách câu trả lời không hợp lệ.', 'INVALID_SUBMISSION', 400);
-    }
-    const result = await courseService.submitQuizCheckpoint(req.params.id, cau_tra_loi, req.user.id);
-    return res.apiSuccess(result);
-  } catch (err) {
-    return res.apiError(err.message, 'SUBMIT_FAILED', 400);
-  }
-});
+router.get('/my-courses', authenticate, apiOperation(
+  req => courseService.listMyCourses(req.user.id), 'FETCH_MY_COURSES_FAILED', 500
+));
 
-// 9. Real-time Single Question Evaluation for Duolingo Practice
-router.post('/checkpoints/:id/check-answer', authenticate, async (req, res) => {
-  try {
-    const { ma_cau_hoi, tra_loi } = req.body;
-    if (!ma_cau_hoi || tra_loi === undefined) {
-      return res.apiError('Thiếu mã câu hỏi hoặc câu trả lời.', 'INVALID_INPUT', 400);
-    }
-    const result = await courseService.checkSingleQuestion(req.params.id, ma_cau_hoi, tra_loi);
-    return res.apiSuccess(result);
-  } catch (err) {
-    return res.apiError(err.message, 'CHECK_ANSWER_FAILED', 400);
+router.post('/courses/:slug/enroll', authenticate, apiOperation(
+  req => courseService.enrollCourse(req.params.slug, req.user.id), 'ENROLL_FAILED', 400
+));
+
+router.get('/courses/:slug', optionalAuthenticate, apiOperation(async req => {
+  const userId = req.user?.id ?? null;
+  const details = await courseService.getCourseDetails(req.params.slug, userId);
+  const milestones = details.chapters.flatMap(chapter => chapter.milestones);
+  const byMilestone = userId ? await records(userId, milestones.map(milestone => milestone.id)) : {};
+  for (const milestone of milestones) {
+    milestone.record = byMilestone[milestone.id] ?? null;
   }
-});
+  return details;
+}, 'FETCH_COURSE_FAILED', 404));
+
+router.get('/checkpoints/:id', authenticate, apiOperation(async req => {
+  const milestoneId = req.params.id;
+  const preview = await courseService.getCheckpointPreview(milestoneId, req.user.id);
+  const byMilestone = await records(req.user.id, [milestoneId]);
+  return { ...preview, record: byMilestone[milestoneId] ?? null };
+}, 'CHECKPOINT_ACCESS_DENIED', 403));
+
+router.post('/checkpoints/:id/complete-theory', authenticate, apiOperation(
+  req => courseService.completeTheoreticalCheckpoint(req.params.id, req.user.id),
+  'THEORY_COMPLETION_FAILED', 400
+));
+
+router.post('/checkpoints/:id/sessions', authenticate, apiOperation(
+  req => courseSessions.startSession(req.params.id, req.user.id, req.body ?? {}),
+  'STUDY_SESSION_START_FAILED', 400
+));
+
+router.get('/checkpoints/:id/sessions/:sid', authenticate, apiOperation(
+  req => courseSessions.getSession(req.params.id, req.user.id, req.params.sid),
+  'STUDY_SESSION_ACCESS_DENIED', 403
+));
+
+router.post('/checkpoints/:id/sessions/:sid/answer', authenticate, apiOperation(
+  req => courseSessions.answer(req.params.id, req.user.id, req.params.sid, req.body ?? {}),
+  'STUDY_ANSWER_FAILED', 400
+));
+
+router.post('/checkpoints/:id/sessions/:sid/pair', authenticate, apiOperation(
+  req => courseSessions.checkPair(req.params.id, req.user.id, req.params.sid, req.body ?? {}),
+  'STUDY_PAIR_CHECK_FAILED', 400
+));
+
+router.post('/checkpoints/:id/sessions/:sid/lookups', authenticate, apiOperation(
+  req => courseSessions.attachLookups(req.params.id, req.user.id, req.params.sid, req.body ?? {}),
+  'STUDY_LOOKUP_FAILED', 400
+));
+
+router.post('/checkpoints/:id/sessions/:sid/finish', authenticate, apiOperation(
+  req => courseSessions.finish(req.params.id, req.user.id, req.params.sid, req.body ?? {}),
+  'STUDY_SESSION_FINISH_FAILED', 400
+));
 
 module.exports = router;

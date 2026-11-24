@@ -3095,8 +3095,8 @@
     // Legacy startPlay(mNum) replaced by DB-driven startPlay(mocId, tieuDe, loaiMoc) at line ~4000
 
     function closePlay() {
-      if (typeof currentQuizSession !== 'undefined' && currentQuizSession && checkCoItNhatMotCau(currentQuizSession)) {
-        // Mặc định tự động lưu kết quả và quay về bản đồ theo yêu cầu người dùng
+      if (currentQuizSession) {
+        // Chốt phiên luyện chặng đã có lượt làm trước khi rời màn hình.
         autoSaveQuizAndNavigate('saga');
         return;
       }
@@ -3140,60 +3140,33 @@
      * Nếu chưa làm câu nào (< 1 câu) thì khỏi lưu vì không có giá trị học tập.
      */
     function checkCoItNhatMotCau(session = currentQuizSession) {
-      if (!session || !session.submissions || !Array.isArray(session.submissions)) return false;
-      const validSubmissions = session.submissions.filter(s => s && (s.tra_loi !== undefined || s.cau_tra_loi !== undefined || s.ma_cau_hoi));
-      return validSubmissions.length >= 1;
+      return Boolean(session?.submissions?.length);
     }
     window.checkCoItNhatMotCau = checkCoItNhatMotCau;
 
     async function autoSaveQuizAndNavigate(targetView = 'saga') {
+      const session = currentQuizSession;
+      if (session?.submitting || session?.savingAnswer || session?.matchingState?.isEvaluating) return;
       const target = targetView || pendingQuizNavView || 'saga';
-
-      // Kiểm tra: nếu chưa làm được ít nhất 1 câu thì khỏi lưu
-      if (!checkCoItNhatMotCau(currentQuizSession)) {
-        closeQuitQuizModal();
-        currentQuizSession = null;
-        pendingQuizNavView = null;
-        navTo(target);
-        if (target === 'saga') scrollToActiveNode(true);
+      try {
+        if (session?.courseSessionId && session.submissions.length && session.kind === 'STEP') {
+          session.submitting = true;
+          await flushCourseLookups(session);
+          await sessionRequest(session, '/finish', { finish_kind: 'ABANDONED' });
+          showToast('Đã lưu các lượt làm vào hồ sơ học tập.', 'success');
+        }
+      } catch (error) {
+        showToast(error.message, 'error');
         return;
+      } finally {
+        if (session) session.submitting = false;
       }
-
-      const mocId = currentQuizSession.mocId;
-      const step = currentQuizSession.step || 1;
-      const subs = [...currentQuizSession.submissions];
-      const count = subs.length;
-
-      // Đóng modal và dọn state ngay lập tức
       closeQuitQuizModal();
       currentQuizSession = null;
+      currentMocSession = null;
       pendingQuizNavView = null;
       navTo(target);
       if (target === 'saga') scrollToActiveNode(true);
-
-      // Lưu ngầm lên server
-      try {
-        const token = localStorage.getItem('tok_token');
-        const resp = await fetch(`/api/checkpoints/${mocId}/abandon-step`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
-          },
-          body: JSON.stringify({
-            buoc: step,
-            cau_tra_loi: subs
-          })
-        });
-        const res = await resp.json();
-        if (res && res.success) {
-          showToast(`💾 Đã tự động lưu ${count} câu đã giải vào Hồ sơ học tập!`, 'success');
-        } else {
-          showToast(`⚠️ Không thể lưu phiên: ${res?.error?.message || 'Lỗi server'}`, 'error');
-        }
-      } catch (err) {
-        console.warn('Lỗi tự động lưu phiên làm dở:', err);
-      }
     }
 
     window.openQuitQuizModal = openQuitQuizModal;
@@ -3214,6 +3187,7 @@
     function quitQuizWithoutSaving() {
       closeQuitQuizModal();
       currentQuizSession = null;
+      currentMocSession = null;
       const target = pendingQuizNavView || 'saga';
       pendingQuizNavView = null;
       navTo(target);
@@ -3622,36 +3596,19 @@
     return rows;
   }
   function syncArenaSubjectSelects() {
-    const courses = (Array.isArray(allSystemCourses) && allSystemCourses.length > 0)
-      ? allSystemCourses
-      : [{ ma_mon: 'mon_csdl', ten_mon: 'Cơ sở dữ liệu', slug: 'co-so-du-lieu' }];
-
-    const lobbySel = document.getElementById('lobby-subject');
-    if (lobbySel) {
-      const curVal = lobbySel.value;
-      lobbySel.innerHTML = courses.map(c => {
-        const code = (c.ma_mon || 'mon_csdl').replace('mon_', '');
-        const shortName = (c.ten_mon || '').split('&')[0].trim();
-        return `<option value="${code}">${shortName}</option>`;
-      }).join('');
-      if (courses.some(c => (c.ma_mon || '').replace('mon_', '') === curVal)) {
-        lobbySel.value = curVal;
-      }
-    }
-
-    const rankSel = document.getElementById('rank-subject');
-    if (rankSel) {
-      const curVal = rankSel.value;
-      let opts = `<option value="all">🌐 Tất cả môn</option>`;
-      opts += courses.map(c => {
-        const code = (c.ma_mon || 'mon_csdl').replace('mon_', '');
-        const shortName = (c.ten_mon || '').split('&')[0].trim();
-        return `<option value="${code}">${shortName}</option>`;
-      }).join('');
-      rankSel.innerHTML = opts;
-      if (curVal === 'all' || courses.some(c => (c.ma_mon || '').replace('mon_', '') === curVal)) {
-        rankSel.value = curVal;
-      }
+    const options = allSystemCourses.map(course => {
+      SUBJ[course.id] = course.name;
+      return new Option(course.name.split('&')[0].trim(), course.id);
+    });
+    const lobby = document.getElementById('lobby-subject');
+    const rank = document.getElementById('rank-subject');
+    for (const select of [lobby, rank]) {
+      if (!select) continue;
+      const selected = select.value;
+      const nodes = options.map(option => option.cloneNode(true));
+      if (select === rank) nodes.unshift(new Option('Tất cả môn', 'all'));
+      select.replaceChildren(...nodes);
+      if ([...select.options].some(option => option.value === selected)) select.value = selected;
     }
   }
   function renderLobby() {
@@ -3786,7 +3743,7 @@
         if (descEl) descEl.textContent = 'Tiếp tục hành trình chinh phục kiến thức và vượt qua các mốc trên lộ trình học tập.';
         if (actionBtn) {
           const firstCourse = myEnrolledCourses[0];
-          const courseShort = firstCourse.slug === 'co-so-du-lieu' ? 'CSDL' : (firstCourse.ten_mon ? firstCourse.ten_mon.split(' ')[0] : 'Leo tháp');
+          const courseShort = firstCourse.slug === 'co-so-du-lieu' ? 'CSDL' : (firstCourse.name ? firstCourse.name.split(' ')[0] : 'Leo tháp');
           actionBtn.innerHTML = `<span>🗺️</span> <span class="truncate">Lộ trình ${courseShort}</span> <span>→</span>`;
           actionBtn.onclick = () => openCourseRoadmap(firstCourse.slug);
         }
@@ -3803,15 +3760,7 @@
     }
 
     function calculateCurrentProgressPct() {
-      if (!liveCourseData || !liveCourseData.cac_chuong) return 0;
-      let total = 0, comp = 0;
-      liveCourseData.cac_chuong.forEach(ch => {
-        (ch.cac_moc || []).forEach(m => {
-          total++;
-          if (m.trang_thai === 'DA_HOAN_THANH' || m.trang_thai === 'HOAN_THANH') comp++;
-        });
-      });
-      return total > 0 ? Math.round((comp / total) * 100) : 0;
+      return Math.round(Number(liveCourseData?.completion_percent) || 0);
     }
 
     function renderHubCourses() {
@@ -3835,12 +3784,12 @@
       }
 
       container.innerHTML = myEnrolledCourses.map(c => {
-        const pct = c.tien_do !== undefined ? Math.round(c.tien_do) : calculateCurrentProgressPct();
+        const pct = c.completion_percent !== undefined ? Math.round(c.completion_percent) : calculateCurrentProgressPct();
         return `
           <div class="p-4 rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-emerald-500/40 flex items-center justify-between cursor-pointer transition shadow-2xs group" onclick="openCourseRoadmap('${c.slug}')">
             <div class="min-w-0 pr-3">
-              <p class="font-bold text-xs truncate group-hover:text-emerald-600 transition">${escapeHtml(c.ten_mon)}</p>
-              <p class="text-[10px] text-[var(--muted-foreground)] mt-0.5">${c.thu_tu ? 'Học phần #' + c.thu_tu : 'Lộ trình chuẩn hóa'} · Chinh phục tháp</p>
+              <p class="font-bold text-xs truncate group-hover:text-emerald-600 transition">${escapeHtml(c.name)}</p>
+              <p class="text-[10px] text-[var(--muted-foreground)] mt-0.5">${c.sort_order ? 'Học phần #' + c.sort_order : 'Lộ trình chuẩn hóa'} · Chinh phục tháp</p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
               <span class="text-xs font-bold text-emerald-600 font-mono">${pct}%</span>
@@ -3872,7 +3821,7 @@
       }
 
       container.innerHTML = myEnrolledCourses.map(c => {
-        const pct = c.tien_do !== undefined ? Math.round(c.tien_do) : calculateCurrentProgressPct();
+        const pct = c.completion_percent !== undefined ? Math.round(c.completion_percent) : calculateCurrentProgressPct();
         return `
           <div class="bg-[var(--card)] border border-emerald-500/30 rounded-2xl p-6 space-y-4 shadow-xs relative overflow-hidden">
             <div class="absolute top-0 right-0 bg-emerald-500/10 text-emerald-600 text-[10px] font-bold px-3 py-1 rounded-bl-xl font-mono">
@@ -3883,8 +3832,8 @@
                 🗄️
               </div>
               <div class="min-w-0 flex-1">
-                <h3 class="font-bold text-base leading-tight truncate">${escapeHtml(c.ten_mon)}</h3>
-                <p class="text-xs text-[var(--muted-foreground)] mt-0.5 line-clamp-1">${c.mo_ta ? escapeHtml(c.mo_ta) : 'Lộ trình chuẩn hóa kiến thức đại học'}</p>
+                <h3 class="font-bold text-base leading-tight truncate">${escapeHtml(c.name)}</h3>
+                <p class="text-xs text-[var(--muted-foreground)] mt-0.5 line-clamp-1">${c.description ? escapeHtml(c.description) : 'Lộ trình chuẩn hóa kiến thức đại học'}</p>
               </div>
             </div>
             <div class="space-y-1.5">
@@ -3914,7 +3863,7 @@
       }
 
       container.innerHTML = allSystemCourses.map(c => {
-        const isEnrolled = myEnrolledCourses.some(m => m.ma_mon === c.ma_mon || m.slug === c.slug);
+        const isEnrolled = myEnrolledCourses.some(m => m.id === c.id || m.slug === c.slug);
         return `
           <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 space-y-4 shadow-xs flex flex-col justify-between hover:border-[var(--foreground)]/20 transition">
             <div class="space-y-2.5">
@@ -3925,8 +3874,8 @@
                   : `<span class="text-[10px] bg-[var(--background)] border border-[var(--border)] text-[var(--muted-foreground)] px-2 py-0.5 rounded-full font-semibold font-mono">Chưa đăng ký</span>`
                 }
               </div>
-              <h3 class="font-bold text-sm leading-tight text-[var(--foreground)]">${escapeHtml(c.ten_mon)}</h3>
-              <p class="text-[11px] text-[var(--muted-foreground)] line-clamp-3 leading-relaxed">${escapeHtml(c.mo_ta || 'Giáo trình đào tạo chuẩn hóa')}</p>
+              <h3 class="font-bold text-sm leading-tight text-[var(--foreground)]">${escapeHtml(c.name)}</h3>
+              <p class="text-[11px] text-[var(--muted-foreground)] line-clamp-3 leading-relaxed">${escapeHtml(c.description || 'Giáo trình đào tạo chuẩn hóa')}</p>
             </div>
             <div>
               ${isEnrolled
@@ -4007,9 +3956,9 @@
       if (coinsVal) coinsVal.textContent = (userCoins || 0) + ' 🪙';
 
       let totalMocs = 0, compMocs = 0;
-      if (liveCourseData && liveCourseData.cac_chuong) {
-        liveCourseData.cac_chuong.forEach(ch => {
-          (ch.cac_moc || []).forEach(m => {
+      if (liveCourseData && liveCourseData.chapters) {
+        liveCourseData.chapters.forEach(ch => {
+          (ch.milestones || []).forEach(m => {
             totalMocs++;
             if (m.trang_thai === 'HOAN_THANH' || m.trang_thai === 'DA_HOAN_THANH') compMocs++;
           });
@@ -4036,7 +3985,7 @@
         if (csdlBar) csdlBar.style.width = '0%';
       } else {
         const activeCourse = myEnrolledCourses[0];
-        if (courseTitleEl) courseTitleEl.textContent = `Tiến độ ${activeCourse.ten_mon ? activeCourse.ten_mon.split('&')[0].trim() : 'CSDL'}`;
+        if (courseTitleEl) courseTitleEl.textContent = `Tiến độ ${activeCourse.name ? activeCourse.name.split('&')[0].trim() : 'CSDL'}`;
         if (courseBadgeEl) {
           courseBadgeEl.textContent = 'Đang học';
           courseBadgeEl.className = 'font-bold text-xs text-emerald-600';
@@ -6461,26 +6410,26 @@
     let userManuallyNavigatedChapter = false;
 
     function getPlayerCurrentChapter(courseData) {
-      if (!courseData || !courseData.cac_chuong || courseData.cac_chuong.length === 0) return null;
-      // 1. Prioritize HIGHEST chapter containing an unlocked active milestone ('DA_MO')
-      for (let i = courseData.cac_chuong.length - 1; i >= 0; i--) {
-        const ch = courseData.cac_chuong[i];
-        if ((ch.cac_moc || []).some(m => m.trang_thai === 'DA_MO')) {
-          return ch.ma_chuong;
+      if (!courseData || !courseData.chapters || courseData.chapters.length === 0) return null;
+      // 1. Prioritize HIGHEST chapter containing an unlocked active milestone ('OPEN')
+      for (let i = courseData.chapters.length - 1; i >= 0; i--) {
+        const ch = courseData.chapters[i];
+        if ((ch.milestones || []).some(m => m.status === 'OPEN')) {
+          return ch.id;
         }
       }
       // 2. Or the highest unlocked chapter where previous chapter's boss is passed
-      for (let i = courseData.cac_chuong.length - 1; i >= 0; i--) {
-        const ch = courseData.cac_chuong[i];
-        if (i === 0) return ch.ma_chuong;
-        const prevCh = courseData.cac_chuong[i - 1];
-        const prevMocs = prevCh.cac_moc || [];
+      for (let i = courseData.chapters.length - 1; i >= 0; i--) {
+        const ch = courseData.chapters[i];
+        if (i === 0) return ch.id;
+        const prevCh = courseData.chapters[i - 1];
+        const prevMocs = prevCh.milestones || [];
         const prevBoss = prevMocs[prevMocs.length - 1];
-        if (prevBoss && (prevBoss.trang_thai === 'DA_HOAN_THANH' || prevBoss.trang_thai === 'HOAN_THANH')) {
-          return ch.ma_chuong;
+        if (prevBoss && (prevBoss.status === 'COMPLETED')) {
+          return ch.id;
         }
       }
-      return courseData.cac_chuong[0].ma_chuong;
+      return courseData.chapters[0].id;
     }
 
 
@@ -6498,21 +6447,20 @@
       const rewardEl = document.getElementById('hub-focus-reward');
       const btn = document.getElementById('btn_hub_start_focus_moc');
 
-      if (chTag && liveCourseData && liveCourseData.cac_chuong) {
-        const activeChapter = liveCourseData.cac_chuong.find(c => c.ma_chuong === currentSagaChapterId) || liveCourseData.cac_chuong[0];
+      if (chTag && liveCourseData && liveCourseData.chapters) {
+        const activeChapter = liveCourseData.chapters.find(c => c.id === currentSagaChapterId) || liveCourseData.chapters[0];
         if (activeChapter) {
-          chTag.textContent = activeChapter.tieu_de || `Chương ${activeChapter.thu_tu || 1}`;
+          chTag.textContent = activeChapter.title || `Chương ${activeChapter.sort_order || 1}`;
         }
       }
-      if (titleEl) titleEl.textContent = moc.tieu_de || 'Mốc học tập';
-      if (descEl) descEl.textContent = moc.mo_ta || 'Tiếp tục hành trình học tập tương tác cùng Linh vật Pet của bạn.';
+      if (titleEl) titleEl.textContent = moc.title || 'Mốc học tập';
+      if (descEl) descEl.textContent = moc.description || 'Tiếp tục hành trình học tập tương tác cùng Linh vật Pet của bạn.';
       if (rewardEl) {
-        rewardEl.textContent = `+${moc.diem_thuong || 150} EXP • +${moc.xu_thuong || 30} Xu`;
+        rewardEl.textContent = `+${moc.reward_xp ?? 0} EXP • +${moc.reward_coins ?? 0} Xu`;
       }
       if (btn) {
-        const isDone = (moc.trang_thai === 'HOAN_THANH' || moc.trang_thai === 'DA_HOAN_THANH');
-        const steps = String(moc.cac_buoc_hoan_thanh || '0/4');
-        const finishedSteps = parseInt(steps.split('/')[0] || '0', 10);
+        const isDone = (moc.status === 'COMPLETED');
+        const finishedSteps = moc.completed_steps || 0;
         if (isDone) {
           btn.innerHTML = '<span>⭐ Ôn tập mốc</span>';
         } else if (finishedSteps > 0) {
@@ -6528,8 +6476,8 @@
     }
 
     function startFocusMocLearning() {
-      if (currentFocusMoc && currentFocusMoc.ma_moc) {
-        openCheckpointModal(currentFocusMoc.ma_moc);
+      if (currentFocusMoc && currentFocusMoc.id) {
+        openCheckpointModal(currentFocusMoc.id);
       } else {
         openCourseRoadmap(currentActiveCourseSlug || 'co-so-du-lieu');
       }
@@ -6540,7 +6488,7 @@
       try {
         let preferredChapterId = null;
         if (preferredChapterIdOrSlug) {
-          if (typeof preferredChapterIdOrSlug === 'string' && (preferredChapterIdOrSlug.startsWith('ch_') || preferredChapterIdOrSlug.startsWith('chuong_'))) {
+          if (typeof preferredChapterIdOrSlug === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(preferredChapterIdOrSlug)) {
             preferredChapterId = preferredChapterIdOrSlug;
           } else if (typeof preferredChapterIdOrSlug === 'string') {
             if (currentActiveCourseSlug !== preferredChapterIdOrSlug) {
@@ -6572,32 +6520,30 @@
     }
 
     function getStarCountForMoc(moc) {
-      if (!moc || (moc.trang_thai !== 'HOAN_THANH' && moc.trang_thai !== 'DA_HOAN_THANH')) return 0;
-      const record=moc.ky_luc;
-      if(!record||record.recordedSteps<Number(moc.tong_so_buoc||4))return 1;
-      return record.accuracy>=95?3:record.accuracy>=80?2:1;
+      if (moc?.status !== 'COMPLETED') return 0;
+      return moc.record?.stars ?? 1;
     }
 
     function getActiveMoc(mocs) {
       if (!Array.isArray(mocs) || mocs.length === 0) return null;
-      const foundActive = mocs.find(m => m.trang_thai === 'DA_MO');
+      const foundActive = mocs.find(m => m.status === 'OPEN');
       if (foundActive) return foundActive;
-      const lastDone = mocs.map(m => m.trang_thai).lastIndexOf('DA_HOAN_THANH');
+      const lastDone = mocs.map(m => m.status).lastIndexOf('COMPLETED');
       const idx = lastDone >= 0 ? Math.min(mocs.length - 1, lastDone + 1) : 0;
       return mocs[idx] || mocs[0];
     }
 
     function getMocSpeechText(moc) {
       if (!moc) return 'Bắt đầu học! 🎯';
-      if (moc.trang_thai === 'DA_HOAN_THANH' || moc.trang_thai === 'HOAN_THANH') {
+      if (moc.status === 'COMPLETED') {
         return 'Ôn lại nhé! ✨';
       }
-      if (moc.loai_moc === 'THU_THACH_BOSS') {
+      if (moc.kind === 'BOSS') {
         return 'Thách đấu Boss! ⚔️';
       }
-      const steps = String(moc.cac_buoc_hoan_thanh || '0/4');
+      const steps = String(moc.completed_steps || '0/4');
       const finishedSteps = parseInt(steps.split('/')[0] || '0', 10);
-      const score = typeof moc.diem_dat_duoc === 'number' ? moc.diem_dat_duoc : 0;
+      const score = typeof moc.xp_earned === 'number' ? moc.xp_earned : 0;
       if (finishedSteps > 0 || score > 0) {
         return 'Học tiếp nào! 🎯';
       }
@@ -6615,10 +6561,10 @@
       if (speechTxt) speechTxt.textContent = 'Hoàn thành mốc trước đã! 🔒';
       showToast('Mốc này đang khóa. Hãy hoàn thành các mốc trước để mở khóa!', 'info');
       setTimeout(() => {
-        if (speechTxt && liveCourseData && liveCourseData.cac_chuong) {
-          const allChapters = liveCourseData.cac_chuong || [];
-          const curCh = allChapters.find(c => c.ma_chuong === currentSagaChapterId) || allChapters[0];
-          const curMocs = curCh ? curCh.cac_moc || [] : [];
+        if (speechTxt && liveCourseData && liveCourseData.chapters) {
+          const allChapters = liveCourseData.chapters || [];
+          const curCh = allChapters.find(c => c.id === currentSagaChapterId) || allChapters[0];
+          const curMocs = curCh ? curCh.milestones || [] : [];
           speechTxt.textContent = getMocSpeechText(getActiveMoc(curMocs));
         }
       }, 2000);
@@ -6637,11 +6583,7 @@
     }
 
     function handleTheoryHintClick() {
-      if (currentMocSession) {
-        reopenTheoryCards();
-      } else if (currentQuizSession) {
-        viewCurrentTheoryFromQuiz();
-      }
+      viewCurrentTheoryFromQuiz();
     }
 
     function escapeHtml(str) {
@@ -6713,55 +6655,65 @@
       return formattedLines.join('');
     }
 
+    async function courseRequest(milestoneId, path = '', body) {
+      const token = localStorage.getItem('tok_token');
+      const response = await fetch('/api/checkpoints/' + encodeURIComponent(milestoneId) + path, {
+        method: body === undefined ? 'GET' : 'POST',
+        headers: {
+          ...(token ? { Authorization: 'Bearer ' + token } : {}),
+          ...(body === undefined ? {} : { 'Content-Type': 'application/json' })
+        },
+        body: body === undefined ? undefined : JSON.stringify(body)
+      });
+      const result = await response.json();
+      if (token !== localStorage.getItem('tok_token')) throw Error('Tài khoản đã thay đổi.');
+      if (!response.ok || !result.success) throw Error(result.error?.message || 'Không xử lý được bài học.');
+      return result.data;
+    }
+
+    function sessionRequest(session, path = '', body) {
+      return courseRequest(session.mocId, '/sessions/' + encodeURIComponent(session.courseSessionId) + path, body);
+    }
+
+    function createCourseSessionState(milestone, kind, data = null) {
+      return {
+        mocId: milestone.id,
+        title: milestone.title,
+        kind,
+        step: data?.step_no ?? null,
+        totalSteps: milestone.step_count,
+        theory: milestone.theory_markdown,
+        courseSessionId: data?.id ?? null,
+        questions: data?.questions ?? [],
+        qIndex: 0,
+        submissions: data?.attempts ?? [],
+        lookupEvents: [],
+        pendingLookups: []
+      };
+    }
+
     async function startMocLearning(mocId, resumeSnapshot) {
       closeCheckpointModal();
-      const token = localStorage.getItem('tok_token');
       try {
-        const resumeIds=resumeSnapshot?[...new Set([...(resumeSnapshot.queue||[]),...(resumeSnapshot.submissions||[]).map(a=>a.ma_cau_hoi)])]:[];
-        const resumeQuery=resumeIds.length?'?resume='+encodeURIComponent(resumeIds.join(',')):'';
-        const resp = await fetch('/api/checkpoints/' + mocId + resumeQuery, {
-          headers: token ? { 'Authorization': 'Bearer ' + token } : {}
-        });
-        const res = await resp.json();
-        if (res.success && res.data) {
-          const d = res.data;
-          const parsedCards = parseTheoryToCards(d.noi_dung_ly_thuyet, d.tieu_de);
-          const rawQuestions = d.danh_sach_cau_hoi || [];
-
-          currentMocSession = {
-            mocId: d.ma_moc,
-            tieuDe: d.tieu_de,
-            loaiMoc: d.loai_moc,
-            cards: parsedCards,
-            cardIndex: 0,
-            phase: 'THEORY_CARDS',
-            questionsQueue: [...rawQuestions],
-            totalOriginalQuestions: rawQuestions.length,
-            masteredCount: 0,
-            firstAttemptCorrectCount: 0,
-            failedQuestionsSet: new Set(),
-            submissions: [],
-            currentQuestionStartTime: null,
-            currentQuestionLookups: 0,
-            isReturningFromTheoryHint: false,
-            currentAnswer: null,
-            isAnswerChecked: false,
-            questions: rawQuestions,
-            qIndex: 0,
-            matchingState: null,
-            dienTuChosen: null,
-            arrangedTokens: []
-          };
-
-          currentQuizSession = currentMocSession;
-
-          navTo('play');
-          renderMocLearningScreen();
-        } else {
-          showToast(res.error?.message || 'Không thể mở mốc bài học!', 'error');
+        const milestone = await courseRequest(mocId);
+        if (milestone.kind === 'THEORY') {
+          await openTheoryModal(mocId);
+          return;
         }
-      } catch (err) {
-        showToast('Lỗi kết nối khi tải mốc bài học!', 'error');
+        const previous = resumeSnapshot?.id
+          ? await courseRequest(mocId, '/sessions/' + encodeURIComponent(resumeSnapshot.id))
+          : null;
+        currentMocSession = createCourseSessionState(milestone, 'MILESTONE', previous);
+        Object.assign(currentMocSession, {
+          cards: parseTheoryToCards(milestone.theory_markdown, milestone.title),
+          cardIndex: 0,
+          phase: 'THEORY_CARDS'
+        });
+        currentQuizSession = currentMocSession;
+        navTo('play');
+        renderMocLearningScreen();
+      } catch (error) {
+        showToast(error.message, 'error');
       }
     }
 
@@ -6770,7 +6722,7 @@
       const s = currentMocSession;
 
       const titleEl = document.getElementById('play-title');
-      if (titleEl) titleEl.textContent = s.tieuDe;
+      if (titleEl) titleEl.textContent = s.title;
 
       const progEl = document.getElementById('play-progress');
 
@@ -6816,12 +6768,7 @@
         const stepBadge = document.getElementById('play-step-badge');
         if (stepBadge) stepBadge.textContent = '🎯 Luyện tập củng cố';
 
-        if (s.questionsQueue.length === 0) {
-          completeAllPractice();
-          return;
-        }
-
-        renderCurrentPracticeQuestion();
+        renderQuizQuestion();
       }
     }
 
@@ -6836,378 +6783,140 @@
       }
     }
 
-    function startPracticePhase() {
-      if (!currentMocSession) return;
-      currentMocSession.phase = 'PRACTICE_QUEUE';
-      if (currentMocSession.questionsQueue.length === 0) {
-        completeAllPractice();
-        return;
+    async function startPracticePhase() {
+      const session = currentMocSession;
+      if (!session || session.opening) return;
+      session.opening = true;
+      try {
+        if (!session.courseSessionId) {
+          const result = await courseRequest(session.mocId, '/sessions', { kind: 'MILESTONE' });
+          if (currentMocSession !== session) return;
+          session.courseSessionId = result.id;
+          session.questions = result.questions;
+          session.submissions = result.attempts ?? [];
+        }
+        session.phase = 'PRACTICE_QUEUE';
+        const done = new Set(session.submissions.filter(attempt => attempt.is_correct).map(attempt => attempt.position));
+        session.questionsQueue = session.questions.filter(question => !done.has(question.position));
+        if (session.questionsQueue.length === 0) await finishAndSubmitStep();
+        else renderMocLearningScreen();
+      } catch (error) {
+        showToast(error.message, 'error');
+      } finally {
+        session.opening = false;
       }
-      renderMocLearningScreen();
-      if (audioSettings && audioSettings.quiz) playAdvancedSound('click');
     }
 
-    function reopenTheoryCards() {
-      if (!currentMocSession) return;
-      // Chỉ tính tra cứu bài giảng khi người học bấm nút tra cứu từ câu hỏi
-      currentMocSession.currentQuestionLookups = (currentMocSession.currentQuestionLookups || 0) + 1;
-      currentMocSession.isReturningFromTheoryHint = true;
-      currentMocSession.theoryLookupStartTime = Date.now();
-      currentMocSession.phase = 'THEORY_CARDS';
-      currentMocSession.cardIndex = 0;
-      renderMocLearningScreen();
-      if (audioSettings && audioSettings.quiz) playAdvancedSound('click');
+    function currentCourseQuestion(session = currentQuizSession) {
+      return session?.questionsQueue ? session.questionsQueue[0] : session?.questions[session.qIndex];
     }
 
-    function renderCurrentPracticeQuestion() {
-      const region=document.getElementById('practice-scroll-region');if(region)region.scrollTop=0;
-      if (!currentMocSession || currentMocSession.questionsQueue.length === 0) return;
-      const s = currentMocSession;
-      const q = s.questionsQueue[0];
-      queueMicrotask(() => window.GuidedTour?.question(q.loai_cau_hoi || 'TRAC_NGHIEM_4'));
+    function courseLookupEvent(openedAt, session) {
+      if (!openedAt || !currentCourseQuestion(session)) return null;
+      return {
+        opened_at: new Date(openedAt).toISOString(),
+        duration_seconds: Math.max(1, Math.round((Date.now() - openedAt) / 1000)),
+        offset_seconds: Math.max(0, Math.round((openedAt - (session.currentQuestionStartTime || openedAt)) / 1000)),
+        context: session.currentAnswer ? 'AFTER_ANSWER' : 'BEFORE_ANSWER'
+      };
+    }
 
-      s.questions = s.questionsQueue;
-      s.qIndex = 0;
-      s.currentAnswer = null;
-      s.isAnswerChecked = false;
-      s.matchingState = null;
-      s.dienTuChosen = null;
-      s.arrangedTokens = [];
-      if (!s.submissions) s.submissions = [];
+    function queueCourseLookup(session, lookup) {
+      if (!session.currentAnswer) session.lookupEvents.push(lookup);
+      else session.pendingLookups.push({ attempt_no: session.currentAnswer.attempt_no, lookup });
+    }
 
-      // Đo thời gian và số lần tra cứu theo từng câu hỏi:
-      if (!s.isReturningFromTheoryHint) {
-        s.currentQuestionStartTime = Date.now();
-        s.currentQuestionLookups = 0;
-        s.currentQuestionLookupEvents = [];
-      } else {
-        // Vừa xem lại thẻ lý thuyết quay về: ghi nhận sự kiện tra cứu
-        const lookupStart = s.theoryLookupStartTime || Date.now();
-        const durationSec = Math.max(1, Math.round((Date.now() - lookupStart) / 1000));
-        const event = {
-          ma_cau_hoi: q.ma_cau_hoi,
-          thoi_diem: new Date(lookupStart).toISOString(),
-          thoi_luong_giay: durationSec,
-          ngu_canh: 'TRUOC_KHI_CHON',
-          moc_giay_trong_cau: Math.max(0, Math.round((lookupStart - (s.currentQuestionStartTime || lookupStart)) / 1000))
+    async function flushCourseLookups(session) {
+      while (session.pendingLookups.length) {
+        const entry = session.pendingLookups[0];
+        await sessionRequest(session, '/lookups', { attempt_no: entry.attempt_no, lookups: [entry.lookup] });
+        session.pendingLookups.shift();
+      }
+    }
+
+    async function submitCourseAnswer(session, question, answer) {
+      if (session.currentAnswer || session.savingAnswer) return null;
+      session.savingAnswer = true;
+      const next = (session.submissions.at(-1)?.attempt_no ?? 0) + 1;
+      try {
+        session.pendingAttempt ??= {
+          ...answer,
+          position: question.position,
+          attempt_no: next,
+          seconds: Math.round((Date.now() - session.currentQuestionStartTime) / 1000),
+          lookups: [...session.lookupEvents]
         };
-        s.currentQuestionLookupEvents = s.currentQuestionLookupEvents || [];
-        s.currentQuestionLookupEvents.push(event);
-      }
-      s.isReturningFromTheoryHint = false;
-
-      currentQuizSession = s;
-
-      const progEl = document.getElementById('play-progress');
-      if (progEl) {
-        const pct = Math.round((s.masteredCount / Math.max(1, s.totalOriginalQuestions)) * 100);
-        progEl.style.width = `${pct}%`;
-      }
-
-      const qBloomTag = document.getElementById('q-bloom-tag');
-      if (qBloomTag) {
-        qBloomTag.textContent = `[BLOOM: ${q.muc_bloom || 'NHO'}] · [DẠNG: ${formatQuestionTypeName(q.loai_cau_hoi)}]`;
-      }
-
-      const qCounter = document.getElementById('q-counter');
-      if (qCounter) {
-        const remaining = s.questionsQueue.length;
-        const mastered = s.masteredCount || 0;
-        qCounter.textContent = `Đã làm chủ: ${mastered}/${s.totalOriginalQuestions} câu (Còn lại: ${remaining})`;
-      }
-
-      const qPrompt = document.getElementById('q-prompt');
-      if (qPrompt) {
-        if (q.loai_cau_hoi === 'NOI_CAP') {
-          qPrompt.textContent = 'Ghép thuật ngữ với định nghĩa tương ứng';
-        } else {
-          qPrompt.textContent = q.noi_dung;
-        }
-      }
-
-      const fbBox = document.getElementById('q-feedback-box');
-      if (fbBox) fbBox.classList.add('hidden');
-
-      const isAutoAdvanceType = (q.loai_cau_hoi === 'TRAC_NGHIEM_4' || q.loai_cau_hoi === 'NOI_CAP');
-      const nextBtn = document.getElementById('btn-next-step');
-      if (nextBtn) {
-        if (isAutoAdvanceType) {
-          nextBtn.disabled = true;
-          nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] opacity-0 pointer-events-none";
-          nextBtn.innerHTML = '<span>Tiếp tục</span> <span>→</span>';
-        } else {
-          nextBtn.disabled = false;
-          nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]";
-          nextBtn.innerHTML = '<span>Kiểm tra</span> <span>✓</span>';
-        }
-      }
-
-      const container = document.getElementById('q-options-container');
-      if (!container) return;
-      container.innerHTML = '';
-
-      if (q.loai_cau_hoi === 'NOI_CAP') {
-        renderNoiCapUI(q, container);
-      } else if (q.loai_cau_hoi === 'DIEN_TU') {
-        renderDienTuUI(q, container);
-      } else if (q.loai_cau_hoi === 'SAP_XEP_CAU') {
-        renderSapXepCauUI(q, container);
-      } else {
-        renderTracNghiem4UI(q, container);
+        const result = await sessionRequest(session, '/answer', session.pendingAttempt);
+        session.pendingAttempt = null;
+        if (session !== currentQuizSession) return null;
+        session.submissions.push(result);
+        session.currentAnswer = result;
+        session.isCurrentQuestionChecked = true;
+        showCourseFeedback(question, result);
+        return result;
+      } catch (error) {
+        showToast(error.message, 'error');
+        return null;
+      } finally {
+        session.savingAnswer = false;
       }
     }
 
-    let lastPracticeCheckResult = null;
+    function showCourseFeedback(question, result) {
+      const box = document.getElementById('q-feedback-box');
+      const title = document.getElementById('q-feedback-title');
+      const description = document.getElementById('q-feedback-desc');
+      const button = document.getElementById('btn-next-step');
+      const valid = result.is_correct;
+      const tone = valid ? 'emerald' : 'rose';
+      let expected = result.correct_answer;
+      if (question.type === 'MULTIPLE_CHOICE') expected = question.options.find(option => option.position === expected)?.text;
+      if (question.type === 'ORDERING') expected = expected?.join(' ');
+      if (question.type === 'MATCHING') expected = null;
+
+      title.textContent = valid ? '✓ Chính xác!' : expected ? '✕ Chưa đúng. Đáp án: ' + expected : '✕ Chưa đúng';
+      description.textContent = result.explanation || '';
+      box.className = `rounded-2xl p-4 border border-${tone}-500/40 bg-${tone}-500/10 text-xs space-y-1.5`;
+      if (audioSettings.quiz) playAdvancedSound(valid ? 'quiz-correct' : 'quiz-wrong');
+
+      button.textContent = !valid && currentQuizSession.kind === 'MILESTONE'
+        ? 'Luyện lại ở cuối ↺' : 'Tiếp tục →';
+      button.classList.remove('opacity-0', 'pointer-events-none');
+      button.disabled = false;
+    }
 
     async function handleMocPracticeAction() {
-      const s = currentMocSession || currentQuizSession;
-      if (!s) return;
-
-      const currentQ = (s.questionsQueue && s.questionsQueue[0]) || (s.questions && s.questions[s.qIndex || 0]);
-      if (!currentQ) {
-        if (currentMocSession) completeAllPractice();
-        else finishAndSubmitStep();
+      const session = currentQuizSession;
+      const question = currentCourseQuestion(session);
+      if (!session || !question || session.savingAnswer || session.submitting) return;
+      if (!session.currentAnswer) {
+        if (session.pendingAttempt) {
+          await submitCourseAnswer(session, question, session.pendingAttempt);
+        } else if (question.type === 'FILL_BLANK' && session.dienTuChosen) {
+          await submitCourseAnswer(session, question, { submitted_text: session.dienTuChosen });
+        } else if (question.type === 'ORDERING' && session.arrangedTokens.length) {
+          const tokens = session.arrangedTokens.map(token => token.word);
+          await submitCourseAnswer(session, question, { response: { kind: 'ORDERING', tokens } });
+        }
         return;
       }
 
-      const isChecked = s.isAnswerChecked || s.isCurrentQuestionChecked;
-
-      if (!isChecked) {
-        // Chỉ câu Điền từ và Sắp xếp câu mới cần người dùng bấm nút [Kiểm tra]
-        if (currentQ.loai_cau_hoi === 'DIEN_TU') {
-          if (!s.dienTuChosen) {
-            showToast('Vui lòng chạm một từ bên dưới để điền vào ô trống trước khi kiểm tra!', 'info');
-            return;
-          }
-          const expected = currentQ.du_lieu?.blank_answer;
-          const isCorrect = Boolean(expected && String(s.dienTuChosen).trim().toLowerCase() === String(expected).trim().toLowerCase());
-          const timeSpentSec = Math.max(1, Math.round((Date.now() - (s.currentQuestionStartTime || Date.now())) / 1000));
-          const lookupsCount = s.currentQuestionLookups || 0;
-          s.isAnswerChecked = true;
-          s.isCurrentQuestionChecked = true;
-          lastPracticeCheckResult = isCorrect;
-          s.currentAnswer = {
-            ma_cau_hoi: currentQ.ma_cau_hoi,
-            selected_word: s.dienTuChosen,
-            lua_chon: s.dienTuChosen,
-            la_dung: isCorrect,
-            thoi_gian_giay: timeSpentSec,
-            so_lan_tra_cuu: lookupsCount,
-            nhat_ky_tra_cuu: [...(s.currentQuestionLookupEvents || [])]
-          };
-          if (!s.submissions) s.submissions = [];
-          s.submissions.push(s.currentAnswer);
-
-          if (s.failedQuestionsSet && !s.failedQuestionsSet.has(currentQ.ma_cau_hoi)) {
-            if (isCorrect) s.firstAttemptCorrectCount = (s.firstAttemptCorrectCount || 0) + 1;
-            else s.failedQuestionsSet.add(currentQ.ma_cau_hoi);
-          }
-
-          const blankTarget = document.getElementById('blank-drop-target');
-          if (blankTarget) {
-            if (isCorrect) {
-              blankTarget.className = "inline-flex items-center justify-center min-w-[120px] min-h-[36px] px-3 py-1 rounded-xl border-2 border-emerald-500 bg-emerald-500/15 font-bold text-emerald-600 text-xs sm:text-sm mx-1 align-middle";
-              blankTarget.innerHTML = `✓ ${escapeHtml(s.dienTuChosen)}`;
-            } else {
-              blankTarget.className = "inline-flex items-center justify-center min-w-[120px] min-h-[36px] px-3 py-1 rounded-xl border-2 border-rose-500 bg-rose-500/15 font-bold text-rose-600 text-xs sm:text-sm mx-1 align-middle pair-shake-error";
-              blankTarget.innerHTML = `✕ ${escapeHtml(s.dienTuChosen)} (Đúng: ${escapeHtml(expected || '')})`;
-            }
-          }
-
-          if (audioSettings && audioSettings.quiz) playAdvancedSound(isCorrect ? 'quiz-correct' : 'quiz-wrong');
-
-          const fbBox = document.getElementById('q-feedback-box');
-          const fbTitle = document.getElementById('q-feedback-title');
-          const fbDesc = document.getElementById('q-feedback-desc');
-          if (fbBox && fbTitle && fbDesc) {
-            fbTitle.innerHTML = isCorrect ? `<span class="text-emerald-600 font-bold">✓ Rất chính xác! Tuyệt vời!</span>` : `<span class="text-rose-600 font-bold">❌ Chưa chính xác (Câu này sẽ gặp lại ở cuối để làm chủ!)</span>`;
-            fbDesc.textContent = currentQ.giai_thich || 'Khái niệm trọng tâm giúp khắc sâu kiến thức.';
-            fbBox.className = `rounded-2xl p-4 border ${isCorrect ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-rose-500/40 bg-rose-500/10'} text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200`;
-            fbBox.classList.remove('hidden');
-          }
-
-          const nextBtn = document.getElementById('btn-next-step');
-          if (nextBtn) {
-            if (isCorrect) {
-              nextBtn.innerHTML = '<span>Tiếp tục</span> <span>→</span>';
-              nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]";
-            } else {
-              nextBtn.innerHTML = '<span>Đã hiểu · Luyện lại ở cuối</span> <span>↺</span>';
-              nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]";
-            }
-          }
-          return;
-        } else if (currentQ.loai_cau_hoi === 'SAP_XEP_CAU') {
-          if (!s.arrangedTokens || s.arrangedTokens.length === 0) {
-            showToast('Vui lòng chạm các từ bên dưới để ghép thành câu trước khi kiểm tra!', 'info');
-            return;
-          }
-          const userOrder = s.arrangedTokens.map(t => t.word);
-          const expectedOrder = currentQ.du_lieu?.correct_order || [];
-          const isCorrect = (expectedOrder.length > 0 && userOrder.length === expectedOrder.length &&
-            expectedOrder.every((w, i) => String(w).trim().toLowerCase() === String(userOrder[i]).trim().toLowerCase()));
-
-          const timeSpentSec = Math.max(1, Math.round((Date.now() - (s.currentQuestionStartTime || Date.now())) / 1000));
-          const lookupsCount = s.currentQuestionLookups || 0;
-          s.isAnswerChecked = true;
-          s.isCurrentQuestionChecked = true;
-          lastPracticeCheckResult = isCorrect;
-          s.currentAnswer = {
-            ma_cau_hoi: currentQ.ma_cau_hoi,
-            ordered_words: userOrder,
-            lua_chon: userOrder.join(' '),
-            la_dung: isCorrect,
-            thoi_gian_giay: timeSpentSec,
-            so_lan_tra_cuu: lookupsCount,
-            nhat_ky_tra_cuu: [...(s.currentQuestionLookupEvents || [])]
-          };
-          if (!s.submissions) s.submissions = [];
-          s.submissions.push(s.currentAnswer);
-
-          if (s.failedQuestionsSet && !s.failedQuestionsSet.has(currentQ.ma_cau_hoi)) {
-            if (isCorrect) s.firstAttemptCorrectCount = (s.firstAttemptCorrectCount || 0) + 1;
-            else s.failedQuestionsSet.add(currentQ.ma_cau_hoi);
-          }
-
-          const zone = document.getElementById('sentence-construction-zone');
-          if (zone) {
-            if (isCorrect) {
-              zone.classList.add('border-emerald-500', 'bg-emerald-500/10');
-            } else {
-              zone.classList.add('border-rose-500', 'bg-rose-500/10', 'pair-shake-error');
-            }
-          }
-
-          if (audioSettings && audioSettings.quiz) playAdvancedSound(isCorrect ? 'quiz-correct' : 'quiz-wrong');
-
-          const fbBox = document.getElementById('q-feedback-box');
-          const fbTitle = document.getElementById('q-feedback-title');
-          const fbDesc = document.getElementById('q-feedback-desc');
-          if (fbBox && fbTitle && fbDesc) {
-            fbTitle.innerHTML = isCorrect ? `<span class="text-emerald-600 font-bold">✓ Rất chính xác! Cú pháp hoàn hảo!</span>` : `<span class="text-rose-600 font-bold">❌ Chưa chính xác! Câu đúng là: "${expectedOrder.join(' ')}"</span>`;
-            fbDesc.textContent = currentQ.giai_thich || 'Khái niệm trọng tâm giúp khắc sâu kiến thức.';
-            fbBox.className = `rounded-2xl p-4 border ${isCorrect ? 'border-emerald-500/40 bg-emerald-500/10' : 'border-rose-500/40 bg-rose-500/10'} text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200`;
-            fbBox.classList.remove('hidden');
-          }
-
-          const nextBtn = document.getElementById('btn-next-step');
-          if (nextBtn) {
-            if (isCorrect) {
-              nextBtn.innerHTML = '<span>Tiếp tục</span> <span>→</span>';
-              nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]";
-            } else {
-              nextBtn.innerHTML = '<span>Đã hiểu · Luyện lại ở cuối</span> <span>↺</span>';
-              nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]";
-            }
-          }
-          return;
-        }
-      }
-
-      // Step 2: Tiếp tục sang câu tiếp theo
-      s.isAnswerChecked = false;
-      s.isCurrentQuestionChecked = false;
-
-      if (currentMocSession && currentMocSession.questionsQueue) {
-        const isCorrect = lastPracticeCheckResult;
-        if (isCorrect) {
-          currentMocSession.questionsQueue.shift();
-          currentMocSession.masteredCount = (currentMocSession.masteredCount || 0) + 1;
-        } else {
-          // Push failed question to end of queue ("làm sai đẩy câu đó ra cuối")
-          const failed = currentMocSession.questionsQueue.shift();
-          currentMocSession.questionsQueue.push(failed);
-        }
-
-        if (currentMocSession.questionsQueue.length === 0) {
-          completeAllPractice();
-        } else {
-          renderCurrentPracticeQuestion();
-        }
-      } else if (currentQuizSession) {
-        currentQuizSession.qIndex++;
-        if (currentQuizSession.qIndex >= currentQuizSession.questions.length) {
-          finishAndSubmitStep();
-        } else {
-          renderQuizQuestion();
-        }
-      }
-    }
-
-    async function completeAllPractice() {
-      if (!currentMocSession) return;
-      const s = currentMocSession;
-      const token = localStorage.getItem('tok_token');
-      const total = s.totalOriginalQuestions || 1;
-      const firstCorrect = s.firstAttemptCorrectCount || 0;
-      const accuracyPct = Math.round((firstCorrect / total) * 100);
-
       try {
-        const resp = await fetch(`/api/checkpoints/${s.mocId}/submit`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
-          },
-          body: JSON.stringify({
-            cau_tra_loi: s.submissions || []
-          })
-        });
-        const res = await resp.json();
-        if (!res.success) {
-          showToast(res.error?.message || 'Lỗi khi lưu kết quả bài tập!', 'error');
-          return;
-        }
-
-        const earnedCoins = typeof res.data?.earnedCoins === 'number' ? res.data.earnedCoins : 0;
-        const earnedExp = typeof res.data?.earnedExp === 'number' ? res.data.earnedExp : 0;
-        const telemetry = res.data?.telemetry;
-
-        // Cập nhật ngay số dư xu và exp thật từ máy chủ
-        await refreshUserData();
-        if (typeof trackDailyQuestAction === 'function') {
-          trackDailyQuestAction('hoc_tap');
-        }
-
-        const congratsModal = document.getElementById('modal-moc-congrats');
-        const titleEl = document.getElementById('congrats-moc-title');
-        const accEl = document.getElementById('congrats-accuracy');
-        const expEl = document.getElementById('congrats-exp');
-        const coinsEl = document.getElementById('congrats-coins');
-        const timeEl = document.getElementById('congrats-time');
-        const speedEl = document.getElementById('congrats-speed');
-        const lookupsEl = document.getElementById('congrats-lookups');
-
-        if (titleEl) titleEl.textContent = s.tieuDe;
-        if (accEl) accEl.textContent = `${accuracyPct}%`;
-        if (expEl) expEl.textContent = `+${earnedExp}`;
-        if (coinsEl) coinsEl.textContent = `+${earnedCoins}`;
-
-        if (telemetry) {
-          if (timeEl) timeEl.textContent = `${telemetry.thoi_gian_tong_giay}s`;
-          if (speedEl) speedEl.textContent = `${telemetry.toc_do_trung_binh_giay}s/câu`;
-          if (lookupsEl) lookupsEl.textContent = `${telemetry.tong_so_lan_tra_cuu} lần`;
-        } else {
-          let clientTotalSec = 0;
-          let clientLookups = 0;
-          (s.submissions || []).forEach(sub => {
-            clientTotalSec += (sub.thoi_gian_giay || 0);
-            clientLookups += (sub.so_lan_tra_cuu || 0);
-          });
-          const count = Math.max(1, (s.submissions || []).length);
-          if (timeEl) timeEl.textContent = `${clientTotalSec}s`;
-          if (speedEl) speedEl.textContent = `${(clientTotalSec / count).toFixed(1)}s/câu`;
-          if (lookupsEl) lookupsEl.textContent = `${clientLookups} lần`;
-        }
-
-        if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-correct');
-
-        if (congratsModal) {
-          congratsModal.classList.remove('hidden');
-          document.body.style.overflow = 'hidden';
-        }
-      } catch (err) {
-        showToast('Lỗi khi nộp bài tập hoàn thành!', 'error');
+        await flushCourseLookups(session);
+      } catch (error) {
+        showToast(error.message, 'error');
+        return;
+      }
+      if (session !== currentQuizSession) return;
+      if (session.kind === 'MILESTONE') {
+        const previous = session.questionsQueue.shift();
+        if (!session.currentAnswer.is_correct) session.questionsQueue.push(previous);
+        if (session.questionsQueue.length) renderQuizQuestion();
+        else await finishAndSubmitStep();
+      } else {
+        session.qIndex++;
+        if (session.qIndex < session.questions.length) renderQuizQuestion();
+        else await finishAndSubmitStep();
       }
     }
 
@@ -7228,14 +6937,14 @@
       ]);
 
       if (lastFinishedMoc && (lastFinishedMoc.loaiMoc === 'THU_THACH_BOSS' || String(lastFinishedMoc.mocId).endsWith('_05'))) {
-        if (liveCourseData && liveCourseData.cac_chuong) {
-          const chIdx = liveCourseData.cac_chuong.findIndex(c => (c.cac_moc || []).some(m => m.ma_moc === lastFinishedMoc.mocId));
-          if (chIdx >= 0 && chIdx + 1 < liveCourseData.cac_chuong.length) {
-            const nextCh = liveCourseData.cac_chuong[chIdx + 1];
-            currentSagaChapterId = nextCh.ma_chuong;
+        if (liveCourseData && liveCourseData.chapters) {
+          const chIdx = liveCourseData.chapters.findIndex(c => (c.milestones || []).some(m => m.id === lastFinishedMoc.mocId));
+          if (chIdx >= 0 && chIdx + 1 < liveCourseData.chapters.length) {
+            const nextCh = liveCourseData.chapters[chIdx + 1];
+            currentSagaChapterId = nextCh.id;
             userManuallyNavigatedChapter = false;
             renderRealSagaRoadmap(liveCourseData);
-            showToast(`🚀 Tiến bước vào ${nextCh.tieu_de || `Chương ${chIdx + 2}`}! Chúc bạn chinh phục thành công!`, 'success');
+            showToast(`🚀 Tiến bước vào ${nextCh.title || `Chương ${chIdx + 2}`}! Chúc bạn chinh phục thành công!`, 'success');
           }
         }
       }
@@ -7254,139 +6963,73 @@
     let currentCheckpointMoc = null;
 
     async function openCheckpointModal(mocId) {
-      const token = localStorage.getItem('tok_token');
       try {
-        const resp = await fetch('/api/checkpoints/' + mocId, {
-          headers: token ? { 'Authorization': 'Bearer ' + token } : {}
-        });
-        const res = await resp.json();
-        if (res.success && res.data) {
-          currentCheckpointMoc = res.data;
-          const d = res.data;
-          const record=d.ky_luc,stars=getStarCountForMoc(d);
-          document.getElementById('cp-records').innerHTML=`<div class="cp-stars" aria-label="${stars} trên 3 sao">${[1,2,3].map(n=>'<span class="'+(n<=stars?'earned':'')+'">'+(n<=stars?'★':'☆')+'</span>').join('')}</div><div class="cp-stat-grid"><div><strong>${record?record.accuracy+'%':'—'}</strong><span>Độ chính xác tốt nhất</span></div><div><strong>${record?.averageSeconds!=null?record.averageSeconds+' giây':'—'}</strong><span>Thời gian TB / câu</span></div></div><p class="cp-record-note">Kết hợp lượt tốt nhất của từng chặng${record?' · Đã ghi nhận '+record.recordedSteps+'/'+d.tong_so_buoc+' chặng':''}.</p><details class="cp-star-rules"><summary>Điều kiện nhận sao</summary><p>1 sao: hoàn thành mốc. 2 sao: đúng từ 80%. 3 sao: đúng từ 95%. Sao chính xác chỉ được tính khi có kết quả đủ các chặng. Thời gian không ảnh hưởng số sao.</p></details>`;
+        const milestone = await courseRequest(mocId);
+        currentCheckpointMoc = milestone;
+        const record = milestone.record;
+        const stars = getStarCountForMoc(milestone);
+        const completed = milestone.status === 'COMPLETED';
+        const theoryOnly = milestone.kind === 'THEORY';
+        const steps = milestone.step_configs ?? [];
+        document.getElementById('cp-records').innerHTML =
+          `<div class="cp-stars" aria-label="${stars} trên 3 sao">${[1,2,3].map(n =>
+            '<span class="' + (n <= stars ? 'earned' : '') + '">' + (n <= stars ? '★' : '☆') + '</span>'
+          ).join('')}</div><div class="cp-stat-grid">
+            <div><strong>${record?.accuracy_percent != null ? Number(record.accuracy_percent) + '%' : '—'}</strong><span>Độ chính xác tốt nhất</span></div>
+            <div><strong>${record?.average_seconds != null ? Number(record.average_seconds) + ' giây' : '—'}</strong><span>Thời gian TB / câu</span></div>
+          </div>`;
+        document.getElementById('cp-modal-badge').textContent = milestone.kind === 'BOSS' ? '👑 BOSS CHƯƠNG' : 'Mốc học';
+        document.getElementById('cp-modal-title').textContent = milestone.title;
+        const summary = (milestone.theory_markdown || '').replace(/#{1,6}\s+|[-*]\s+/g, '').trim();
+        document.getElementById('cp-modal-summary').textContent = summary.length > 180 ? summary.slice(0, 180) + '…' : summary;
+        document.getElementById('cp-modal-status-badge').textContent = completed ? '✓ Đã hoàn thành' : 'Đang học';
+        document.getElementById('cp-modal-steps-header').textContent = theoryOnly ? '' : 'Luyện tập · ' + milestone.step_count + ' chặng';
+        document.getElementById('cp-modal-steps-progress').textContent = theoryOnly ? ''
+          : `${milestone.completed_steps}/${milestone.step_count} chặng hoàn thành`;
 
-          const badgeEl = document.getElementById('cp-modal-badge');
-          if (badgeEl) badgeEl.textContent = d.loai_moc === 'THU_THACH_BOSS' ? '👑 BOSS CHƯƠNG' : 'Mốc học hệ thống';
+        const container = document.getElementById('cp-modal-steps-container');
+        container.replaceChildren(...steps.map(step => {
+          const row = document.createElement('div');
+          const done = step.status === 'COMPLETED';
+          const available = step.status === 'OPEN';
+          row.className = 'p-3 rounded-2xl border flex items-center justify-between gap-2 ' +
+            (done ? 'border-emerald-500/40 bg-emerald-500/5' :
+              available ? 'border-emerald-500 bg-emerald-500/10' : 'border-[var(--border)] opacity-50');
+          const info = document.createElement('div');
+          const label = document.createElement('strong');
+          label.className = 'text-xs';
+          label.textContent = `${step.step_no}. ${step.title}`;
+          const weights = document.createElement('p');
+          weights.className = 'text-[10px] text-[var(--muted-foreground)]';
+          weights.textContent = [
+            [step.remember_pct, 'Nhớ'],
+            [step.understand_pct, 'Hiểu'],
+            [step.apply_pct, 'Vận dụng']
+          ].filter(([value]) => value > 0).map(([value, name]) => `${value}% ${name}`).join(' · ');
+          info.append(label, weights);
+          row.appendChild(info);
+          const button = document.createElement('button');
+          button.id = 'btn_cp_step_ontap_' + step.step_no;
+          button.type = 'button';
+          button.textContent = done ? 'Ôn tập' : available ? 'Làm bài' : 'Chưa mở';
+          button.className = 'px-3 py-1.5 rounded-xl border border-emerald-500/30 text-emerald-600 font-bold text-xs';
+          button.disabled = !done && !available;
+          button.onclick = () => startStepPlay(mocId, step.step_no);
+          row.appendChild(button);
+          return row;
+        }));
 
-          const totalSteps = d.tong_so_buoc || 4;
-          const headerEl = document.getElementById('cp-modal-steps-header');
-          if (headerEl) headerEl.textContent = `Luyện tập · ${totalSteps} chặng`;
-
-          const stBadge = document.getElementById('cp-modal-status-badge');
-          if (stBadge) {
-            if (d.trang_thai === 'DA_HOAN_THANH' || d.trang_thai === 'HOAN_THANH') {
-              stBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 font-mono';
-              stBadge.textContent = `✓ Đã hoàn thành (${totalSteps}/${totalSteps} chặng)`;
-            } else {
-              stBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 font-mono';
-              stBadge.textContent = `▶ Đang học (Chặng ${Math.min(d.buoc_hien_tai, totalSteps)}/${totalSteps})`;
-            }
-          }
-
-          const titleEl = document.getElementById('cp-modal-title');
-          if (titleEl) titleEl.textContent = d.tieu_de;
-
-          // Summary
-          const sumEl = document.getElementById('cp-modal-summary');
-          if (sumEl) {
-            const cleanSummary = (d.noi_dung_ly_thuyet || '')
-              .replace(/#{1,6}\s+/g, '')
-              .replace(/[-*]\s+/g, '')
-              .trim()
-              .slice(0, 180);
-            sumEl.textContent = cleanSummary ? (cleanSummary + '...') : 'Định nghĩa và bài tập thực hành theo ma trận Bloom.';
-          }
-
-          // Steps progress text
-          const progText = document.getElementById('cp-modal-steps-progress');
-          const doneCount = d.buoc_hien_tai > totalSteps ? totalSteps : Math.max(0, d.buoc_hien_tai - 1);
-          if (progText) progText.textContent = `${doneCount}/${totalSteps} chặng hoàn thành`;
-
-          // Render Step Cards
-          const container = document.getElementById('cp-modal-steps-container');
-          if (container) {
-            const steps = d.thong_tin_cac_buoc || [
-              { buoc: 1, tieu_de: 'Khắc sâu Định nghĩa', ti_le: '100% Nhớ', hoan_thanh: d.buoc_hien_tai > 1 },
-              { buoc: 2, tieu_de: 'Củng cố Nhận thức', ti_le: '80% Nhớ - 20% Hiểu', hoan_thanh: d.buoc_hien_tai > 2 },
-              { buoc: 3, tieu_de: 'Kết nối & Phân tích', ti_le: '50% Nhớ - 40% Hiểu - 10% Vận dụng', hoan_thanh: d.buoc_hien_tai > 3 },
-              { buoc: 4, tieu_de: 'Làm chủ & Sắp xếp', ti_le: '10% Nhớ - 60% Hiểu - 30% Vận dụng', hoan_thanh: d.buoc_hien_tai > 4 }
-            ];
-
-            container.innerHTML = steps.map(s => {
-              const isStepDone = s.hoan_thanh;
-              const isStepActive = (s.buoc === d.buoc_hien_tai);
-
-              let borderClass = 'border-[var(--border)] bg-[var(--card)]';
-              let badgeHtml = '';
-              let actionBtnHtml = '';
-
-              if (isStepDone) {
-                borderClass = 'border-emerald-500/40 bg-emerald-500/5';
-                badgeHtml = `<span class="text-[10px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full font-mono">✓ Đã vượt qua</span>`;
-                actionBtnHtml = `<button id="btn_cp_step_ontap_${s.buoc}" onclick="startStepPlay('${d.ma_moc}', ${s.buoc}, '${escapeHtml(d.tieu_de)}')" class="px-3 py-1.5 rounded-xl border border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 font-bold text-[11px] transition cursor-pointer">Ôn tập</button>`;
-              } else if (isStepActive) {
-                borderClass = 'border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/20';
-                badgeHtml = `<span class="text-[10px] font-bold text-emerald-600 bg-emerald-500/20 px-2 py-0.5 rounded-full font-mono animate-pulse">▶ Bước hiện tại</span>`;
-              } else {
-                borderClass = 'border-[var(--border)] opacity-40 bg-[var(--background)]/30';
-                badgeHtml = `<span class="text-[10px] text-[var(--muted-foreground)] font-mono">🔒 Khóa</span>`;
-                actionBtnHtml = `<span class="text-[11px] text-[var(--muted-foreground)] font-mono px-2">Cần xong bước trước</span>`;
-              }
-
-              return `
-                <div class="p-3 rounded-2xl border ${borderClass} flex items-center justify-between transition gap-2">
-                  <div class="min-w-0 flex items-center gap-2.5">
-                    <div class="w-7 h-7 rounded-xl ${isStepDone ? 'bg-emerald-500 text-white' : (isStepActive ? 'bg-emerald-600 text-white font-bold' : 'bg-[var(--border)] text-[var(--muted-foreground)]')} flex items-center justify-center text-xs shrink-0 font-mono">
-                      ${isStepDone ? '✓' : s.buoc}
-                    </div>
-                    <div class="min-w-0">
-                      <div class="flex items-center gap-2">
-                        <p class="font-bold text-xs truncate text-[var(--foreground)] leading-tight">${s.buoc}. ${escapeHtml(s.tieu_de)}</p>
-                        ${badgeHtml}
-                      </div>
-                      <p class="text-[10px] text-[var(--muted-foreground)] mt-0.5">${escapeHtml(s.ti_le)}</p>
-                    </div>
-                  </div>
-                  <div class="shrink-0">
-                    ${actionBtnHtml}
-                  </div>
-                </div>
-              `;
-            }).join('');
-          }
-
-          // Primary CTA button
-          const primaryBtn = document.getElementById('btn-cp-primary-action');
-          if (primaryBtn) {
-            const activeBuoc = Math.min(totalSteps, d.buoc_hien_tai || 1);
-            const practiceButton = document.getElementById('btn-cp-practice-secondary');
-            practiceButton.hidden = true;
-            if (d.trang_thai === 'DA_HOAN_THANH' || d.buoc_hien_tai > totalSteps) {
-              primaryBtn.textContent = 'Ôn tập';
-              primaryBtn.onclick = () => startStepPlay(d.ma_moc, 1, d.tieu_de);
-            } else {
-              const hasTheory = Boolean(d.noi_dung_ly_thuyet?.trim());
-              const theoryFirst = activeBuoc === 1 && hasTheory;
-              practiceButton.hidden = !theoryFirst;
-              practiceButton.onclick = () => startStepPlay(d.ma_moc, 1, d.tieu_de);
-              primaryBtn.textContent = theoryFirst ? 'Xem lý thuyết' : `Tiếp tục chặng ${activeBuoc}`;
-              if (theoryFirst) {
-                primaryBtn.onclick = openTheoryFromCheckpoint;
-              } else {
-                primaryBtn.onclick = () => startStepPlay(d.ma_moc, activeBuoc, d.tieu_de);
-              }
-            }
-          }
-
-          // Show modal
-          const modal = document.getElementById('modal-checkpoint');
-          if (modal) modal.classList.remove('hidden');
-        } else {
-          showToast(res.error?.message || 'Không thể mở mốc bài học!', 'error');
-        }
-      } catch (err) {
-        showToast('Lỗi kết nối khi tải chi tiết mốc bài học!', 'error');
+        const primary = document.getElementById('btn-cp-primary-action');
+        const secondary = document.getElementById('btn-cp-practice-secondary');
+        const stepNo = completed ? 1 : (milestone.current_step ?? 1);
+        const theoryFirst = theoryOnly || (!completed && stepNo === 1 && Boolean(milestone.theory_markdown?.trim()));
+        primary.textContent = theoryFirst ? 'Xem lý thuyết' : completed ? 'Ôn tập' : `Tiếp tục chặng ${stepNo}`;
+        primary.onclick = theoryFirst ? openTheoryFromCheckpoint : () => startStepPlay(mocId, stepNo);
+        secondary.hidden = !theoryFirst || theoryOnly;
+        secondary.onclick = () => startStepPlay(mocId, stepNo);
+        document.getElementById('modal-checkpoint').classList.remove('hidden');
+      } catch (error) {
+        showToast(error.message, 'error');
       }
     }
 
@@ -7397,16 +7040,15 @@
 
     function openTheoryFromCheckpoint() {
       if (!currentCheckpointMoc) return;
-      const mocId = currentCheckpointMoc.ma_moc;
+      const mocId = currentCheckpointMoc.id;
       closeCheckpointModal();
       openTheoryModal(mocId);
     }
 
     function startActiveStepFromModal() {
       if (!currentCheckpointMoc) return;
-      const totalSteps = currentCheckpointMoc.tong_so_buoc || 4;
-      const activeBuoc = Math.min(totalSteps, currentCheckpointMoc.buoc_hien_tai || 1);
-      startStepPlay(currentCheckpointMoc.ma_moc, activeBuoc, currentCheckpointMoc.tieu_de);
+      if (currentCheckpointMoc.kind === 'THEORY') return openTheoryFromCheckpoint();
+      startStepPlay(currentCheckpointMoc.id, currentCheckpointMoc.current_step || 1);
     }
 
     async function startPlay(mocId, tieuDe, loaiMoc) {
@@ -7414,292 +7056,102 @@
       await openCheckpointModal(mocId);
     }
 
-    async function startStepPlay(mocId, stepNumber = 1, tieuDe = '') {
+    async function startStepPlay(mocId, stepNumber = 1) {
       closeCheckpointModal();
-      const token = localStorage.getItem('tok_token');
       try {
-        const resp = await fetch(`/api/checkpoints/${mocId}?step=${stepNumber}`, {
-          headers: token ? { 'Authorization': 'Bearer ' + token } : {}
-        });
-        const res = await resp.json();
-        if (res.success && res.data) {
-          const qs = res.data.danh_sach_cau_hoi || [];
-          if (qs.length === 0) {
-            showToast(`Bước ${stepNumber} chưa có câu hỏi nào trong ngân hàng đề!`, 'info');
-            return;
-          }
-          currentQuizSession = {
-            mocId: mocId,
-            step: stepNumber,
-            totalSteps: res.data.tong_so_buoc || (currentCheckpointMoc ? currentCheckpointMoc.tong_so_buoc : 4),
-            tieuDe: tieuDe || res.data.tieu_de,
-            loaiMoc: res.data.loai_moc,
-            noiDungLyThuyet: res.data.noi_dung_ly_thuyet,
-            questions: qs,
-            qIndex: 0,
-            submissions: [],
-            currentAnswer: null,
-            isCurrentQuestionChecked: false,
-            matchingState: null,
-            dienTuChosen: null,
-            arrangedTokens: []
-          };
-          navTo('play');
-          renderQuizQuestion();
-        } else {
-          showToast(res.error?.message || 'Không thể mở bài tập bước này!', 'error');
-        }
-      } catch (err) {
-        showToast('Lỗi kết nối khi tải câu hỏi bước luyện tập!', 'error');
+        const milestone = currentCheckpointMoc?.id === mocId ? currentCheckpointMoc : await courseRequest(mocId);
+        const session = await courseRequest(mocId, '/sessions', { kind: 'STEP', step_no: stepNumber });
+        currentMocSession = null;
+        currentQuizSession = createCourseSessionState(milestone, 'STEP', session);
+        const latestAttempts = new Set(currentQuizSession.submissions.map(attempt => attempt.position));
+        const unfinished = session.questions.findIndex(question => !latestAttempts.has(question.position));
+        currentQuizSession.qIndex = unfinished === -1 ? session.questions.length : unfinished;
+        navTo('play');
+        renderQuizQuestion();
+      } catch (error) {
+        showToast(error.message, 'error');
       }
-    }
-
-    function getBloomRatioText(step, totalSteps = 4) {
-      if (totalSteps >= 5) {
-        if (step === 1) return '70% Nhớ - 30% Hiểu · Khởi động';
-        if (step === 2) return '30% Nhớ - 50% Hiểu - 20% Vận dụng · Thấm sâu';
-        if (step === 3) return '10% Nhớ - 40% Hiểu - 50% Vận dụng · Tăng tốc';
-        if (step === 4) return '30% Hiểu - 70% Vận dụng · Bứt phá';
-        return '10% Hiểu - 90% Vận dụng · Đỉnh tháp';
-      }
-      if (step === 1) return '70% Nhớ - 30% Hiểu · Khắc sâu Định nghĩa';
-      if (step === 2) return '40% Nhớ - 40% Hiểu - 20% Vận dụng · Thấu hiểu';
-      if (step === 3) return '20% Nhớ - 30% Hiểu - 50% Vận dụng · Bứt phá';
-      return '10% Nhớ - 60% Hiểu - 30% Vận dụng · Làm chủ';
-    }
-
-    function formatQuestionTypeName(loai) {
-      if (loai === 'NOI_CAP') return 'Nối cặp tương ứng';
-      if (loai === 'DIEN_TU') return 'Điền từ vào chỗ trống';
-      if (loai === 'SAP_XEP_CAU') return 'Sắp xếp ghép thành câu';
-      return 'Trắc nghiệm cân đối';
     }
 
     function renderQuizQuestion() {
-      document.getElementById('play-theory-container')?.classList.add('hidden');
-      document.getElementById('play-practice-container')?.classList.remove('hidden');
-      const region=document.getElementById('practice-scroll-region');if(region)region.scrollTop=0;
-      if (!currentQuizSession) return;
-      const { tieuDe, step, questions, qIndex } = currentQuizSession;
-      if (qIndex >= questions.length) {
+      const session = currentQuizSession;
+      if (!session) return;
+      const q = currentCourseQuestion(session);
+      if (!q) {
         finishAndSubmitStep();
         return;
       }
+      const total = session.questions.length;
+      const remaining = session.questionsQueue?.length ?? (total - session.qIndex);
+      const number = Math.max(1, total - remaining + 1);
+      document.getElementById('play-theory-container').classList.add('hidden');
+      document.getElementById('play-practice-container').classList.remove('hidden');
+      document.getElementById('play-title').textContent = session.title;
+      document.getElementById('play-progress').style.width = Math.round((number - 1) / total * 100) + '%';
+      document.getElementById('play-step-badge').textContent = session.kind === 'STEP'
+        ? `Chặng ${session.step}/${session.totalSteps} · Câu ${number}/${total}` : `Ôn tập · Còn ${remaining} câu`;
+      const tag = document.getElementById('q-bloom-tag');
+      if (tag) tag.textContent = ({ REMEMBER: 'Nhớ', UNDERSTAND: 'Hiểu', APPLY: 'Vận dụng' })[q.bloom_level] || '';
+      document.getElementById('q-prompt').textContent = q.stem;
+      const options = document.getElementById('q-options-container');
+      document.getElementById('practice-scroll-region')?.scrollTo(0, 0);
+      options.replaceChildren();
+      document.getElementById('q-feedback-box').classList.add('hidden');
+      const button = document.getElementById('btn-next-step');
+      button.onclick = handleMocPracticeAction;
+      button.textContent = 'Kiểm tra';
+      button.classList.remove('bg-rose-500');
+      button.disabled = ['MULTIPLE_CHOICE', 'MATCHING'].includes(q.type);
+      button.classList.toggle('opacity-0', button.disabled);
+      button.classList.toggle('pointer-events-none', button.disabled);
 
-      currentQuizSession.currentAnswer = null;
-      currentQuizSession.isCurrentQuestionChecked = false;
-      currentQuizSession.matchingState = null;
-      currentQuizSession.dienTuChosen = null;
-      currentQuizSession.arrangedTokens = [];
-      currentQuizSession.currentQuestionStartTime = Date.now();
-      currentQuizSession.currentQuestionLookups = 0;
-      currentQuizSession.currentQuestionLookupEvents = [];
-
-      const q = questions[qIndex];
-      queueMicrotask(() => window.GuidedTour?.question(q.loai_cau_hoi || 'TRAC_NGHIEM_4'));
-      const totalSteps = currentCheckpointMoc?.tong_so_buoc || 4;
-
-      const playTitle = document.getElementById('play-title');
-      if (playTitle) playTitle.textContent = tieuDe;
-
-      const playStepBadge = document.getElementById('play-step-badge');
-      if (playStepBadge) playStepBadge.textContent = `Chặng ${step}/${totalSteps}: ${getBloomRatioText(step, totalSteps)}`;
-
-      const playProg = document.getElementById('play-progress');
-      if (playProg) {
-        const pct = Math.round((qIndex / questions.length) * 100);
-        playProg.style.width = `${pct}%`;
-      }
-
-      const qBloomTag = document.getElementById('q-bloom-tag');
-      if (qBloomTag) {
-        qBloomTag.textContent = `[BLOOM: ${q.muc_bloom || 'NHO'}] · [DẠNG: ${formatQuestionTypeName(q.loai_cau_hoi)}]`;
-      }
-
-      const qCounter = document.getElementById('q-counter');
-      if (qCounter) qCounter.textContent = `Câu ${qIndex + 1}/${questions.length} · Chặng ${step}/${totalSteps}`;
-
-      const qPrompt = document.getElementById('q-prompt');
-      if (qPrompt) {
-        if (q.loai_cau_hoi === 'NOI_CAP') {
-          qPrompt.textContent = 'Ghép thuật ngữ với định nghĩa tương ứng';
-        } else {
-          qPrompt.textContent = q.noi_dung;
-        }
-      }
-
-      const fbBox = document.getElementById('q-feedback-box');
-      if (fbBox) fbBox.classList.add('hidden');
-
-      const isAutoAdvanceType = (q.loai_cau_hoi === 'TRAC_NGHIEM_4' || q.loai_cau_hoi === 'NOI_CAP');
-      const nextBtn = document.getElementById('btn-next-step');
-      if (nextBtn) {
-        if (isAutoAdvanceType) {
-          nextBtn.disabled = true;
-          nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] opacity-0 pointer-events-none";
-          nextBtn.innerHTML = '<span>Tiếp tục</span> <span>→</span>';
-        } else {
-          nextBtn.disabled = false;
-          nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99]";
-          nextBtn.innerHTML = '<span>Kiểm tra</span> <span>✓</span>';
-        }
-      }
-
-      const container = document.getElementById('q-options-container');
-      if (!container) return;
-      container.innerHTML = '';
-
-      if (q.loai_cau_hoi === 'NOI_CAP') {
-        renderNoiCapUI(q, container);
-      } else if (q.loai_cau_hoi === 'DIEN_TU') {
-        renderDienTuUI(q, container);
-      } else if (q.loai_cau_hoi === 'SAP_XEP_CAU') {
-        renderSapXepCauUI(q, container);
-      } else {
-        renderTracNghiem4UI(q, container);
-      }
+      session.currentAnswer = null;
+      session.pendingAttempt = null;
+      session.isCurrentQuestionChecked = false;
+      session.currentQuestionStartTime = Date.now();
+      session.lookupEvents = [];
+      session.dienTuChosen = null;
+      session.arrangedTokens = [];
+      session.matchingState = null;
+      if (q.type === 'MATCHING') renderNoiCapUI(q, options);
+      else if (q.type === 'FILL_BLANK') renderDienTuUI(q, options);
+      else if (q.type === 'ORDERING') renderSapXepCauUI(q, options);
+      else renderTracNghiem4UI(q, options);
+      queueMicrotask(() => window.GuidedTour?.question(q.type));
     }
 
-    // --- 2a. Trắc Nghiệm 4 Đáp Án Cân Đối ---
-    function renderTracNghiem4UI(q, container) {
-      const letters = ['A', 'B', 'C', 'D'];
-      const opts = q.dap_an || [];
-
+    function renderTracNghiem4UI(question, container) {
       const grid = document.createElement('div');
-      grid.className = "grid grid-cols-1 gap-3";
-
-      opts.forEach((opt, idx) => {
-        const btn = document.createElement('button');
-        btn.id = `btn_q_opt_${idx}`;
-        btn.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border border-[var(--border)] hover:border-emerald-500/60 hover:bg-emerald-500/5 transition flex items-center justify-between cursor-pointer group";
-        btn.innerHTML = `
-          <span class="text-xs sm:text-sm text-[var(--foreground)] group-hover:text-emerald-600 font-medium leading-relaxed">${escapeHtml(opt)}</span>
-          <span class="w-7 h-7 rounded-xl border border-[var(--border)] flex items-center justify-center text-xs font-mono text-[var(--muted-foreground)] group-hover:border-emerald-500 group-hover:text-emerald-600 shrink-0 ml-3">${letters[idx]}</span>
-        `;
-        btn.onclick = () => selectTracNghiem(idx);
-        grid.appendChild(btn);
-      });
-
-      container.appendChild(grid);
-    }
-
-    function selectTracNghiem(idx) {
-      const s = currentMocSession || currentQuizSession;
-      if (!s) return;
-      if (s.isAnswerChecked || s.isCurrentQuestionChecked) return;
-
-      const q = (s.questionsQueue && s.questionsQueue[0]) || (s.questions && s.questions[s.qIndex || 0]);
-      if (!q) return;
-
-      // Đánh dấu đã kiểm tra lập tức: chọn sai là sai luôn, không cần nút kiểm tra!
-      s.isAnswerChecked = true;
-      s.isCurrentQuestionChecked = true;
-
-      const isCorrect = (q.vi_tri_dap_an_dung !== null && q.vi_tri_dap_an_dung !== undefined)
-        ? (idx === Number(q.vi_tri_dap_an_dung))
-        : true;
-      lastPracticeCheckResult = isCorrect;
-
-      const timeSpentSec = Math.max(1, Math.round((Date.now() - (s.currentQuestionStartTime || Date.now())) / 1000));
-      const lookupsCount = s.currentQuestionLookups || 0;
-
-      s.currentAnswer = {
-        ma_cau_hoi: q.ma_cau_hoi,
-        chi_muc_chon: idx,
-        lua_chon: idx,
-        la_dung: isCorrect,
-        thoi_gian_giay: timeSpentSec,
-        so_lan_tra_cuu: lookupsCount,
-        nhat_ky_tra_cuu: [...(s.currentQuestionLookupEvents || [])]
-      };
-      if (s.submissions) {
-        s.submissions.push(s.currentAnswer);
-      }
-
-      if (s.failedQuestionsSet && !s.failedQuestionsSet.has(q.ma_cau_hoi)) {
-        if (isCorrect) {
-          s.firstAttemptCorrectCount = (s.firstAttemptCorrectCount || 0) + 1;
-        } else {
-          s.failedQuestionsSet.add(q.ma_cau_hoi);
-        }
-      }
-
-      const container = document.getElementById('q-options-container');
-      if (container) {
-        container.querySelectorAll('button').forEach((b, i) => {
-          b.disabled = true;
-          b.classList.remove('group', 'hover:border-emerald-500/60', 'hover:bg-emerald-500/5', 'cursor-pointer');
-          b.classList.add('cursor-default');
-
-          const optText = (q.dap_an && q.dap_an[i]) || b.innerText;
-
-          if (i === idx) {
-            if (isCorrect) {
-              b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-500/15 text-emerald-600 transition flex items-center justify-between font-bold shadow-sm";
-              b.innerHTML = `
-                <span class="text-xs sm:text-sm text-emerald-700 dark:text-emerald-300 font-bold leading-relaxed">${escapeHtml(optText)}</span>
-                <span class="px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-600 text-xs font-bold shrink-0 ml-3 flex items-center gap-1">✓ Chính xác</span>
-              `;
-            } else {
-              b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 border-rose-500 bg-rose-500/15 text-rose-600 transition flex items-center justify-between font-bold shadow-sm pair-shake-error";
-              b.innerHTML = `
-                <span class="text-xs sm:text-sm text-rose-700 dark:text-rose-300 font-bold leading-relaxed">${escapeHtml(optText)}</span>
-                <span class="px-2.5 py-1 rounded-xl bg-rose-500/20 text-rose-600 text-xs font-bold shrink-0 ml-3 flex items-center gap-1">✕ Sai</span>
-              `;
-            }
-          } else if (i === Number(q.vi_tri_dap_an_dung) && !isCorrect) {
-            b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border-2 border-emerald-500/80 bg-emerald-500/10 text-emerald-600 transition flex items-center justify-between font-semibold shadow-xs";
-            b.innerHTML = `
-              <span class="text-xs sm:text-sm text-emerald-700 dark:text-emerald-300 font-semibold leading-relaxed">${escapeHtml(optText)}</span>
-              <span class="px-2.5 py-1 rounded-xl bg-emerald-500/20 text-emerald-600 text-xs font-bold shrink-0 ml-3 flex items-center gap-1">✓ Đáp án đúng</span>
-            `;
-          } else {
-            b.className = "w-full text-left p-3.5 sm:p-4 rounded-2xl border border-[var(--border)] opacity-35 transition flex items-center justify-between";
+      grid.className = 'grid sm:grid-cols-2 gap-2.5';
+      question.options.forEach((option, index) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.id = 'option_' + index;
+        button.className = 'text-left border border-[var(--border)] rounded-xl bg-[var(--card)] px-4 py-3 text-sm font-semibold hover:border-emerald-500';
+        button.textContent = option.text;
+        button.dataset.position = option.position;
+        button.onclick = async () => {
+          const session = currentQuizSession;
+          if (!session || session.currentAnswer || session.savingAnswer) return;
+          const result = await submitCourseAnswer(session, question, { selected_option_position: option.position });
+          if (!result) return;
+          for (const choice of grid.querySelectorAll('button')) {
+            choice.disabled = true;
+            const chosen = Number(choice.dataset.position);
+            if (chosen === result.correct_answer) choice.classList.add('border-emerald-500','bg-emerald-500/10');
+            else if (chosen === result.selected_option_position) choice.classList.add('border-rose-500','bg-rose-500/10');
           }
-        });
-      }
-
-      if (audioSettings && audioSettings.quiz) {
-        playAdvancedSound(isCorrect ? 'quiz-correct' : 'quiz-wrong');
-      }
-
-      const fbBox = document.getElementById('q-feedback-box');
-      const fbTitle = document.getElementById('q-feedback-title');
-      const fbDesc = document.getElementById('q-feedback-desc');
-      if (fbBox && fbTitle && fbDesc) {
-        if (isCorrect) {
-          fbTitle.innerHTML = `<span class="text-emerald-600 font-bold">✓ Rất chính xác! Tuyệt vời!</span>`;
-          fbBox.className = "rounded-2xl p-4 border border-emerald-500/40 bg-emerald-500/10 text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200";
-        } else {
-          fbTitle.innerHTML = `<span class="text-rose-600 font-bold">❌ Chưa chính xác (Câu này sẽ gặp lại ở cuối để làm chủ!)</span>`;
-          fbBox.className = "rounded-2xl p-4 border border-rose-500/40 bg-rose-500/10 text-xs space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-200";
-        }
-        fbDesc.textContent = q.giai_thich || 'Khái niệm trọng tâm của mốc học giúp củng cố bản chất lý thuyết và ghi nhớ bền vững.';
-        fbBox.classList.remove('hidden');
-      }
-
-      const nextBtn = document.getElementById('btn-next-step');
-      if (nextBtn) {
-        nextBtn.disabled = false;
-        nextBtn.classList.remove('opacity-0', 'pointer-events-none');
-        const isLastInStep = s.questions && s.qIndex === (s.questions.length - 1);
-        if (isCorrect) {
-          nextBtn.innerHTML = isLastInStep ? '<span>Hoàn thành & Tiếp tục</span> <span>✓</span>' : '<span>Tiếp tục</span> <span>→</span>';
-          nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] animate-in fade-in zoom-in-95 duration-150";
-        } else {
-          nextBtn.innerHTML = '<span>Đã hiểu · Luyện lại ở cuối</span> <span>↺</span>';
-          nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] animate-in fade-in zoom-in-95 duration-150";
-        }
-      }
+        };
+        grid.appendChild(button);
+      });
+      container.appendChild(grid);
     }
 
     // --- 2b. Duolingo Nối Cặp Thuật Ngữ & Khái Niệm ---
     function renderNoiCapUI(q, container) {
-      const data = q.du_lieu || {};
-      const leftItems = data.leftItems || [];
-      const rightItems = data.rightItems || [];
-      const totalPairs = data.totalPairs || leftItems.length;
-      const pairsMap = data.pairsMap || {};
+      const leftItems = q.left_items;
+      const rightItems = q.right_items;
+      const totalPairs = leftItems.length;
 
       if (!currentQuizSession) {
         currentQuizSession = { questions: [q], qIndex: 0 };
@@ -7711,7 +7163,6 @@
         selectedRightBtn: null,
         matchedPairs: [],
         totalPairs,
-        pairsMap,
         isEvaluating: false
       };
 
@@ -7785,7 +7236,7 @@
       container.appendChild(wrapper);
     }
 
-    function selectNoiCapToken(side, item, btnEl) {
+    async function selectNoiCapToken(side, item, btnEl) {
       if (!currentQuizSession || currentQuizSession.isCurrentQuestionChecked) return;
       const ms = currentQuizSession.matchingState;
       if (!ms || ms.isEvaluating) return;
@@ -7846,9 +7297,19 @@
         const leftBtn = ms.selectedLeftBtn;
         const rightBtn = ms.selectedRightBtn;
 
-        // Check against pairsMap
-        const expectedRight = ms.pairsMap[leftVal];
-        const isMatch = (expectedRight !== undefined && expectedRight === rightVal);
+        const session = currentQuizSession;
+        const question = currentCourseQuestion(session);
+        ms.isEvaluating = true;
+        let isMatch;
+        try {
+          const result = await sessionRequest(session, '/pair', { position: question.position, left: leftVal, right: rightVal });
+          if (session !== currentQuizSession || ms !== session.matchingState) return;
+          isMatch = result.matches;
+        } catch (error) {
+          ms.isEvaluating = false;
+          showToast(error.message, 'error');
+          return;
+        }
 
         if (isMatch) {
           // Matched cards remain visible for review.
@@ -7874,70 +7335,23 @@
             counterBadge.textContent = `${ms.matchedPairs.length}/${ms.totalPairs} cặp`;
           }
 
-          const q = currentQuizSession.questions[currentQuizSession.qIndex];
-          currentQuizSession.currentAnswer = {
-            ma_cau_hoi: q.ma_cau_hoi,
-            matched_pairs: ms.matchedPairs
-          };
-
-          // If all pairs are matched -> Tự động hoàn thành câu & chuyển nút thành [Tiếp tục]
           if (ms.matchedPairs.length >= ms.totalPairs) {
-            // Keep completed pairs readable, aligned for review instead of leaving empty slots.
-            const rightButtons=[...container.querySelectorAll('button[data-side="right"]')];
-            for(const left of container.querySelectorAll('button[data-side="left"]')){
-              const right=rightButtons.find(button=>button.dataset.item===ms.pairsMap[left.dataset.item]);
-              if(right){
+            const rightButtons = [...container.querySelectorAll('button[data-side="right"]')];
+            for (const left of container.querySelectorAll('button[data-side="left"]')) {
+              const pair = ms.matchedPairs.find(entry => entry.left === left.dataset.item);
+              const right = rightButtons.find(button => button.dataset.item === pair?.right);
+              if (right) {
                 right.parentElement.appendChild(right);
-                const rowHeight=Math.max(left.getBoundingClientRect().height,right.getBoundingClientRect().height);
-                left.style.minHeight=right.style.minHeight=rowHeight+'px';
+                left.style.minHeight = right.style.minHeight =
+                  Math.max(left.getBoundingClientRect().height, right.getBoundingClientRect().height) + 'px';
               }
             }
-            if (counterBadge) {
-              counterBadge.textContent = `✓ ${ms.totalPairs}/${ms.totalPairs} hoàn tất`;
-              counterBadge.className = "text-[10px] sm:text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white font-mono";
-            }
-            const statusEl = document.getElementById('noi-cap-status-box');
-            if (statusEl) statusEl.classList.add('hidden');
-            if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-correct');
-
-            const s = currentMocSession || currentQuizSession;
-            if (s) {
-              const timeSpentSec = Math.max(1, Math.round((Date.now() - (s.currentQuestionStartTime || Date.now())) / 1000));
-              const lookupsCount = s.currentQuestionLookups || 0;
-
-              s.isAnswerChecked = true;
-              s.isCurrentQuestionChecked = true;
-              lastPracticeCheckResult = true;
-
-              s.currentAnswer = {
-                ma_cau_hoi: q.ma_cau_hoi,
-                matched_pairs: ms.matchedPairs,
-                lua_chon: `${ms.matchedPairs.length} cặp`,
-                la_dung: true,
-                thoi_gian_giay: timeSpentSec,
-                so_lan_tra_cuu: lookupsCount,
-                nhat_ky_tra_cuu: [...(s.currentQuestionLookupEvents || [])]
-              };
-
-              if (s.failedQuestionsSet && !s.failedQuestionsSet.has(q.ma_cau_hoi)) {
-                s.firstAttemptCorrectCount = (s.firstAttemptCorrectCount || 0) + 1;
-              }
-              if (s.submissions) {
-                s.submissions.push(s.currentAnswer);
-              }
-            }
-
-            document.getElementById('q-feedback-box')?.classList.add('hidden');
-
-            const nextBtn = document.getElementById('btn-next-step');
-            if (nextBtn) {
-              nextBtn.disabled = false;
-              nextBtn.classList.remove('opacity-0', 'pointer-events-none');
-              const isLastInStep = s && s.questions && s.qIndex === (s.questions.length - 1);
-              nextBtn.innerHTML = isLastInStep ? '<span>Hoàn thành & Tiếp tục</span> <span>✓</span>' : '<span>Tiếp tục</span> <span>→</span>';
-              nextBtn.className = "w-full py-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 active:scale-[0.99] animate-in fade-in zoom-in-95 duration-150";
-            }
+            const nextButton = document.getElementById('btn-next-step');
+            await submitCourseAnswer(session, question, { response: { kind: 'MATCHING', pairs: ms.matchedPairs } });
+            nextButton.disabled = false;
+            nextButton.classList.remove('opacity-0','pointer-events-none');
           }
+          ms.isEvaluating = false;
         } else {
           // --- MATCH WRONG: Gentle shake + red border flash + gentle error buzzer ---
           ms.isEvaluating = true;
@@ -7963,9 +7377,8 @@
 
     // --- 2c. Duolingo Điền Từ Vào Chỗ Trống ---
     function renderDienTuUI(q, container) {
-      const data = q.du_lieu || {};
-      const template = data.sentence_template || 'Cơ sở dữ liệu đảm bảo tính {blank}.';
-      const options = data.options || [];
+      const template = q.sentence_template;
+      const options = q.options;
 
       const wrapper = document.createElement('div');
       wrapper.className = "space-y-6";
@@ -8007,7 +7420,7 @@
     }
 
     function selectDienTuWord(word) {
-      if (!currentQuizSession || currentQuizSession.isCurrentQuestionChecked) return;
+      if (!currentQuizSession || (currentQuizSession.isCurrentQuestionChecked || currentQuizSession.savingAnswer)) return;
       currentQuizSession.dienTuChosen = word;
 
       const target = document.getElementById('blank-drop-target');
@@ -8028,17 +7441,12 @@
         });
       }
 
-      const q = currentQuizSession.questions[currentQuizSession.qIndex];
-      currentQuizSession.currentAnswer = {
-        ma_cau_hoi: q.ma_cau_hoi,
-        selected_word: word
-      };
 
       if (audioSettings && audioSettings.quiz) playAdvancedSound('click');
     }
 
     function removeDienTuWord() {
-      if (!currentQuizSession || currentQuizSession.isCurrentQuestionChecked) return;
+      if (!currentQuizSession || (currentQuizSession.isCurrentQuestionChecked || currentQuizSession.savingAnswer)) return;
       currentQuizSession.dienTuChosen = null;
 
       const target = document.getElementById('blank-drop-target');
@@ -8054,24 +7462,22 @@
         });
       }
 
-      currentQuizSession.currentAnswer = null;
       if (audioSettings && audioSettings.quiz) playAdvancedSound('click');
     }
 
     // --- 2d. Duolingo Sắp Xếp Ghép Câu Hoàn Chỉnh ---
     function renderSapXepCauUI(q, container) {
-      const data = q.du_lieu || {};
-      const tokens = data.tokens || [];
+      const tokens = q.tokens;
 
       currentQuizSession.arrangedTokens = [];
 
       const wrapper = document.createElement('div');
       wrapper.className = "space-y-4";
 
-      if (data.prompt) {
+      if (q.prompt) {
         const pTag = document.createElement('p');
         pTag.className = "text-xs font-semibold text-emerald-600";
-        pTag.textContent = data.prompt;
+        pTag.textContent = q.prompt;
         wrapper.appendChild(pTag);
       }
 
@@ -8108,7 +7514,7 @@
     }
 
     function addWordToConstruction(word, tokenIdx) {
-      if (!currentQuizSession || currentQuizSession.isCurrentQuestionChecked) return;
+      if (!currentQuizSession || (currentQuizSession.isCurrentQuestionChecked || currentQuizSession.savingAnswer)) return;
       currentQuizSession.arrangedTokens.push({ word, tokenIdx });
 
       renderConstructionZone();
@@ -8119,17 +7525,12 @@
         bankBtn.classList.add('opacity-30', 'pointer-events-none');
       }
 
-      const q = currentQuizSession.questions[currentQuizSession.qIndex];
-      currentQuizSession.currentAnswer = {
-        ma_cau_hoi: q.ma_cau_hoi,
-        ordered_words: currentQuizSession.arrangedTokens.map(t => t.word)
-      };
 
       if (audioSettings && audioSettings.quiz) playAdvancedSound('click');
     }
 
     function removeWordFromConstruction(orderIdx) {
-      if (!currentQuizSession || currentQuizSession.isCurrentQuestionChecked) return;
+      if (!currentQuizSession || (currentQuizSession.isCurrentQuestionChecked || currentQuizSession.savingAnswer)) return;
       const removed = currentQuizSession.arrangedTokens.splice(orderIdx, 1)[0];
 
       renderConstructionZone();
@@ -8142,15 +7543,6 @@
         }
       }
 
-      const q = currentQuizSession.questions[currentQuizSession.qIndex];
-      if (currentQuizSession.arrangedTokens.length > 0) {
-        currentQuizSession.currentAnswer = {
-          ma_cau_hoi: q.ma_cau_hoi,
-          ordered_words: currentQuizSession.arrangedTokens.map(t => t.word)
-        };
-      } else {
-        currentQuizSession.currentAnswer = null;
-      }
 
       if (audioSettings && audioSettings.quiz) playAdvancedSound('click');
     }
@@ -8178,21 +7570,25 @@
     // --- 2e. Duolingo Step Completion Handler ---
 
     function showStepReview(session, result) {
-      const questions = new Map(session.questions.map(question => [question.ma_cau_hoi, question]));
-      const mistakes = (result.details || []).filter(detail => !detail.la_dung && questions.has(detail.ma_cau_hoi));
+      const questions = new Map(session.questions.map(question => [question.position, question]));
+      const mistakes = new Map();
+      session.submissions.forEach(attempt => {
+        if (!attempt.is_correct) mistakes.set(attempt.position, attempt);
+      });
       const dialog = document.getElementById('step-review-dialog');
+      const label = session.kind === 'STEP' ? 'Chặng ' + session.step : 'Ôn tập mốc';
       document.getElementById('step-review-score').textContent =
-        `Chặng ${session.step} · ${result.correctCount}/${result.totalQuestions} câu đúng`;
+        `${label} · ${result.correct_count}/${result.question_count} câu đúng`;
       const toggle = document.getElementById('step-review-mistakes');
-      toggle.hidden = mistakes.length === 0;
+      toggle.hidden = mistakes.size === 0;
       toggle.open = false;
-      toggle.querySelector('summary').textContent = `Ôn lại ${mistakes.length} câu sai`;
-      toggle.querySelector('ol').replaceChildren(...mistakes.map(detail => {
+      toggle.querySelector('summary').textContent = `Ôn lại ${mistakes.size} câu sai`;
+      toggle.querySelector('ol').replaceChildren(...[...mistakes.values()].map(attempt => {
         const item = document.createElement('li');
         const prompt = document.createElement('strong');
         const explanation = document.createElement('p');
-        prompt.textContent = questions.get(detail.ma_cau_hoi).noi_dung;
-        explanation.textContent = detail.giai_thich || 'Xem lại lý thuyết của mốc này.';
+        prompt.textContent = questions.get(attempt.position)?.stem || '';
+        explanation.textContent = attempt.explanation || 'Xem lại lý thuyết của mốc này.';
         item.append(prompt, explanation);
         return item;
       }));
@@ -8200,122 +7596,60 @@
     }
 
     async function finishAndSubmitStep() {
-      if (!currentQuizSession) return;
       const session = currentQuizSession;
-      if (session.submitting) return;
+      if (!session?.courseSessionId || session.submitting) return;
       session.submitting = true;
-      const { mocId, step, submissions } = session;
-      const token = localStorage.getItem('tok_token');
-
       try {
-        const resp = await fetch(`/api/checkpoints/${mocId}/submit-step`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
-          },
-          body: JSON.stringify({
-            buoc: step,
-            cau_tra_loi: submissions
-          })
-        });
-        const res = await resp.json();
-
-        if (res.success && res.data) {
-          const { scorePercentage, correctCount, totalQuestions, isPassed, earnedCoins, earnedExp, moc_hoan_thanh, tong_so_buoc } = res.data;
-          const totalSteps = tong_so_buoc || (currentQuizSession ? currentQuizSession.totalSteps : 4);
-
-          if (isPassed) {
-            if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-correct');
-            showToast(`🎉 VƯỢT QUA CHẶNG ${step}/${totalSteps}! ${scorePercentage}% điểm (+${earnedCoins ?? 0} 🪙, +${earnedExp ?? 0} ⭐ EXP)`);
-            if (moc_hoan_thanh) {
-              const isBossMoc = (currentQuizSession && (currentQuizSession.loaiMoc === 'THU_THACH_BOSS' || String(currentQuizSession.mocId).endsWith('_05')));
-              setTimeout(() => {
-                showToast(`🏆 CHÚC MỪNG BẠN ĐÃ HOÀN THÀNH TOÀN BỘ ${totalSteps} CHẶNG CỦA MỐC HỌC!`);
-              }, 1200);
-
-              if (isBossMoc && liveCourseData && liveCourseData.cac_chuong) {
-                const chIdx = liveCourseData.cac_chuong.findIndex(c => (c.cac_moc || []).some(m => m.ma_moc === mocId));
-                if (chIdx >= 0 && chIdx + 1 < liveCourseData.cac_chuong.length) {
-                  const nextCh = liveCourseData.cac_chuong[chIdx + 1];
-                  currentSagaChapterId = nextCh.ma_chuong;
-                  userManuallyNavigatedChapter = false;
-                  renderRealSagaRoadmap(liveCourseData);
-                  setTimeout(() => {
-                    showToast(`🚀 Tiến bước vào ${nextCh.tieu_de || `Chương ${chIdx + 2}`}!`, 'success');
-                  }, 2000);
-                }
-              }
-            }
-          } else {
-            if (audioSettings && audioSettings.quiz) playAdvancedSound('quiz-wrong');
-            showToast(`Chưa đạt điểm yêu cầu (${scorePercentage}%). Cần tối thiểu 70% để vượt qua. Hãy ôn tập lại nhé!`, "error");
-          }
-
-          // Refresh user data & roadmap
-          await Promise.all([
-            refreshUserData(),
-            loadCourseRoadmap()
-          ]);
-          if (currentQuizSession !== session) return;
-          currentQuizSession = null;
-          closePlay();
-          showStepReview(session, res.data);
-        } else {
-          showToast(res.error?.message || 'Lỗi khi nộp bài tập!', 'error');
-        }
-      } catch (err) {
-        showToast('Lỗi kết nối khi nộp bài tập!', 'error');
+        await flushCourseLookups(session);
+        const result = await sessionRequest(session, '/finish', { finish_kind: 'SUBMITTED' });
+        if (session !== currentQuizSession) return;
+        if (audioSettings.quiz) playAdvancedSound(result.passed ? 'quiz-correct' : 'quiz-wrong');
+        showToast(result.passed
+          ? `Đã vượt qua · ${result.score_percent}% (+${result.coins_awarded} Xu, +${result.xp_awarded} EXP)`
+          : `Chưa đạt · ${result.score_percent}%. Cần ít nhất 70%.`,
+          result.passed ? 'success' : 'info');
+        currentQuizSession = null;
+        currentMocSession = null;
+        closePlay();
+        showStepReview(session, result);
+        await Promise.all([refreshUserData(), loadCourseRoadmap()]);
+      } catch (error) {
+        showToast(error.message, 'error');
+        const button = document.getElementById('btn-next-step');
+        button.disabled = false;
+        button.classList.remove('opacity-0','pointer-events-none');
+        button.textContent = 'Thử nộp lại';
+        button.onclick = finishAndSubmitStep;
       } finally {
         session.submitting = false;
       }
-
     }
 
     let currentTheoryLookupOpenedAt = null;
 
     function viewCurrentTheoryFromQuiz() {
-      const s = currentQuizSession || currentMocSession;
-      if (!s) return;
-      s.currentQuestionLookups = (s.currentQuestionLookups || 0) + 1;
-      currentTheoryLookupOpenedAt = Date.now();
-      openTheoryModal(s.mocId || (currentCheckpointMoc ? currentCheckpointMoc.ma_moc : ''));
+      const session = currentQuizSession;
+      if (session && !session.savingAnswer && !session.submitting) openTheoryModal(session.mocId, true);
     }
 
-    // --- 3. Theory Modal Controller ---
-    async function openTheoryModal(mocId) {
-      const token = localStorage.getItem('tok_token');
+    async function openTheoryModal(mocId, lookup = false) {
       try {
-        const resp = await fetch('/api/checkpoints/' + mocId, {
-          headers: token ? { 'Authorization': 'Bearer ' + token } : {}
-        });
-        const res = await resp.json();
-        if (res.success && res.data) {
-          currentTheoryMoc = res.data;
-          document.getElementById('theory-title').textContent = res.data.tieu_de;
-
-          // Render theoretical content nicely
-          const contentEl = document.getElementById('theory-content');
-          const raw = res.data.noi_dung_ly_thuyet || 'Chưa có nội dung lý thuyết cho mốc này.';
-          contentEl.innerHTML = formatTheoryContent(raw);
-
-          // Configure Complete button
-          const btnComplete = document.getElementById('btn-complete-theory');
-          if (res.data.trang_thai === 'DA_HOAN_THANH' || res.data.trang_thai === 'HOAN_THANH') {
-            btnComplete.innerHTML = '<span>✓ Đã hoàn thành (Xem lại)</span>';
-            btnComplete.disabled = false;
-          } else {
-            btnComplete.innerHTML = '<span>✓ Đã hiểu bài & Nhận thưởng</span><span class="bg-emerald-700/60 px-2 py-0.5 rounded text-[10px] font-mono">+' + (res.data.xu_thuong || 10) + ' 🪙</span>';
-            btnComplete.disabled = false;
-          }
-
-          const modal = document.getElementById('modal-theory');
-          if (modal) modal.classList.remove('hidden');
-        } else {
-          showToast(res.error?.message || 'Không thể tải nội dung lý thuyết!', 'error');
-        }
-      } catch (err) {
-        showToast('Lỗi kết nối khi tải lý thuyết mốc!', 'error');
+        const milestone = await courseRequest(mocId);
+        if (lookup && currentQuizSession?.mocId !== milestone.id) return;
+        currentTheoryMoc = milestone;
+        currentTheoryLookupOpenedAt = lookup ? Date.now() : null;
+        document.getElementById('theory-title').textContent = milestone.title;
+        document.getElementById('theory-content').innerHTML = formatTheoryContent(
+          milestone.theory_markdown || 'Chưa có nội dung lý thuyết cho mốc này.'
+        );
+        const button = document.getElementById('btn-complete-theory');
+        button.hidden = milestone.kind !== 'THEORY';
+        const completed = milestone.status === 'COMPLETED';
+        button.textContent = completed ? 'Đã hoàn thành' : `Đã hiểu bài · +${milestone.reward_coins} Xu`;
+        button.disabled = completed;
+        document.getElementById('modal-theory').classList.remove('hidden');
+      } catch (error) {
+        showToast(error.message, 'error');
       }
     }
 
@@ -8340,75 +7674,34 @@
     }
 
     function closeTheoryModal() {
-      const modal = document.getElementById('modal-theory');
-      if (modal) modal.classList.add('hidden');
-
-      if (currentTheoryLookupOpenedAt) {
-        const s = currentQuizSession || currentMocSession;
-        if (s) {
-          const currentQ = (s.questionsQueue && s.questionsQueue[0]) || (s.questions && s.questions[s.qIndex || 0]);
-          if (currentQ) {
-            const durationSec = Math.max(1, Math.round((Date.now() - currentTheoryLookupOpenedAt) / 1000));
-            const isChecked = Boolean(s.isAnswerChecked || s.isCurrentQuestionChecked);
-            const event = {
-              ma_cau_hoi: currentQ.ma_cau_hoi,
-              thoi_diem: new Date(currentTheoryLookupOpenedAt).toISOString(),
-              thoi_luong_giay: durationSec,
-              ngu_canh: isChecked ? 'SAU_KHI_TRA_LOI' : 'TRUOC_KHI_CHON',
-              moc_giay_trong_cau: Math.max(0, Math.round((currentTheoryLookupOpenedAt - (s.currentQuestionStartTime || currentTheoryLookupOpenedAt)) / 1000))
-            };
-            s.currentQuestionLookupEvents = s.currentQuestionLookupEvents || [];
-            s.currentQuestionLookupEvents.push(event);
-
-            // Nếu câu này đã được submit vào mảng submissions rồi (người học xem sau khi trả lời):
-            if (s.submissions && s.submissions.length > 0) {
-              const lastSub = s.submissions[s.submissions.length - 1];
-              if (lastSub && lastSub.ma_cau_hoi === currentQ.ma_cau_hoi) {
-                lastSub.nhat_ky_tra_cuu = lastSub.nhat_ky_tra_cuu || [];
-                lastSub.nhat_ky_tra_cuu.push(event);
-                lastSub.so_lan_tra_cuu = (lastSub.so_lan_tra_cuu || 0) + 1;
-              }
-            }
-          }
-        }
-        currentTheoryLookupOpenedAt = null;
+      document.getElementById('modal-theory').classList.add('hidden');
+      const session = currentQuizSession;
+      if (session?.mocId === currentTheoryMoc?.id && session) {
+        const event = courseLookupEvent(currentTheoryLookupOpenedAt, session);
+        if (event) queueCourseLookup(session, event);
       }
+      currentTheoryLookupOpenedAt = null;
       currentTheoryMoc = null;
     }
 
     async function confirmCompleteTheory() {
-      if (!currentTheoryMoc) return;
-      const mocId = currentTheoryMoc.ma_moc;
-      const token = localStorage.getItem('tok_token');
-
+      if (currentTheoryMoc?.kind !== 'THEORY') return;
+      const mocId = currentTheoryMoc.id;
+      const button = document.getElementById('btn-complete-theory');
+      button.disabled = true;
       try {
-        const resp = await fetch(`/api/checkpoints/${mocId}/complete-theory`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { 'Authorization': 'Bearer ' + token } : {})
-          },
-          body: JSON.stringify({})
-        });
-        const res = await resp.json();
-        if (res.success && res.data) {
-          if (audioSettings && audioSettings.quiz) playAdvancedSound('success');
-          const { xu_nhan_duoc: coins = 0, exp_nhan_duoc: exp = 0, alreadyCompleted } = res.data;
-          showToast(alreadyCompleted ? 'Bạn đã hoàn thành mốc này.' : `Hoàn thành mốc lý thuyết · +${coins} Xu · +${exp} EXP`);
-          closeTheoryModal();
-          await Promise.all([
-            refreshUserData(),
-            loadCourseRoadmap()
-          ]);
-        } else {
-          showToast(res.error?.message || 'Không thể lưu tiến độ lý thuyết!', 'error');
-        }
-      } catch (err) {
-        showToast('Lỗi kết nối khi hoàn thành lý thuyết!', 'error');
+        const result = await courseRequest(mocId, '/complete-theory', {});
+        if (audioSettings.quiz) playAdvancedSound('success');
+        showToast(result.already_completed ? 'Bạn đã hoàn thành mốc này.'
+          : `Hoàn thành lý thuyết · +${result.coins_awarded} Xu · +${result.xp_awarded} EXP`);
+        closeTheoryModal();
+        await Promise.all([refreshUserData(), loadCourseRoadmap()]);
+      } catch (error) {
+        button.disabled = false;
+        showToast(error.message, 'error');
       }
     }
 
-    // --- 4. Real Pet Shop & Equipment ---
     async function loadRealPets() {
       const token = localStorage.getItem('tok_token');
       try {
@@ -8487,7 +7780,7 @@
       try {
         const response=await fetch('/api/arena/leaderboard');const result=await response.json();
         if(!result.success || !Array.isArray(result.data))return;
-        const scopes=['all','csdl',...(allSystemCourses||[]).map(c=>(c.ma_mon||'').replace(/^mon_/,''))];
+        const scopes=['all','csdl',...(allSystemCourses || []).map(course => course.id)];
         for(const scope of new Set(scopes)){
           const users=result.data.filter(u=>scope==='all'||Object.prototype.hasOwnProperty.call(u.diem_dau_hang||{},'mon_'+scope));
           const rows={hang:[],speed:[],acc:[],streak:[]};
@@ -9402,8 +8695,8 @@
         || myEnrolledCourses[0];
       if (enrolled?.slug) {
         navTo('hub');
-        if (enrolled.slug === currentActiveCourseSlug && currentFocusMoc?.ma_moc) {
-          openCheckpointModal(currentFocusMoc.ma_moc);
+        if (enrolled.slug === currentActiveCourseSlug && currentFocusMoc?.id) {
+          openCheckpointModal(currentFocusMoc.id);
         } else {
           openCourseRoadmap(enrolled.slug);
         }

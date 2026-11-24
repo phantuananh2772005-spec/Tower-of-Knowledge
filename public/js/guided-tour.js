@@ -13,10 +13,10 @@
     audio: ['#settings-view-audio', 'Đây là nơi bật hoặc tắt các hiệu ứng âm thanh trong hệ thống.']
   };
   const questions = {
-    TRAC_NGHIEM_4: 'Chọn một đáp án rồi xem phản hồi.',
-    DIEN_TU: 'Chọn từ phù hợp để điền vào chỗ trống.',
-    NOI_CAP: 'Chọn một mục bên trái rồi chọn mục tương ứng bên phải.',
-    SAP_XEP_CAU: 'Chọn từng cụm từ theo thứ tự để tạo câu hoàn chỉnh.'
+    MULTIPLE_CHOICE: 'Chọn một đáp án rồi xem phản hồi.',
+    FILL_BLANK: 'Chọn từ phù hợp để điền vào chỗ trống.',
+    MATCHING: 'Chọn một mục bên trái rồi chọn mục tương ứng bên phải.',
+    ORDERING: 'Chọn từng cụm từ theo thứ tự để tạo câu hoàn chỉnh.'
   };
   let tip = null;
   let tipKey = null;
