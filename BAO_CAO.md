@@ -7,7 +7,7 @@ Nhánh `local-pg-v1` tách từ `main` tại `fe206d3`. [Luật nghiệp vụ](L
 | 0 · Trích luật | Đã hoàn tất. Những lựa chọn đã chốt gồm ẩn khiên, sát thương chung, lưu từng lượt học và chi tiết Admin, giữ thưởng thực nhận và chỉ hoàn thành qua đọc ở mốc thuần lý thuyết. |
 | 1 · Thiết kế | Đã duyệt. Admin sửa nhãn bước và độ khó trên câu hiện tại. Nội dung và phương án đổi qua bản mới. Kiểm câu cùng môn nằm ở backend theo rủi ro đã chấp nhận. |
 | 2 · DDL và seed | Đã áp trên PostgreSQL 16.16 qua Docker local. Schema `app_v1` có 29 bảng, 169 cột, 8 view và ba nhóm trigger. Đã kiểm chạy lại, rollback hai lần, áp lại cùng seed. Hướng dẫn ở [README](database/pg-v1/README.md). |
-| 3 · Kiểm chứng DB | Script `verify_v1.sql` kiểm ràng buộc, quyền theo cột và đối soát ví sau thưởng, mua và rollback. |
+| 3 · Kiểm chứng DB | [verify_v1.sql](database/pg-v1/verify_v1.sql) đạt **75/75 ca** trên PostgreSQL 16.16. Đối soát ví sau thưởng, mua và rollback có **0 sai lệch**. Còn **0 dòng dữ liệu thử** sau rollback. |
 | 4–5 · Chỉnh ứng dụng và chạy local | Chưa sửa mã ứng dụng hoặc tạo `.env.local`. Bước 4 bắt buộc test chặn phát câu khác môn qua luồng mở hiệp của backend. |
 
 Không có thay đổi trên `main` hoặc máy chủ Render. Máy local dùng container `thaptrithuc-pg-v1` với cổng loopback 55432, database `thaptrithuc_v1`. Script quản trị chạy qua socket trong container.
