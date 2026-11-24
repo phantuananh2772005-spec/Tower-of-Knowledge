@@ -1,8 +1,8 @@
 # Thiết kế PostgreSQL V1 · Tháp Tri Thức
 
-**Bước 1, bản sửa chờ duyệt lần cuối ngày 24/11/2026.** Đích là PostgreSQL local `thaptrithuc_v1` trên nhánh `local-pg-v1`. Thiết kế lấy nghiệp vụ từ [LUAT_NGHIEP_VU.md](LUAT_NGHIEP_VU.md). Quyết định đã chốt gồm ẩn khiên, sát thương chung cho mọi Pet, lưu từng lần làm và chi tiết đối chiếu Admin, giữ thưởng thực nhận theo trận, và chỉ cho mốc thuần lý thuyết hoàn thành qua phần đọc.
+**Thiết kế đã duyệt ngày 24/11/2026.** Đích là PostgreSQL local `thaptrithuc_v1` trên nhánh `local-pg-v1`. Thiết kế lấy nghiệp vụ từ [LUAT_NGHIEP_VU.md](LUAT_NGHIEP_VU.md). Quyết định đã chốt gồm ẩn khiên, sát thương chung cho mọi Pet, lưu từng lần làm và chi tiết đối chiếu Admin, giữ thưởng thực nhận theo trận, và chỉ cho mốc thuần lý thuyết hoàn thành qua phần đọc.
 
-Thiết kế dùng các tính năng có trong PostgreSQL 16. Mọi tên vật lý là tiếng Anh, ASCII snake_case và tên bảng số nhiều. Bước này chỉ mô tả schema, cơ chế toàn vẹn và chuẩn kiểm thử. DDL, seed và sửa ứng dụng bắt đầu sau các điểm duyệt đã nêu trong yêu cầu.
+Thiết kế dùng các tính năng có trong PostgreSQL 16. Mọi tên vật lý là tiếng Anh, ASCII snake_case và tên bảng số nhiều. Tài liệu mô tả schema và cơ chế toàn vẹn đã duyệt. DDL và seed ở `database/pg-v1/`.
 
 ## Các quyết định cần thấy khi duyệt
 
@@ -17,7 +17,7 @@ Thiết kế dùng các tính năng có trong PostgreSQL 16. Mọi tên vật l�
 | **Giá trị 0 và chấm bước** | Giá/thưởng 0 là giá/thưởng 0. Khi thưởng bước dương, giữ luật phân bổ, làm tròn và sàn hiện hành. Một bước mới chỉ tăng tiến độ nếu bằng bước đang mở. Ôn bước trước vẫn lưu lượt nhưng không trả lại thưởng. Đây là thay đổi chủ ý so với nhánh cũ chấp nhận bước lớn hơn bước đang mở. |
 | **Ghi danh và ngày nhiệm vụ** | Giữ khả năng tự ghi danh khi người đã xác thực xem lộ trình và giữ thứ tự mốc. Giữ tiêu chí nhiệm vụ theo code B0, kể cả phiên lưu dở, với tập dữ kiện thực sự đã lưu. Mốc thuần lý thuyết cập nhật tiến độ và thưởng, không tự tạo phiên giả để làm tăng nhiệm vụ. |
 
-## Danh mục vật lý chờ duyệt
+## Danh mục vật lý
 
 | Nhóm | Bảng | Cột |
 |---|---:|---:|
@@ -27,7 +27,7 @@ Thiết kế dùng các tính năng có trong PostgreSQL 16. Mọi tên vật l�
 | Học tập | 6 | 36 |
 | Kinh tế | 4 | 18 |
 | Đấu trường | 7 | 33 |
-| **Tổng trước DDL** | **29** | **169** |
+| **Tổng** | **29** | **169** |
 
 Quy ước trong danh mục. `?` là cột cho phép NULL, các cột còn lại bắt buộc. `PK` trên nhiều cột biểu thị một khóa ghép. `FK` có thể là thành phần của khóa ghép. Khóa UUID sinh cho thực thể có danh tính riêng và giữ nguyên khi đổi tên. Các quan hệ, suất đấu, hàng phiên và lượt dùng khóa nghiệp vụ ghép. `text` dùng miền CHECK thay vì lưu nhiều dạng enum cũ. Mọi timestamp là `timestamptz` và kết nối định dạng UTC. `date` dùng cho ngày địa phương khi bản chất nghiệp vụ là ngày.
 
@@ -277,7 +277,7 @@ Lượt chấm của một suất trong một hiệp.
 
 ## Hằng số nguồn của V1
 
-Bước 2 sẽ khai báo các hằng số bằng hàm SQL `IMMUTABLE` mặc định `SECURITY INVOKER` ở đầu **`database/pg-v1/001_schema.sql`**, trước các bảng và CHECK dùng chúng. Tệp này dự kiến tạo sau duyệt. Không có bảng cấu hình mới. Backend đọc các hàm khi khởi động, truyền tham số vào luật thuần, và đưa giới hạn cần hiển thị ra DTO. View và CHECK gọi cùng nguồn DB. Thiếu hằng số thì dừng khởi động, tránh giá trị JS dự phòng bị lệch.
+DDL khai báo các hằng số bằng hàm SQL `IMMUTABLE` mặc định `SECURITY INVOKER` ở đầu **`database/pg-v1/001_schema.sql`**, trước các bảng và CHECK dùng chúng. Không có bảng cấu hình mới. Backend đọc các hàm khi khởi động, truyền tham số vào luật thuần, và đưa giới hạn cần hiển thị ra DTO. View và CHECK gọi cùng nguồn DB. Thiếu hằng số thì dừng khởi động, tránh giá trị JS dự phòng bị lệch.
 
 | Hằng số | Giá trị | Hàm nguồn và nơi sử dụng |
 |---|---:|---|
@@ -303,7 +303,7 @@ Bước 2 sẽ khai báo các hằng số bằng hàm SQL `IMMUTABLE` mặc đ�
 - Bảng nội dung và danh mục dùng `ACTIVE/ARCHIVED`. Dòng con hiển thị trong luồng mới khi nó và toàn bộ tổ tiên đều ACTIVE. Cờ con lưu quyết định riêng, việc ngừng môn không ghi đè cờ chương/mốc/câu. Chỉnh nội dung lộ trình giữ ID của môn/chương/mốc và thứ tự unique, không chuyển chương/mốc sang cha khác. Quyền UPDATE theo cột của role runtime loại trừ khóa chính và liên kết cha. Backend khóa mốc khi kiểm lịch sử và giữ nguyên loại, số bước nếu đã có lượt hoặc tiến độ. Các phép chỉnh không làm đổi tham chiếu lịch sử vẫn thực hiện qua nghiệp vụ quản trị.
 - Câu `MULTIPLE_CHOICE` có bốn hàng `question_options` vị trí 0–3. Unique lọc bảo đảm tối đa một hàng đúng. Constraint trigger DEFERRABLE INITIALLY DEFERRED bảo đảm câu MCQ còn đúng một hàng đúng khi hoàn tất transaction. Trigger trên câu và phương án đọc trạng thái cuối. Backend kiểm đủ bốn phương án cho MCQ và không có phương án cho loại khác trong transaction phát hành. [Constraint trigger](https://www.postgresql.org/docs/16/sql-createtrigger.html), [partial unique index](https://www.postgresql.org/docs/16/indexes-partial.html).
 - `questions.type` là `MULTIPLE_CHOICE/MATCHING/FILL_BLANK/ORDERING`. `bloom_level` là `REMEMBER/UNDERSTAND/APPLY`, chuyển alias THONG_HIEU và PHAN_TICH sang cấp chuẩn của luồng chọn đề. JSONB phi trắc nghiệm là object chuẩn theo loại. MATCHING có `pairs` gồm `left/right` và ít nhất một cặp. FILL_BLANK có `sentence_template`, `options`, `blank_answer` và đúng một chỗ `{blank}`. ORDERING có `prompt`, `correct_order` và `distractors`. Validator DB dùng dữ liệu cùng hàng, xác nhận kiểu và phần tử chuỗi bắt buộc. Dữ liệu seed/admin dùng cùng hình dạng.
-- Nội dung và phương án đã phát phải bất biến kể cả phiên đang mở. V1 dùng quy tắc đơn giản cho mọi câu đã ghi. Chỉnh cấu trúc luôn phát hành bản mới và chuyển status bản cũ sang ARCHIVED trong một transaction backend. Role runtime chỉ có UPDATE(status) trên questions, có INSERT để khởi tạo câu và phương án, và không có UPDATE/DELETE trên question_options. Backend tạo trọn bộ phương án khi thêm câu và từ chối thêm phương án vào câu đã phát hành. RESTRICT từ round/phiên giữ câu cũ. Điều này bảo toàn cả kết quả đã chốt và người làm đang giữ ID đề. Trang quản trị xóa bằng ARCHIVED ở cả bốn cấp. Chỉ phiên và từng lượt hợp lệ được xử lý, đáp án đúng và giải thích không có trong payload phát đề. Học gửi một lượt để server kiểm và trả phản hồi, nên vẫn có phản hồi ngay.
+- Nội dung và phương án đã phát phải bất biến kể cả phiên đang mở. V1 dùng quy tắc đơn giản cho mọi câu đã ghi. Chỉnh cấu trúc luôn phát hành bản mới và chuyển status bản cũ sang ARCHIVED trong một transaction backend. Role `thaptrithuc_v1_runtime` được cấp `UPDATE (status, step_no, difficulty)` trên `questions`. Admin có thể chỉnh nhãn bước và độ khó trên cùng ID qua backend. Nội dung câu, giải thích, payload và phương án bất biến với role runtime. Đổi nội dung tạo bản mới và chuyển bản cũ sang ARCHIVED. Role runtime được INSERT câu/phương án lúc khởi tạo và không có UPDATE/DELETE trên question_options. Backend tạo trọn bộ phương án khi thêm câu và từ chối thêm phương án vào câu đã phát hành. RESTRICT từ round/phiên giữ câu cũ. Điều này bảo toàn cả kết quả đã chốt và người làm đang giữ ID đề. Trang quản trị xóa bằng ARCHIVED ở cả bốn cấp. Chỉ phiên và từng lượt hợp lệ được xử lý, đáp án đúng và giải thích không có trong payload phát đề. Học gửi một lượt để server kiểm và trả phản hồi, nên vẫn có phản hồi ngay.
 - Backend khoanh phạm vi đề và kiểm tổ tiên ACTIVE trong transaction khi phát. STEP và MILESTONE đọc câu của mốc. BOSS đọc các mốc cùng chương. EXTREME đọc cùng môn. Lấy khóa FOR SHARE trên tổ tiên và câu theo thứ tự nhất quán để thao tác đổi trạng thái phải chờ đến khi phát đề xong. FK ghép giới hạn lượt ở câu đã phát. Khi gửi lại, backend khóa phiên và trả kết quả của cùng `attempt_no`. Từ chối trùng khóa với câu hoặc nội dung khác. App chỉ ghi và chốt qua các đường nghiệp vụ.
 - Backend chấm và kiểm kiểu khớp câu trong giao dịch ghi lượt. MCQ gốc ghi vị trí chuẩn của option trong kho câu, không ghi chỉ số hiển thị sau khi xáo. Chuyển thể của Cực Hạn và điền từ ghi nội dung đã chọn. Ghép và sắp xếp ghi response JSONB. Cực Hạn có thể gặp lại câu ở vòng sau với cùng vị trí nguồn và attempt_no mới. Câu không chơi vẫn có trong bộ đề nhưng không sinh lượt.
 - Phiên có mốc kéo theo môn qua chương. Phiên EXTREME có subject_id trực tiếp. CHECK cùng hàng theo kind bắt đúng một liên kết và cột bước/started_at đi kèm. Backend khóa và kiểm giới hạn bước, ghi danh, thao tác chốt và cập nhật tiến độ trong cùng transaction. EXTREME không cần ghi danh. Khách Cực Hạn giữ phiên tạm thời và không ghi lịch sử/thưởng.
@@ -339,6 +339,11 @@ Bước 2 sẽ khai báo các hằng số bằng hàm SQL `IMMUTABLE` mặc đ�
 | **Đúng hai người trong trận** | PK (match_id,slot), CHECK slot 1/2, UNIQUE người theo trận và một hàm đếm được gọi bởi constraint trigger hoãn trên `matches` và `match_players`. | Các khóa chặn người thứ ba và trùng người. Chúng không bắt bản ghi trận phải có đủ hai dòng tham gia, kể cả khi tạo trận với 0 người hoặc xóa một người trước commit. |
 
 Tổng cộng có năm khai báo trigger trong ba nhóm. Nhóm thứ nhất và thứ ba mỗi nhóm có khai báo trên bảng cha và bảng con để bắt cả đường tạo cha lẫn thay đổi con. Trigger chỉ kiểm một đáp án đúng, sổ Xu chỉ ghi thêm và đủ hai suất. Backend kiểm số lượng phương án theo loại câu, cặp WIN/LOSE/DRAW, cửa sổ mùa, hiệp liền kề, đúng môn và điều kiện chốt thưởng trong giao dịch tương ứng. Các trường hợp FK, CHECK và UNIQUE xử lý được vẫn giữ trong DB. [Tài liệu PostgreSQL về CHECK và FK](https://www.postgresql.org/docs/16/ddl-constraints.html), [constraint trigger](https://www.postgresql.org/docs/16/sql-createtrigger.html).
+
+## Rủi ro đã chấp nhận
+
+- FK của `match_rounds.question_id` kiểm câu tồn tại. Kiểm câu thuộc môn của trận nằm hoàn toàn ở giao dịch backend. Ghi SQL trực tiếp có thể gắn một câu thuộc môn khác vào trận. Bước 4 bắt buộc có kiểm thử qua luồng mở hiệp thật, tạo hai môn riêng, đưa câu của môn B vào trận môn A và xác nhận bị từ chối, không có dòng hiệp mới và không phát câu cho người chơi. Dùng câu đúng môn làm ca đối chứng.
+- Tính nhất quán giữa số dư và sổ Xu dựa vào transaction có khóa dòng. `verify_v1.sql` kiểm `users.coin_balance = COALESCE(SUM(coin_ledger.delta), 0)` cho mọi người dùng sau các ca thưởng, mua và rollback.
 
 ## View và điểm tích hợp
 
@@ -411,7 +416,7 @@ erDiagram
 |---|---|
 | Quyền sở hữu Pet hoặc phụ kiện | **Bước 3.** Tạo account, cấp Sparky và trang bị hợp lệ. FK ghép chặn trang bị chưa sở hữu. PK chặn trùng cặp người–Pet/phụ kiện. |
 | Trắc nghiệm thiếu hoặc nhiều đáp án đúng | **Bước 3.** Câu MCQ có một phương án đúng qua kiểm. Buộc chạy trigger hoãn ở ca tạo MCQ không có phương án và ca có phương án nhưng đều sai. Unique lọc chặn hai phương án đúng. **Bước 4–5.** Giao dịch phát hành từ chối MCQ thiếu phương án và câu kiểu khác có phương án MCQ. |
-| Bảo toàn câu từng phát và cấu trúc môn | **Bước 3.** Role runtime không sửa cấu trúc câu, phương án hay FK cha của chương/mốc. FK RESTRICT của dữ liệu lịch sử chặn xóa câu/môn. **Bước 4–5.** Chuyển ARCHIVED và tạo bản mới trong một transaction, bài cũ vẫn đọc bản cũ. Chặn đổi loại hoặc số bước của mốc đã học. |
+| Bảo toàn câu từng phát và cấu trúc môn | **Bước 3.** Role runtime sửa được step_no và difficulty nhưng không sửa stem, payload, phương án hay FK cha của chương/mốc. FK RESTRICT của dữ liệu lịch sử chặn xóa câu/môn. **Bước 4–5.** Chuyển ARCHIVED và tạo bản mới trong một transaction, bài cũ vẫn đọc bản cũ. Chặn đổi loại hoặc số bước của mốc đã học. |
 | Phạm vi phiên và các lần làm lại | **Bước 3.** Phiên theo mốc hoặc EXTREME theo môn hợp lệ, thiếu cả hai, đồng thời có cả hai hoặc dùng sai loại đều bị CHECK từ chối. Hai attempt hợp lệ của cùng câu tồn tại riêng. FK ghép chặn lượt ngoài bộ đề. **Bước 4–5.** Admin thấy cả hai lần làm. Chọn đề lệch môn/mốc/chương, tổ tiên đã ARCHIVED hoặc sai bước bị từ chối qua service. |
 | Đáp án lưu đúng một dạng | **Bước 3.** Nhận MCQ, text, cặp nối, token hoặc TIMEOUT hợp lệ. Từ chối 0 hoặc nhiều dạng, JSON null, thiếu kind, sai kiểu phần tử và TIMEOUT có kết quả đúng. Kiểm cả payload phi trắc nghiệm của câu hỏi. **Bước 4–5.** Từ chối dạng không khớp câu đã phát và xác nhận chỉ số MCQ đã xáo được ánh xạ về vị trí gốc. |
 | Bloom theo bước | **Bước 3.** Nhận cấu hình có ba tỷ lệ hợp lệ tổng 100 và SQL NULL khi dùng mặc định. Từ chối thiếu/thừa khóa, tỷ lệ ngoài miền, chuỗi hoặc số lẻ, tổng khác 100, bước ngoài phạm vi và cấu hình trên mốc THEORY. **Bước 4–5.** Kiểm bộ phát đề đọc đúng override và quay về preset ở bước thiếu cấu hình. |
@@ -419,8 +424,8 @@ erDiagram
 | Hai người, hiệp và kết quả trận | **Bước 3.** Nhận trận đủ hai suất, chặn trận có 0/1 người, xóa làm thiếu người hoặc chèn người thứ ba. Chặn hai WIN và lượt theo người/hiệp thuộc trận khác. **Bước 4–5.** Chặn câu khác môn, hiệp không liên tiếp và thay đổi trận đã chốt. Kiểm WIN + LOSE, DRAW + DRAW, đầu hàng, hủy và hết giờ. |
 | HP, Xu, EXP, điểm âm và thứ tự trùng | **Bước 3.** CHECK chặn giá trị âm ở cột có miền không âm và hạn mức EXP vượt 1.500. View kẹp HP ở 0, không có cột HP để ghi thủ công. UNIQUE chặn trùng thứ tự chương/mốc cùng cha. **Bước 4–5.** Kiểm sát thương 12/+3, hiển thị HP và nhận EXP khi chạm trần từ hai phiên đồng thời. |
 | Chốt mùa | **Bước 3.** Chặn hai mùa mở, trùng người–môn–mùa và trận có tham chiếu mùa không hợp lệ. **Bước 4–5.** Kiểm cửa sổ 56 ngày, ranh giới khi chốt trận, chốt mùa hai lần không thưởng lại và điểm cũ được giữ. |
-| Sổ Xu chỉ ghi thêm và số dư nhất quán | **Bước 3.** Role runtime không có quyền UPDATE, DELETE hoặc TRUNCATE trên ledger. Dùng role kiểm thử có quyền UPDATE/DELETE để xác minh trigger từ chối cả hai lệnh, rồi rollback. **Bước 4–5.** Cố ý gây lỗi giữa INSERT ledger và UPDATE số dư, cả hai phải rollback. Hai giao dịch cùng người nối tiếp theo khóa dòng, không mất cập nhật. |
+| Sổ Xu chỉ ghi thêm và số dư nhất quán | **Bước 3.** Role runtime không có quyền UPDATE, DELETE hoặc TRUNCATE trên ledger. Dùng role kiểm thử có quyền UPDATE/DELETE để xác minh trigger từ chối cả hai lệnh, rồi rollback. Đối soát mọi tài khoản sau ca thưởng, mua và rollback. **Bước 4–5.** Cố ý gây lỗi giữa INSERT ledger và UPDATE số dư, cả hai phải rollback. Hai giao dịch cùng người nối tiếp theo khóa dòng, không mất cập nhật. |
 
-Bộ `verify_v1.sql` tương lai ghi PASS/FAIL cho các ca Bước 3. Mỗi ca có transaction và rollback, riêng ca trigger hoãn chạy `SET CONSTRAINTS ... IMMEDIATE` trước khi rollback. Dùng role runtime để kiểm quyền thực tế. Các quy tắc chuyển vào giao dịch backend, gồm câu khác môn trong trận, được xác minh ở Bước 4–5 qua đường ghi của ứng dụng. Ca đồng thời dùng hai kết nối localhost. Fixture thử tách seed và kiểm sạch sau rollback/dọn ca đồng thời. Đường chạy Bước 2 gồm DDL, seed từ manifest repo và rollback chạy lại được trên đúng tên DB local.
+Bộ `verify_v1.sql` ghi PASS/FAIL cho các ca Bước 3. Mỗi ca có transaction và rollback, riêng ca trigger hoãn chạy `SET CONSTRAINTS ... IMMEDIATE` trước khi rollback. Dùng role runtime để kiểm quyền thực tế. Các quy tắc chuyển vào giao dịch backend được xác minh qua đường ghi của ứng dụng. Ca câu khác môn là yêu cầu bắt buộc của Bước 4. Ca đồng thời dùng hai kết nối localhost. Fixture thử tách seed và kiểm sạch sau rollback/dọn ca đồng thời. Đường chạy Bước 2 gồm DDL, seed từ manifest repo và rollback chạy lại được trên đúng tên DB local.
 
-**Điểm duyệt.** Danh mục ở trên là schema đích cần duyệt, gồm cả lựa chọn tính HP và thưởng Xu khi đọc. Sau khi duyệt mới viết DDL. Nếu qua Bước 3 phát hiện trường hợp thiết kế không mô tả được nghiệp vụ, đưa bằng chứng vào báo cáo để xem xét trước khi đổi schema.
+**Phạm vi thay đổi.** Danh mục là schema đích đã duyệt, gồm cả HP và Xu thưởng tính khi đọc. Nếu phát hiện nghiệp vụ chưa được schema biểu diễn, ghi bằng chứng vào báo cáo để duyệt trước khi đổi schema.
