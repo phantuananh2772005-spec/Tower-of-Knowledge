@@ -273,6 +273,7 @@
       .battle-match-column .pair-wrong { animation:none; background:#fecaca; border-color:#e11d48; }
     }
   </style>
+<link rel="stylesheet" href="/css/result-book.css">
 </head>
 <body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen flex font-sans">
 
@@ -2166,60 +2167,43 @@
       </div>
     </div>
 
-    <!-- ================= MODAL TỔNG QUAN MỐC HỌC TẬP & LỘ TRÌNH 4 BƯỚC BLOOM DUOLINGO ================= -->
-    <div id="modal-checkpoint" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs transition-opacity duration-200" onclick="if(event.target===this)closeCheckpointModal()">
-      <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl w-full max-w-lg p-6 sm:p-7 space-y-5 shadow-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto animate-in fade-in zoom-in duration-200 relative">
-        <button id="btn_close_cp_modal" onclick="closeCheckpointModal()" class="absolute top-5 right-5 text-[var(--muted-foreground)] hover:text-[var(--foreground)] text-lg cursor-pointer">✕</button>
-
-        <div class="space-y-1.5 pr-6">
-          <div class="flex items-center gap-2">
-            <span id="cp-modal-badge" class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 font-mono">Mốc học</span>
-            <span id="cp-modal-status-badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 font-mono">Đang học</span>
+    <div id="modal-checkpoint" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs" role="dialog" aria-modal="true" aria-labelledby="cp-modal-title" onclick="if(event.target===this)closeCheckpointModal()" onkeydown="if(event.key==='Escape')closeCheckpointModal()">
+      <div class="bg-[var(--card)] border border-[var(--border)] rounded-3xl w-full max-w-md p-5 sm:p-6 space-y-4 shadow-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto relative">
+        <button type="button" id="btn_close_cp_modal" aria-label="Đóng" onclick="closeCheckpointModal()" class="absolute top-3 right-3 w-10 h-10 rounded-xl hover:bg-[var(--background)] text-[var(--muted-foreground)] cursor-pointer">✕</button>
+        <div class="space-y-1.5 pr-10">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span id="cp-modal-badge" class="text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600"></span>
+            <span id="cp-modal-status-badge" class="text-[11px] font-semibold text-[var(--muted-foreground)]"></span>
           </div>
-          <h3 id="cp-modal-title" class="font-bold text-base sm:text-lg leading-tight text-[var(--foreground)]">Mốc 1.1: Khái niệm CSDL</h3>
+          <h3 id="cp-modal-title" class="font-bold text-lg leading-tight text-[var(--foreground)]"></h3>
+          <p id="cp-step-title" class="text-xs text-[var(--muted-foreground)]"></p>
+          <p id="cp-step-weights" class="text-[11px] text-[var(--muted-foreground)]"></p>
         </div>
 
-        <div id="cp-records" aria-live="polite"></div>
-        <!-- Tóm tắt Lý thuyết mốc học -->
-        <div class="bg-[var(--background)]/60 border border-[var(--border)] rounded-2xl p-4 space-y-2">
-          <div class="flex items-center justify-between text-xs">
-            <span class="font-bold text-[var(--muted-foreground)] uppercase tracking-wider text-[10px]">Lý thuyết</span>
-            <button id="btn_cp_open_theory_full" onclick="openTheoryFromCheckpoint()" class="text-xs font-semibold text-emerald-600 hover:underline cursor-pointer">Xem lý thuyết →</button>
-          </div>
-          <p id="cp-modal-summary" class="text-xs text-[var(--foreground)]/80 leading-relaxed line-clamp-3"></p>
-        </div>
+        <div id="cp-records" aria-label="Kỷ lục bài học"></div>
+        <p id="cp-modal-summary" class="text-xs text-[var(--muted-foreground)] leading-relaxed line-clamp-3"></p>
 
-        <!-- Lộ trình Duolingo Stepping (Bloom Taxonomy) -->
-        <div class="space-y-2.5">
-          <div class="flex items-center justify-between text-xs font-bold">
-            <span id="cp-modal-steps-header" class="text-[var(--muted-foreground)] uppercase tracking-wider text-[10px]">🎯 Các Chặng Luyện tập Ghi nhớ & Làm chủ (Bloom):</span>
-            <span id="cp-modal-steps-progress" class="text-emerald-600 font-mono text-[11px]">Đang tải tiến độ...</span>
-          </div>
-          <div id="cp-modal-steps-container" class="space-y-2">
-            <!-- Dynamic 4 steps rendered by JS -->
-          </div>
-        </div>
-
-        <!-- Action Button -->
-        <div class="pt-2">
-          <button id="btn-cp-primary-action" onclick="startActiveStepFromModal()" class="w-full py-3 rounded-2xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition shadow-md cursor-pointer flex items-center justify-center gap-2">
-            <span>Bắt đầu Luyện tập Bước 1</span> <span>→</span>
-          </button>
-          <button id="btn-cp-practice-secondary" hidden class="mt-2 w-full py-2 text-xs font-semibold text-emerald-600 hover:underline">Luyện tập chặng 1</button>
+        <div class="space-y-1.5">
+          <button type="button" id="btn-cp-primary-action" class="w-full min-h-11 py-2.5 rounded-2xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 transition shadow-sm cursor-pointer"></button>
+          <button type="button" id="btn_cp_open_theory_full" onclick="openTheoryFromCheckpoint()" class="w-full min-h-10 py-1.5 text-xs font-semibold text-emerald-600 hover:underline cursor-pointer" hidden>Xem lý thuyết</button>
         </div>
       </div>
     </div>
 
     <dialog id="step-review-dialog" aria-labelledby="step-review-title" class="m-auto w-[calc(100%-2rem)] max-w-lg max-h-[85dvh] overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] p-5 backdrop:bg-black/60">
-      <h2 id="step-review-title" class="text-lg font-bold">Kết quả luyện tập</h2>
-      <p id="step-review-score" class="mt-1 text-sm"></p>
-      <details id="step-review-mistakes" class="mt-4 text-sm">
-        <summary class="cursor-pointer font-semibold text-emerald-600"></summary>
-        <ol class="mt-2 list-decimal space-y-3 pl-5"></ol>
-      </details>
-      <form method="dialog" class="mt-4">
-        <button class="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white">Về bản đồ</button>
-      </form>
+      <div class="result-spread">
+        <div class="result-art"><strong>Tháp Tri Thức</strong><img id="result-book-pet" alt=""></div>
+        <section class="result-page">
+          <p id="step-review-label"></p>
+          <h2 id="step-review-title"></h2>
+          <div id="result-book-stars"></div>
+          <strong id="step-review-score"></strong>
+          <p id="step-review-detail"></p>
+          <button type="button" id="step-review-action"></button>
+          <details id="step-review-mistakes"><summary></summary><ol></ol></details>
+          <form method="dialog"><button>Về bản đồ</button></form>
+        </section>
+      </div>
     </dialog>
 
     <!-- ================= MODAL CHÚC MỪNG HOÀN THÀNH MỐC HỌC (VICTORY MODAL) ================= -->
@@ -6373,7 +6357,10 @@
       }
     }
 
+    let roadmapRequest = 0;
+
     async function loadCourseRoadmap(preferredChapterIdOrSlug = null) {
+      const request = ++roadmapRequest;
       const token = localStorage.getItem('tok_token');
       try {
         let preferredChapterId = null;
@@ -6391,6 +6378,8 @@
         const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
         const resp = await fetch('/api/courses/' + encodeURIComponent(activeSlug), { headers });
         const res = await resp.json();
+        if (request !== roadmapRequest || activeSlug !== currentActiveCourseSlug ||
+            token !== localStorage.getItem('tok_token')) return;
         if (res.success && res.data) {
           liveCourseData = res.data;
           if (preferredChapterId) {
@@ -6414,50 +6403,11 @@
       return moc.record?.stars ?? 1;
     }
 
-    function getActiveMoc(mocs) {
-      if (!Array.isArray(mocs) || mocs.length === 0) return null;
-      const foundActive = mocs.find(m => m.status === 'OPEN');
-      if (foundActive) return foundActive;
-      const lastDone = mocs.map(m => m.status).lastIndexOf('COMPLETED');
-      const idx = lastDone >= 0 ? Math.min(mocs.length - 1, lastDone + 1) : 0;
-      return mocs[idx] || mocs[0];
-    }
-
-    function getMocSpeechText(moc) {
-      if (!moc) return 'Bắt đầu học! 🎯';
-      if (moc.status === 'COMPLETED') {
-        return 'Ôn lại nhé! ✨';
-      }
-      if (moc.kind === 'BOSS') {
-        return 'Thách đấu Boss! ⚔️';
-      }
-      const steps = String(moc.completed_steps || '0/4');
-      const finishedSteps = parseInt(steps.split('/')[0] || '0', 10);
-      const score = typeof moc.xp_earned === 'number' ? moc.xp_earned : 0;
-      if (finishedSteps > 0 || score > 0) {
-        return 'Học tiếp nào! 🎯';
-      }
-      return 'Bắt đầu học! 🎯';
-    }
-
-    function onSagaLockedClick(mocId) {
-      const el = document.getElementById('btn_moc_lock_' + mocId);
-      if (el) {
-        el.classList.remove('shake');
-        void el.getBoundingClientRect();
-        el.classList.add('shake');
-      }
-      const speechTxt = document.getElementById('roadmap-pet-speech-text');
-      if (speechTxt) speechTxt.textContent = 'Hoàn thành mốc trước đã! 🔒';
-      showToast('Mốc này đang khóa. Hãy hoàn thành các mốc trước để mở khóa!', 'info');
-      setTimeout(() => {
-        if (speechTxt && liveCourseData && liveCourseData.chapters) {
-          const allChapters = liveCourseData.chapters || [];
-          const curCh = allChapters.find(c => c.id === currentSagaChapterId) || allChapters[0];
-          const curMocs = curCh ? curCh.milestones || [] : [];
-          speechTxt.textContent = getMocSpeechText(getActiveMoc(curMocs));
-        }
-      }, 2000);
+    function onSagaLockedClick(button, withinLesson) {
+      button.classList.remove('shake');
+      void button.getBoundingClientRect();
+      button.classList.add('shake');
+      showToast(withinLesson ? 'Hoàn thành chặng trước để mở chặng này.' : 'Hoàn thành phần học trước để mở khóa.', 'info');
     }
 
     function changeSagaChapter(chId) {
@@ -6852,80 +6802,81 @@
     // --- 2. Duolingo Stepping Checkpoint Controller ---
     let currentCheckpointMoc = null;
 
-    async function openCheckpointModal(mocId) {
+    let checkpointTrigger = null;
+    let checkpointRequest = 0;
+
+    async function openCheckpointModal(mocId, requestedStep = null) {
+      const trigger = document.activeElement;
+      const view = currentAppView;
+      const request = ++checkpointRequest;
       try {
         const milestone = await courseRequest(mocId);
-        currentCheckpointMoc = milestone;
-        const record = milestone.record;
-        const stars = getStarCountForMoc(milestone);
-        const completed = milestone.status === 'COMPLETED';
+        if (request !== checkpointRequest || view !== currentAppView) return;
         const theoryOnly = milestone.kind === 'THEORY';
-        const steps = milestone.step_configs ?? [];
-        document.getElementById('cp-records').innerHTML =
-          `<div class="cp-stars" aria-label="${stars} trên 3 sao">${[1,2,3].map(n =>
-            '<span class="' + (n <= stars ? 'earned' : '') + '">' + (n <= stars ? '★' : '☆') + '</span>'
-          ).join('')}</div><div class="cp-stat-grid">
-            <div><strong>${record?.accuracy_percent != null ? Number(record.accuracy_percent) + '%' : '—'}</strong><span>Độ chính xác tốt nhất</span></div>
-            <div><strong>${record?.average_seconds != null ? Number(record.average_seconds) + ' giây' : '—'}</strong><span>Thời gian TB / câu</span></div>
-          </div>`;
-        document.getElementById('cp-modal-badge').textContent = milestone.kind === 'BOSS' ? '👑 BOSS CHƯƠNG' : 'Mốc học';
-        document.getElementById('cp-modal-title').textContent = milestone.title;
-        const summary = (milestone.theory_markdown || '').replace(/#{1,6}\s+|[-*]\s+/g, '').trim();
-        document.getElementById('cp-modal-summary').textContent = summary.length > 180 ? summary.slice(0, 180) + '…' : summary;
-        document.getElementById('cp-modal-status-badge').textContent = completed ? '✓ Đã hoàn thành' : 'Đang học';
-        document.getElementById('cp-modal-steps-header').textContent = theoryOnly ? '' : 'Luyện tập · ' + milestone.step_count + ' chặng';
-        document.getElementById('cp-modal-steps-progress').textContent = theoryOnly ? ''
-          : `${milestone.completed_steps}/${milestone.step_count} chặng hoàn thành`;
+        const stepNo = theoryOnly ? null : requestedStep ?? milestone.current_step ?? 1;
+        const step = milestone.step_configs?.find(item => item.step_no === stepNo);
+        if (!theoryOnly && (!step || step.status === 'LOCKED')) {
+          showToast('Chặng này chưa mở.', 'info');
+          return;
+        }
 
-        const container = document.getElementById('cp-modal-steps-container');
-        container.replaceChildren(...steps.map(step => {
-          const row = document.createElement('div');
-          const done = step.status === 'COMPLETED';
-          const available = step.status === 'OPEN';
-          row.className = 'p-3 rounded-2xl border flex items-center justify-between gap-2 ' +
-            (done ? 'border-emerald-500/40 bg-emerald-500/5' :
-              available ? 'border-emerald-500 bg-emerald-500/10' : 'border-[var(--border)] opacity-50');
-          const info = document.createElement('div');
-          const label = document.createElement('strong');
-          label.className = 'text-xs';
-          label.textContent = `${step.step_no}. ${step.title}`;
-          const weights = document.createElement('p');
-          weights.className = 'text-[10px] text-[var(--muted-foreground)]';
-          weights.textContent = [
-            [step.remember_pct, 'Nhớ'],
-            [step.understand_pct, 'Hiểu'],
-            [step.apply_pct, 'Vận dụng']
-          ].filter(([value]) => value > 0).map(([value, name]) => `${value}% ${name}`).join(' · ');
-          info.append(label, weights);
-          row.appendChild(info);
-          const button = document.createElement('button');
-          button.id = 'btn_cp_step_ontap_' + step.step_no;
-          button.type = 'button';
-          button.textContent = done ? 'Ôn tập' : available ? 'Làm bài' : 'Chưa mở';
-          button.className = 'px-3 py-1.5 rounded-xl border border-emerald-500/30 text-emerald-600 font-bold text-xs';
-          button.disabled = !done && !available;
-          button.onclick = () => startStepPlay(mocId, step.step_no);
-          row.appendChild(button);
-          return row;
-        }));
+        currentCheckpointMoc = milestone;
+        checkpointTrigger = trigger;
+        const modal = document.getElementById('modal-checkpoint');
+        const entry = gardenTopicForLesson(liveCourseData, mocId);
+        const record = milestone.record?.steps?.[stepNo];
+        const stars = record?.stars ?? 0;
+        const completed = theoryOnly ? milestone.status === 'COMPLETED' : step.status === 'COMPLETED';
+        const title = gardenLessonTitle(milestone);
+        document.getElementById('cp-modal-badge').textContent = theoryOnly
+          ? 'Lý thuyết' + (entry ? ' · Mục ' + entry : '')
+          : (entry ? 'Mục ' + entry + ' · ' : '') + 'Chặng ' + stepNo;
+        document.getElementById('cp-modal-title').textContent = title;
+        document.getElementById('cp-modal-status-badge').textContent = milestone.status === 'COMPLETED' ? 'Mục đã hoàn thành' : completed ? 'Đã qua' : '';
+        const stepTitle = document.getElementById('cp-step-title');
+        stepTitle.textContent = step?.title ?? '';
+        stepTitle.hidden = theoryOnly || !stepTitle.textContent;
+        const weights = document.getElementById('cp-step-weights');
+        weights.textContent = step ? [
+          [step.remember_pct, 'Nhớ'], [step.understand_pct, 'Hiểu'], [step.apply_pct, 'Vận dụng']
+        ].filter(([value]) => value > 0).map(([value, label]) => value + '% ' + label).join(' · ') : '';
+        weights.hidden = !weights.textContent;
 
+        const records = document.getElementById('cp-records');
+        records.hidden = theoryOnly;
+        if (!theoryOnly) {
+          records.innerHTML =
+            `<div class="cp-stars" aria-label="${stars} trên 3 sao">${[1, 2, 3].map(n =>
+              '<span class="' + (n <= stars ? 'earned' : '') + '">' + (n <= stars ? '★' : '☆') + '</span>'
+            ).join('')}</div><div class="cp-stat-grid">
+              <div><strong>${record?.accuracy_percent != null ? Number(record.accuracy_percent) + '%' : '—'}</strong><span>Kỷ lục độ chính xác của màn</span></div>
+              <div><strong>${record?.average_seconds != null ? Number(record.average_seconds) + ' giây' : '—'}</strong><span>Thời gian TB / câu của màn</span></div>
+            </div>`;
+        }
+
+        const theory = (milestone.theory_markdown || '').trim();
+        const summary = document.getElementById('cp-modal-summary');
+        summary.hidden = !theoryOnly || !theory;
+        summary.textContent = theoryOnly ? theory.replace(/#{1,6}\s+|[-*]\s+/g, '').trim() : '';
+        const theoryButton = document.getElementById('btn_cp_open_theory_full');
+        theoryButton.hidden = theoryOnly || !theory;
         const primary = document.getElementById('btn-cp-primary-action');
-        const secondary = document.getElementById('btn-cp-practice-secondary');
-        const stepNo = completed ? 1 : (milestone.current_step ?? 1);
-        const theoryFirst = theoryOnly || (!completed && stepNo === 1 && Boolean(milestone.theory_markdown?.trim()));
-        primary.textContent = theoryFirst ? 'Xem lý thuyết' : completed ? 'Ôn tập' : `Tiếp tục chặng ${stepNo}`;
-        primary.onclick = theoryFirst ? openTheoryFromCheckpoint : () => startStepPlay(mocId, stepNo);
-        secondary.hidden = !theoryFirst || theoryOnly;
-        secondary.onclick = () => startStepPlay(mocId, stepNo);
-        document.getElementById('modal-checkpoint').classList.remove('hidden');
+        primary.textContent = theoryOnly ? 'Xem lý thuyết' : completed ? 'Ôn tập' : 'Làm bài';
+        primary.onclick = theoryOnly ? openTheoryFromCheckpoint : () => startStepPlay(mocId, stepNo);
+        modal.classList.remove('hidden');
+        primary.focus({ preventScroll: true });
       } catch (error) {
-        showToast(error.message, 'error');
+        if (request === checkpointRequest && view === currentAppView) showToast(error.message, 'error');
       }
     }
 
     function closeCheckpointModal() {
+      checkpointRequest++;
       const modal = document.getElementById('modal-checkpoint');
-      if (modal) modal.classList.add('hidden');
+      if (!modal || modal.classList.contains('hidden')) return;
+      modal.classList.add('hidden');
+      if (checkpointTrigger?.isConnected) checkpointTrigger.focus({ preventScroll: true });
+      checkpointTrigger = null;
     }
 
     function openTheoryFromCheckpoint() {
@@ -6933,12 +6884,6 @@
       const mocId = currentCheckpointMoc.id;
       closeCheckpointModal();
       openTheoryModal(mocId);
-    }
-
-    function startActiveStepFromModal() {
-      if (!currentCheckpointMoc) return;
-      if (currentCheckpointMoc.kind === 'THEORY') return openTheoryFromCheckpoint();
-      startStepPlay(currentCheckpointMoc.id, currentCheckpointMoc.current_step || 1);
     }
 
     async function startPlay(mocId, tieuDe, loaiMoc) {
@@ -6953,6 +6898,8 @@
         const session = await courseRequest(mocId, '/sessions', { kind: 'STEP', step_no: stepNumber });
         currentMocSession = null;
         currentQuizSession = createCourseSessionState(milestone, 'STEP', session);
+        currentQuizSession.title = gardenLessonTitle(milestone);
+        currentQuizSession.topicNumber = gardenTopicForLesson(liveCourseData, mocId);
         const latestAttempts = new Set(currentQuizSession.submissions.map(attempt => attempt.position));
         const unfinished = session.questions.findIndex(question => !latestAttempts.has(question.position));
         currentQuizSession.qIndex = unfinished === -1 ? session.questions.length : unfinished;
@@ -6979,7 +6926,7 @@
       document.getElementById('play-title').textContent = session.title;
       document.getElementById('play-progress').style.width = Math.round((number - 1) / total * 100) + '%';
       document.getElementById('play-step-badge').textContent = session.kind === 'STEP'
-        ? `Chặng ${session.step}/${session.totalSteps} · Câu ${number}/${total}` : `Ôn tập · Còn ${remaining} câu`;
+        ? `${session.topicNumber ? 'Mục ' + session.topicNumber + ' · ' : ''}Chặng ${session.step} · Câu ${number}/${total}` : `Ôn tập · Còn ${remaining} câu`;
       const tag = document.getElementById('q-bloom-tag');
       if (tag) tag.textContent = ({ REMEMBER: 'Nhớ', UNDERSTAND: 'Hiểu', APPLY: 'Vận dụng' })[q.bloom_level] || '';
       document.getElementById('q-prompt').textContent = q.stem;
@@ -7012,7 +6959,7 @@
 
     function renderTracNghiem4UI(question, container) {
       const grid = document.createElement('div');
-      grid.className = 'grid sm:grid-cols-2 gap-2.5';
+      grid.className = 'grid grid-cols-1 gap-2.5';
       question.options.forEach((option, index) => {
         const button = document.createElement('button');
         button.type = 'button';
@@ -7467,8 +7414,37 @@
       });
       const dialog = document.getElementById('step-review-dialog');
       const label = session.kind === 'STEP' ? 'Chặng ' + session.step : 'Ôn tập mốc';
-      document.getElementById('step-review-score').textContent =
-        `${label} · ${result.correct_count}/${result.question_count} câu đúng`;
+      const next = session.kind === 'STEP' && result.passed && !result.completed && result.current_step === session.step + 1;
+      const required = Math.ceil(result.question_count * 0.695);
+      document.getElementById('step-review-label').textContent = [session.topicNumber && 'Mục ' + session.topicNumber, label].filter(Boolean).join(' · ');
+      const stars = result.passed ? 1 + Number(result.score_percent >= 80) + Number(result.score_percent >= 95) : 0;
+      const title = ['Chưa qua màn', 'Hoàn thành', 'Làm rất tốt', 'Xuất sắc'][stars];
+      const themes = ['sky','halloween','teachers','christmas','new-year','tet','valentine','womens-day','youth-spring'];
+      const activeTheme = document.documentElement.dataset.scenicTheme;
+      const theme = themes.includes(activeTheme) ? activeTheme : 'sky';
+      dialog.style.setProperty('--book-art', `url("/assets/result-book/book-${theme}.webp")`);
+      dialog.dataset.stars = stars;
+      const pet = typeof currentEquippedPet === 'undefined' ? null : currentEquippedPet;
+      const names = ['sparky','kitsune','spike_hedgehog','maneki_neko','bambo_panda','inky_octopus','kim_quy_turtle','byte_robot','astra_stag','kylin_qilin','pyra_phoenix','stone_golem','admin_nguyet','admin_aurum'];
+      const species = names.find(name => pet?.image?.toLowerCase().includes(name)) ?? 'sparky';
+      const petImage = document.getElementById('result-book-pet');
+      petImage.src = `/assets/result-book/${species}-${stars}.webp`;
+      petImage.alt = pet?.name ?? 'Sparky';
+      document.getElementById('step-review-title').textContent = title;
+      const starRow = document.getElementById('result-book-stars');
+      starRow.textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+      starRow.setAttribute('aria-label', stars + ' trên 3 sao');
+      document.getElementById('step-review-score').textContent = `${result.correct_count}/${result.question_count} câu đúng`;
+      document.getElementById('step-review-detail').textContent = result.passed
+        ? (next ? 'Có thể vào chặng ' + result.current_step + '.' : result.completed ? 'Mục này đã hoàn thành.' : 'Đã ghi nhận kết quả.')
+        : `Cần đúng ${required}/${result.question_count} câu trong một lượt (70%). Còn thiếu ${required - result.correct_count} câu.`;
+      const action = document.getElementById('step-review-action');
+      action.hidden = session.kind !== 'STEP';
+      action.textContent = next ? 'Vào chặng ' + result.current_step : 'Thử lại';
+      action.onclick = () => {
+        dialog.close();
+        startStepPlay(session.mocId, next ? result.current_step : session.step);
+      };
       const toggle = document.getElementById('step-review-mistakes');
       toggle.hidden = mistakes.size === 0;
       toggle.open = false;
@@ -7494,15 +7470,12 @@
         const result = await sessionRequest(session, '/finish', { finish_kind: 'SUBMITTED' });
         if (session !== currentQuizSession) return;
         if (audioSettings.quiz) playAdvancedSound(result.passed ? 'quiz-correct' : 'quiz-wrong');
-        showToast(result.passed
-          ? `Đã vượt qua · ${result.score_percent}% (+${result.coins_awarded} Xu, +${result.xp_awarded} EXP)`
-          : `Chưa đạt · ${result.score_percent}%. Cần ít nhất 70%.`,
-          result.passed ? 'success' : 'info');
         currentQuizSession = null;
         currentMocSession = null;
         closePlay();
         showStepReview(session, result);
         await Promise.all([refreshUserData(), loadCourseRoadmap()]);
+        if (result.passed) scrollToActiveNode(false);
       } catch (error) {
         showToast(error.message, 'error');
         const button = document.getElementById('btn-next-step');
@@ -7528,15 +7501,15 @@
         if (lookup && currentQuizSession?.mocId !== milestone.id) return;
         currentTheoryMoc = milestone;
         currentTheoryLookupOpenedAt = lookup ? Date.now() : null;
-        document.getElementById('theory-title').textContent = milestone.title;
+        document.getElementById('theory-title').textContent = gardenLessonTitle(milestone);
         document.getElementById('theory-content').innerHTML = formatTheoryContent(
           milestone.theory_markdown || 'Chưa có nội dung lý thuyết cho mốc này.'
         );
         const button = document.getElementById('btn-complete-theory');
-        button.hidden = milestone.kind !== 'THEORY';
-        const completed = milestone.status === 'COMPLETED';
-        button.textContent = completed ? 'Đã hoàn thành' : `Đã hiểu bài · +${milestone.reward_coins} Xu`;
-        button.disabled = completed;
+        const canClaim = milestone.kind === 'THEORY' && milestone.status !== 'COMPLETED';
+        button.hidden = false;
+        button.disabled = false;
+        button.textContent = canClaim ? `Đã hiểu bài · +${milestone.reward_coins} Xu` : 'Đã hiểu bài';
         document.getElementById('modal-theory').classList.remove('hidden');
       } catch (error) {
         showToast(error.message, 'error');
@@ -7575,7 +7548,11 @@
     }
 
     async function confirmCompleteTheory() {
-      if (currentTheoryMoc?.kind !== 'THEORY') return;
+      if (!currentTheoryMoc) return;
+      if (currentTheoryMoc.kind !== 'THEORY' || currentTheoryMoc.status === 'COMPLETED') {
+        closeTheoryModal();
+        return;
+      }
       const mocId = currentTheoryMoc.id;
       const button = document.getElementById('btn-complete-theory');
       button.disabled = true;

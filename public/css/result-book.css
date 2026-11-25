@@ -1,0 +1,30 @@
+#step-review-dialog {
+  margin:auto; padding:0; width:min(94vw,1000px); max-width:none; max-height:94dvh;
+  border:0; border-radius:16px; background:#ecd9ad; color:#243d28;
+  box-shadow:0 20px 80px #21170770; font-family:Georgia,serif;
+}
+#step-review-dialog::backdrop { background:#201d14bf; }
+.result-spread { display:grid; grid-template-columns:1fr 1fr; min-height:clamp(400px,49vw,560px); background:var(--book-art) center/100% 100% no-repeat; }
+.result-art { display:flex; flex-direction:column; align-items:center; justify-content:space-around; padding:9% 6%; }
+.result-art strong { font-size:clamp(24px,4vw,48px); color:#263d24; text-shadow:0 2px 2px #fff5c7,0 0 12px #fff5c7; }
+.result-art img { width:65%; height:clamp(120px,18vw,226px); object-fit:contain; filter:drop-shadow(0 4px 2px #41331b35); }
+.result-page { align-self:center; text-align:center; padding:12% 12% 12% 6%; }
+#step-review-label { font-weight:700; }
+#step-review-title { font-size:clamp(26px,4vw,50px); font-weight:800; line-height:1.1; margin:12px 0 3px; }
+#step-review-dialog[data-stars="0"] h2 { color:#923d25; }
+#result-book-stars { font-size:clamp(32px,5vw,62px); line-height:1.2; letter-spacing:3px; color:#9a6013; }
+#step-review-score { display:block; font-size:clamp(20px,2.5vw,30px); margin:9px 0 3px; }
+#step-review-detail { font-size:15px; line-height:1.4; }
+#step-review-action, #step-review-mistakes summary { width:100%; padding:9px 12px; border-radius:9px; font-weight:700; cursor:pointer; }
+#step-review-action { margin-top:16px; color:#fff8dc; background:#285c38; border:2px solid #b59148; box-shadow:0 3px #25422c; }
+#step-review-mistakes summary { margin-top:9px; color:#28472f; border:1px solid #a49971; background:#fff6da; }
+#step-review-mistakes ol { text-align:left; padding:12px 14px 12px 30px; list-style:decimal; background:#fff7df; font:14px/1.5 system-ui; }
+#step-review-mistakes li+li { margin-top:8px; }
+.result-page form button { min-height:44px; text-decoration:underline; cursor:pointer; }
+@media(max-width:640px) {
+  .result-spread { display:block; background:#f7eaca; min-height:0; }
+  .result-art { height:156px; position:relative; align-items:flex-start; justify-content:flex-start; padding:16px 22px; background:var(--book-art) left center/200% auto no-repeat; }
+  .result-art img { position:absolute; bottom:4px; right:10%; width:125px; height:130px; }
+  .result-page { padding:17px 24px 8px; }
+  #step-review-title { margin-top:4px; }
+}

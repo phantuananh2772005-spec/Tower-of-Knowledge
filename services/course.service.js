@@ -23,6 +23,7 @@ const subjectSummaryQuery = `
 
 const milestoneProjection = `
   m.id, m.chapter_id, m.title, m.kind, m.sort_order, m.step_count, m.questions_per_step,
+  NULLIF(btrim(m.theory_markdown), '') IS NOT NULL AS has_theory,
   m.reward_xp, m.reward_coins, COALESCE(p.status, 'LOCKED') AS status, p.current_step,
   COALESCE(p.completed_steps, 0) AS completed_steps, p.completed_at,
   COALESCE(p.xp_earned, 0) AS xp_earned, COALESCE(p.coins_earned, 0)::bigint AS coins_earned

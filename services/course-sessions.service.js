@@ -1,6 +1,7 @@
 const { isDeepStrictEqual } = require('node:util');
 const db = require('../database/db');
 const { calculateQuestionWeight } = require('../core/rules/adaptive.rules');
+const { getStudyQuestionExclusions } = require('../core/rules/seeded-study-content');
 const { applyMilestoneProgress, lockCourseUser, lockOpenMilestone } = require('./course.service');
 const { correctAnswer, getStepConfig, gradeQuestion, pairMatches, pickStudyQuestions, presentQuestion } = require('./study-questions');
 
@@ -120,8 +121,9 @@ async function startSession(milestoneId, userId, { kind, step_no = null } = {}) 
       "SELECT q.id, q.bloom_level FROM questions q JOIN milestones m ON m.id = q.milestone_id"
         + " WHERE m.status = 'ACTIVE' AND q.status = 'ACTIVE'"
         + ' AND (CASE WHEN $1::boolean THEN m.chapter_id = $2 ELSE m.id = $3 END)'
+        + ' AND NOT (q.id = ANY($4::uuid[]))'
         + ' ORDER BY m.id, q.id FOR SHARE OF m, q',
-      [milestone.kind === 'BOSS', milestone.chapter_id, milestoneId]
+      [milestone.kind === 'BOSS', milestone.chapter_id, milestoneId, getStudyQuestionExclusions(milestoneId)]
     );
     if (!pool.length) throw new Error('Mốc bài học chưa có câu hỏi.');
     const activeStep = step_no ?? (milestone.progress.current_step || 1);

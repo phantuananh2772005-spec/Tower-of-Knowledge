@@ -1,6 +1,6 @@
-const { createHash } = require('node:crypto');
 const { readFileSync } = require('node:fs');
 const path = require('node:path');
+const { seededContentId: contentId, foundationReview } = require('../core/rules/seeded-study-content');
 const { checkpoints: chapterOneMilestones, questionsList: chapterOneQuestions } = require('./seed_chapter1_5levels');
 
 const subjectSlugs = { mon_csdl: 'co-so-du-lieu', mon_cds: 'chuyen-doi-so' };
@@ -58,16 +58,6 @@ function readLegacySeed(filename) {
     throw new Error(filename + ': missing curriculum data');
   }
   return sections;
-}
-
-function contentId(table, legacyId) {
-  if (!legacyId) throw new Error('Missing source ID for ' + table);
-  const bytes = createHash('sha256').update('thaptrithuc-v1-content/' + table + '/' + legacyId).digest().subarray(0, 16);
-  // Stable UUIDs make reruns safe even after Admin changes content or moves its sort order.
-  bytes[6] = (bytes[6] & 0x0f) | 0x80;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hex = bytes.toString('hex');
-  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20, 32)].join('-');
 }
 
 function normalizeQuestion(source) {
@@ -131,14 +121,18 @@ function collectContent(subjectIds) {
   const milestoneSources = new Map([...csdl.moc_bai_hoc, ...chapterOneMilestones, ...cds.moc_bai_hoc]
     .map(row => [row.ma_moc, row]));
   const milestones = [...milestoneSources.values()].map(source => {
-    const kind = milestoneKinds[source.loai_moc];
+    const id = contentId('milestones', source.ma_moc);
+    const foundation = id === foundationReview.milestoneId;
+    const kind = foundation ? 'QUIZ' : milestoneKinds[source.loai_moc];
     if (!kind) throw new Error('Unknown milestone kind for ' + source.ma_moc);
     return {
-      id: contentId('milestones', source.ma_moc), chapter_id: contentId('chapters', source.ma_chuong), kind,
+      id, chapter_id: contentId('chapters', source.ma_chuong), kind,
       title: source.tieu_de, theory_markdown: source.noi_dung_ly_thuyet ?? null,
       sort_order: source.thu_tu, reward_xp: source.diem_thuong, reward_coins: source.xu_thuong,
-      step_count: kind === 'THEORY' ? 0 : source.tong_so_buoc ?? (kind === 'BOSS' ? 5 : 4),
-      questions_per_step: kind === 'THEORY' ? 0 : source.so_cau_moi_buoc ?? 10
+      step_count: foundation ? foundationReview.stepCount
+        : kind === 'THEORY' ? 0 : source.tong_so_buoc ?? (kind === 'BOSS' ? 5 : 4),
+      questions_per_step: foundation ? foundationReview.questionsPerStep
+        : kind === 'THEORY' ? 0 : source.so_cau_moi_buoc ?? 10
     };
   });
   const questionSources = new Map([...csdl.cau_hoi, ...chapterOneQuestions, ...cds.cau_hoi]
@@ -171,6 +165,19 @@ async function seedCourseContent(tx) {
       + ' ON CONFLICT (id) DO NOTHING',
     [JSON.stringify(milestones)]
   );
+  const foundation = milestones.find(milestone => milestone.id === foundationReview.milestoneId);
+  const upgraded = await tx.queryOne(
+    "UPDATE milestones SET kind = 'QUIZ', step_count = $2, questions_per_step = $3"
+      + " WHERE id = $1 AND kind = 'THEORY' AND status = 'ACTIVE' AND theory_markdown = $4 RETURNING id",
+    [foundation.id, foundation.step_count, foundation.questions_per_step, foundation.theory_markdown]
+  );
+  if (upgraded) {
+    await tx.execute(
+      'UPDATE milestone_progress SET current_step = 1'
+        + ' WHERE milestone_id = $1 AND completed_at IS NULL AND current_step IS NULL',
+      [upgraded.id]
+    );
+  }
   const insertedQuestions = await tx.query(
     'INSERT INTO questions (id, milestone_id, type, bloom_level, step_no, difficulty, stem, explanation, payload)'
       + ' SELECT id, milestone_id, type, bloom_level, step_no, difficulty, stem, explanation, payload'
@@ -193,6 +200,7 @@ async function seedCourseContent(tx) {
   return {
     chapters: insertedChapters.rowCount,
     milestones: insertedMilestones.rowCount,
+    upgraded_topics: upgraded ? 1 : 0,
     questions: insertedQuestions.length,
     options: options.length
   };
