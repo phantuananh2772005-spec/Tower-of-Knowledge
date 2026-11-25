@@ -1,267 +1,115 @@
 const express = require('express');
-const router = express.Router();
 const adminService = require('../services/admin.service');
 const { requireAdmin } = require('../middlewares/auth.middleware');
 
-// All admin routes require QUAN_TRI_VIEN
+const router = express.Router();
 router.use(requireAdmin);
 
-// Analytics
-router.get('/stats', async (req, res) => {
-  try {
-    const stats = await adminService.getSystemStats();
-    return res.apiSuccess(stats);
-  } catch (err) {
-    return res.apiError(err.message, 'FETCH_STATS_FAILED', 500);
-  }
-});
+function adminOperation(operation, errorCode, { successStatus = 200, failureStatus = 500 } = {}) {
+  return async (req, res) => {
+    try {
+      return res.apiSuccess(await operation(req), successStatus);
+    } catch (error) {
+      const status = error.status ?? failureStatus;
+      if (status >= 500) {
+        console.error('[ADMIN] ' + errorCode, error);
+        return res.apiError('Không thể xử lý yêu cầu quản trị.', errorCode, status);
+      }
+      const message = error.severity ? 'Dữ liệu không đáp ứng ràng buộc.' : error.message;
+      return res.apiError(message, errorCode, status);
+    }
+  };
+}
 
-// Courses
-router.post('/courses', async (req, res) => {
-  try {
-    const course = await adminService.createCourse(req.body);
-    return res.apiSuccess(course, 201);
-  } catch (err) {
-    return res.apiError(err.message, 'CREATE_COURSE_FAILED', 400);
-  }
-});
+const create = { successStatus: 201, failureStatus: 400 };
+const write = { failureStatus: 400 };
 
-router.put('/courses/:id', async (req, res) => {
-  try {
-    const course = await adminService.updateCourse(req.params.id, req.body);
-    return res.apiSuccess(course);
-  } catch (err) {
-    return res.apiError(err.message, 'UPDATE_COURSE_FAILED', 400);
-  }
-});
+router.get('/stats', adminOperation(() => adminService.getSystemStats(), 'FETCH_STATS_FAILED'));
 
-router.delete('/courses/:id', async (req, res) => {
-  try {
-    const result = await adminService.deleteCourse(req.params.id);
-    return res.apiSuccess(result);
-  } catch (err) {
-    return res.apiError(err.message, 'DELETE_COURSE_FAILED', 400);
-  }
-});
+router.get('/courses', adminOperation(() => adminService.listCourses(), 'FETCH_COURSES_FAILED'));
+router.post('/courses', adminOperation(
+  req => adminService.createCourse(req.body), 'CREATE_COURSE_FAILED', create
+));
+router.put('/courses/:id', adminOperation(
+  req => adminService.updateCourse(req.params.id, req.body), 'UPDATE_COURSE_FAILED', write
+));
+router.delete('/courses/:id', adminOperation(
+  req => adminService.deleteCourse(req.params.id), 'DELETE_COURSE_FAILED', write
+));
 
-// Chapters
-router.post('/chapters', async (req, res) => {
-  try {
-    const chapter = await adminService.createChapter(req.body);
-    return res.apiSuccess(chapter, 201);
-  } catch (err) {
-    return res.apiError(err.message, 'CREATE_CHAPTER_FAILED', 400);
-  }
-});
+router.post('/chapters', adminOperation(
+  req => adminService.createChapter(req.body), 'CREATE_CHAPTER_FAILED', create
+));
+router.put('/chapters/:id', adminOperation(
+  req => adminService.updateChapter(req.params.id, req.body), 'UPDATE_CHAPTER_FAILED', write
+));
+router.delete('/chapters/:id', adminOperation(
+  req => adminService.deleteChapter(req.params.id), 'DELETE_CHAPTER_FAILED', write
+));
 
-router.put('/chapters/:id', async (req, res) => {
-  try {
-    const chapter = await adminService.updateChapter(req.params.id, req.body);
-    return res.apiSuccess(chapter);
-  } catch (err) {
-    return res.apiError(err.message, 'UPDATE_CHAPTER_FAILED', 400);
-  }
-});
+router.post('/checkpoints', adminOperation(
+  req => adminService.createCheckpoint(req.body), 'CREATE_CHECKPOINT_FAILED', create
+));
+router.put('/checkpoints/:id', adminOperation(
+  req => adminService.updateCheckpoint(req.params.id, req.body), 'UPDATE_CHECKPOINT_FAILED', write
+));
+router.delete('/checkpoints/:id', adminOperation(
+  req => adminService.deleteCheckpoint(req.params.id), 'DELETE_CHECKPOINT_FAILED', write
+));
 
-router.delete('/chapters/:id', async (req, res) => {
-  try {
-    const result = await adminService.deleteChapter(req.params.id);
-    return res.apiSuccess(result);
-  } catch (err) {
-    return res.apiError(err.message, 'DELETE_CHAPTER_FAILED', 400);
-  }
-});
+router.get('/questions', adminOperation(
+  req => adminService.listQuestions(req.query), 'FETCH_QUESTIONS_FAILED', { failureStatus: 400 }
+));
+router.post('/questions', adminOperation(
+  req => adminService.createQuestion(req.body), 'CREATE_QUESTION_FAILED', create
+));
+router.put('/questions/:id', adminOperation(
+  req => adminService.updateQuestion(req.params.id, req.body), 'UPDATE_QUESTION_FAILED', write
+));
+router.delete('/questions/:id', adminOperation(
+  req => adminService.deleteQuestion(req.params.id), 'DELETE_QUESTION_FAILED', write
+));
+router.post('/questions/bulk', adminOperation(
+  req => adminService.bulkImportQuestions(req.body?.questions, req.body?.default_milestone_id),
+  'BULK_IMPORT_FAILED', write
+));
 
-// Checkpoints
-router.post('/checkpoints', async (req, res) => {
-  try {
-    const checkpoint = await adminService.createCheckpoint(req.body);
-    return res.apiSuccess(checkpoint, 201);
-  } catch (err) {
-    return res.apiError(err.message, 'CREATE_CHECKPOINT_FAILED', 400);
-  }
-});
+router.get('/users', adminOperation(() => adminService.listUsers(), 'FETCH_USERS_FAILED'));
+router.put('/users/:id/role', adminOperation(
+  req => adminService.updateUserRole(req.params.id, req.body?.role, req.user.id), 'UPDATE_ROLE_FAILED', write
+));
+router.put('/users/:id/disabled', adminOperation(
+  req => adminService.setUserDisabled(req.params.id, req.body?.disabled, req.user.id), 'UPDATE_USER_STATUS_FAILED', write
+));
+router.post('/users/:id/coins', adminOperation(
+  req => adminService.adjustUserCoins(req.params.id, req.body?.amount, req.body?.reason), 'ADJUST_COINS_FAILED', write
+));
 
-router.put('/checkpoints/:id', async (req, res) => {
-  try {
-    const checkpoint = await adminService.updateCheckpoint(req.params.id, req.body);
-    return res.apiSuccess(checkpoint);
-  } catch (err) {
-    return res.apiError(err.message, 'UPDATE_CHECKPOINT_FAILED', 400);
-  }
-});
+router.get('/logs', adminOperation(
+  () => adminService.getActivityLogs(), 'FETCH_LOGS_FAILED'
+));
+router.get('/learning-activity', adminOperation(
+  () => adminService.getLearningActivityFeed(), 'FETCH_LEARNING_ACTIVITY_FAILED'
+));
+router.get('/learners', adminOperation(
+  () => adminService.getLearnersTelemetryList(), 'FETCH_LEARNERS_FAILED'
+));
+router.get('/learners/:id/telemetry', adminOperation(
+  req => adminService.getLearnerDeepTelemetry(req.params.id), 'FETCH_LEARNER_TELEMETRY_FAILED'
+));
+router.get('/transactions', adminOperation(
+  () => adminService.getAllTransactions(), 'FETCH_TRANSACTIONS_FAILED'
+));
 
-router.delete('/checkpoints/:id', async (req, res) => {
-  try {
-    const result = await adminService.deleteCheckpoint(req.params.id);
-    return res.apiSuccess(result);
-  } catch (err) {
-    return res.apiError(err.message, 'DELETE_CHECKPOINT_FAILED', 400);
-  }
-});
-
-// Question Bank
-router.get('/questions', async (req, res) => {
-  try {
-    const questions = await adminService.listQuestions(req.query);
-    return res.apiSuccess(questions);
-  } catch (err) {
-    return res.apiError(err.message, 'FETCH_QUESTIONS_FAILED', 500);
-  }
-});
-
-router.post('/questions', async (req, res) => {
-  try {
-    const question = await adminService.createQuestion(req.body);
-    return res.apiSuccess(question, 201);
-  } catch (err) {
-    return res.apiError(err.message, 'CREATE_QUESTION_FAILED', 400);
-  }
-});
-
-router.put('/questions/:id', async (req, res) => {
-  try {
-    const question = await adminService.updateQuestion(req.params.id, req.body);
-    return res.apiSuccess(question);
-  } catch (err) {
-    return res.apiError(err.message, 'UPDATE_QUESTION_FAILED', 400);
-  }
-});
-
-router.delete('/questions/:id', async (req, res) => {
-  try {
-    const result = await adminService.deleteQuestion(req.params.id);
-    return res.apiSuccess(result);
-  } catch (err) {
-    return res.apiError(err.message, 'DELETE_QUESTION_FAILED', 400);
-  }
-});
-
-router.post('/questions/bulk', async (req, res) => {
-  try {
-    const { questions, default_moc_id } = req.body;
-    const result = await adminService.bulkImportQuestions(questions, default_moc_id);
-    return res.apiSuccess(result);
-  } catch (err) {
-    return res.apiError(err.message, 'BULK_IMPORT_FAILED', 400);
-  }
-});
-
-// Users Management
-router.get('/users', async (req, res) => {
-  try {
-    const users = await adminService.listUsers();
-    return res.apiSuccess(users);
-  } catch (err) {
-    return res.apiError(err.message, 'FETCH_USERS_FAILED', 500);
-  }
-});
-
-router.put('/users/:id/role', async (req, res) => {
-  try {
-    const { vai_tro } = req.body;
-    const result = await adminService.updateUserRole(req.params.id, vai_tro);
-    return res.apiSuccess(result);
-  } catch (err) {
-    return res.apiError(err.message, 'UPDATE_ROLE_FAILED', 400);
-  }
-});
-
-router.post('/users/:id/coins', async (req, res) => {
-  try {
-    const { amount, reason } = req.body;
-    const result = await adminService.adjustUserCoins(req.params.id, parseInt(amount, 10), reason);
-    return res.apiSuccess(result);
-  } catch (err) {
-    return res.apiError(err.message, 'ADJUST_COINS_FAILED', 400);
-  }
-});
-
-// Activity and Learning Logs
-router.get('/logs', async (req, res) => {
-  try {
-    const logs = await adminService.getActivityLogs();
-    return res.apiSuccess(logs);
-  } catch (err) {
-    return res.apiError(err.message, 'FETCH_LOGS_FAILED', 500);
-  }
-});
-
-// Comprehensive Learning Activity Feed (Recent Sessions + System Summary)
-router.get('/learning-activity', async (req, res) => {
-  try {
-    const data = await adminService.getLearningActivityFeed();
-    return res.apiSuccess(data);
-  } catch (err) {
-    return res.apiError(err.message, 'FETCH_LEARNING_ACTIVITY_FAILED', 500);
-  }
-});
-
-// Learners Telemetry Directory (All registered users with aggregated telemetry)
-router.get('/learners', async (req, res) => {
-  try {
-    const data = await adminService.getLearnersTelemetryList();
-    return res.apiSuccess(data);
-  } catch (err) {
-    return res.apiError(err.message, 'FETCH_LEARNERS_FAILED', 500);
-  }
-});
-
-// Learner Deep Telemetry (Full test history, per-question analytics, memory map)
-router.get('/learners/:id/telemetry', async (req, res) => {
-  try {
-    const data = await adminService.getLearnerDeepTelemetry(req.params.id);
-    return res.apiSuccess(data);
-  } catch (err) {
-    return res.apiError(err.message, 'FETCH_LEARNER_TELEMETRY_FAILED', 500);
-  }
-});
-
-// All System Coin Transactions
-router.get('/transactions', async (req, res) => {
-  try {
-    const tx = await adminService.getAllTransactions();
-    return res.apiSuccess(tx);
-  } catch (err) {
-    return res.apiError(err.message, 'FETCH_TRANSACTIONS_FAILED', 500);
-  }
-});
-
-// Pets Management
-router.get('/pets', async (req, res) => {
-  try {
-    const pets = await adminService.listPets();
-    return res.apiSuccess(pets);
-  } catch (err) {
-    return res.apiError(err.message, 'FETCH_PETS_FAILED', 500);
-  }
-});
-
-router.post('/pets', async (req, res) => {
-  try {
-    const pet = await adminService.createPet(req.body);
-    return res.apiSuccess(pet, 201);
-  } catch (err) {
-    return res.apiError(err.message, 'CREATE_PET_FAILED', 400);
-  }
-});
-
-router.put('/pets/:id', async (req, res) => {
-  try {
-    const pet = await adminService.updatePet(req.params.id, req.body);
-    return res.apiSuccess(pet);
-  } catch (err) {
-    return res.apiError(err.message, 'UPDATE_PET_FAILED', 400);
-  }
-});
-
-router.delete('/pets/:id', async (req, res) => {
-  try {
-    const result = await adminService.deletePet(req.params.id);
-    return res.apiSuccess(result);
-  } catch (err) {
-    return res.apiError(err.message, 'DELETE_PET_FAILED', 400);
-  }
-});
+router.get('/pets', adminOperation(() => adminService.listPets(), 'FETCH_PETS_FAILED'));
+router.post('/pets', adminOperation(
+  req => adminService.createPet(req.body), 'CREATE_PET_FAILED', create
+));
+router.put('/pets/:id', adminOperation(
+  req => adminService.updatePet(req.params.id, req.body), 'UPDATE_PET_FAILED', write
+));
+router.delete('/pets/:id', adminOperation(
+  req => adminService.deletePet(req.params.id), 'DELETE_PET_FAILED', write
+));
 
 module.exports = router;

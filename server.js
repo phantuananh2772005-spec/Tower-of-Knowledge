@@ -45,12 +45,11 @@ app.use(responseFormatter);
 
 // Serve static assets & frontend applications
 app.use('/design/map-assets/optimized', express.static(path.join(__dirname, 'public/design/map-assets/optimized'), { maxAge: '7d' }));
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Admin Redirects
 app.get('/admin.html', (req, res) => {
   res.redirect('/admin/');
 });
+
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
