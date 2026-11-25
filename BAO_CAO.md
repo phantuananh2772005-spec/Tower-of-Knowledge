@@ -22,6 +22,9 @@ Nhánh `local-pg-v1` tách từ `main` tại `fe206d3`. [Luật nghiệp vụ](L
 | 5 · Economy và quest | **PASS** | `node --test tests/test_economy_pg_v1.js` đạt 3/3 kịch bản qua HTTP và PostgreSQL. Giờ Việt Nam, cấp XP chạm trần 1.500, nhận một lần, quà tân thủ, lịch sử số dư và rollback đều đạt. Các luồng đã thử có 0 ví lệch với tổng sổ. |
 | 6 · Arena và season | **PASS** | `node --test tests/test_arena_pg_v1.js` đạt 2/2 qua HTTP, Socket.IO và PostgreSQL. Câu sai môn bị chặn trước khi lưu trận/hiệp và phát đề. HTTP và Socket.IO từ chối khiên. Chrome local xác nhận nút khiên đã ẩn, Bot dùng đúng ảnh Pet và lượt hợp lệ gây sát thương. Kiểm chốt mùa 56 ngày, thưởng đồng hạng một lần và đối soát ví đạt. Toàn bộ nhóm 1–6 đạt 15/15. |
 | 7 · Admin | **PASS** | `node --test tests/test_admin_pg_v1.js` đạt 2/2 qua HTTP và PostgreSQL. Sửa bước/độ khó giữ ID. Đổi đề tạo bản mới, bản cũ và từng lượt làm/tra cứu còn đọc được sau lưu trữ. Kiểm phân quyền, vô hiệu hóa, thu hồi phiên, nhập câu hỏi nguyên tử và đối soát ví. Chrome local kiểm cây môn, sửa câu và trang Pet/học viên. Nhóm 1–7 đạt 17/17. |
+| 8 · Cực Hạn | **PASS** | Kiểm thử HTTP/PostgreSQL đạt 2/2. Giữ từng lượt lặp, đo thời gian bằng timestamp phiên, giới hạn đề theo môn, chơi khách ở bộ nhớ và cấp thưởng một lần khi chốt đồng thời. Phiên 0 lượt không tính nhiệm vụ học. Chrome local kiểm tải lại đúng câu, sang vòng mới, hết giờ và tổng kết đã lưu. Nhóm 1–8 đạt 19/19. |
+
+Nếu tiến trình Cực Hạn khởi động lại sau khi chốt, kết quả và Xu đã cấp vẫn đọc được, còn EXP thực nhận của lần chốt trước hiển thị dấu gạch khi không còn biên nhận trong bộ nhớ.
 
 Không có thay đổi trên `main` hoặc máy chủ Render. Máy local dùng container `thaptrithuc-pg-v1` với cổng loopback 55432, database `thaptrithuc_v1`. Script quản trị chạy qua socket trong container.
 

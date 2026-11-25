@@ -1,6 +1,7 @@
 const db = require('../database/db');
 const content = require('./admin-content.service');
 const { deriveRankTitle } = require('../core/rules/economy.rules');
+const { replayExtreme, extremePrompt } = require('../core/rules/extreme.rules');
 const { mutateCoinsInTransaction } = require('./wallet.service');
 
 const USER_COLUMNS = [
@@ -23,8 +24,8 @@ async function getSystemStats() {
              (SELECT count(*) FROM milestones)::integer AS milestone_count,
              (SELECT count(*) FROM questions)::integer AS question_count,
              (SELECT count(*) FROM matches)::integer AS match_count,
-             (SELECT count(*) FROM study_sessions
-                WHERE kind = 'EXTREME' AND finished_at IS NOT NULL)::integer AS extreme_session_count,
+             (SELECT count(*) FROM v_study_session_stats
+                WHERE kind = 'EXTREME' AND finished_at IS NOT NULL AND answer_count > 0)::integer AS extreme_session_count,
              (SELECT count(*) FROM coin_ledger)::integer AS transaction_count,
              (SELECT coalesce(sum(coin_balance), 0) FROM users) AS coin_balance_total
     `),
@@ -132,17 +133,20 @@ function answerText(value) {
 }
 
 function formatAttempt(row) {
-  const { payload, selected_text, option_answer, ...attempt } = row;
+  const { payload, selected_text, option_answer, session_kind, ...attempt } = row;
   const response = attempt.response;
   let submitted = selected_text ?? attempt.submitted_text;
   if (response?.kind === 'TIMEOUT') submitted = 'Hết giờ';
   if (response?.kind === 'MATCHING') submitted = answerText(response.pairs);
   if (response?.kind === 'ORDERING') submitted = answerText(response.tokens);
+  let expected = option_answer ?? payload?.blank_answer ?? payload?.pairs ?? payload?.correct_order;
+  if (session_kind === 'EXTREME' && attempt.type === 'MATCHING') expected = payload.pairs[0].right;
   return {
     ...attempt,
+    stem: session_kind === 'EXTREME' ? extremePrompt({ ...attempt, payload }) : attempt.stem,
     seconds: numeric(attempt.seconds),
     answer_text: submitted,
-    correct_answer_text: answerText(option_answer ?? payload?.blank_answer ?? payload?.pairs ?? payload?.correct_order),
+    correct_answer_text: answerText(expected),
     lookup_count: attempt.lookups.length
   };
 }
@@ -150,12 +154,13 @@ function formatAttempt(row) {
 async function loadAttempts(sessionIds) {
   if (!sessionIds.length) return new Map();
   const rows = await db.query(`
-    SELECT a.session_id, a.attempt_no, a.question_position, q.id AS question_id,
+    SELECT a.session_id, a.attempt_no, a.question_position, q.id AS question_id, s.kind AS session_kind,
            q.type, q.bloom_level, q.difficulty, q.stem, q.explanation, q.payload,
            a.is_correct, a.seconds, a.selected_option_position, a.submitted_text, a.response,
            chosen.text AS selected_text, expected.text AS option_answer,
            coalesce(events.lookups, '[]'::jsonb) AS lookups
     FROM session_answers a
+    JOIN study_sessions s ON s.id = a.session_id
     JOIN study_session_questions issued
       ON issued.session_id = a.session_id AND issued.position = a.question_position
     JOIN questions q ON q.id = issued.question_id
@@ -181,25 +186,6 @@ async function loadAttempts(sessionIds) {
   return bySession;
 }
 
-function describeExtreme(attempts, poolSize) {
-  let score = 0;
-  let combo = 0;
-  let best_combo = 0;
-  let round = 1;
-  for (const [index, attempt] of attempts.entries()) {
-    round = Math.floor(index / poolSize) + 1;
-    if (!attempt.is_correct) {
-      combo = 0;
-      continue;
-    }
-    combo++;
-    best_combo = Math.max(best_combo, combo);
-    const multiplier = combo >= 10 ? 3 : combo >= 6 ? 2 : combo >= 3 ? 1.5 : 1;
-    score += Math.round(10 * multiplier * (1 + (round - 1) * 0.5));
-  }
-  return { score, best_combo, round };
-}
-
 async function loadSessions(userId = null, limit = null) {
   const rows = await db.query(`
     SELECT t.session_id AS id, t.user_id, t.kind, t.milestone_id, t.step_no,
@@ -214,13 +200,15 @@ async function loadSessions(userId = null, limit = null) {
     LEFT JOIN milestones m ON m.id = t.milestone_id
     LEFT JOIN chapters c ON c.id = m.chapter_id
     JOIN subjects s ON s.id = coalesce(t.subject_id, c.subject_id)
-    WHERE t.finished_at IS NOT NULL AND ($1::uuid IS NULL OR t.user_id = $1)
+    WHERE t.finished_at IS NOT NULL AND (t.kind <> 'EXTREME' OR t.answer_count > 0)
+      AND ($1::uuid IS NULL OR t.user_id = $1)
     ORDER BY t.finished_at DESC, t.session_id DESC LIMIT $2
   `, [userId, limit]);
   const bySession = await loadAttempts(rows.map(row => row.id));
   return rows.map(({ xp, ...session }) => {
     const attempts = bySession.get(session.id) ?? [];
     const duration = numeric(session.duration_seconds);
+    const extreme = session.kind === 'EXTREME' ? replayExtreme(attempts, session.scored_question_count) : null;
     return {
       ...session,
       rank_title: deriveRankTitle(xp),
@@ -230,8 +218,7 @@ async function loadSessions(userId = null, limit = null) {
       duration_seconds: duration,
       formatted_duration: formatDuration(duration),
       attempts,
-      extreme_stats: session.kind === 'EXTREME'
-        ? describeExtreme(attempts, session.scored_question_count) : null
+      extreme_stats: extreme ? { score: extreme.score, best_combo: extreme.best_combo, round: extreme.round } : null
     };
   });
 }
@@ -258,7 +245,7 @@ async function getLearningActivityFeed() {
       SELECT count(*)::integer AS total_sessions, count(DISTINCT user_id)::integer AS total_learners_active,
              round(avg(accuracy_percent)) AS avg_accuracy, sum(duration_seconds) AS total_study_time_seconds,
              coalesce(sum(total_lookups), 0)::integer AS total_lookups
-      FROM v_study_session_stats WHERE finished_at IS NOT NULL
+      FROM v_study_session_stats WHERE finished_at IS NOT NULL AND (kind <> 'EXTREME' OR answer_count > 0)
     `),
     loadSessions(null, 10),
     getActivityLogs()
@@ -281,7 +268,8 @@ async function getLearnersTelemetryList() {
       SELECT user_id, count(*)::integer AS total_sessions, round(avg(accuracy_percent)) AS avg_accuracy,
              sum(duration_seconds) AS total_study_time_seconds, sum(total_lookups)::integer AS total_lookups,
              max(finished_at) AS last_finished_at
-      FROM v_study_session_stats WHERE finished_at IS NOT NULL GROUP BY user_id
+      FROM v_study_session_stats WHERE finished_at IS NOT NULL AND (kind <> 'EXTREME' OR answer_count > 0)
+      GROUP BY user_id
     ), progress AS (
       SELECT user_id, count(*)::integer AS completed_milestones
       FROM milestone_progress WHERE completed_at IS NOT NULL GROUP BY user_id

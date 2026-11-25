@@ -1,55 +1,41 @@
 const express = require('express');
-const router = express.Router();
 const extremeService = require('../services/extreme.service');
 const { optionalAuthenticate } = require('../middlewares/auth.middleware');
 
-// 1. Start a new Extreme Survival session
-router.post('/start', optionalAuthenticate, async (req, res) => {
-  try {
-    const ma_mon = req.body.ma_mon || 'mon_csdl';
-    const userId = req.user ? req.user.id : null;
-    const session = await extremeService.startSession(ma_mon, userId);
-    return res.apiSuccess(session);
-  } catch (err) {
-    return res.apiError(err.message, 'START_EXTREME_FAILED', 400);
-  }
-});
+const router = express.Router();
+router.use(optionalAuthenticate);
 
-// 2. Fetch the next batch of 10 questions in background
-router.post('/next-batch', optionalAuthenticate, async (req, res) => {
-  try {
-    const { ma_mon, excludeIds, exclude_ids } = req.body;
-    const batch = await extremeService.getNextBatch(ma_mon || 'mon_csdl', excludeIds || exclude_ids || []);
-    return res.apiSuccess(batch);
-  } catch (err) {
-    return res.apiError(err.message, 'NEXT_BATCH_FAILED', 400);
-  }
-});
-
-// 3. Real-time answer evaluation (supports both choice index and option text)
-router.post('/check-answer', optionalAuthenticate, async (req, res) => {
-  try {
-    const { ma_cau_hoi, tra_loi, tra_loi_text, lua_chon_text } = req.body;
-    if (!ma_cau_hoi) {
-      return res.apiError('Thiếu mã câu hỏi.', 'MISSING_QUESTION_ID', 400);
+function extremeOperation(errorCode, required, optional, operation) {
+  return async (req, res) => {
+    try {
+      const body = req.body === undefined ? {} : req.body;
+      if (!body || typeof body !== 'object' || Array.isArray(body)
+        || required.some(key => !Object.hasOwn(body, key))
+        || Object.keys(body).some(key => !required.includes(key) && !optional.includes(key))) {
+        return res.apiError('Dữ liệu Cực Hạn không hợp lệ hoặc có trường không được hỗ trợ.', errorCode, 400);
+      }
+      return res.apiSuccess(await operation(req.user?.id ?? null, body));
+    } catch (error) {
+      const message = error.severity ? 'Không thể xử lý dữ liệu phiên Cực Hạn.' : error.message;
+      return res.apiError(message, errorCode, error.status ?? 400);
     }
-    const result = await extremeService.gradeSession(req.user?.id, req.body.session_id,
-      req.body.answer_index, ma_cau_hoi, tra_loi, tra_loi_text || lua_chon_text);
-    return res.apiSuccess(result);
-  } catch (err) {
-    return res.apiError(err.message, 'CHECK_ANSWER_FAILED', 400);
-  }
-});
+  };
+}
 
-// 4. Finish session and claim rewards
-router.post('/finish', optionalAuthenticate, async (req, res) => {
-  try {
-    const userId = req.user ? req.user.id : null;
-    const result = await extremeService.finishSession(userId, req.body);
-    return res.apiSuccess(result);
-  } catch (err) {
-    return res.apiError(err.message, 'FINISH_EXTREME_FAILED', 400);
-  }
-});
+router.post('/start', extremeOperation('START_EXTREME_FAILED', [], ['subject_id'],
+  (userId, body) => extremeService.startSession(body.subject_id, userId)
+));
+
+router.post('/next-batch', extremeOperation('NEXT_BATCH_FAILED', ['session_id'], ['exclude_positions'],
+  (userId, body) => extremeService.getNextBatch(userId, body)
+));
+
+router.post('/check-answer', extremeOperation('CHECK_ANSWER_FAILED', ['session_id', 'attempt_no', 'position'],
+  ['selected_option_position', 'submitted_text', 'response'], (userId, body) => extremeService.gradeSession(userId, body)
+));
+
+router.post('/finish', extremeOperation('FINISH_EXTREME_FAILED', ['session_id'], [],
+  (userId, body) => extremeService.finishSession(userId, body)
+));
 
 module.exports = router;

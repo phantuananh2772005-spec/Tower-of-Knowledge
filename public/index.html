@@ -2482,7 +2482,7 @@
           </div>
           <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--background)]/60 space-y-1">
             <span class="text-base block">♾️ Vô Hạn Không Ngừng</span>
-            <p class="text-[10px] text-[var(--muted-foreground)] leading-tight">Tải ngầm liên tục câu hỏi. Làm hết kho sẽ lặp vòng thưởng thêm điểm!</p>
+            <p class="text-[10px] text-[var(--muted-foreground)] leading-tight">Làm hết kho để sang vòng mới và tăng điểm.</p>
           </div>
           <div class="p-3 rounded-xl border border-[var(--border)] bg-[var(--background)]/60 space-y-1">
             <span class="text-base block">🎁 Xu & EXP Khủng</span>
@@ -2494,8 +2494,7 @@
         <div class="space-y-1.5 text-left">
           <label for="extreme-subject-select" class="text-xs font-semibold text-[var(--foreground)] block">Chọn môn học thử thách:</label>
           <select id="extreme-subject-select" class="w-full text-xs font-semibold bg-[var(--background)] border border-[var(--border)] rounded-xl px-3.5 py-2.5 cursor-pointer text-[var(--foreground)]">
-            <option value="mon_cds">Chuyển đổi số & Kinh tế số (Kho 174 câu)</option>
-            <option value="mon_csdl">Cơ sở Dữ liệu & Hệ Quản trị (Kho 108 câu)</option>
+            <option value="">Đang tải môn học…</option>
           </select>
         </div>
 
@@ -5819,6 +5818,7 @@
     function unlinkGoogleAccount(){return unlinkVerifiedGoogle();}
 
     function clearUserDataAndUI() {
+      parkExtremeSession();
       currentUserAccount = {
         displayName: 'Học viên',
         username: 'guest',
@@ -6202,7 +6202,10 @@
 
     function applyUserData(user) {
       if (!user) return;
-      if(currentUserAccount.userId !== user.id) Object.keys(ownedPets).forEach(id=>delete ownedPets[id]);
+      if (currentUserAccount.userId !== user.id) {
+        parkExtremeSession();
+        Object.keys(ownedPets).forEach(id => delete ownedPets[id]);
+      }
       currentUserAccount.displayName = user.display_name || user.username;
       currentUserAccount.username = user.username;
       currentUserAccount.email = user.email || '';
@@ -8601,14 +8604,16 @@
     let extremeSession = null;
     let extremeTimerInterval = null;
     let pendingExtremeNavView = null;
+    let startingExtreme = false;
+    const extremeStorageKey = 'tok_extreme_session_v1';
 
     /**
      * Helper gọi API chuẩn cho Thi Đấu Cực Hạn (có Bearer Token & Tự động thử lại khi mạng di động chập chờn)
      */
     async function fetchExtremeApi(endpoint, body = {}, retries = 2) {
+      const token = localStorage.getItem('tok_token');
       for (let attempt = 0; attempt <= retries; attempt++) {
         try {
-          const token = localStorage.getItem('tok_token');
           const headers = { 'Content-Type': 'application/json' };
           if (token) headers['Authorization'] = 'Bearer ' + token;
 
@@ -8620,14 +8625,15 @@
           const json = await resp.json();
           return {
             ok: resp.ok && json.success !== false,
-            data: json.data !== undefined ? json.data : json
+            data: json.data,
+            error: json.error?.message
           };
         } catch (err) {
           if (attempt < retries) {
             await new Promise(r => setTimeout(r, 600));
             continue;
           }
-          console.error('fetchExtremeApi network error after retries:', err);
+          console.error('Yêu cầu Cực Hạn thất bại:', err);
           return { ok: false, data: null, error: err.message };
         }
       }
@@ -8637,164 +8643,108 @@
      * Quản lý lưu trữ trạng thái phiên cực hạn trên localStorage (Chống mất phiên khi F5 / Reload)
      */
     function saveExtremeSessionToStorage() {
-      if (!extremeSession || !extremeSession.active) {
-        localStorage.removeItem('tok_extreme_session');
-        return;
-      }
+      if (!extremeSession?.active && !extremeSession?.pendingFinish) return;
       try {
-        const remainingQueue = extremeSession.bufferQueue ? [...extremeSession.bufferQueue] : [];
-        const backup = {
-          active: true,
-          timestamp: Date.now(),
-          maMon: extremeSession.maMon,
-          tenMon: extremeSession.tenMon,
-          tongSoCauKho: extremeSession.tongSoCauKho,
-          thoiGianMoiCau: extremeSession.thoiGianMoiCau,
-          hp: extremeSession.hp,
-          maxHp: extremeSession.maxHp,
-          soCauDaLam: extremeSession.soCauDaLam,
-          sessionId: extremeSession.sessionId,
-          soCauDung: extremeSession.soCauDung,
-          soCauSai: extremeSession.soCauSai,
-          streak: extremeSession.streak,
-          maxStreak: extremeSession.maxStreak,
-          score: extremeSession.score,
-          vongLap: extremeSession.vongLap,
-          cachedPool: extremeSession.cachedPool,
-          bufferQueue: remainingQueue,
-          answeredQuestions: extremeSession.answeredQuestions || [],
-          currentQuestionIndex: extremeSession.currentQuestionIndex,
-          startTime: extremeSession.startTime
-        };
-        localStorage.setItem('tok_extreme_session', JSON.stringify(backup));
-      } catch (e) {}
+        const s = extremeSession;
+        localStorage.setItem(extremeStorageKey, JSON.stringify({
+          startedAt: s.startedAt,
+          owner: s.owner,
+          sessionId: s.sessionId,
+          subjectId: s.subjectId,
+          subjectName: s.subjectName,
+          hp: s.hp,
+          maxHp: s.maxHp,
+          soCauDung: s.soCauDung,
+          soCauSai: s.soCauSai,
+          streak: s.streak,
+          maxStreak: s.maxStreak,
+          score: s.score,
+          vongLap: s.vongLap,
+          cachedPool: s.cachedPool,
+          queuedPositions: s.bufferQueue.map(question => question.position),
+          wrongIds: [...s.wrongIds],
+          currentPosition: s.currentQuestion?.position ?? null,
+          currentQuestionIndex: s.currentQuestionIndex,
+          pendingAnswer: s.pendingAnswer,
+          pendingFinish: s.pendingFinish
+        }));
+      } catch {}
+    }
+
+    function parkExtremeSession() {
+      if (!extremeSession) return;
+      saveExtremeSessionToStorage();
+      stopExtremeQuestionTimer();
+      extremeSession = null;
+      pendingExtremeNavView = null;
+      for (const id of ['modal-extreme-quit-confirm', 'modal-extreme-summary']) {
+        document.getElementById(id).classList.add('hidden');
+      }
+      if (currentAppView === 'extreme') navTo('minigame');
     }
 
     function clearExtremeSessionStorage() {
-      try {
-        localStorage.removeItem('tok_extreme_session');
-      } catch (e) {}
+      try { localStorage.removeItem(extremeStorageKey); } catch {}
     }
 
-    /**
-     * Khôi phục phiên thi đấu cực hạn dở dang
-     */
+    function readExtremeBackup() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(extremeStorageKey));
+        if (saved?.sessionId && saved.owner === (currentUserAccount?.userId || null) &&
+            Date.now() - saved.startedAt < 2 * 60 * 60 * 1000) return saved;
+      } catch {}
+      return null;
+    }
+
     function resumeExtremeSession() {
-      try {
-        const raw = localStorage.getItem('tok_extreme_session');
-        if (!raw) {
-          showToast('Không tìm thấy phiên chơi cần khôi phục.', 'warning');
-          return;
-        }
-        const saved = JSON.parse(raw);
-        if (!saved.sessionId) { clearExtremeSessionStorage(); showToast('Phiên cũ đã hết hạn. Hãy bắt đầu lượt mới.'); return; }
-        closeExtremeSetupModal();
-        showToast('⚡ Đã khôi phục thành công trận đấu cực hạn!', 'success');
-
-        extremeSession = {
-          active: true,
-          sessionId: saved.sessionId,
-          maMon: saved.maMon,
-          tenMon: saved.tenMon,
-          tongSoCauKho: saved.tongSoCauKho || (saved.cachedPool ? saved.cachedPool.length : 108),
-          thoiGianMoiCau: saved.thoiGianMoiCau || 25,
-          hp: saved.hp !== undefined ? saved.hp : 5,
-          maxHp: saved.maxHp || 5,
-          soCauDaLam: saved.soCauDaLam || 0,
-          soCauDung: saved.soCauDung || 0,
-          soCauSai: saved.soCauSai || 0,
-          streak: saved.streak || 0,
-          maxStreak: saved.maxStreak || 0,
-          score: saved.score || 0,
-          vongLap: saved.vongLap || 1,
-          cachedPool: saved.cachedPool || [],
-          bufferQueue: saved.bufferQueue || [],
-          answeredQuestions: saved.answeredQuestions || [],
-          currentQuestionIndex: saved.currentQuestionIndex || 0,
-          currentQuestion: null,
-          currentQuestionStartTime: null,
-          isGrading: false,
-          timeRemaining: 25,
-          startTime: saved.startTime || Date.now()
-        };
-
-        navTo('extreme');
-        updateExtremeHeartsUI();
-        updateExtremeHeaderUI();
-        renderNextExtremeQuestion();
-      } catch (e) {
-        console.error('resumeExtremeSession error:', e);
-        showToast('Lỗi khi khôi phục trận đấu: ' + e.message, 'error');
+      const saved = readExtremeBackup();
+      if (!saved) {
+        showToast('Phiên trước đã hết hạn. Hãy bắt đầu lượt mới.', 'warning');
+        return;
       }
+      const byPosition = new Map(saved.cachedPool.map(question => [question.position, question]));
+      extremeSession = {
+        ...saved,
+        active: !saved.pendingFinish,
+        bufferQueue: saved.queuedPositions.map(position => byPosition.get(position)).filter(Boolean),
+        wrongIds: new Set(saved.wrongIds),
+        isGrading: false,
+        currentQuestion: null
+      };
+      closeExtremeSetupModal();
+      navTo('extreme');
+      updateExtremeHeartsUI();
+      updateExtremeHeaderUI();
+      if (saved.pendingFinish || saved.hp === 0) {
+        finishExtremeGame(saved.hp === 0);
+        return;
+      }
+      renderNextExtremeQuestion(byPosition.get(saved.currentPosition));
     }
 
-    /**
-     * Mở modal thiết lập trận đấu cực hạn
-     */
-    async function openExtremeSetupModal(preferredMaMon) {
+    async function openExtremeSetupModal() {
       const modal = document.getElementById('modal-extreme-setup');
       if (!modal) return;
-
-      // Kiểm tra có phiên thi đấu dở dang lưu trong localStorage không (< 3 giờ)
+      modal.classList.remove('hidden');
+      const saved = readExtremeBackup();
       const resumeBox = document.getElementById('extreme-resume-box');
-      const resumeDesc = document.getElementById('extreme-resume-desc');
-      if (resumeBox) {
-        try {
-          const raw = localStorage.getItem('tok_extreme_session');
-          if (raw) {
-            const saved = JSON.parse(raw);
-            const isFresh = (Date.now() - (saved.timestamp || 0)) < 3 * 3600 * 1000;
-            if (isFresh && saved.active && saved.currentQuestionIndex) {
-              if (resumeDesc) {
-                resumeDesc.textContent = `${saved.tenMon || 'Môn học'} · Câu ${saved.currentQuestionIndex} · Điểm: ${saved.score || 0} · ❤️ ${saved.hp || 5}`;
-              }
-              resumeBox.classList.remove('hidden');
-            } else {
-              resumeBox.classList.add('hidden');
-            }
-          } else {
-            resumeBox.classList.add('hidden');
-          }
-        } catch (e) {
-          resumeBox.classList.add('hidden');
-        }
+      resumeBox.classList.toggle('hidden', !saved);
+      if (saved) {
+        document.getElementById('extreme-resume-desc').textContent =
+          `${saved.subjectName} · Câu ${saved.currentQuestionIndex} · ${saved.score} điểm · ❤️ ${saved.hp}`;
       }
 
       const select = document.getElementById('extreme-subject-select');
-      if (select) {
-        select.innerHTML = '';
-        // Ưu tiên toàn bộ môn học trong hệ thống để người chơi thoải mái chọn môn thử thách
-        let coursesToUse = [];
-        if (Array.isArray(allSystemCourses) && allSystemCourses.length > 0) {
-          coursesToUse = allSystemCourses;
-        } else if (Array.isArray(catalogCourses) && catalogCourses.length > 0) {
-          coursesToUse = catalogCourses;
-        } else if (Array.isArray(myEnrolledCourses) && myEnrolledCourses.length > 0) {
-          coursesToUse = myEnrolledCourses;
-        }
-
-        if (coursesToUse.length > 0) {
-          coursesToUse.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c.ma_mon;
-            const isCds = c.ma_mon === 'mon_cds' || c.slug === 'chuyen-doi-so';
-            const countStr = isCds ? '174 câu' : '108 câu';
-            opt.textContent = `${c.ten_mon} (Kho ${countStr})`;
-            select.appendChild(opt);
-          });
-        } else {
-          select.innerHTML = `
-            <option value="mon_cds">Chuyển đổi số & Kinh tế số (Kho 174 câu)</option>
-            <option value="mon_csdl">Cơ sở Dữ liệu & Hệ Quản trị (Kho 108 câu)</option>
-          `;
-        }
-
-        if (preferredMaMon) {
-          select.value = preferredMaMon;
-        }
+      const start = document.getElementById('btn_start_extreme_play');
+      const previous = select.value;
+      if (!allSystemCourses.length) {
+        start.disabled = true;
+        await loadAllCourses();
       }
-
-      modal.classList.remove('hidden');
+      select.replaceChildren(...allSystemCourses.map(course => new Option(course.name, course.id)));
+      if (allSystemCourses.some(course => course.id === previous)) select.value = previous;
+      if (!select.options.length) select.add(new Option('Chưa có môn học', ''));
+      start.disabled = !select.value || startingExtreme;
     }
 
     /**
@@ -8809,86 +8759,59 @@
      * Tính toán thời gian làm bài động theo mức Bloom và độ dài đề bài (Pedagogical Balance)
      */
     function getExtremeQuestionTime(q) {
-      if (!q) return 25;
-      const bloom = (q.muc_bloom || '').toUpperCase();
-      const textLen = (q.noi_dung || '').length;
-      if (bloom === 'PHAN_TICH' || bloom === 'DANH_GIA' || textLen > 140) {
-        return 35; // Câu phân tích, tình huống thực tế dài: 35 giây
-      }
-      if (bloom === 'VAN_DUNG' || textLen > 80) {
-        return 30; // Câu vận dụng: 30 giây
-      }
-      if (bloom === 'HIEU') {
-        return 25; // Câu thông hiểu chuẩn: 25 giây
-      }
-      return 20; // Câu nhớ/định nghĩa ngắn: 20 giây
+      if (q.stem.length > 140) return 35;
+      if (q.bloom_level === 'APPLY' || q.stem.length > 80) return 30;
+      if (q.bloom_level === 'UNDERSTAND') return 25;
+      return 20;
     }
 
-    /**
-     * Bắt đầu phiên Thi đấu Cực hạn
-     */
-    async function startExtremeSurvival(maMon) {
+    async function startExtremeSurvival(subjectId) {
+      if (!subjectId || startingExtreme) return;
+      startingExtreme = true;
+      const owner = currentUserAccount.userId;
+      const start = document.getElementById('btn_start_extreme_play');
+      start.disabled = true;
       try {
-        clearExtremeSessionStorage();
-        const resolvedMon = maMon || (document.getElementById('extreme-subject-select') ? document.getElementById('extreme-subject-select').value : 'mon_csdl');
-        closeExtremeSetupModal();
-        showToast('Đang nạp toàn bộ kho câu hỏi vào bộ nhớ...', 'info');
-
-        const res = await fetchExtremeApi('/api/extreme/start', { ma_mon: resolvedMon });
-
-        if (!res.ok) {
-          showToast(res.data?.message || 'Không thể khởi động chế độ cực hạn', 'error');
-          return;
-        }
-
+        const res = await fetchExtremeApi('/api/extreme/start', { subject_id: subjectId }, 0);
+        if (!res.ok) throw new Error(res.error || 'Không thể mở phiên Cực Hạn.');
+        if (owner !== currentUserAccount.userId) return;
         const data = res.data;
-        const initialQuestions = data.danh_sach_cau_hoi || data.questions || [];
-
-        if (initialQuestions.length === 0) {
-          showToast('Môn học này chưa có câu hỏi trong kho!', 'warning');
-          return;
-        }
-
-        // Tải 1 lần toàn bộ câu hỏi và lưu tạm trên RAM người dùng, xáo trộn ngẫu nhiên ở nền
-        const fullCachedPool = [...initialQuestions];
-        const shuffledQueue = shuffleArray(fullCachedPool);
+        const pool = data.questions;
+        clearExtremeSessionStorage();
+        closeExtremeSetupModal();
 
         extremeSession = {
           active: true,
           sessionId: data.session_id,
-          maMon: data.ma_mon || resolvedMon,
-          tenMon: data.ten_mon || 'Cơ sở Dữ liệu',
-          tongSoCauKho: fullCachedPool.length,
-          thoiGianMoiCau: 25,
-          hp: data.max_sinh_mang || 5,
-          maxHp: 5,
-          soCauDaLam: 0,
+          startedAt: Date.now(),
+          owner,
+          subjectId: data.subject_id,
+          subjectName: data.subject_name,
+          hp: data.max_lives,
+          maxHp: data.max_lives,
           soCauDung: 0,
           soCauSai: 0,
           streak: 0,
           maxStreak: 0,
           score: 0,
           vongLap: 1,
-          cachedPool: fullCachedPool,   // Toàn bộ kho câu hỏi lưu trên RAM người dùng
-          bufferQueue: shuffledQueue,   // Hàng đợi làm bài (đã đảo ngẫu nhiên)
-          answeredQuestions: [],        // Nhật ký câu hỏi để gửi telemetry
+          cachedPool: pool,
+          bufferQueue: shuffleArray(pool),
+          wrongIds: new Set(),
           currentQuestion: null,
-          currentQuestionStartTime: null,
+          currentQuestionIndex: 0,
           isGrading: false,
-          timeRemaining: 25,
-          startTime: Date.now()
+          pendingAnswer: null,
+          pendingFinish: false
         };
-
-        // Chuyển sang View Thi đấu cực hạn
         navTo('extreme');
         updateExtremeHeartsUI();
-        updateExtremeHeaderUI();
-
-        // Hiển thị câu hỏi đầu tiên
         renderNextExtremeQuestion();
       } catch (err) {
-        console.error('startExtremeSurvival error:', err);
-        showToast('Lỗi khi bắt đầu thi đấu cực hạn: ' + err.message, 'error');
+        showToast(err.message, 'error');
+      } finally {
+        startingExtreme = false;
+        start.disabled = false;
       }
     }
 
@@ -8897,7 +8820,7 @@
      */
     function updateExtremeHeartsUI() {
       if (!extremeSession) return;
-      const currentHp = Math.max(0, Math.min(5, extremeSession.hp));
+      const currentHp = Math.max(0, Math.min(extremeSession.maxHp, extremeSession.hp));
       for (let i = 1; i <= 5; i++) {
         const heartEl = document.getElementById(`extreme-heart-${i}`);
         if (heartEl) {
@@ -8958,7 +8881,7 @@
 
       const courseTag = document.getElementById('extreme-course-tag');
       if (courseTag) {
-        courseTag.textContent = extremeSession.tenMon || 'CSDL';
+        courseTag.textContent = extremeSession.subjectName;
       }
 
       const maxStreakLabel = document.getElementById('extreme-max-streak-label');
@@ -8972,7 +8895,7 @@
      */
     function startExtremeQuestionTimer() {
       stopExtremeQuestionTimer();
-      if (!extremeSession || !extremeSession.active) return;
+      if (!extremeSession?.active || !extremeSession.currentQuestion || extremeSession.isGrading) return;
 
       const totalTime = extremeSession.thoiGianMoiCau || 25;
       extremeSession.timeRemaining = totalTime;
@@ -9012,7 +8935,7 @@
 
         if (remain <= 0) {
           stopExtremeQuestionTimer();
-          handleExtremeAnswer(null, true); // Hết giờ = tính là trả lời sai
+          handleExtremeAnswer(null, true);
         }
       }, 100);
     }
@@ -9039,125 +8962,64 @@
     /**
      * Hiển thị câu hỏi cực hạn tiếp theo từ RAM người dùng
      */
-    function renderNextExtremeQuestion() {
-      if (!extremeSession || !extremeSession.active) return;
-
-      // Nếu đã làm hết toàn bộ câu trong buffer (đã trải qua trọn vẹn toàn bộ kho câu hỏi):
-      if (extremeSession.bufferQueue.length === 0) {
-        if (extremeSession.cachedPool && extremeSession.cachedPool.length > 0) {
-          extremeSession.vongLap++;
-
-          // THUẬT TOÁN LẶP LẠI NGẮT QUÃNG (Spaced Repetition):
-          // Tách riêng các câu người chơi đã từng trả lời SAI ở các vòng trước để ưu tiên ôn tập lại
-          const wrongQIds = new Set(
-            (extremeSession.answeredQuestions || [])
-              .filter(a => a.la_dung === false)
-              .map(a => a.ma_cau_hoi)
-          );
-
-          const wrongPool = [];
-          const rightPool = [];
-
-          extremeSession.cachedPool.forEach(item => {
-            if (wrongQIds.has(item.ma_cau_hoi)) {
-              wrongPool.push(item);
-            } else {
-              rightPool.push(item);
-            }
-          });
-
-          // Đưa toàn bộ các câu từng làm sai lên đầu vòng mới, xáo trộn nội bộ mỗi nhóm
-          extremeSession.bufferQueue = [
-            ...shuffleArray(wrongPool),
-            ...shuffleArray(rightPool)
-          ];
-
-          const bonusMult = (1 + (extremeSession.vongLap - 1) * 0.5).toFixed(1);
-          const wrongNote = wrongPool.length > 0 ? ` (Ưu tiên ôn tập lại ${wrongPool.length} câu bạn từng làm sai!)` : '';
-          showToast(`🔥 Vòng ${extremeSession.vongLap} (x${bonusMult} điểm)!${wrongNote}`, 'success');
-        } else {
-          // Không còn câu nào trong pool
+    function renderNextExtremeQuestion(resumedQuestion) {
+      const session = extremeSession;
+      if (!session?.active) return;
+      if (!resumedQuestion && session.bufferQueue.length === 0) {
+        if (!session.cachedPool.length) {
           finishExtremeGame(false);
           return;
         }
+        session.vongLap++;
+        const wrong = session.cachedPool.filter(question => session.wrongIds.has(question.id));
+        const remaining = session.cachedPool.filter(question => !session.wrongIds.has(question.id));
+        session.bufferQueue = [...shuffleArray(wrong), ...shuffleArray(remaining)];
       }
 
-      // Lấy câu hỏi kế tiếp trực tiếp từ buffer trên RAM (tốc độ tức thì)
-      const q = extremeSession.bufferQueue.shift();
-      extremeSession.currentQuestion = q;
-      extremeSession.currentQuestionStartTime = Date.now();
-      extremeSession.isGrading = false;
-      extremeSession.currentQuestionIndex = (extremeSession.currentQuestionIndex || 0) + 1;
-
-      // Tính toán thời lượng suy nghĩ động (Pedagogical Balance)
+      const q = resumedQuestion || session.bufferQueue.shift();
+      session.currentQuestion = q;
+      session.isGrading = false;
+      if (!resumedQuestion) session.currentQuestionIndex++;
       const qTime = getExtremeQuestionTime(q);
-      extremeSession.thoiGianMoiCau = qTime;
-
-      // Cập nhật UI
+      session.thoiGianMoiCau = qTime;
       updateExtremeHeaderUI();
 
-      const bloomTag = document.getElementById('extreme-q-bloom');
-      if (bloomTag) {
-        bloomTag.textContent = `🎯 CÂU HỎI SINH TỒN · [${q.muc_bloom || 'HIỂU'}] · ${qTime}s`;
-      }
-
-      const promptEl = document.getElementById('extreme-q-prompt');
-      if (promptEl) {
-        promptEl.textContent = q.noi_dung || 'Nội dung câu hỏi...';
-      }
-
-      const fbBox = document.getElementById('extreme-feedback-box');
-      if (fbBox) {
-        fbBox.classList.add('hidden');
-      }
-
-      const healNotice = document.getElementById('extreme-heart-heal-notice');
-      if (healNotice) {
-        healNotice.classList.add('hidden');
-      }
+      const bloomLabels = { REMEMBER: 'NHỚ', UNDERSTAND: 'HIỂU', APPLY: 'VẬN DỤNG' };
+      document.getElementById('extreme-q-bloom').textContent = `${bloomLabels[q.bloom_level]} · ${qTime}s`;
+      document.getElementById('extreme-q-prompt').textContent = q.stem;
+      document.getElementById('extreme-feedback-box').classList.add('hidden');
+      document.getElementById('extreme-heart-heal-notice').classList.add('hidden');
 
       const optionsContainer = document.getElementById('extreme-options-container');
-      if (!optionsContainer) return;
-      optionsContainer.innerHTML = '';
+      optionsContainer.replaceChildren();
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const opts = shuffleArray(q.options);
+      session.shuffledOptions = opts;
 
-      const letters = ['A', 'B', 'C', 'D'];
-      const rawOpts = q.dap_an || [];
-      // Đảo ngẫu nhiên vị trí các đáp án (A, B, C, D) mỗi khi hiển thị để vị trí đáp án luôn thay đổi liên tục
-      const opts = shuffleArray(rawOpts);
-      q.currentShuffledOptions = opts;
-
-      if (opts.length === 0 && q.loai_cau_hoi !== 'TRAC_NGHIEM_4') {
-        // Fallback an toàn nếu có câu dạng khác
-        const notice = document.createElement('div');
-        notice.className = 'p-4 rounded-xl border border-[var(--border)] text-xs text-[var(--muted-foreground)] text-center';
-        notice.textContent = 'Câu hỏi này đang được chuẩn hóa. Bấm tiếp tục để làm câu kế tiếp.';
-        optionsContainer.appendChild(notice);
-
-        const skipBtn = document.createElement('button');
-        skipBtn.id = 'btn_extreme_skip_fallback';
-        skipBtn.className = 'w-full py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs cursor-pointer';
-        skipBtn.textContent = 'Câu tiếp theo →';
-        skipBtn.onclick = () => renderNextExtremeQuestion();
-        optionsContainer.appendChild(skipBtn);
-        return;
-      }
-
-      opts.forEach((optText, idx) => {
+      opts.forEach((option, idx) => {
+        const optText = option.text;
         const btn = document.createElement('button');
         btn.id = `btn_extreme_opt_${idx}`;
         btn.className = "w-full text-left px-3.5 py-2 sm:py-2.5 rounded-xl border border-[var(--border)] hover:border-rose-500/60 hover:bg-rose-500/5 transition flex items-center justify-between cursor-pointer group shadow-2xs";
         btn.innerHTML = `
           <div class="flex items-center gap-2.5 min-w-0 pr-2">
-            <span class="w-6 h-6 rounded-lg border border-[var(--border)] flex items-center justify-center text-[11px] font-bold font-mono text-[var(--muted-foreground)] group-hover:border-rose-500 group-hover:text-rose-500 group-hover:bg-rose-500/10 shrink-0 transition-colors">${letters[idx]}</span>
+            <span class="w-6 h-6 rounded-lg border border-[var(--border)] flex items-center justify-center text-[11px] font-bold font-mono text-[var(--muted-foreground)] group-hover:border-rose-500 group-hover:text-rose-500 group-hover:bg-rose-500/10 shrink-0 transition-colors">${letters[idx] ?? idx + 1}</span>
             <span class="text-xs sm:text-[13px] text-[var(--foreground)] group-hover:text-rose-500 font-medium leading-snug break-words">${escapeHtml(optText)}</span>
           </div>
         `;
-        btn.onclick = () => handleExtremeAnswer(idx, optText, false);
+        btn.onclick = () => handleExtremeAnswer(idx);
         optionsContainer.appendChild(btn);
       });
 
-      // Bắt đầu đếm ngược thời gian suy nghĩ
-      startExtremeQuestionTimer();
+      saveExtremeSessionToStorage();
+      if (session.pendingAnswer) {
+        const pending = session.pendingAnswer;
+        const index = opts.findIndex(option => q.type === 'MULTIPLE_CHOICE'
+          ? option.position === pending.selected_option_position : option.text === pending.submitted_text);
+        handleExtremeAnswer(index < 0 ? null : index, Boolean(pending.response));
+      } else {
+        startExtremeQuestionTimer();
+      }
     }
 
     /**
@@ -9176,80 +9038,51 @@
       container.appendChild(button);
     }
 
-    async function handleExtremeAnswer(choiceIdx, selectedOptText = '', isTimeout = false) {
-      if (!extremeSession || !extremeSession.active || extremeSession.isGrading) return;
-      extremeSession.isGrading = true;
+    async function handleExtremeAnswer(choiceIdx, isTimeout = false) {
+      const session = extremeSession;
+      if (!session?.active || session.isGrading || !session.currentQuestion ||
+          session.owner !== currentUserAccount.userId) return;
+      const q = session.currentQuestion;
+      const currentOpts = session.shuffledOptions;
+      const choice = currentOpts[choiceIdx];
+      if (!session.pendingAnswer && !isTimeout && !choice) return;
+      session.isGrading = true;
       stopExtremeQuestionTimer();
 
-      const q = extremeSession.currentQuestion;
-      if (!q) return;
-
-      const currentOpts = q.currentShuffledOptions || q.dap_an || [];
-      const chosenText = selectedOptText || (choiceIdx !== null && currentOpts[choiceIdx]) || '';
-
-      // Vô hiệu hóa toàn bộ tùy chọn để tránh bấm 2 lần
       const container = document.getElementById('extreme-options-container');
-      if (container) {
-        container.querySelectorAll('button').forEach(b => {
-          b.disabled = true;
-          b.classList.remove('cursor-pointer', 'hover:border-rose-500/60', 'hover:bg-rose-500/5', 'group');
-          b.classList.add('cursor-default');
-        });
+      container.querySelectorAll('button').forEach(button => { button.disabled = true; });
+      if (!session.pendingAnswer) {
+        const answer = isTimeout ? { response: { kind: 'TIMEOUT' } }
+          : q.type === 'MULTIPLE_CHOICE' ? { selected_option_position: choice.position }
+          : { submitted_text: choice.text };
+        session.pendingAnswer = {
+          session_id: session.sessionId,
+          attempt_no: session.soCauDung + session.soCauSai + 1,
+          position: q.position,
+          ...answer
+        };
+        saveExtremeSessionToStorage();
       }
 
       try {
-        let isCorrect = false;
-        let correctIdx = null;
-        let explanation = q.giai_thich || 'Khái niệm trọng tâm giúp củng cố kiến thức vững chắc.';
-
-        if (isTimeout) {
-          isCorrect = false;
-          // Gọi API để lấy đáp án đúng
-          const checkRes = await fetchExtremeApi('/api/extreme/check-answer', { session_id: extremeSession.sessionId, answer_index: extremeSession.soCauDung + extremeSession.soCauSai, ma_cau_hoi: q.ma_cau_hoi, tra_loi: -1 });
-          if (!checkRes.ok || !checkRes.data) throw new Error('Chưa xác nhận được lượt hết giờ.');
-          if (checkRes.ok && checkRes.data) {
-            const expText = String(checkRes.data.dap_an_dung_text || checkRes.data.correct_answer || '').trim().toLowerCase();
-            correctIdx = currentOpts.findIndex(o => String(o || '').trim().toLowerCase() === expText);
-            if (correctIdx < 0 && checkRes.data.vi_tri_dap_an_dung !== undefined) {
-              correctIdx = checkRes.data.vi_tri_dap_an_dung;
-            }
-            if (checkRes.data.giai_thich) explanation = checkRes.data.giai_thich;
-          }
-        } else {
-          // Gửi câu trả lời kèm văn bản đáp án đã chọn lên server chấm điểm độc lập vị trí
-          const checkRes = await fetchExtremeApi('/api/extreme/check-answer', {
-            session_id: extremeSession.sessionId,
-            answer_index: extremeSession.soCauDung + extremeSession.soCauSai,
-            ma_cau_hoi: q.ma_cau_hoi,
-            tra_loi: chosenText,
-            tra_loi_text: chosenText,
-            choice_idx: choiceIdx
-          });
-
-          if (checkRes.ok && checkRes.data) {
-            isCorrect = Boolean(checkRes.data.is_correct);
-            const expText = String(checkRes.data.dap_an_dung_text || checkRes.data.correct_answer || '').trim().toLowerCase();
-            correctIdx = currentOpts.findIndex(o => String(o || '').trim().toLowerCase() === expText);
-            if (correctIdx < 0 && checkRes.data.vi_tri_dap_an_dung !== undefined) {
-              correctIdx = checkRes.data.vi_tri_dap_an_dung;
-            }
-            if (checkRes.data.giai_thich) explanation = checkRes.data.giai_thich;
-          } else {
-            throw new Error(checkRes.error?.message || 'Chưa xác nhận được câu trả lời.');
-          }
-        }
+        const res = await fetchExtremeApi('/api/extreme/check-answer', session.pendingAnswer);
+        if (!res.ok) throw new Error(res.error);
+        if (extremeSession !== session || !session.active) return;
+        const { is_correct: isCorrect, correct_answer, correct_option_position, explanation, stats } = res.data;
+        const correctIdx = currentOpts.findIndex(option => q.type === 'MULTIPLE_CHOICE'
+          ? option.position === correct_option_position : option.text === correct_answer);
 
         // Cập nhật giao diện các nút đáp án (xanh cho đáp án đúng, đỏ nếu chọn sai)
         if (container) {
-          const letters = ['A', 'B', 'C', 'D'];
+          const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
           container.querySelectorAll('button').forEach((b, idx) => {
-            const optText = currentOpts[idx] || b.innerText;
+            const optText = currentOpts[idx]?.text || b.innerText;
             if (idx === choiceIdx) {
               if (isCorrect) {
                 b.className = "w-full text-left px-3.5 py-2 sm:py-2.5 rounded-xl border-2 border-emerald-500 bg-emerald-500/15 text-emerald-600 transition flex items-center justify-between font-bold shadow-xs";
                 b.innerHTML = `
                   <div class="flex items-center gap-2.5 min-w-0 pr-2">
-                    <span class="w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-[11px] font-bold font-mono shrink-0">${letters[idx]}</span>
+                    <span class="w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-[11px] font-bold font-mono shrink-0">${letters[idx] ?? idx + 1}</span>
                     <span class="text-xs sm:text-[13px] text-emerald-600 dark:text-emerald-400 font-bold leading-snug break-words">${escapeHtml(optText)}</span>
                   </div>
                   <span class="px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-600 text-[11px] font-bold shrink-0 ml-2 whitespace-nowrap">✓ Đúng</span>
@@ -9258,7 +9091,7 @@
                 b.className = "w-full text-left px-3.5 py-2 sm:py-2.5 rounded-xl border-2 border-rose-500 bg-rose-500/15 text-rose-600 transition flex items-center justify-between font-bold shadow-xs pair-shake-error";
                 b.innerHTML = `
                   <div class="flex items-center gap-2.5 min-w-0 pr-2">
-                    <span class="w-6 h-6 rounded-lg bg-rose-500 text-white flex items-center justify-center text-[11px] font-bold font-mono shrink-0">${letters[idx]}</span>
+                    <span class="w-6 h-6 rounded-lg bg-rose-500 text-white flex items-center justify-center text-[11px] font-bold font-mono shrink-0">${letters[idx] ?? idx + 1}</span>
                     <span class="text-xs sm:text-[13px] text-rose-600 dark:text-rose-400 font-bold leading-snug break-words">${escapeHtml(optText)}</span>
                   </div>
                   <span class="px-2 py-0.5 rounded-lg bg-rose-500/20 text-rose-600 text-[11px] font-bold shrink-0 ml-2 whitespace-nowrap">✕ Sai</span>
@@ -9268,7 +9101,7 @@
               b.className = "w-full text-left px-3.5 py-2 sm:py-2.5 rounded-xl border-2 border-emerald-500/80 bg-emerald-500/10 text-emerald-600 transition flex items-center justify-between font-semibold shadow-xs";
               b.innerHTML = `
                 <div class="flex items-center gap-2.5 min-w-0 pr-2">
-                  <span class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-600 border border-emerald-500/40 flex items-center justify-center text-[11px] font-bold font-mono shrink-0">${letters[idx]}</span>
+                  <span class="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-600 border border-emerald-500/40 flex items-center justify-center text-[11px] font-bold font-mono shrink-0">${letters[idx] ?? idx + 1}</span>
                   <span class="text-xs sm:text-[13px] text-emerald-600 dark:text-emerald-400 font-semibold leading-snug break-words">${escapeHtml(optText)}</span>
                 </div>
                 <span class="px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-600 text-[11px] font-bold shrink-0 ml-2 whitespace-nowrap">✓ Đáp án đúng</span>
@@ -9279,108 +9112,49 @@
           });
         }
 
-        // Ghi lại nhật ký câu hỏi đã làm để đồng bộ telemetry về Cổng Quản Trị
-        if (!extremeSession.answeredQuestions) extremeSession.answeredQuestions = [];
-        extremeSession.answeredQuestions.push({
-          ma_cau_hoi: q.ma_cau_hoi,
-          noi_dung: q.noi_dung,
-          muc_bloom: q.muc_bloom,
-          do_kho: q.do_kho,
-          lua_chon: choiceIdx,
-          la_dung: isCorrect,
-          thoi_gian_giay: Math.max(1, Math.round((Date.now() - (extremeSession.currentQuestionStartTime || Date.now())) / 1000)),
-          giai_thich: explanation
-        });
+        const healed = stats.lives > session.hp;
+        session.soCauDung = stats.correct_count;
+        session.soCauSai = stats.answer_count - stats.correct_count;
+        session.streak = stats.combo;
+        session.maxStreak = stats.best_combo;
+        session.score = stats.score;
+        session.hp = stats.lives;
+        session.vongLap = stats.round;
+        session.pendingAnswer = null;
+        session.currentQuestion = null;
+        session.isGrading = false;
+        if (!isCorrect) session.wrongIds.add(q.id);
+        updateExtremeHeartsUI();
+        updateExtremeHeaderUI();
+        saveExtremeSessionToStorage();
 
-        // Cập nhật trạng thái người chơi
-        if (isCorrect) {
-          extremeSession.soCauDung++;
-          extremeSession.streak++;
-          if (extremeSession.streak > extremeSession.maxStreak) {
-            extremeSession.maxStreak = extremeSession.streak;
-          }
-
-          // Tính điểm với hệ số chuỗi và hệ số vòng lặp
-          let streakMultiplier = 1.0;
-          if (extremeSession.streak >= 10) streakMultiplier = 3.0;
-          else if (extremeSession.streak >= 6) streakMultiplier = 2.0;
-          else if (extremeSession.streak >= 3) streakMultiplier = 1.5;
-
-          const loopMultiplier = 1 + (extremeSession.vongLap - 1) * 0.5;
-          const pointsEarned = Math.round(10 * streakMultiplier * loopMultiplier);
-          extremeSession.score += pointsEarned;
-
-          if (audioSettings && audioSettings.quiz) {
-            playAdvancedSound('quiz-correct');
-          }
-
-          // HỒI MÁU: Mỗi chuỗi 10 câu đúng liên tiếp hồi 1 ❤️
-          if (extremeSession.streak > 0 && extremeSession.streak % 10 === 0 && extremeSession.hp < extremeSession.maxHp) {
-            extremeSession.hp++;
-            updateExtremeHeartsUI();
-
-            const healNotice = document.getElementById('extreme-heart-heal-notice');
-            if (healNotice) {
-              healNotice.textContent = `+1 ❤️ Hồi Sinh Mạng (Chuỗi ${extremeSession.streak})!`;
-              healNotice.classList.remove('hidden');
-            }
-            showToast(`❤️ Xuất sắc! Chuỗi ${extremeSession.streak} câu đúng giúp bạn hồi phục +1 Sinh Mạng!`, 'success');
-          }
-
-          updateExtremeHeaderUI();
-          saveExtremeSessionToStorage();
-
-          // Chuyển câu mượt mà sau 700ms
-          setTimeout(() => {
-            renderNextExtremeQuestion();
-          }, 700);
-
-        } else {
-          // Trả lời sai hoặc hết giờ
-          extremeSession.soCauSai++;
-          extremeSession.streak = 0;
-          extremeSession.hp--;
-
-          if (audioSettings && audioSettings.quiz) {
-            playAdvancedSound('quiz-wrong');
-          }
-
-          updateExtremeHeartsUI();
-          updateExtremeHeaderUI();
-          saveExtremeSessionToStorage();
-
-          // Hiển thị giải thích
-          const fbBox = document.getElementById('extreme-feedback-box');
-          const fbTitle = document.getElementById('extreme-feedback-title');
-          const fbDesc = document.getElementById('extreme-feedback-desc');
-          if (fbBox && fbTitle && fbDesc) {
-            fbTitle.innerHTML = isTimeout
-              ? `<span class="text-rose-500 font-bold">⏱️ Hết thời gian! (-1 ❤️ Sinh Mạng)</span>`
-              : `<span class="text-rose-500 font-bold">❌ Chưa chính xác! (-1 ❤️ Sinh Mạng)</span>`;
-            fbDesc.textContent = explanation;
-            fbBox.className = "rounded-xl p-2.5 sm:p-3 border border-rose-500/40 bg-rose-500/10 text-xs space-y-1 animate-in fade-in slide-in-from-bottom-2 duration-200";
-            fbBox.classList.remove('hidden');
-          }
-
-          if (extremeSession.hp <= 0) {
-            // HẾT SINH MẠNG => GAME OVER
-            setTimeout(() => {
-              finishExtremeGame(true);
-            }, 1200);
-          } else {
-            // Còn sinh mạng => Cho xem đáp án và giải thích rồi sang câu mới
-            setTimeout(() => {
-              renderNextExtremeQuestion();
-            }, 1400);
-          }
+        if (audioSettings?.quiz) playAdvancedSound(isCorrect ? 'quiz-correct' : 'quiz-wrong');
+        if (healed) {
+          const notice = document.getElementById('extreme-heart-heal-notice');
+          notice.textContent = `+1 ❤️ Hồi sinh mạng · Chuỗi ${session.streak}`;
+          notice.classList.remove('hidden');
         }
 
+        if (!isCorrect) {
+          const feedback = document.getElementById('extreme-feedback-box');
+          document.getElementById('extreme-feedback-title').textContent = isTimeout
+            ? 'Hết thời gian · −1 sinh mạng' : 'Chưa chính xác · −1 sinh mạng';
+          document.getElementById('extreme-feedback-desc').textContent = explanation || correct_answer;
+          feedback.classList.remove('hidden');
+        }
+        setTimeout(() => {
+          if (extremeSession !== session || !session.active || session.currentQuestion ||
+              !document.getElementById('modal-extreme-quit-confirm').classList.contains('hidden')) return;
+          if (!session.hp) finishExtremeGame(true);
+          else renderNextExtremeQuestion();
+        }, isCorrect ? 700 : 1400);
       } catch (err) {
         console.error('handleExtremeAnswer error:', err);
-        if (extremeSession?.currentQuestion !== q || !extremeSession.active) return;
-        showExtremeRetry('Chưa xác nhận được câu trả lời.', () => {
-          extremeSession.isGrading = false;
-          handleExtremeAnswer(choiceIdx, selectedOptText, isTimeout);
+        if (extremeSession !== session || session.currentQuestion !== q || !session.active) return;
+        showExtremeRetry(err.message || 'Chưa xác nhận được câu trả lời.', () => {
+          if (extremeSession !== session) return;
+          session.isGrading = false;
+          handleExtremeAnswer(choiceIdx, isTimeout);
         });
       }
     }
@@ -9408,8 +9182,10 @@
       if (modal) modal.classList.add('hidden');
       pendingExtremeNavView = null;
 
-      if (extremeSession && extremeSession.active && !extremeSession.isGrading) {
-        startExtremeQuestionTimer();
+      if (extremeSession?.active && !extremeSession.isGrading) {
+        if (!extremeSession.hp) finishExtremeGame(true);
+        else if (extremeSession.currentQuestion) startExtremeQuestionTimer();
+        else renderNextExtremeQuestion();
       }
     }
 
@@ -9417,6 +9193,10 @@
      * Xác nhận dừng trận và nhận thưởng
      */
     async function confirmExtremeQuitAndFinish() {
+      if (extremeSession?.pendingAnswer) {
+        showToast('Hãy xác nhận xong câu trả lời trước khi kết thúc.', 'warning');
+        return;
+      }
       const modal = document.getElementById('modal-extreme-quit-confirm');
       if (modal) modal.classList.add('hidden');
       await finishExtremeGame(false);
@@ -9426,46 +9206,25 @@
      * Kết thúc phiên thi đấu cực hạn, gửi telemetry và hiển thị bảng tổng kết
      */
     async function finishExtremeGame(isDead = false) {
-      if (!extremeSession) return;
+      const session = extremeSession;
+      if (!session || session.submittingFinish || session.owner !== currentUserAccount.userId) return;
       stopExtremeQuestionTimer();
-      extremeSession.active = false;
-
-      extremeSession.soCauDaLam = (extremeSession.soCauDung || 0) + (extremeSession.soCauSai || 0);
-
-      const durationSec = Math.max(1, Math.round((Date.now() - (extremeSession.startTime || Date.now())) / 1000));
-      const sessionPayload = { session_id: extremeSession.sessionId };
+      session.active = false;
+      session.pendingFinish = true;
+      session.submittingFinish = true;
+      saveExtremeSessionToStorage();
 
       try {
-        const res = await fetchExtremeApi('/api/extreme/finish', sessionPayload);
-        if (!res.ok || !res.data) throw new Error('Chưa xác nhận được kết quả.');
+        const res = await fetchExtremeApi('/api/extreme/finish', { session_id: session.sessionId });
+        if (!res.ok) throw new Error(res.error || 'Chưa xác nhận được kết quả.');
+        if (extremeSession !== session) return;
         clearExtremeSessionStorage();
-        const summary = res.data.summary;
-        refreshArenaExpQuota();
-
-        const answeredCount = summary?.total_answered ?? 0;
-        const correctCount = summary?.correct_count ?? 0;
-        const streakCount = summary?.max_streak ?? 0;
-        const totalScore = summary?.total_score ?? 0;
-        const loopCount = summary?.loops_completed ?? 1;
-
-        let badge = isDead ? 'Chiến Binh Sinh Tồn' : 'Đấu Sĩ Dũng Cảm';
-        let coins = 0;
-        let exp = 0;
-
-        if (res.ok && res.data) {
-          if (res.data.badgeTitle) badge = res.data.badgeTitle;
-          if (res.data.summary?.badge) badge = res.data.summary.badge;
-          if (res.data.earnedCoins !== undefined) coins = res.data.earnedCoins;
-          else if (res.data.rewards?.coins !== undefined) coins = res.data.rewards.coins;
-          if (res.data.earnedExp !== undefined) exp = res.data.earnedExp;
-          else if (res.data.rewards?.exp !== undefined) exp = res.data.rewards.exp;
-
-          if (res.data.wallet && currentUser) {
-            currentUser.so_du_xu = res.data.wallet.so_du_xu;
-            currentUser.diem_kinh_nghiem = res.data.wallet.diem_kinh_nghiem;
-            currentUser.cap_do = res.data.wallet.cap_do;
-            if (typeof updateUserDisplay === 'function') updateUserDisplay();
-          }
+        session.pendingFinish = false;
+        const { badge, coins_awarded: coins, xp_awarded: exp, summary, wallet } = res.data;
+        const { answer_count, correct_count, best_combo, score, round } = summary;
+        if (wallet) {
+          void refreshUserData();
+          void refreshArenaExpQuota();
         }
 
         // Cập nhật modal tổng kết
@@ -9480,12 +9239,12 @@
         const iconEl = document.getElementById('extreme-summary-icon');
 
         if (badgeEl) badgeEl.textContent = badge;
-        if (answeredEl) answeredEl.textContent = `${correctCount}/${answeredCount} câu`;
-        if (maxStreakEl) maxStreakEl.textContent = `🔥 ${streakCount} câu`;
-        if (scoreEl) scoreEl.textContent = `${totalScore.toLocaleString()} PTS`;
-        if (loopsEl) loopsEl.textContent = `Vòng ${loopCount}`;
-        if (coinsEl) coinsEl.textContent = `+${coins} 🪙`;
-        if (expEl) expEl.textContent = `+${exp} ⭐`;
+        if (answeredEl) answeredEl.textContent = `${correct_count}/${answer_count} câu`;
+        if (maxStreakEl) maxStreakEl.textContent = `🔥 ${best_combo} câu`;
+        if (scoreEl) scoreEl.textContent = `${score.toLocaleString()} điểm`;
+        if (loopsEl) loopsEl.textContent = `Vòng ${round}`;
+        if (coinsEl) coinsEl.textContent = coins == null ? '–' : `+${coins} 🪙`;
+        if (expEl) expEl.textContent = exp == null ? '–' : `+${exp} ⭐`;
 
         if (iconEl) {
           iconEl.textContent = isDead ? '💀' : '🏆';
@@ -9497,12 +9256,16 @@
           playAdvancedSound(isDead ? 'quiz-wrong' : 'win-fanfare');
         }
 
-        if (typeof trackDailyQuestAction === 'function') {
-          trackDailyQuestAction('dau_truong');
-        }
+        if (coins > 0 || (wallet && res.data.already_finished)) trackDailyQuestAction('dau_truong');
       } catch (err) {
         console.error('finishExtremeGame error:', err);
-        showExtremeRetry('Chưa xác nhận được kết quả.', () => finishExtremeGame(isDead));
+        if (extremeSession === session) {
+          showExtremeRetry(err.message, () => {
+            if (extremeSession === session) finishExtremeGame(isDead);
+          });
+        }
+      } finally {
+        session.submittingFinish = false;
       }
     }
 
@@ -9526,9 +9289,10 @@
       const sumModal = document.getElementById('modal-extreme-summary');
       if (sumModal) sumModal.classList.add('hidden');
 
-      const lastMon = extremeSession ? extremeSession.maMon : 'mon_csdl';
+      const subjectId = extremeSession?.subjectId;
       extremeSession = null;
-      startExtremeSurvival(lastMon);
+      if (subjectId) startExtremeSurvival(subjectId);
+      else openExtremeSetupModal();
     }
 
 </script>

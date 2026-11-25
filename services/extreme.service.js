@@ -1,406 +1,411 @@
-/**
- * Extreme Survival Challenge Service (Thi Đấu Cực Hạn)
- * Endless Roguelite Survival Quiz with 5 Lives, Combo Multipliers,
- * and Seamless Batch-Prefetching.
- */
-
+const { createHash, randomInt, randomUUID } = require('node:crypto');
 const db = require('../database/db');
-const { randomUUID } = require('node:crypto');
-const { mutateCoinsInTransaction, addExperienceInTransaction, withUserLock } = require('./economy.service');
-const sessions = new Map();
-const SESSION_TTL = 2 * 60 * 60 * 1000;
+const { deriveUserLevel } = require('../core/rules/economy.rules');
+const { MAX_LIVES, replayExtreme, extremeSummary, extremeRewards, extremeBadge, extremePrompt } =
+  require('../core/rules/extreme.rules');
+const { awardRepeatXpInTransaction } = require('./economy.service');
+const { correctAnswer, gradeQuestion, presentQuestion } = require('./study-questions');
+const { mutateCoinsInTransaction } = require('./wallet.service');
 
-function requireSession(id, userId) {
-  const session = sessions.get(id);
-  if (!session || session.userId !== (userId || null) || Date.now() >= session.expires) {
-    throw new Error('Phiên Cực hạn đã hết hạn. Hãy bắt đầu lượt mới.');
+const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
+const MAX_SESSIONS = 1000;
+const MAX_ATTEMPTS = 1000;
+const SECONDS_PER_QUESTION = 25;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const answerFields = new Set(['session_id', 'attempt_no', 'position', 'selected_option_position', 'submitted_text', 'response']);
+const guestSessions = new Map();
+const receipts = new Map();
+const pendingFinishes = new Map();
+
+const validIndex = value => Number.isInteger(value) && value > 0 && value <= 2147483647;
+const requireSessionId = id => {
+  if (typeof id !== 'string' || !UUID.test(id)) throw new Error('Phiên Cực Hạn không hợp lệ.');
+};
+
+function expireEntries(entries, now) {
+  for (const [key, item] of entries) {
+    if (item.expires <= now) entries.delete(key);
   }
+}
+
+function shuffle(items) {
+  const copy = [...items];
+  for (let index = copy.length - 1; index > 0; index--) {
+    const target = randomInt(index + 1);
+    [copy[index], copy[target]] = [copy[target], copy[index]];
+  }
+  return copy;
+}
+
+function quickChoices(question, sessionId) {
+  const { type, payload } = question;
+  let texts;
+  if (type === 'FILL_BLANK') {
+    texts = payload.options;
+  } else if (type === 'MATCHING') {
+    texts = payload.pairs.map(pair => pair.right);
+  } else {
+    const tokens = payload.correct_order;
+    const rotated = [...tokens.slice(1), tokens[0]];
+    const swapped = tokens.length > 1 ? [tokens[1], tokens[0], ...tokens.slice(2)] : tokens;
+    const variants = [tokens, [...tokens].reverse(), rotated, swapped];
+    variants.push(...payload.distractors.map(token => [token, ...tokens.slice(1)]));
+    texts = variants.map(variant => variant.join(' → '));
+  }
+
+  return [...new Set(texts)]
+    .map(text => ({
+      text,
+      order: createHash('sha256').update(JSON.stringify([sessionId, question.id, text])).digest('hex')
+    }))
+    .sort((a, b) => a.order.localeCompare(b.order))
+    .map(({ text }) => ({ text }));
+}
+
+function publicQuestion(question, sessionId) {
+  if (question.type === 'MULTIPLE_CHOICE') return presentQuestion(question, sessionId);
+  const { id, position, type, bloom_level, difficulty } = question;
+  return {
+    id, position, type, bloom_level, difficulty,
+    stem: extremePrompt(question),
+    options: quickChoices(question, sessionId)
+  };
+}
+
+async function resolveSubject(tx, selector = null) {
+  if (selector != null && (typeof selector !== 'string' || !selector.trim())) {
+    throw new Error('Môn học không hợp lệ.');
+  }
+  const value = selector?.trim() ?? null;
+  const subject = await tx.queryOne(`
+    SELECT id, name FROM subjects
+    WHERE status = 'ACTIVE' AND (id = $1::uuid OR slug = $2::text OR ($1 IS NULL AND $2 IS NULL))
+    ORDER BY sort_order, id LIMIT 1 FOR SHARE
+  `, value && UUID.test(value) ? [value, null] : [null, value]);
+  if (!subject) throw new Error('Không tìm thấy môn Cực Hạn đang mở.');
+  return subject;
+}
+
+const QUESTION_COLUMNS = "q.id, q.type, q.stem, q.bloom_level, q.difficulty, q.payload, q.explanation,"
+  + " COALESCE((SELECT jsonb_agg(jsonb_build_object('position', o.position, 'text', o.text,"
+  + " 'is_correct', o.is_correct) ORDER BY o.position) FROM question_options o WHERE o.question_id = q.id),"
+  + " '[]'::jsonb) AS options";
+
+async function activeQuestions(tx, subjectId) {
+  const rows = await tx.query(
+    'SELECT ' + QUESTION_COLUMNS + ' FROM chapters c JOIN milestones m ON m.chapter_id = c.id'
+      + ' JOIN questions q ON q.milestone_id = m.id'
+      + " WHERE c.subject_id = $1 AND c.status = 'ACTIVE' AND m.status = 'ACTIVE' AND q.status = 'ACTIVE'"
+      + ' ORDER BY c.id, m.id, q.id FOR SHARE OF c, m, q',
+    [subjectId]
+  );
+  return shuffle(rows).map((question, index) => ({ ...question, position: index + 1 }));
+}
+
+async function lockUser(tx, userId) {
+  const user = await tx.queryOne(
+    "SELECT id, coin_balance, xp FROM users WHERE id = $1 AND disabled_at IS NULL"
+      + " AND role IN ('LEARNER', 'ADMIN') FOR UPDATE",
+    [userId]
+  );
+  if (!user) throw new Error('Không tìm thấy người chơi Cực Hạn đang hoạt động.');
+  return user;
+}
+
+async function openDurableSession(tx, userId, subject, questions) {
+  const session = await tx.queryOne(
+    "INSERT INTO study_sessions (user_id, kind, subject_id, started_at)"
+      + " VALUES ($1, 'EXTREME', $2, clock_timestamp()) RETURNING id",
+    [userId, subject.id]
+  );
+  await tx.execute(
+    'INSERT INTO study_session_questions (session_id, position, question_id)'
+      + ' SELECT $1, seq::integer, question_id FROM unnest($2::uuid[]) WITH ORDINALITY AS issued(question_id, seq)',
+    [session.id, questions.map(question => question.id)]
+  );
+  return session.id;
+}
+
+function openGuestSession(id, questions) {
+  const now = Date.now();
+  expireEntries(guestSessions, now);
+  if (guestSessions.size >= MAX_SESSIONS) throw new Error('Đấu trường đang bận. Hãy thử lại sau.');
+  guestSessions.set(id, {
+    started_at: now, expires: now + SESSION_TTL_MS, questions, attempts: [], result: null
+  });
+}
+
+async function startSession(subjectSelector, userId = null) {
+  const { subject, questions, publicQuestions, id } = await db.transaction(async tx => {
+    if (userId) {
+      await lockUser(tx, userId);
+      await tx.queryOne("SELECT pg_advisory_xact_lock(hashtext('thap-tri-thuc-v1:extreme-open'))");
+      const { at_capacity } = await tx.queryOne(`
+        SELECT count(*) >= $1 AS at_capacity FROM study_sessions
+        WHERE kind = 'EXTREME' AND finished_at IS NULL
+          AND started_at > clock_timestamp() - $2 * interval '1 millisecond'
+      `, [MAX_SESSIONS, SESSION_TTL_MS]);
+      if (at_capacity) throw new Error('Đấu trường đang bận. Hãy thử lại sau.');
+    }
+    const subject = await resolveSubject(tx, subjectSelector);
+    const questions = await activeQuestions(tx, subject.id);
+    let id = null;
+    if (questions.length) id = userId ? await openDurableSession(tx, userId, subject, questions) : randomUUID();
+    return { subject, questions, publicQuestions: questions.map(question => publicQuestion(question, id)), id };
+  });
+  if (!userId && id) openGuestSession(id, questions);
+  return {
+    session_id: id, subject_id: subject.id, subject_name: subject.name, pool_count: questions.length,
+    max_lives: MAX_LIVES, seconds_per_question: SECONDS_PER_QUESTION,
+    questions: publicQuestions
+  };
+}
+
+function requireGuest(id) {
+  const session = guestSessions.get(id);
+  if (!session || Date.now() >= session.expires) throw new Error('Phiên Cực Hạn đã hết hạn. Hãy bắt đầu lượt mới.');
   return session;
 }
 
-function openSession(userId, course, pool) {
-  const now = Date.now();
-  for (const [id, session] of sessions) if (session.expires <= now) sessions.delete(id);
-  if (sessions.size >= 1000) throw new Error('Đấu trường đang bận. Hãy thử lại sau.');
-  const id = randomUUID();
-  sessions.set(id, {
-    userId: userId || null, course, expires: now + SESSION_TTL, startedAt: now,
-    allowed: new Set(pool.map(q => q.ma_cau_hoi)), seen: new Set(),
-    round: 1, lives: 5, streak: 0, maxStreak: 0, correct: 0, score: 0, answers: []
-  });
-  return id;
+async function lockSession(tx, id, userId) {
+  const session = await tx.queryOne(
+    "SELECT s.id, s.started_at, s.finished_at, (SELECT count(*)::integer FROM study_session_questions q"
+      + " WHERE q.session_id = s.id) AS pool_size FROM study_sessions s"
+      + " WHERE id = $1 AND user_id = $2 AND kind = 'EXTREME' FOR UPDATE",
+    [id, userId]
+  );
+  if (!session) throw new Error('Không tìm thấy phiên Cực Hạn.');
+  return session;
 }
 
-async function gradeSession(userId, id, index, questionId, answer, answerText) {
-  return withUserLock('extreme:' + id, async () => {
-    const session = requireSession(id, userId);
-    if (session.result) throw new Error('Phiên đã kết thúc.');
-    if (Number.isInteger(index) && index >= 0 && index < session.answers.length) {
-      const previous = session.answers[index];
-      if (previous.ma_cau_hoi === questionId) return previous.result;
+async function databaseNow(tx, session, { allowFinished = false } = {}) {
+  const { now } = await tx.queryOne('SELECT clock_timestamp() AS now');
+  if ((!allowFinished || !session.finished_at) && now - session.started_at >= SESSION_TTL_MS) {
+    throw new Error('Phiên Cực Hạn đã hết hạn. Hãy bắt đầu lượt mới.');
+  }
+  return now;
+}
+
+async function issuedQuestions(tx, sessionId, position = null, exclude = []) {
+  return tx.query(
+    'SELECT issued.position, ' + QUESTION_COLUMNS
+      + ' FROM study_session_questions issued JOIN questions q ON q.id = issued.question_id'
+      + ' WHERE issued.session_id = $1 AND ($2::integer IS NULL OR issued.position = $2)'
+      + ' AND NOT (issued.position = ANY($3::integer[])) ORDER BY issued.position',
+    [sessionId, position, exclude]
+  );
+}
+
+async function getNextBatch(userId, { session_id, exclude_positions = [] } = {}) {
+  requireSessionId(session_id);
+  if (!Array.isArray(exclude_positions) || !exclude_positions.every(validIndex)) {
+    throw new Error('Danh sách vị trí câu hỏi không hợp lệ.');
+  }
+  const excluded = new Set(exclude_positions);
+  let questions;
+  if (userId) {
+    questions = await db.transaction(async tx => {
+      await lockUser(tx, userId);
+      const session = await lockSession(tx, session_id, userId);
+      if (session.finished_at) throw new Error('Phiên Cực Hạn đã kết thúc.');
+      await databaseNow(tx, session);
+      return issuedQuestions(tx, session.id, null, [...excluded]);
+    });
+  } else {
+    const session = requireGuest(session_id);
+    if (session.result) throw new Error('Phiên Cực Hạn đã kết thúc.');
+    questions = session.questions.filter(question => !excluded.has(question.position));
+  }
+  return { session_id, exhausted: !questions.length, questions: questions.map(q => publicQuestion(q, session_id)) };
+}
+
+function gradeExtreme(question, sessionId, submission) {
+  const { selected_option_position, submitted_text, response } = submission;
+  if (question.type === 'MULTIPLE_CHOICE' || question.type === 'FILL_BLANK' || response != null) {
+    const graded = gradeQuestion(question, submission);
+    if (graded.response && graded.response.kind !== 'TIMEOUT') {
+      throw new Error('Cực Hạn nhận đáp án dạng lựa chọn nhanh.');
     }
-    if (index !== session.answers.length || !session.allowed.has(questionId)
-      || session.lives <= 0 || session.answers.length >= 1000) throw new Error('Lượt trả lời không hợp lệ.');
-    if (session.seen.size === session.allowed.size) {
-      session.seen.clear();
-      session.round++;
+    return graded;
+  }
+
+  if (selected_option_position != null || typeof submitted_text !== 'string'
+    || !quickChoices(question, sessionId).some(choice => choice.text === submitted_text)) {
+    throw new Error('Phương án không thuộc câu hỏi Cực Hạn.');
+  }
+  const correct = correctAnswer(question);
+  const expected = question.type === 'MATCHING' ? correct[0].right : correct.join(' → ');
+  return { selected_option_position: null, submitted_text, response: null, is_correct: submitted_text === expected };
+}
+
+function sameSubmission(previous, position, graded) {
+  return previous.question_position === position
+    && previous.selected_option_position === graded.selected_option_position
+    && previous.submitted_text === graded.submitted_text
+    && (previous.response?.kind ?? null) === (graded.response?.kind ?? null);
+}
+
+function answerResult(question, attempts, poolSize) {
+  const attempt = attempts.at(-1);
+  const key = correctAnswer(question);
+  let text = key;
+  if (question.type === 'MULTIPLE_CHOICE') text = question.options.find(option => option.position === key).text;
+  if (question.type === 'MATCHING') text = key[0].right;
+  if (question.type === 'ORDERING') text = key.join(' → ');
+  return {
+    attempt_no: attempt.attempt_no, position: attempt.question_position, is_correct: attempt.is_correct,
+    correct_option_position: question.type === 'MULTIPLE_CHOICE' ? key : null,
+    correct_answer: text, explanation: question.explanation,
+    stats: replayExtreme(attempts, poolSize)
+  };
+}
+
+function submitAttempt(sessionId, question, attempts, poolSize, submission, finished) {
+  const { attempt_no, position } = submission;
+  const graded = gradeExtreme(question, sessionId, submission);
+  const previous = attempts[attempt_no - 1];
+  if (previous) {
+    if (!sameSubmission(previous, position, graded)) throw new Error('Lượt này đã lưu với câu trả lời khác.');
+    return { feedback: answerResult(question, attempts.slice(0, attempt_no), poolSize), saved: null };
+  }
+  if (finished) throw new Error('Phiên Cực Hạn đã kết thúc.');
+  const stats = replayExtreme(attempts, poolSize);
+  if (attempt_no !== attempts.length + 1 || stats.lives <= 0) throw new Error('Lượt trả lời không hợp lệ.');
+  const roundStart = attempts.length - attempts.length % poolSize;
+  if (attempts.slice(roundStart).some(attempt => attempt.question_position === position)) {
+    throw new Error('Câu hỏi đã được trả lời trong vòng này.');
+  }
+  const saved = { attempt_no, question_position: position, ...graded };
+  return { feedback: answerResult(question, [...attempts, saved], poolSize), saved };
+}
+
+async function readAttempts(tx, sessionId) {
+  return tx.query(
+    'SELECT attempt_no, question_position, is_correct, selected_option_position, submitted_text, response'
+      + ' FROM session_answers WHERE session_id = $1 ORDER BY attempt_no',
+    [sessionId]
+  );
+}
+
+function gradeSession(userId, submission = {}) {
+  const { session_id, position, attempt_no } = submission;
+  requireSessionId(session_id);
+  if (Object.keys(submission).some(key => !answerFields.has(key))
+    || !validIndex(position) || !validIndex(attempt_no) || attempt_no > MAX_ATTEMPTS) {
+    throw new Error('Lượt trả lời không hợp lệ.');
+  }
+  if (!userId) {
+    const session = requireGuest(session_id);
+    const question = session.questions[position - 1];
+    if (!question) throw new Error('Câu hỏi không thuộc phiên Cực Hạn.');
+    const { feedback, saved } = submitAttempt(
+      session_id, question, session.attempts, session.questions.length, submission, Boolean(session.result)
+    );
+    if (saved) session.attempts.push(saved);
+    return feedback;
+  }
+  return db.transaction(async tx => {
+    await lockUser(tx, userId);
+    const session = await lockSession(tx, session_id, userId);
+    await databaseNow(tx, session);
+    const [question] = await issuedQuestions(tx, session.id, position);
+    if (!question) throw new Error('Câu hỏi không thuộc phiên Cực Hạn.');
+    const attempts = await readAttempts(tx, session.id);
+    const { feedback, saved } = submitAttempt(
+      session.id, question, attempts, session.pool_size, submission, Boolean(session.finished_at)
+    );
+    if (saved) {
+      await tx.execute(
+        'INSERT INTO session_answers (session_id, attempt_no, question_position, is_correct,'
+          + ' selected_option_position, submitted_text, response) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [session.id, saved.attempt_no, saved.question_position, saved.is_correct,
+          saved.selected_option_position, saved.submitted_text, saved.response]
+      );
     }
-    if (session.seen.has(questionId)) throw new Error('Câu hỏi đã được trả lời trong vòng này.');
-    const result = await checkAnswer(questionId, answer, answerText);
-    session.seen.add(questionId);
-    if (result.is_correct) {
-      session.correct++;
-      session.streak++;
-      session.maxStreak = Math.max(session.maxStreak, session.streak);
-      const multiplier = session.streak >= 10 ? 3 : session.streak >= 6 ? 2 : session.streak >= 3 ? 1.5 : 1;
-      session.score += Math.round(10 * multiplier * (1 + (session.round - 1) * 0.5));
-      if (session.streak % 10 === 0) session.lives = Math.min(5, session.lives + 1);
-    } else {
-      session.streak = 0;
-      session.lives--;
+    return feedback;
+  });
+}
+
+function finishResult(summary, coins, xp, user, alreadyFinished = false) {
+  return {
+    badge: extremeBadge(summary.correct_count),
+    coins_awarded: coins,
+    xp_awarded: xp,
+    already_finished: alreadyFinished,
+    summary,
+    wallet: user ? { coin_balance: user.coin_balance, total_xp: user.xp, level: deriveUserLevel(user.xp) } : null
+  };
+}
+
+async function finalizeDurable(userId, id) {
+  return db.transaction(async tx => {
+    const user = await lockUser(tx, userId);
+    const session = await lockSession(tx, id, userId);
+    const now = await databaseNow(tx, session, { allowFinished: true });
+    const attempts = await readAttempts(tx, session.id);
+    const stats = replayExtreme(attempts, session.pool_size);
+    const summary = extremeSummary(stats, (session.finished_at ?? now) - session.started_at);
+    const rewards = extremeRewards(stats);
+    if (session.finished_at) {
+      return { result: finishResult(summary, rewards.coins, rewards.xp ? null : 0, user, true) };
     }
-    session.answers.push({ ma_cau_hoi: questionId, la_dung: result.is_correct, result });
+
+    await tx.execute(
+      "UPDATE study_sessions SET finished_at = $2, finish_kind = 'SUBMITTED' WHERE id = $1",
+      [session.id, now]
+    );
+    if (rewards.coins) {
+      const wallet = await mutateCoinsInTransaction(tx, userId, rewards.coins, 'EXTREME_REWARD', {
+        note: 'Thưởng Cực Hạn', occurred_at: now
+      });
+      user.coin_balance = wallet.coin_balance;
+    }
+    let xpAwarded = 0;
+    if (rewards.xp) {
+      const xp = await awardRepeatXpInTransaction(tx, userId, rewards.xp, { occurred_at: now });
+      xpAwarded = xp.xp_awarded;
+      user.xp = xp.total_xp;
+    }
+    return {
+      result: finishResult(summary, rewards.coins, xpAwarded, user),
+      expires: session.started_at.getTime() + SESSION_TTL_MS
+    };
+  });
+}
+
+async function finishSession(userId, { session_id } = {}) {
+  requireSessionId(session_id);
+  if (!userId) {
+    const session = requireGuest(session_id);
+    if (session.result) return { ...session.result, already_finished: true };
+    const stats = replayExtreme(session.attempts, session.questions.length);
+    const summary = extremeSummary(stats, Date.now() - session.started_at);
+    session.result = finishResult(summary, 0, 0, null);
+    return session.result;
+  }
+
+  const key = userId + ':' + session_id.toLowerCase();
+  const now = Date.now();
+  const cached = receipts.get(key);
+  if (cached?.expires > now) return { ...cached.result, already_finished: true };
+  const pending = pendingFinishes.get(key);
+  if (pending) return { ...await pending, already_finished: true };
+
+  const finished = finalizeDurable(userId, session_id).then(({ result, expires }) => {
+    const committedAt = Date.now();
+    if (expires > committedAt) {
+      expireEntries(receipts, committedAt);
+      if (receipts.size >= MAX_SESSIONS) receipts.delete(receipts.keys().next().value);
+      receipts.set(key, { result, expires });
+    }
     return result;
   });
+  pendingFinishes.set(key, finished);
+  try {
+    return await finished;
+  } finally {
+    pendingFinishes.delete(key);
+  }
 }
 
-/**
- * Format raw question from DB into a safe client format (NEVER reveal answer position)
- * In Extreme Survival mode, all question formats are adapted into high-speed 4-option questions.
- */
-function formatSafeQuestion(q) {
-  let noiDung = q.noi_dung;
-  let dapAn = null;
-  let loaiCauHoi = q.loai_cau_hoi || 'TRAC_NGHIEM_4';
-
-  if (q.loai_cau_hoi === 'TRAC_NGHIEM_4' || (!q.loai_cau_hoi && q.dap_an_a)) {
-    dapAn = [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d].filter(Boolean);
-  } else if (q.loai_cau_hoi === 'DIEN_TU') {
-    try {
-      const parsed = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : q.du_lieu_cau_hoi;
-      if (parsed && parsed.sentence_template && parsed.options) {
-        noiDung = parsed.sentence_template.replace('{blank}', '______');
-        dapAn = parsed.options;
-      }
-    } catch (e) {}
-  } else if (q.loai_cau_hoi === 'NOI_CAP') {
-    try {
-      const parsed = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : q.du_lieu_cau_hoi;
-      if (parsed && parsed.pairs && parsed.pairs.length >= 2) {
-        const targetPair = parsed.pairs[0];
-        noiDung = `Khái niệm / Định nghĩa nào tương ứng chính xác với "${targetPair.left}"?`;
-        dapAn = parsed.pairs.map(p => p.right);
-      } else if (parsed && Array.isArray(parsed.left_items) && Array.isArray(parsed.right_items) && parsed.matches) {
-        const targetLeft = parsed.left_items[0];
-        noiDung = `Khái niệm / Định nghĩa nào tương ứng chính xác với "${targetLeft.text}"?`;
-        dapAn = parsed.right_items.map(r => r.text);
-      }
-    } catch (e) {}
-  } else if (q.loai_cau_hoi === 'SAP_XEP_CAU') {
-    try {
-      const parsed = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : q.du_lieu_cau_hoi;
-      if (parsed && parsed.correct_order && parsed.correct_order.length > 0) {
-        noiDung = `${q.noi_dung} (Đâu là trình tự cú pháp chuẩn?)`;
-        const correctStr = parsed.correct_order.join(' → ');
-        const revStr = [...parsed.correct_order].reverse().join(' → ');
-        const shuf1 = [...parsed.correct_order].sort().join(' → ');
-        const shuf2 = [parsed.correct_order[1], parsed.correct_order[0], ...parsed.correct_order.slice(2)].join(' → ');
-        dapAn = [correctStr, revStr, shuf1, shuf2];
-      }
-    } catch (e) {}
-  }
-
-  if (!dapAn || dapAn.length < 2) {
-    dapAn = [q.dap_an_a || 'Đúng', q.dap_an_b || 'Sai', q.dap_an_c || 'Khác', q.dap_an_d || 'Không xác định'];
-  }
-
-  // Đảo ngẫu nhiên vị trí các đáp án (Fisher-Yates) để đáp án đúng không bao giờ bị cố định ở vị trí A
-  const shuffledDapAn = [...dapAn];
-  for (let i = shuffledDapAn.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffledDapAn[i], shuffledDapAn[j]] = [shuffledDapAn[j], shuffledDapAn[i]];
-  }
-
-  // BẢO MẬT CHỐNG F12: Tuyệt đối không gửi giai_thich (chứa lời giải) về client ở bước khởi tạo.
-  // giai_thich chỉ được server trả về sau khi người chơi đã gửi câu trả lời lên /api/extreme/check-answer.
-  return {
-    ma_cau_hoi: q.ma_cau_hoi,
-    noi_dung: noiDung,
-    loai_cau_hoi: loaiCauHoi,
-    muc_bloom: q.muc_bloom || 'NHO',
-    do_kho: q.do_kho || 1,
-    dap_an: shuffledDapAn
-  };
-}
-
-/**
- * Start an Extreme Survival Session
- * Fetches course info and ALL questions for the course at once.
- * The client stores all questions in RAM, shuffles them, and serves them instantly
- * without needing chunked DB requests during gameplay.
- */
-async function startSession(ma_mon = 'mon_csdl', ma_nguoi_dung = null) {
-  // Resolve ma_mon from slug if needed
-  let course = await db.queryOne('SELECT ma_mon, ten_mon FROM mon_hoc WHERE ma_mon = $1 OR slug = $1', [ma_mon]);
-  if (!course) {
-    course = await db.queryOne('SELECT TOP 1 ma_mon, ten_mon FROM mon_hoc ORDER BY thu_tu ASC');
-  }
-  const resolvedMon = course ? course.ma_mon : 'mon_csdl';
-
-  // Fetch ALL questions for this course at once (sử dụng Index scan nhẹ, không dùng ORDER BY NEWID())
-  const rawQuestions = await db.query(`
-    SELECT q.ma_cau_hoi, q.noi_dung, q.loai_cau_hoi, q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d,
-           q.du_lieu_cau_hoi, q.muc_bloom, q.do_kho, q.vi_tri_dap_an_dung
-    FROM cau_hoi q
-    JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
-    JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
-    WHERE c.ma_mon = $1
-    ORDER BY q.ma_cau_hoi ASC
-  `, [resolvedMon]);
-
-  // Xáo trộn mảng câu hỏi trên RAM Node.js bằng thuật toán Fisher-Yates (0ms disk overhead)
-  const pool = (rawQuestions || []).map(formatSafeQuestion);
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-
-  return {
-    session_id: pool.length ? openSession(ma_nguoi_dung, resolvedMon, pool) : null,
-    ma_mon: resolvedMon,
-    ten_mon: course ? course.ten_mon : 'Cơ sở Dữ liệu',
-    tong_so_cau_trong_kho: pool.length,
-    max_sinh_mang: 5,
-    thoi_gian_moi_cau: 25,
-    danh_sach_cau_hoi: pool,
-    questions: pool
-  };
-}
-
-/**
- * Fetch the next batch of questions (kept as backward-compatible fallback)
- */
-async function getNextBatch(ma_mon = 'mon_csdl', excludeIds = []) {
-  let course = await db.queryOne('SELECT ma_mon FROM mon_hoc WHERE ma_mon = $1 OR slug = $1', [ma_mon]);
-  const resolvedMon = course ? course.ma_mon : 'mon_csdl';
-
-  let rawQuestions = [];
-  const safeExclude = Array.isArray(excludeIds) ? excludeIds.filter(id => typeof id === 'string' && id.trim().length > 0) : [];
-
-  if (safeExclude.length > 0) {
-    const safeInClause = safeExclude.map(id => `'${id.replace(/'/g, "''")}'`).join(',');
-    rawQuestions = await db.query(`
-      SELECT q.ma_cau_hoi, q.noi_dung, q.loai_cau_hoi, q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d,
-             q.du_lieu_cau_hoi, q.muc_bloom, q.do_kho, q.vi_tri_dap_an_dung, q.giai_thich
-      FROM cau_hoi q
-      JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
-      JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
-      WHERE c.ma_mon = $1 AND q.ma_cau_hoi NOT IN (${safeInClause})
-      ORDER BY NEWID()
-    `, [resolvedMon]);
-  } else {
-    rawQuestions = await db.query(`
-      SELECT q.ma_cau_hoi, q.noi_dung, q.loai_cau_hoi, q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d,
-             q.du_lieu_cau_hoi, q.muc_bloom, q.do_kho, q.vi_tri_dap_an_dung, q.giai_thich
-      FROM cau_hoi q
-      JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
-      JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
-      WHERE c.ma_mon = $1
-      ORDER BY NEWID()
-    `, [resolvedMon]);
-  }
-
-  const formattedQuestions = (rawQuestions || []).map(formatSafeQuestion);
-
-  return {
-    ma_mon: resolvedMon,
-    so_luong: formattedQuestions.length,
-    da_het_kho: formattedQuestions.length === 0,
-    danh_sach_cau_hoi: formattedQuestions,
-    questions: formattedQuestions
-  };
-}
-
-/**
- * Helper to normalize string for answer comparison
- */
-function normalizeAnswer(str) {
-  if (typeof str !== 'string') return '';
-  return str
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
-}
-
-/**
- * Check an answer in real-time
- * Position-independent: Matches against the exact text of the correct answer
- */
-async function checkAnswer(ma_cau_hoi, tra_loi, tra_loi_text = null) {
-  if (!ma_cau_hoi) throw new Error('Mã câu hỏi không được để trống.');
-
-  const q = await db.queryOne('SELECT * FROM cau_hoi WHERE ma_cau_hoi = $1', [ma_cau_hoi]);
-  if (!q) throw new Error('Không tìm thấy câu hỏi trong ngân hàng đề.');
-
-  let isCorrect = false;
-  let viTriDapAnDung = 0;
-  let dapAnDungText = '';
-  const rawAnswers = [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d].filter(Boolean);
-
-  if (q.loai_cau_hoi === 'TRAC_NGHIEM_4' || (!q.loai_cau_hoi && q.dap_an_a)) {
-    viTriDapAnDung = Number(q.vi_tri_dap_an_dung ?? 0);
-    const all4 = [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d];
-    dapAnDungText = all4[viTriDapAnDung] || all4[0] || '';
-  } else if (q.loai_cau_hoi === 'DIEN_TU') {
-    try {
-      const parsed = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : q.du_lieu_cau_hoi;
-      dapAnDungText = parsed.blank_answer || (parsed.options ? parsed.options[0] : '');
-      const opts = parsed.options || [];
-      const exp = normalizeAnswer(dapAnDungText);
-      const foundIdx = opts.findIndex(o => normalizeAnswer(o) === exp);
-      viTriDapAnDung = foundIdx >= 0 ? foundIdx : 0;
-    } catch (e) {
-      dapAnDungText = '';
-    }
-  } else if (q.loai_cau_hoi === 'NOI_CAP') {
-    try {
-      const parsed = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : q.du_lieu_cau_hoi;
-      if (parsed.pairs && parsed.pairs[0]) {
-        dapAnDungText = parsed.pairs[0].right;
-      } else if (parsed.left_items && parsed.right_items && parsed.matches) {
-        const targetLeftId = parsed.left_items[0].id;
-        const targetRightId = parsed.matches[targetLeftId];
-        const rightItem = parsed.right_items.find(r => r.id === targetRightId) || parsed.right_items[0];
-        dapAnDungText = rightItem ? rightItem.text : '';
-      }
-      viTriDapAnDung = 0;
-    } catch (e) {
-      dapAnDungText = '';
-    }
-  } else if (q.loai_cau_hoi === 'SAP_XEP_CAU') {
-    try {
-      const parsed = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : q.du_lieu_cau_hoi;
-      dapAnDungText = (parsed.correct_order || []).join(' → ');
-      viTriDapAnDung = 0;
-    } catch (e) {
-      dapAnDungText = '';
-    }
-  }
-
-  // So khớp đáp án theo nội dung văn bản (độc lập 100% với vị trí hiển thị A/B/C/D)
-  const normExpected = normalizeAnswer(dapAnDungText);
-  const textSubmitted = (typeof tra_loi === 'string' && isNaN(Number(tra_loi)))
-    ? tra_loi
-    : (typeof tra_loi_text === 'string' ? tra_loi_text : null);
-
-  if (textSubmitted !== null && textSubmitted.trim().length > 0) {
-    isCorrect = (normalizeAnswer(textSubmitted) === normExpected);
-  } else {
-    // Dự phòng nếu client hoặc unit test truyền vị trí index (0, 1, 2, 3)
-    const choiceIdx = typeof tra_loi === 'number' ? tra_loi : parseInt(tra_loi, 10);
-    if (!isNaN(choiceIdx)) {
-      if (choiceIdx === viTriDapAnDung) {
-        isCorrect = true;
-      } else if (rawAnswers[choiceIdx] && normalizeAnswer(rawAnswers[choiceIdx]) === normExpected) {
-        isCorrect = true;
-      }
-    }
-  }
-
-  return {
-    ma_cau_hoi,
-    is_correct: isCorrect,
-    la_dung: isCorrect,
-    vi_tri_dap_an_dung: viTriDapAnDung,
-    correct_answer: dapAnDungText,
-    dap_an_dung: viTriDapAnDung,
-    dap_an_dung_text: dapAnDungText,
-    giai_thich: q.giai_thich || 'Khái niệm trọng tâm giúp khắc sâu kiến thức.'
-  };
-}
-
-/**
- * Conclude an Extreme Survival Match
- * Computes rewards (Coins & EXP), records history, and returns performance summary
- */
-async function finishSession(ma_nguoi_dung, { session_id } = {}) {
-  return withUserLock('extreme:' + session_id, async () => {
-    const session = requireSession(session_id, ma_nguoi_dung);
-    if (session.result) return session.result;
-
-    const tong_so_cau_lam = session.answers.length;
-    const tong_so_cau_dung = session.correct;
-    const chuoi_dung_cao_nhat = session.maxStreak;
-    const tong_diem = session.score;
-    const thoi_gian_giay = Math.max(0, Math.round((Date.now() - session.startedAt) / 1000));
-    const vong_lap = session.round;
-    const earnedCoins = ma_nguoi_dung ? Math.min(250, Math.floor(tong_diem / 40) + tong_so_cau_dung * 2 + chuoi_dung_cao_nhat * 3) : 0;
-    let earnedExp = ma_nguoi_dung ? Math.min(600, tong_so_cau_dung * 6 + chuoi_dung_cao_nhat * 10 + (vong_lap - 1) * 60) : 0;
-
-    if (ma_nguoi_dung && tong_so_cau_lam) {
-      await db.transaction(async tx => {
-        const moc = await tx.queryOne(`
-          SELECT TOP 1 m.ma_moc FROM moc_bai_hoc m JOIN chuong_hoc c ON m.ma_chuong=c.ma_chuong
-          WHERE c.ma_mon=$1 ORDER BY c.thu_tu,m.thu_tu
-        `, [session.course]);
-        if (!moc) throw new Error('Không tìm thấy mốc để ghi kết quả.');
-        const details = session.answers.map(({ ma_cau_hoi, la_dung }) => ({ ma_cau_hoi, la_dung }));
-        await tx.execute(`
-          INSERT INTO lich_su_phien_hoc(ma_phien,ma_nguoi_dung,ma_moc,loai_phien,buoc_so,
-            thoi_gian_tong_giay,ti_le_dung,toc_do_trung_binh_giay,tong_so_lan_tra_cuu,chi_tiet_cau_hoi)
-          VALUES($1,$2,$3,'THI_DAU_CUC_HAN',$4,$5,$6,$7,0,$8)
-        `, ['ext_' + session_id, ma_nguoi_dung, moc.ma_moc, vong_lap, thoi_gian_giay,
-          Math.round(tong_so_cau_dung / tong_so_cau_lam * 100), thoi_gian_giay / tong_so_cau_lam, JSON.stringify(details)]);
-        if (earnedCoins) await mutateCoinsInTransaction(tx, ma_nguoi_dung, earnedCoins, 'THI_DAU_CUC_HAN', 'Thưởng Cực hạn');
-        if (earnedExp) earnedExp = (await addExperienceInTransaction(tx, ma_nguoi_dung, earnedExp, { repeat: true })).expAwarded;
-      });
-    }
-
-  // Determine achievement badge
-  let badgeTitle = 'Tập Sự Cực Hạn';
-  if (tong_so_cau_dung >= 50) badgeTitle = 'Huyền Thoại Bất Tử';
-  else if (tong_so_cau_dung >= 30) badgeTitle = 'Bậc Thầy Bền Bỉ';
-  else if (tong_so_cau_dung >= 15) badgeTitle = 'Dũng Giả Bất Khuất';
-  else if (tong_so_cau_dung >= 5) badgeTitle = 'Chiến Binh Sinh Tồn';
-
-  session.result = {
-    success: true,
-    badgeTitle,
-    earnedCoins,
-    earnedExp,
-    rewards: {
-      coins: earnedCoins,
-      exp: earnedExp
-    },
-    summary: {
-      tong_so_cau_lam,
-      total_answered: tong_so_cau_lam,
-      tong_so_cau_dung,
-      correct_count: tong_so_cau_dung,
-      chuoi_dung_cao_nhat,
-      max_streak: chuoi_dung_cao_nhat,
-      tong_diem,
-      total_score: tong_diem,
-      thoi_gian_giay,
-      vong_lap,
-      loops_completed: vong_lap,
-      badge: badgeTitle
-    }
-  };
-    return session.result;
-  });
-}
-
-module.exports = {
-  startSession,
-  getNextBatch,
-  checkAnswer,
-  gradeSession,
-  finishSession
-};
+module.exports = { startSession, getNextBatch, gradeSession, finishSession };

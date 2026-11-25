@@ -26,7 +26,8 @@ function lockQuestUser(tx, userId) {
 function readEvidence(connection, userId, day) {
   return connection.queryOne(
     "SELECT EXISTS (SELECT 1 FROM study_sessions s WHERE s.user_id = $1"
-      + ' AND s.finished_at >= $2 AND s.finished_at < $3) AS "STUDY",'
+      + ' AND s.finished_at >= $2 AND s.finished_at < $3'
+      + " AND (s.kind <> 'EXTREME' OR EXISTS (SELECT 1 FROM session_answers a WHERE a.session_id = s.id))) AS \"STUDY\","
       + " (EXISTS (SELECT 1 FROM match_players p JOIN matches m ON m.id = p.match_id"
       + " WHERE p.user_id = $1 AND m.status = 'FINISHED' AND m.finished_at >= $2 AND m.finished_at < $3)"
       + " OR EXISTS (SELECT 1 FROM coin_ledger l WHERE l.user_id = $1 AND l.kind = 'EXTREME_REWARD'"

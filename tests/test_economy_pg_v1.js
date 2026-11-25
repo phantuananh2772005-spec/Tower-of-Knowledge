@@ -234,11 +234,32 @@ test('Vietnam daily quest eligibility and rewards move together across UTC 17:00
       assert.equal(dailyReset.progress.PET_CARE, false);
       rejected(await claimPetQuest(send, token), 400);
 
-      const { id: subjectId } = await tx.queryOne('SELECT id FROM subjects ORDER BY id LIMIT 1');
-      await tx.execute(
+      const { id: subjectId } = await tx.queryOne(
+        "INSERT INTO subjects (slug, name, sort_order) VALUES ($1, 'Quest boundary', 90) RETURNING id",
+        ['quest-boundary-' + randomUUID()]
+      );
+      const { id: sessionId } = await tx.queryOne(
         "INSERT INTO study_sessions (user_id, kind, subject_id, started_at, finished_at, finish_kind)"
-        + " VALUES ($1, 'EXTREME', $2, $3, $4, 'SUBMITTED')",
+        + " VALUES ($1, 'EXTREME', $2, $3, $4, 'SUBMITTED') RETURNING id",
         [user.id, subjectId, before, after]
+      );
+      assert.equal((await getStatus()).progress.STUDY, false, 'Closing an Extreme session without an attempt is not study');
+      const chapter = await tx.queryOne(
+        "INSERT INTO chapters (subject_id, title, sort_order) VALUES ($1, 'Chapter', 1) RETURNING id", [subjectId]
+      );
+      const milestone = await tx.queryOne(
+        "INSERT INTO milestones (chapter_id, title, kind, sort_order, reward_xp, reward_coins, step_count, questions_per_step)"
+        + " VALUES ($1, 'Quiz', 'QUIZ', 1, 0, 0, 1, 1) RETURNING id", [chapter.id]
+      );
+      const question = await tx.queryOne(
+        "INSERT INTO questions (milestone_id, type, bloom_level, step_no, difficulty, stem, payload)"
+        + " VALUES ($1, 'FILL_BLANK', 'REMEMBER', 1, 1, 'Fill the blank', $2) RETURNING id",
+        [milestone.id, { sentence_template: 'A {blank}', options: ['word'], blank_answer: 'word' }]
+      );
+      await tx.execute('INSERT INTO study_session_questions VALUES ($1, 1, $2)', [sessionId, question.id]);
+      await tx.execute(
+        'INSERT INTO session_answers (session_id, attempt_no, question_position, submitted_text, is_correct)'
+        + " VALUES ($1, 1, 1, 'word', true)", [sessionId]
       );
       assert.equal((await getStatus()).progress.STUDY, true);
       assert.equal((await getStatus()).progress.BATTLE, false);

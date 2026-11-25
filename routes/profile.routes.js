@@ -11,8 +11,9 @@ const journeyQuery = `
     WHERE p.user_id = $1 AND s.status = 'ACTIVE'
   ), activity AS (
     SELECT (finished_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::date AS day, count(*) AS sessions
-    FROM study_sessions
-    WHERE user_id = $1 AND finished_at >= CURRENT_TIMESTAMP - interval '90 days'
+    FROM study_sessions s
+    WHERE s.user_id = $1 AND s.finished_at >= CURRENT_TIMESTAMP - interval '90 days'
+      AND (s.kind <> 'EXTREME' OR EXISTS (SELECT 1 FROM session_answers a WHERE a.session_id = s.id))
     GROUP BY 1
   ), season_awards AS (
     SELECT season_no, rank, coins_awarded
