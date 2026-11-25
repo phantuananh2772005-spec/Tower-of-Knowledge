@@ -9,7 +9,7 @@ Nhánh `local-pg-v1` tách từ `main` tại `fe206d3`. [Luật nghiệp vụ](L
 | 2 · DDL và seed | Đã áp trên PostgreSQL 16.16 qua Docker local. Schema `app_v1` có 29 bảng, 169 cột, 8 view và ba nhóm trigger. Đã kiểm chạy lại, rollback hai lần, áp lại cùng seed. Hướng dẫn ở [README](database/pg-v1/README.md). |
 | 3 · Kiểm chứng DB | [verify_v1.sql](database/pg-v1/verify_v1.sql) đạt **75/75 ca** trên PostgreSQL 16.16. Đối soát ví sau thưởng, mua và rollback có **0 sai lệch**. Còn **0 dòng dữ liệu thử** sau rollback. |
 | 4 · Chỉnh ứng dụng | **PASS 9/9 nhóm**. Thứ tự và phạm vi ở [KE_HOACH_SUA_CODE.md](KE_HOACH_SUA_CODE.md). |
-| 5 · Chạy thử đầy đủ | Thực hiện sau khi chuyển các nhóm ứng dụng. |
+| 5 · Chạy thử đầy đủ | Đã kiểm local sau seed. [Kết quả từng luồng](KET_QUA_CHAY_LOCAL.md) ghi kiểm thử 19/19 ứng dụng, 75/75 SQL và trận xếp hạng giữa hai người. |
 
 ## Kiểm thử từng nhóm Bước 4
 
@@ -28,6 +28,32 @@ Nhánh `local-pg-v1` tách từ `main` tại `fe206d3`. [Luật nghiệp vụ](L
 Nếu tiến trình Cực Hạn khởi động lại sau khi chốt, kết quả và Xu đã cấp vẫn đọc được, còn EXP thực nhận của lần chốt trước hiển thị dấu gạch khi không còn biên nhận trong bộ nhớ.
 
 Không có thay đổi trên `main` hoặc máy chủ Render. Máy local dùng container `thaptrithuc-pg-v1` với cổng loopback 55432, database `thaptrithuc_v1`. Script quản trị chạy qua socket trong container.
+
+## Các commit chuyển ứng dụng
+
+| Nhóm | Commit | Mã và dữ liệu chính |
+|---|---|---|
+| Config | `8c26d2d` | `config/local-env.js`, `database/db.js`, `server.js` |
+| Auth và users | `8709216` | Route và service xác thực, Google, khôi phục, middleware, giao diện tài khoản |
+| Pet và inventory | `373e00c` | Route và service Pet, inventory và giao diện Shop |
+| Nội dung và course | `487da86` | Service môn, phiên, câu hỏi, kỷ lục và route tiến độ |
+| Economy và quest | `a94e886` | Service Xu, EXP, nhiệm vụ và giao diện thưởng |
+| Arena và season | `ccaf610` | Service trận và mùa, route Arena, Socket.IO và giao diện trận |
+| Admin | `83dd196` | Service danh mục, phân quyền, báo cáo, route và giao diện Admin |
+| Extreme | `b6036cb` | Luật Cực Hạn, service, route, lịch sử Admin, hồ sơ và giao diện |
+| Seed và scripts | `f0af2a9` | Lệnh npm local, PostgreSQL SQL runner, seed giáo trình và bot |
+
+## Điểm yếu và cơ chế chặn
+
+| Điểm cần chặn | Cơ chế hiện tại |
+|---|---|
+| Ghi lượt của câu chưa được phát | Khóa ngoại ghép từ lượt đến phiên và vị trí câu đã phát |
+| Phát câu thuộc môn khác trong trận | Backend kiểm tổ tiên và môn trước khi ghi hiệp. Kiểm HTTP và Socket.IO xác nhận không có hiệp hoặc gói câu. |
+| Đội Pet hay phụ kiện của người khác | Khóa ngoại ghép từ slot của người dùng đến quyền sở hữu |
+| Ghi đè đề đã có lịch sử | Runtime chỉ cập nhật trạng thái, bước và độ khó. Sửa nội dung tạo bản mới. Khóa ngoại lịch sử còn trỏ bản cũ. |
+| Nộp chốt trận, chốt phiên hoặc nhận thưởng ngày nhiều lần | Khóa dòng và transaction lưu kết quả, thưởng và sổ Xu. Nhiệm vụ có khóa duy nhất theo mã, người dùng và ngày Việt Nam. |
+| Xu và sổ lệch sau thưởng hoặc mua | Khóa dòng người dùng, ghi ledger và cập nhật ví trong cùng transaction. Runtime bị cấm sửa hoặc xóa dòng sổ. |
+| Gửi tham số khiên | UI ẩn khiên. HTTP và Socket.IO từ chối trường khiên ở bước ghi lượt. |
 
 ## Dữ liệu mẫu và phần còn thiếu
 
