@@ -1,3 +1,6 @@
+-- Historical content source read by scripts/seed-pg-v1-content.js.
+\echo Use npm run seed to load this content into local PostgreSQL V1.
+\quit
 -- =======================================================================
 -- SEED DATA: seed_postgres_cds.sql
 -- Course: Chuyen doi so & Kinh te so (mon_cds / chuyen-doi-so)

@@ -49,7 +49,30 @@ ALTER ROLE thaptrithuc_v1_app IN DATABASE thaptrithuc_v1 SET search_path TO app_
 \password thaptrithuc_v1_app
 ```
 
-Tạo `.env.local` ở thư mục gốc từ `.env.local.example`. Điền mật khẩu của login ứng dụng đã mã hóa theo cú pháp URL và một `JWT_SECRET` riêng cho local. Chạy `npm ci`, `node --test tests/test_db_adapter.js` rồi `npm start`. Server nghe loopback tại cổng `PORT` trong tệp.
+Tạo `.env.local` ở thư mục gốc từ `.env.local.example`. Điền mật khẩu của login ứng dụng đã mã hóa theo cú pháp URL và một `JWT_SECRET` riêng cho local. Chạy các lệnh sau sau khi tạo login ứng dụng. Server nghe loopback tại cổng `PORT` trong tệp.
+
+```powershell
+npm ci
+npm run seed
+npm test
+npm start
+```
+
+`npm run migrate` áp DDL và dữ liệu tham chiếu qua container Docker local đã cấu hình ở trên. `npm run test:db` chạy bộ kiểm SQL trên cùng container. Với bản PostgreSQL cài trực tiếp, dùng các lệnh psql ở phần dưới.
+
+`npm run seed` kết nối bằng login runtime từ `.env.local` và nạp dữ liệu mẫu học tập, ba bot luyện tập cùng Pet của bot trong một transaction. Chạy được nhiều lần. Tài khoản bot chỉ phục vụ Đấu trường. Phiên học, tiến độ và tài khoản học viên được tạo qua giao diện hoặc bộ kiểm thử có rollback.
+
+### Tài khoản Admin local
+
+Đăng ký một tài khoản qua trang học viên. Mở psql local bằng tài khoản quản trị cơ sở dữ liệu, rồi nâng quyền tài khoản đã chọn bằng các lệnh sau. Đăng nhập lại tại `/admin/` vì thay đổi quyền thu hồi phiên cũ.
+
+```sql
+\prompt 'Tên đăng nhập local: ' bootstrap_admin_username
+UPDATE app_v1.users
+SET role = 'ADMIN', session_version = session_version + 1
+WHERE username = :'bootstrap_admin_username' AND role = 'LEARNER' AND disabled_at IS NULL
+RETURNING username, role;
+```
 
 ## Chạy với PostgreSQL cài local
 
@@ -63,6 +86,8 @@ psql -X -q -h 127.0.0.1 -U postgres -d thaptrithuc_v1 -f database/pg-v1/verify_v
 ```
 
 ## Tệp và hành vi
+
+`npm test` chọn các bộ kiểm ứng dụng đã chuyển sang V1. Các bài kiểm riêng lẻ còn tham chiếu cấu trúc cũ được giữ để đối chiếu lịch sử. Hai tệp `database/seed_postgres*.sql` chỉ cung cấp nội dung gốc cho script chuyển seed V1.
 
 - [001_schema.sql](001_schema.sql) là điểm chạy DDL. Các tệp trong **schema/** được nạp theo thứ tự bằng psql. Lần chạy lại kiểm dấu phiên bản và số bảng/cột, không tạo bản sao hay ghi lại dữ liệu.
 - [seed_reference.sql](seed_reference.sql) nạp danh mục Pet, phụ kiện, hai môn mẫu, nhiệm vụ ngày và mùa đầu từ nguồn trong repo. Dữ liệu đã có được giữ khi chạy lại.

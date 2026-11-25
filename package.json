@@ -6,9 +6,10 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node tests/test_runner.js",
-    "migrate": "node database/migrate.js",
-    "seed": "node database/seed.js"
+    "test": "node --test tests/test_db_adapter.js tests/test_auth_pg_v1.js tests/test_pet_inventory_pg_v1.js tests/test_course_pg_v1.js tests/test_economy_pg_v1.js tests/test_arena_pg_v1.js tests/test_admin_pg_v1.js tests/test_extreme_pg_v1.js",
+    "test:db": "node scripts/run-pg-v1-sql.js verify",
+    "migrate": "node scripts/run-pg-v1-sql.js migrate",
+    "seed": "node scripts/seed-pg-v1.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

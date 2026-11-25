@@ -1,3 +1,6 @@
+-- Historical content source read by scripts/seed-pg-v1-content.js.
+\echo Use npm run seed to load this content into local PostgreSQL V1.
+\quit
 -- =======================================================================
 -- SEED DATA: 002_seed_postgres.sql
 -- Du an: Tower of Knowledge (Giao trinh Co so Du lieu & Dau truong 1v1)
