@@ -1,600 +1,417 @@
-/**
- * Arena 1v1 Battle Service
- * Manages match lifecycle, turns, damage calculation, and victory resolution.
- */
-
 const db = require('../database/db');
-const { calculateDamage, applyDamage, resolveMatchOutcome } = require('../core/rules/combat.rules');
-const { mutateCoinsInTransaction, addExperienceInTransaction } = require('./economy.service');
-const arenaRules=require('../public/js/arena-rules');
-const { syncArenaSeason } = require('./arena-season.service');
+const arenaRules = require('../public/js/arena-rules');
+const { acquireArenaSeasonLock, syncArenaSeason } = require('./arena-season.service');
+const { awardRepeatXpInTransaction } = require('./economy.service');
+const { formatPet } = require('./pet.service');
+const { correctAnswer, gradeQuestion, pairMatches, presentQuestion } = require('./study-questions');
+const { mutateCoinsInTransaction } = require('./wallet.service');
 
-/**
- * Create a new 1v1 match between 2 players
- */
-async function createMatch(player1Id, player2Id, ma_mon = 'mon_csdl', mode = 'PRACTICE') {
-  if (!player1Id || !player2Id || player1Id === player2Id) throw new Error('Trận đấu cần hai người chơi khác nhau.');
+const MAX_ROUNDS = 10;
+const MODES = ['RANKED', 'CASUAL', 'PRACTICE'];
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const answerFields = new Set([
+  'match_id', 'user_id', 'round_no', 'selected_option_position', 'submitted_text', 'response'
+]);
+const matchColumns = 'id, subject_id, mode, status, started_at, finished_at, finish_reason, season_no';
 
-  if(!['RANKED','CASUAL','PRACTICE'].includes(mode))throw new Error('Chế độ đấu không hợp lệ.');
-  if(mode==='RANKED'&&[player1Id,player2Id].some(id=>id.startsWith('usr_bot_')))throw new Error('Đấu hạng chỉ dành cho hai người chơi thật.');
-  const ma_tran = `match_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-
-  await db.transaction(async tx => {
-  const players = await tx.query('SELECT ma_nguoi_dung FROM nguoi_dung WHERE ma_nguoi_dung IN ($1, $2)', [player1Id, player2Id]);
-  if (players.length !== 2) throw new Error('Người chơi không tồn tại. Hãy đăng nhập lại hoặc chọn đối thủ hợp lệ.');
-  // Create match
-  await tx.execute(`
-    INSERT INTO tran_dau_1v1 (ma_tran, ma_mon, trang_thai, thoi_gian_bat_dau, che_do)
-    VALUES ($1, $2, 'DANG_THI_DAU', SYSDATETIME(), $3)
-  `, [ma_tran, ma_mon, mode]);
-
-  // Player 1 pet
-  const pet1 = await tx.queryOne(`
-    SELECT tc.ma_thu_cung, tc.he_so_sat_thuong 
-    FROM thu_cung_so_huu sh JOIN thu_cung tc ON sh.ma_thu_cung = tc.ma_thu_cung 
-    WHERE sh.ma_nguoi_dung = $1 AND sh.dang_kich_hoat = $2
-  `, [player1Id, true]);
-
-  // Player 2 pet
-  const pet2 = await tx.queryOne(`
-    SELECT tc.ma_thu_cung, tc.he_so_sat_thuong 
-    FROM thu_cung_so_huu sh JOIN thu_cung tc ON sh.ma_thu_cung = tc.ma_thu_cung 
-    WHERE sh.ma_nguoi_dung = $1 AND sh.dang_kich_hoat = $2
-  `, [player2Id, true]);
-
-  const p1IdInMatch = `pm_${ma_tran}_1`;
-  const p2IdInMatch = `pm_${ma_tran}_2`;
-
-  await tx.execute(`
-    INSERT INTO nguoi_choi_trong_tran (ma_nguoi_choi_trong_tran, ma_tran, ma_nguoi_dung, ma_thu_cung, mau_hien_tai, mau_toi_da, ket_qua)
-    VALUES ($1, $2, $3, $4, 100, 100, 'CHUA_KET_THUC')
-  `, [p1IdInMatch, ma_tran, player1Id, pet1 ? pet1.ma_thu_cung : null]);
-
-  await tx.execute(`
-    INSERT INTO nguoi_choi_trong_tran (ma_nguoi_choi_trong_tran, ma_tran, ma_nguoi_dung, ma_thu_cung, mau_hien_tai, mau_toi_da, ket_qua)
-    VALUES ($1, $2, $3, $4, 100, 100, 'CHUA_KET_THUC')
-  `, [p2IdInMatch, ma_tran, player2Id, pet2 ? pet2.ma_thu_cung : null]);
-
-  // Pick 10 questions randomly across ALL question types and difficulties from course
-  const questions = await tx.query(`
-    SELECT TOP 10 q.ma_cau_hoi
-    FROM cau_hoi q
-    JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
-    JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
-    WHERE c.ma_mon = $1
-    ORDER BY NEWID()
-  `, [ma_mon]);
-
-  // If NEWID() returns fewer or not supported, pick all questions and shuffle
-  let selectedQuestions = questions;
-  if (!selectedQuestions || selectedQuestions.length < 10) {
-    const all = await tx.query(`
-      SELECT q.ma_cau_hoi 
-      FROM cau_hoi q
-      JOIN moc_bai_hoc m ON q.ma_moc = m.ma_moc
-      JOIN chuong_hoc c ON m.ma_chuong = c.ma_chuong
-      WHERE c.ma_mon = $1
-    `, [ma_mon]);
-    const shuffled = (all || []).sort(() => Math.random() - 0.5);
-    selectedQuestions = shuffled.slice(0, 10);
-  }
-
-  if (!selectedQuestions.length) throw new Error('Môn học chưa có câu hỏi để thi đấu.');
-  for (let i = 0; i < selectedQuestions.length; i++) {
-    const ma_cau_trong_tran = `qm_${ma_tran}_${i + 1}`;
-    await tx.execute(`
-      INSERT INTO cau_hoi_trong_tran (ma_cau_trong_tran, ma_tran, ma_cau_hoi, thu_tu_cau)
-      VALUES ($1, $2, $3, $4)
-    `, [ma_cau_trong_tran, ma_tran, selectedQuestions[i].ma_cau_hoi, i + 1]);
-  }
-
-  });
-  return await getMatchState(ma_tran);
+function requireUuid(value, message) {
+  if (typeof value !== 'string' || !UUID.test(value)) throw new Error(message);
 }
 
-/**
- * Get full state of a match
- */
-async function getMatchState(ma_tran) {
-  const match = await db.queryOne('SELECT * FROM tran_dau_1v1 WHERE ma_tran = $1', [ma_tran]);
-  if (!match) throw new Error('Không tìm thấy trận đấu.');
+function requireRound(roundNo) {
+  if (!Number.isInteger(roundNo) || roundNo < 1 || roundNo > MAX_ROUNDS) {
+    throw new Error('Thứ tự câu hỏi không hợp lệ.');
+  }
+}
 
-  const players = await db.query(`
-    SELECT p.ma_nguoi_choi_trong_tran, p.ma_nguoi_dung, u.ten_dang_nhap, u.ten_hien_thi, u.khung_avatar,
-           p.mau_hien_tai, p.mau_toi_da, p.tong_sat_thuong_gay_ra, p.ket_qua, p.xu_nhan_duoc, p.exp_nhan_duoc, p.diem_hang_thay_doi,
-           tc.ma_thu_cung, tc.ten_thu_cung, tc.he_so_sat_thuong, r.diem AS diem_hang
-    FROM nguoi_choi_trong_tran p
-    JOIN nguoi_dung u ON p.ma_nguoi_dung = u.ma_nguoi_dung
-    LEFT JOIN thu_cung tc ON p.ma_thu_cung = tc.ma_thu_cung
-    LEFT JOIN diem_dau_hang r ON r.ma_nguoi_dung=p.ma_nguoi_dung AND r.ma_mon=$2
-    WHERE p.ma_tran = $1
-  `, [ma_tran, match.ma_mon]);
+async function selectActiveQuestions(tx, subjectId) {
+  const questions = await tx.query(
+    "SELECT q.id FROM questions q JOIN milestones m ON m.id = q.milestone_id"
+      + " JOIN chapters c ON c.id = m.chapter_id JOIN subjects s ON s.id = c.subject_id"
+      + " WHERE s.id = $1 AND s.status = 'ACTIVE' AND c.status = 'ACTIVE' AND m.status = 'ACTIVE'"
+      + " AND q.status = 'ACTIVE' ORDER BY random() LIMIT $2",
+    [subjectId, MAX_ROUNDS]
+  );
+  return questions.map(question => question.id);
+}
 
-  const questionsInMatch = await db.query(`
-    SELECT qm.ma_cau_trong_tran, qm.thu_tu_cau, q.ma_cau_hoi, q.noi_dung, q.loai_cau_hoi,
-           q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d, q.vi_tri_dap_an_dung,
-           q.du_lieu_cau_hoi, q.muc_bloom, q.do_kho, q.giai_thich
-    FROM cau_hoi_trong_tran qm
-    JOIN cau_hoi q ON qm.ma_cau_hoi = q.ma_cau_hoi
-    WHERE qm.ma_tran = $1
-    ORDER BY qm.thu_tu_cau ASC
-  `, [ma_tran]);
+async function openRound(tx, match, questionId, roundNo) {
+  requireUuid(questionId, 'Câu hỏi không thuộc môn của trận hoặc đã ngừng sử dụng.');
+  const selectedQuestion = await tx.queryOne(
+    "SELECT q.id FROM subjects s JOIN chapters c ON c.subject_id = s.id"
+      + " JOIN milestones m ON m.chapter_id = c.id JOIN questions q ON q.milestone_id = m.id"
+      + " WHERE s.id = $1 AND q.id = $2 AND s.status = 'ACTIVE' AND c.status = 'ACTIVE'"
+      + " AND m.status = 'ACTIVE' AND q.status = 'ACTIVE' FOR SHARE OF s, c, m, q",
+    [match.subject_id, questionId]
+  );
+  if (!selectedQuestion) throw new Error('Câu hỏi không thuộc môn của trận hoặc đã ngừng sử dụng.');
 
-  // Fetch turns taken
-  const turns = await db.query(`
-    SELECT l.ma_cau_trong_tran, l.ma_nguoi_choi_trong_tran,
-           l.la_dap_an_dung, l.thoi_gian_tra_loi_giay, l.sat_thuong_gay_ra
-    FROM luot_tra_loi l
-    JOIN cau_hoi_trong_tran qm ON l.ma_cau_trong_tran = qm.ma_cau_trong_tran
-    WHERE qm.ma_tran = $1
-  `, [ma_tran]);
+  await tx.execute(
+    'INSERT INTO match_rounds (match_id, round_no, question_id) VALUES ($1, $2, $3)',
+    [match.id, roundNo, questionId]
+  );
+}
 
+async function lockedUsers(tx, ids) {
+  return tx.query(
+    'SELECT id, role, disabled_at FROM users WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE',
+    [ids]
+  );
+}
+
+async function playerStats(connection, matchId) {
+  const rows = await connection.query(
+    'SELECT p.slot, p.user_id, p.result, p.coins_awarded, p.xp_awarded, p.rating_delta, p.hp, p.max_hp,'
+      + ' p.correct_count, p.answer_count, p.total_damage, u.username, u.display_name, u.role,'
+      + ' to_jsonb(pet) AS pet FROM v_match_player_stats p JOIN users u ON u.id = p.user_id'
+      + ' LEFT JOIN pets pet ON pet.id = u.equipped_pet_id WHERE p.match_id = $1 ORDER BY p.slot',
+    [matchId]
+  );
+  return rows.map(player => ({
+    ...player,
+    pet: formatPet(player.pet),
+    correct_count: Number(player.correct_count),
+    answer_count: Number(player.answer_count),
+    total_damage: Number(player.total_damage)
+  }));
+}
+
+async function issuedRounds(connection, matchId, roundNo = null) {
+  return connection.query(
+    "SELECT r.round_no, q.id, q.type, q.stem, q.bloom_level, q.difficulty, q.payload,"
+      + " COALESCE((SELECT jsonb_agg(jsonb_build_object('position', o.position, 'text', o.text,"
+      + " 'is_correct', o.is_correct) ORDER BY o.position) FROM question_options o WHERE o.question_id = q.id),"
+      + " '[]'::jsonb) AS options FROM match_rounds r JOIN questions q ON q.id = r.question_id"
+      + " WHERE r.match_id = $1 AND ($2::smallint IS NULL OR r.round_no = $2) ORDER BY r.round_no",
+    [matchId, roundNo]
+  );
+}
+
+async function requireRoundQuestion(tx, matchId, roundNo) {
+  const [question] = await issuedRounds(tx, matchId, roundNo);
+  if (!question) throw new Error('Không tìm thấy câu hỏi này trong trận.');
+  return question;
+}
+
+function publicRound(question, matchId) {
+  const { position, ...dto } = presentQuestion({ ...question, position: question.round_no }, matchId);
+  return { round_no: position, ...dto };
+}
+
+async function matchState(connection, match, participantId) {
+  const players = await playerStats(connection, match.id);
+  if (participantId && !players.some(player => player.user_id === participantId)) {
+    throw new Error('Bạn không thuộc trận đấu này.');
+  }
+  const rounds = (await issuedRounds(connection, match.id)).map(question => publicRound(question, match.id));
+  const turns = (await connection.query(
+    'SELECT a.round_no, p.user_id, a.is_correct, a.damage, a.response_seconds, a.answered_at'
+      + ' FROM match_answers a JOIN match_players p ON p.match_id = a.match_id AND p.slot = a.slot'
+      + ' WHERE a.match_id = $1 ORDER BY a.round_no, a.answered_at, a.slot',
+    [match.id]
+  )).map(turn => ({ ...turn, response_seconds: Number(turn.response_seconds) }));
+
+  const countByRound = new Map();
+  for (const turn of turns) countByRound.set(turn.round_no, (countByRound.get(turn.round_no) || 0) + 1);
+  const pending = rounds.find(round => (countByRound.get(round.round_no) || 0) < 2);
   return {
-    ma_tran: match.ma_tran,
-    che_do:match.che_do,
-    trang_thai: match.trang_thai,
-    thoi_gian_bat_dau: match.thoi_gian_bat_dau,
-    thoi_gian_ket_thuc: match.thoi_gian_ket_thuc,
-    nguoi_thang_cuoc: match.nguoi_thang_cuoc,
-    ly_do_ket_thuc: match.ly_do_ket_thuc,
-    nguoi_choi: players.map(p => ({
-      ma_nguoi_choi_trong_tran: p.ma_nguoi_choi_trong_tran,
-      ma_nguoi_dung: p.ma_nguoi_dung,
-      ten_dang_nhap: p.ten_dang_nhap,
-      ten_hien_thi: p.ten_hien_thi,
-      khung_avatar: p.khung_avatar,
-      mau_hien_tai: p.mau_hien_tai,
-      mau_toi_da: p.mau_toi_da,
-      tong_sat_thuong_gay_ra: p.tong_sat_thuong_gay_ra,
-      ket_qua: p.ket_qua,
-      diem_hang: Number(p.diem_hang || 0),
-      xu_nhan_duoc:p.xu_nhan_duoc,exp_nhan_duoc:p.exp_nhan_duoc,diem_hang_thay_doi:p.diem_hang_thay_doi,
-      thu_cung: p.ma_thu_cung ? {
-        ma_thu_cung: p.ma_thu_cung,
-        ten_thu_cung: p.ten_thu_cung,
-        he_so_sat_thuong: p.he_so_sat_thuong
-      } : null
-    })),
-    cau_hoi: questionsInMatch.map(q => {
-      let parsedData = null;
-      if (q.du_lieu_cau_hoi) {
-        try {
-          parsedData = typeof q.du_lieu_cau_hoi === 'string' ? JSON.parse(q.du_lieu_cau_hoi) : q.du_lieu_cau_hoi;
-        } catch (e) {}
-      }
-
-      const type = q.loai_cau_hoi || 'TRAC_NGHIEM_4';
-      let options = [];
-      let data = null;
-      if (type === 'TRAC_NGHIEM_4') {
-        options = [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d].filter(Boolean);
-      } else if (type === 'DIEN_TU') {
-        options = [...(parsedData?.cac_tu_lua_chon || parsedData?.options || [])].sort();
-        data = { sentence_template: parsedData?.sentence_template };
-      } else if (type === 'NOI_CAP') {
-        const pairs = parsedData?.pairs || parsedData?.cap_dung || [];
-        data = {
-          left: pairs.map(pair => pair.left).sort(),
-          right: pairs.map(pair => pair.right).sort()
-        };
-      } else if (type === 'SAP_XEP_CAU') {
-        options = [...(parsedData?.correct_order || parsedData?.cac_tu_dung || []),
-          ...(parsedData?.distractors || [])].sort();
-        data = { prompt: parsedData?.prompt };
-      }
-
-      return {
-        ma_cau_trong_tran: q.ma_cau_trong_tran,
-        ma_cau_hoi: q.ma_cau_hoi,
-        thu_tu_cau: q.thu_tu_cau,
-        noi_dung: q.noi_dung,
-        loai_cau_hoi: type,
-        muc_bloom: q.muc_bloom || 'NHO',
-        do_kho: q.do_kho || 1,
-        dap_an: options,
-        du_lieu_cau_hoi: data
-      };
-    }),
-    luot_da_tra_loi: turns
+    ...match,
+    players,
+    rounds,
+    turns,
+    winner_id: players.find(player => player.result === 'WIN')?.user_id ?? null,
+    current_round_no: match.status === 'ACTIVE' ? pending?.round_no ?? null : null
   };
 }
 
-/**
- * Player submits an answer for a specific question in the match
- */
-const normalizePairText = value => String(value ?? '').trim().toLowerCase();
-function matchesPair(expected, chosen) {
-  return chosen && normalizePairText(expected.left) === normalizePairText(chosen.left)
-    && normalizePairText(expected.right) === normalizePairText(chosen.right);
+async function loadMatch(connection, matchId, lock = '') {
+  requireUuid(matchId, 'Không tìm thấy trận đấu.');
+  const match = await connection.queryOne(
+    'SELECT ' + matchColumns + ' FROM matches WHERE id = $1' + lock,
+    [matchId]
+  );
+  if (!match) throw new Error('Không tìm thấy trận đấu.');
+  return match;
 }
 
-async function checkArenaPair(matchId, userId, round, pair) {
-  if (!Number.isInteger(round) || round < 1 || typeof pair?.left !== 'string'
-    || typeof pair?.right !== 'string' || pair.left.length > 1500 || pair.right.length > 1500) {
+function getMatchState(matchId, participantId) {
+  return db.transaction(async tx => {
+    const match = await loadMatch(tx, matchId, ' FOR SHARE');
+    return matchState(tx, match, participantId);
+  });
+}
+
+function createArenaService({ selectRoundQuestions = selectActiveQuestions } = {}) {
+  async function createMatch(player1Id, player2Id, subjectId, mode = 'PRACTICE') {
+    requireUuid(player1Id, 'Không tìm thấy người chơi thứ nhất.');
+    requireUuid(player2Id, 'Không tìm thấy người chơi thứ hai.');
+    requireUuid(subjectId, 'Môn thi đấu không hợp lệ.');
+    if (player1Id.toLowerCase() === player2Id.toLowerCase()) throw new Error('Trận đấu cần hai người chơi khác nhau.');
+    if (!MODES.includes(mode)) throw new Error('Chế độ đấu không hợp lệ.');
+
+    return db.transaction(async tx => {
+      const subject = await tx.queryOne("SELECT id FROM subjects WHERE id = $1 AND status = 'ACTIVE' FOR SHARE", [subjectId]);
+      if (!subject) throw new Error('Không tìm thấy môn thi đấu đang mở.');
+      const match = await tx.queryOne(
+        "INSERT INTO matches (subject_id, mode, status, started_at) VALUES ($1, $2, 'ACTIVE', clock_timestamp())"
+          + ' RETURNING ' + matchColumns,
+        [subject.id, mode]
+      );
+      const participants = await lockedUsers(tx, [player1Id, player2Id]);
+      if (participants.length !== 2 || participants.some(player => player.disabled_at)) {
+        throw new Error('Người chơi không tồn tại hoặc không còn hoạt động.');
+      }
+      if (mode !== 'PRACTICE' && participants.some(player => player.role === 'SYSTEM')) {
+        throw new Error('Chế độ này chỉ dành cho hai người chơi thật.');
+      }
+      await tx.execute(
+        'INSERT INTO match_players (match_id, slot, user_id) VALUES ($1, 1, $2), ($1, 2, $3)',
+        [match.id, player1Id, player2Id]
+      );
+
+      // The selector supplies candidates only. Every issued question must clear the same scope check.
+      const selected = await selectRoundQuestions(tx, subject.id);
+      if (!Array.isArray(selected) || !selected.length) throw new Error('Môn học chưa có câu hỏi để thi đấu.');
+      if (selected.length > MAX_ROUNDS || new Set(selected).size !== selected.length) {
+        throw new Error('Danh sách câu hỏi của trận không hợp lệ.');
+      }
+      for (const [index, questionId] of selected.entries()) await openRound(tx, match, questionId, index + 1);
+      return matchState(tx, match);
+    });
+  }
+  return { createMatch };
+}
+
+async function withMatchLock(matchId, work) {
+  requireUuid(matchId, 'Không tìm thấy trận đấu.');
+  return db.transaction(async tx => {
+    // Mode is fixed after match creation, so the unlocked read is safe before acquiring the season lock.
+    const existing = await tx.queryOne('SELECT mode FROM matches WHERE id = $1', [matchId]);
+    if (!existing) throw new Error('Không tìm thấy trận đấu.');
+    if (existing.mode === 'RANKED') await acquireArenaSeasonLock(tx);
+    const match = await loadMatch(tx, matchId, ' FOR UPDATE');
+    return work(tx, match);
+  });
+}
+
+async function requirePlayer(tx, matchId, userId) {
+  requireUuid(userId, 'Bạn không thuộc trận đấu này.');
+  const player = await tx.queryOne(
+    'SELECT p.slot, p.user_id, u.role FROM match_players p JOIN users u ON u.id = p.user_id'
+      + ' WHERE p.match_id = $1 AND p.user_id = $2',
+    [matchId, userId]
+  );
+  if (!player) throw new Error('Bạn không thuộc trận đấu này.');
+  return player;
+}
+
+async function precedingTurns(tx, matchId, roundNo) {
+  const previous = await tx.queryOne(
+    'SELECT count(*)::int AS attempts, max(answered_at) AS last_at'
+      + ' FROM match_answers WHERE match_id = $1 AND round_no < $2',
+    [matchId, roundNo]
+  );
+  if (previous.attempts !== (roundNo - 1) * 2) throw new Error('Câu hỏi này chưa tới lượt.');
+  return previous.last_at;
+}
+
+async function existingTurn(tx, matchId, roundNo, slot) {
+  return tx.queryOne(
+    'SELECT is_correct, damage, response_seconds, answered_at FROM match_answers'
+      + ' WHERE match_id = $1 AND round_no = $2 AND slot = $3',
+    [matchId, roundNo, slot]
+  );
+}
+
+function checkArenaPair(matchId, userId, roundNo, pair) {
+  requireRound(roundNo);
+  if (!pair || Object.keys(pair).some(name => name !== 'left' && name !== 'right')) {
     throw new Error('Cặp trả lời không hợp lệ.');
   }
-  const question = await db.queryOne(`
-    SELECT q.du_lieu_cau_hoi
-    FROM tran_dau_1v1 t
-    JOIN nguoi_choi_trong_tran p ON p.ma_tran=t.ma_tran AND p.ma_nguoi_dung=$2
-    JOIN cau_hoi_trong_tran qm ON qm.ma_tran=t.ma_tran AND qm.thu_tu_cau=$3
-    JOIN cau_hoi q ON q.ma_cau_hoi=qm.ma_cau_hoi
-    LEFT JOIN luot_tra_loi l ON l.ma_cau_trong_tran=qm.ma_cau_trong_tran
-      AND l.ma_nguoi_choi_trong_tran=p.ma_nguoi_choi_trong_tran
-    WHERE t.ma_tran=$1 AND t.trang_thai='DANG_THI_DAU' AND q.loai_cau_hoi='NOI_CAP'
-      AND l.ma_luot_tra_loi IS NULL AND
-      (SELECT COUNT(*) FROM luot_tra_loi prior
-        JOIN cau_hoi_trong_tran previous ON previous.ma_cau_trong_tran=prior.ma_cau_trong_tran
-        WHERE previous.ma_tran=t.ma_tran AND previous.thu_tu_cau<$3)=$4
-  `, [matchId, userId, round, (round - 1) * 2]);
-  if (!question) throw new Error('Câu nối cặp này chưa tới lượt hoặc đã hoàn thành.');
-  const raw = question.du_lieu_cau_hoi;
-  const data = typeof raw === 'string' ? JSON.parse(raw) : raw;
-  return { correct: (data?.pairs || data?.cap_dung || []).some(expected => matchesPair(expected, pair)) };
+  return db.transaction(async tx => {
+    const match = await loadMatch(tx, matchId, ' FOR SHARE');
+    if (match.status !== 'ACTIVE') throw new Error('Trận đấu đã kết thúc.');
+    const player = await requirePlayer(tx, match.id, userId);
+    await precedingTurns(tx, match.id, roundNo);
+    if (await existingTurn(tx, match.id, roundNo, player.slot)) throw new Error('Lượt trả lời đã hoàn thành.');
+    const question = await requireRoundQuestion(tx, match.id, roundNo);
+    return { matches: pairMatches(question, pair.left, pair.right) };
+  });
 }
 
-async function submitTurnAnswer({ ma_tran, ma_nguoi_dung, thu_tu_cau, vi_tri_dap_an_chon, cau_tra_loi = null, thoi_gian_giay = 5 }) {
-  const { player, isCorrect, damage, isCritical, newOpponentHp, replayed } = await db.transaction(async tx => {
-    const match = await tx.queryOne('SELECT * FROM tran_dau_1v1 WHERE ma_tran = $1' + (db.isPostgres ? ' FOR UPDATE' : ''), [ma_tran]);
-    if (!match) {
-      throw new Error('Trận đấu không tồn tại hoặc đã kết thúc.');
+function concludedOutcome(players, roundCount) {
+  const [first, second] = players;
+  if (first.hp <= 0 && second.hp > 0) return { winnerId: second.user_id, reason: 'KNOCKOUT' };
+  if (second.hp <= 0 && first.hp > 0) return { winnerId: first.user_id, reason: 'KNOCKOUT' };
+  if (first.hp <= 0 && second.hp <= 0) return { winnerId: null, reason: 'DRAW' };
+  if (!roundCount || players.some(player => player.answer_count < roundCount)) return null;
+
+  const advantage = first.hp - second.hp || first.correct_count - second.correct_count
+    || first.total_damage - second.total_damage;
+  if (!advantage) return { winnerId: null, reason: 'DRAW' };
+  return { winnerId: advantage > 0 ? first.user_id : second.user_id, reason: 'TIMEOUT' };
+}
+
+async function assignRating(tx, match, userId, seasonNo, result, hp) {
+  const previous = await tx.queryOne(
+    'SELECT points FROM rank_scores WHERE user_id = $1 AND subject_id = $2 AND season_no = $3',
+    [userId, match.subject_id, seasonNo]
+  );
+  const before = previous?.points ?? 0;
+  const after = Math.max(0, before + arenaRules.delta(result, hp));
+  await tx.execute(
+    'INSERT INTO rank_scores (user_id, subject_id, season_no, points) VALUES ($1, $2, $3, $4)'
+      + ' ON CONFLICT (user_id, subject_id, season_no) DO UPDATE SET points = EXCLUDED.points',
+    [userId, match.subject_id, seasonNo, after]
+  );
+  return after - before;
+}
+
+async function finishMatch(tx, match, players, outcome) {
+  const { at } = await tx.queryOne('SELECT clock_timestamp() AS at');
+  const ranked = match.mode === 'RANKED';
+  const season = ranked ? await syncArenaSeason(tx, at) : null;
+  const participants = await lockedUsers(tx, players.map(player => player.user_id));
+  const provedParticipation = players.every(player => player.answer_count > 0);
+  for (const participant of participants) {
+    const player = players.find(entry => entry.user_id === participant.id);
+    const result = !outcome.winnerId ? 'DRAW' : outcome.winnerId === player.user_id ? 'WIN' : 'LOSE';
+    const earns = provedParticipation && participant.role !== 'SYSTEM';
+    let rating = 0;
+    let xpAwarded = 0;
+    if (earns) {
+      const reward = arenaRules.rewards(match.mode, result);
+      if (ranked && participants.every(entry => entry.role !== 'SYSTEM')) {
+        rating = await assignRating(tx, match, player.user_id, season.season_no, result, player.hp);
+      }
+      if (reward.exp > 0) {
+        xpAwarded = (await awardRepeatXpInTransaction(tx, player.user_id, reward.exp, { occurred_at: at })).xp_awarded;
+      }
+      if (reward.coins > 0) {
+        await mutateCoinsInTransaction(tx, player.user_id, reward.coins, 'MATCH_REWARD', {
+          match_id: match.id, note: match.mode + ' · ' + result, occurred_at: at
+        });
+      }
     }
-
-    // Get player in match
-    const player = await tx.queryOne(`
-      SELECT p.*, tc.he_so_sat_thuong
-      FROM nguoi_choi_trong_tran p
-      LEFT JOIN thu_cung tc ON p.ma_thu_cung = tc.ma_thu_cung
-      WHERE p.ma_tran = $1 AND p.ma_nguoi_dung = $2
-    `, [ma_tran, ma_nguoi_dung]);
-    if (!player) throw new Error('Người chơi không thuộc trận đấu này.');
-
-    if (!Number.isInteger(thu_tu_cau) || thu_tu_cau < 1) {
-      throw new Error('Thứ tự câu hỏi không hợp lệ.');
-    }
-
-    // Get question in match with correct answer
-    const questionInMatch = await tx.queryOne(`
-      SELECT qm.ma_cau_trong_tran, q.loai_cau_hoi, q.vi_tri_dap_an_dung, q.du_lieu_cau_hoi
-      FROM cau_hoi_trong_tran qm
-      JOIN cau_hoi q ON qm.ma_cau_hoi = q.ma_cau_hoi
-      WHERE qm.ma_tran = $1 AND qm.thu_tu_cau = $2
-    `, [ma_tran, thu_tu_cau]);
-    if (!questionInMatch) throw new Error('Không tìm thấy câu hỏi này trong trận.');
-
-    // Check if already answered
-    const alreadyAnswered = await tx.queryOne(
-      'SELECT la_dap_an_dung, sat_thuong_gay_ra FROM luot_tra_loi WHERE ma_cau_trong_tran = $1 AND ma_nguoi_choi_trong_tran = $2',
-      [questionInMatch.ma_cau_trong_tran, player.ma_nguoi_choi_trong_tran]
+    await tx.execute(
+      'UPDATE match_players SET result = $1, xp_awarded = $2, rating_delta = $3 WHERE match_id = $4 AND slot = $5',
+      [result, xpAwarded, rating, match.id, player.slot]
     );
-    if (alreadyAnswered) {
-      return { player, isCorrect: Boolean(alreadyAnswered.la_dap_an_dung), damage: alreadyAnswered.sat_thuong_gay_ra, isCritical: false, replayed: true };
-    }
-
-    // Get opponent
-    const opponent = await tx.queryOne(
-      'SELECT * FROM nguoi_choi_trong_tran WHERE ma_tran = $1 AND ma_nguoi_dung != $2',
-      [ma_tran, ma_nguoi_dung]
-    );
-
-    if (match.trang_thai !== 'DANG_THI_DAU' || !opponent || opponent.mau_hien_tai <= 0 || player.mau_hien_tai <= 0) {
-      throw new Error('Trận đấu đã kết thúc.');
-    }
-    const previousTurns = await tx.queryOne(`
-      SELECT COUNT(*) AS total, MAX(l.thoi_diem_tra_loi) AS latest
-      FROM luot_tra_loi l
-      JOIN cau_hoi_trong_tran qm ON l.ma_cau_trong_tran = qm.ma_cau_trong_tran
-      WHERE qm.ma_tran = $1 AND qm.thu_tu_cau < $2
-    `, [ma_tran, thu_tu_cau]);
-    if (Number(previousTurns.total) !== (thu_tu_cau - 1) * 2) {
-      throw new Error('Câu hỏi này chưa tới lượt.');
-    }
-    const referenceTime = new Date(previousTurns.latest || match.thoi_gian_bat_dau).getTime();
-    const elapsed = (Date.now() - referenceTime) / 1000;
-    // The client starts after the match intro or the previous round animation.
-    const intro = thu_tu_cau === 1 ? 2.2 : 0.6;
-    thoi_gian_giay = Number.isFinite(elapsed) ? Math.max(0, elapsed - intro) : 5;
-
-    // Parse structured data if available
-    let parsed = null;
-    try {
-      parsed = typeof questionInMatch.du_lieu_cau_hoi === 'string'
-        ? JSON.parse(questionInMatch.du_lieu_cau_hoi)
-        : questionInMatch.du_lieu_cau_hoi;
-    } catch (e) {}
-
-    const type = questionInMatch.loai_cau_hoi || 'TRAC_NGHIEM_4';
-    let isCorrect = false;
-
-    // LOGIC-005 Fix: Server-authoritative answer validation against official database content
-    // Client flags (isCorrect / da_hoan_thanh) are strictly ignored
-    if (type === 'NOI_CAP') {
-      const expectedPairs = parsed?.pairs || parsed?.cap_dung || [];
-      const userPairs = cau_tra_loi?.matched_pairs || cau_tra_loi?.cap_ghep || (Array.isArray(cau_tra_loi) ? cau_tra_loi : []);
-      if (expectedPairs.length > 0 && Array.isArray(userPairs) && userPairs.length === expectedPairs.length) {
-        isCorrect = expectedPairs.every(expected => userPairs.some(chosen => matchesPair(expected, chosen)));
-      }
-    } else if (type === 'DIEN_TU') {
-      const correctWord = String(parsed?.tu_dung || parsed?.blank_answer || '').trim().toLowerCase();
-      const chosenWord = String(
-        typeof cau_tra_loi === 'string'
-          ? cau_tra_loi
-          : (cau_tra_loi?.tu_chon || cau_tra_loi?.selected_word || cau_tra_loi?.lua_chon || '')
-      ).trim().toLowerCase();
-      const optionsList = parsed?.cac_tu_lua_chon || parsed?.options || [];
-      if (chosenWord && correctWord) {
-        isCorrect = (chosenWord === correctWord);
-      } else if (typeof vi_tri_dap_an_chon === 'number' && optionsList[vi_tri_dap_an_chon] !== undefined && !cau_tra_loi) {
-        isCorrect = (String(optionsList[vi_tri_dap_an_chon]).trim().toLowerCase() === correctWord);
-      }
-    } else if (type === 'SAP_XEP_CAU') {
-      const cleanCorrect = String(
-        parsed?.cau_hoan_chinh || (parsed?.correct_order || parsed?.cac_tu_dung || []).join(' ')
-      ).trim().toLowerCase().replace(/\s+/g, ' ');
-      const userWords = Array.isArray(cau_tra_loi?.ordered_words) ? cau_tra_loi.ordered_words.join(' ') : '';
-      const userSentence = String(
-        typeof cau_tra_loi === 'string'
-          ? cau_tra_loi
-          : (cau_tra_loi?.cau_ghep || userWords || '')
-      ).trim().toLowerCase().replace(/\s+/g, ' ');
-      if (userSentence && cleanCorrect && userSentence === cleanCorrect) {
-        isCorrect = true;
-      }
-    } else {
-      // TRAC_NGHIEM_4
-      const chosenIdx = vi_tri_dap_an_chon !== undefined && vi_tri_dap_an_chon !== null
-        ? parseInt(vi_tri_dap_an_chon, 10)
-        : parseInt(cau_tra_loi?.vi_tri_chon, 10);
-      const officialIdx = parseInt(questionInMatch.vi_tri_dap_an_dung, 10);
-      isCorrect = !isNaN(chosenIdx) && !isNaN(officialIdx) && chosenIdx === officialIdx;
-    }
-
-    // Calculate damage
-    const petMultiplier = player.he_so_sat_thuong || 1.0;
-    const { damage, isCritical } = calculateDamage({
-      isCorrect,
-      responseTimeSeconds: thoi_gian_giay,
-      baseDamage: 12,
-      petDamageMultiplier: petMultiplier
-    });
-
-    // Record turn
-    const ma_luot_tra_loi = `turn_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-    await tx.execute(`
-      INSERT INTO luot_tra_loi (
-        ma_luot_tra_loi, ma_cau_trong_tran, ma_nguoi_choi_trong_tran,
-        vi_tri_dap_an_chon, la_dap_an_dung, thoi_gian_tra_loi_giay, sat_thuong_gay_ra
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-    `, [
-      ma_luot_tra_loi,
-      questionInMatch.ma_cau_trong_tran,
-      player.ma_nguoi_choi_trong_tran,
-      typeof vi_tri_dap_an_chon === 'number' ? vi_tri_dap_an_chon : (isCorrect ? 1 : 0),
-      isCorrect ? 1 : 0,
-      thoi_gian_giay,
-      damage
-    ]);
-
-    // Apply damage to opponent
-    let newOpponentHp = opponent.mau_hien_tai;
-    if (damage > 0) {
-      newOpponentHp = applyDamage(opponent.mau_hien_tai, damage);
-      await tx.execute(
-        'UPDATE nguoi_choi_trong_tran SET mau_hien_tai = $1 WHERE ma_nguoi_choi_trong_tran = $2',
-        [newOpponentHp, opponent.ma_nguoi_choi_trong_tran]
-      );
-      await tx.execute(
-        'UPDATE nguoi_choi_trong_tran SET tong_sat_thuong_gay_ra = tong_sat_thuong_gay_ra + $1 WHERE ma_nguoi_choi_trong_tran = $2',
-        [damage, player.ma_nguoi_choi_trong_tran]
-      );
-    }
-
-    return { player, isCorrect, damage, isCritical, newOpponentHp };
-  });
-
-  if (replayed) {
-    const state = await getMatchState(ma_tran);
-    return {
-      la_dap_an_dung: isCorrect, sat_thuong_gay_ra: damage, la_chi_mang: isCritical,
-      tran_ket_thuc: state.trang_thai === 'KET_THUC', trang_thai_tran: state, replayed: true
-    };
   }
+  return tx.queryOne(
+    "UPDATE matches SET status = 'FINISHED', finished_at = $1, finish_reason = $2, season_no = $3"
+      + ' WHERE id = $4 RETURNING ' + matchColumns,
+    [at, outcome.reason, season?.season_no ?? null, match.id]
+  );
+}
 
-  // Check match conclusion (either K.O. or last question completed by both)
-  let matchEnded = false;
-  if (newOpponentHp <= 0) {
-    // K.O. VICTORY!
-    matchEnded = true;
-    await concludeMatch(ma_tran, player.ma_nguoi_dung, 'KO_VICTORY');
-  } else {
-    // Check if all questions in match have been answered by both players
-    const totalTurns = await db.query(`
-      SELECT count(*) as cnt
-      FROM luot_tra_loi l
-      JOIN cau_hoi_trong_tran qm ON l.ma_cau_trong_tran = qm.ma_cau_trong_tran
-      WHERE qm.ma_tran = $1
-    `, [ma_tran]);
+async function settleIfResolved(tx, match) {
+  if (match.status !== 'ACTIVE') return match;
+  const players = await playerStats(tx, match.id);
+  const rounds = await tx.queryOne('SELECT count(*)::int AS total FROM match_rounds WHERE match_id = $1', [match.id]);
+  const outcome = concludedOutcome(players, rounds.total);
+  return outcome ? finishMatch(tx, match, players, outcome) : match;
+}
 
-    const count = totalTurns && totalTurns[0] ? totalTurns[0].cnt : 0;
-    const qCountRows = await db.query('SELECT count(*) as qcnt FROM cau_hoi_trong_tran WHERE ma_tran = $1', [ma_tran]);
-    const qCount = qCountRows && qCountRows[0] ? qCountRows[0].qcnt : 10;
-    if (count >= qCount * 2) {
-      matchEnded = true;
-      // Resolve by final scores
-      await concludeMatchByScore(ma_tran);
-    }
+function botSubmission(question, willAnswerCorrectly) {
+  if (!willAnswerCorrectly) return { response: { kind: 'TIMEOUT' } };
+  const expected = correctAnswer(question);
+  switch (question.type) {
+    case 'MULTIPLE_CHOICE': return { selected_option_position: expected };
+    case 'FILL_BLANK': return { submitted_text: expected };
+    case 'MATCHING': return { response: { kind: 'MATCHING', pairs: expected } };
+    case 'ORDERING': return { response: { kind: 'ORDERING', tokens: expected } };
+    default: throw new Error('Dạng câu hỏi không hợp lệ.');
   }
+}
 
-  const updatedState = await getMatchState(ma_tran);
-
+function turnResult(player, roundNo, saved, state, timing, replayed) {
   return {
-    la_dap_an_dung: isCorrect,
-    sat_thuong_gay_ra: damage,
-    la_chi_mang: isCritical,
-    tran_ket_thuc: matchEnded,
-    trang_thai_tran: updatedState
+    match_id: state.id,
+    user_id: player.user_id,
+    round_no: roundNo,
+    is_correct: saved.is_correct,
+    damage: saved.damage,
+    is_critical: saved.is_correct && Number(saved.response_seconds) <= timing.fast_seconds,
+    replayed,
+    match_ended: state.status !== 'ACTIVE',
+    match_state: state
   };
 }
 
-/**
- * Conclude match by specific winner
- */
-async function concludeMatch(matchId, winnerUserId, reason = 'KO_VICTORY') {
-  return db.transaction(async tx => {
-    const lock = db.isPostgres ? ' FOR UPDATE' : '';
-    const match = await tx.queryOne('SELECT * FROM tran_dau_1v1 WHERE ma_tran=$1' + lock, [matchId]);
-    if (!match || match.trang_thai === 'KET_THUC') return;
-
-    const players = await tx.query(
-      'SELECT * FROM nguoi_choi_trong_tran WHERE ma_tran=$1 ORDER BY ma_nguoi_dung', [matchId]
-    );
-    if (players.length !== 2 || (winnerUserId && !players.some(p => p.ma_nguoi_dung === winnerUserId))) {
-      throw new Error('Kết quả trận đấu không hợp lệ.');
-    }
-
-    if (match.che_do === 'RANKED') await syncArenaSeason(tx);
-
-    // Stable lock order keeps simultaneous settlements for the same users consistent.
-    for (const player of players) {
-      await tx.queryOne('SELECT ma_nguoi_dung FROM nguoi_dung WHERE ma_nguoi_dung=$1' + lock, [player.ma_nguoi_dung]);
-    }
-
-    const playerIds = players.map(p => p.ma_nguoi_choi_trong_tran);
-    const turns = await tx.query(
-      'SELECT ma_nguoi_choi_trong_tran FROM luot_tra_loi WHERE ma_nguoi_choi_trong_tran IN ($1,$2)', playerIds
-    );
-    const answered = new Set(turns.map(t => t.ma_nguoi_choi_trong_tran));
-    const participated = playerIds.every(id => answered.has(id));
-    const ranked = match.che_do === 'RANKED' && Boolean(match.ma_mon)
-      && players.every(p => !p.ma_nguoi_dung.startsWith('usr_bot_'));
-
-    if (reason === 'DAU_HANG' && winnerUserId) {
-      await tx.execute(
-        'UPDATE nguoi_choi_trong_tran SET mau_hien_tai=0 WHERE ma_tran=$1 AND ma_nguoi_dung<>$2',
-        [matchId, winnerUserId]
-      );
-    }
-
-    await tx.execute(
-      `UPDATE tran_dau_1v1 SET trang_thai='KET_THUC', thoi_gian_ket_thuc=SYSDATETIME(),
-       nguoi_thang_cuoc=$1, ly_do_ket_thuc=$2 WHERE ma_tran=$3`,
-      [winnerUserId || null, reason, matchId]
-    );
-    for (const player of players) {
-      const userId = player.ma_nguoi_dung;
-      const result = !winnerUserId ? 'HOA' : userId === winnerUserId ? 'THANG' : 'THUA';
-      const earnsReward = participated && !userId.startsWith('usr_bot_');
-      const reward = earnsReward ? arenaRules.rewards(ranked ? 'RANKED' : 'CASUAL', result) : { coins: 0, exp: 0 };
-      let delta = 0;
-      if (ranked && earnsReward) {
-        const key = [userId, match.ma_mon];
-        const previous = await tx.queryOne('SELECT diem FROM diem_dau_hang WHERE ma_nguoi_dung=$1 AND ma_mon=$2', key);
-        const before = Number(previous?.diem || 0);
-        const after = Math.max(0, before + arenaRules.delta(result, Number(player.mau_hien_tai)));
-        delta = after - before;
-        if (previous) {
-          await tx.execute('UPDATE diem_dau_hang SET diem=$1 WHERE ma_nguoi_dung=$2 AND ma_mon=$3', [after, ...key]);
-        } else {
-          await tx.execute('INSERT INTO diem_dau_hang(ma_nguoi_dung,ma_mon,diem) VALUES($1,$2,$3)', [...key, after]);
-        }
-      }
-      if (reward.exp) reward.exp = (await addExperienceInTransaction(tx, userId, reward.exp, { repeat: true })).expAwarded;
-      await tx.execute(
-        `UPDATE nguoi_choi_trong_tran SET ket_qua=$1, xu_nhan_duoc=$2, exp_nhan_duoc=$3,
-         diem_hang_thay_doi=$4 WHERE ma_nguoi_choi_trong_tran=$5`,
-        [result, reward.coins, reward.exp, delta, player.ma_nguoi_choi_trong_tran]
-      );
-      if (reward.coins) {
-        await mutateCoinsInTransaction(tx, userId, reward.coins, 'THUONG_TRAN_DAU', `${match.che_do}: ${result} [${matchId}]`);
-      }
-
-    }
-  });
-}
-
-/**
- * Conclude match by total score / HP comparison
- */
-async function concludeMatchByScore(ma_tran) {
-  const players = await db.query('SELECT * FROM nguoi_choi_trong_tran WHERE ma_tran = $1', [ma_tran]);
-  if (players.length < 2) return;
-
-  const p1 = players[0];
-  const p2 = players[1];
-
-  // Fetch correct answer counts per player from luot_tra_loi
-  const turns = await db.query(`
-    SELECT l.ma_nguoi_choi_trong_tran, l.la_dap_an_dung
-    FROM luot_tra_loi l
-    JOIN cau_hoi_trong_tran qm ON l.ma_cau_trong_tran = qm.ma_cau_trong_tran
-    WHERE qm.ma_tran = $1
-  `, [ma_tran]);
-
-  const p1Score = (turns || []).filter(t => t.ma_nguoi_choi_trong_tran === p1.ma_nguoi_choi_trong_tran && Boolean(t.la_dap_an_dung)).length;
-  const p2Score = (turns || []).filter(t => t.ma_nguoi_choi_trong_tran === p2.ma_nguoi_choi_trong_tran && Boolean(t.la_dap_an_dung)).length;
-
-  const outcome = resolveMatchOutcome({
-    p1HP: Number(p1.mau_hien_tai) || 0,
-    p2HP: Number(p2.mau_hien_tai) || 0,
-    p1Score,
-    p2Score,
-    p1Damage: Number(p1.tong_sat_thuong_gay_ra) || 0,
-    p2Damage: Number(p2.tong_sat_thuong_gay_ra) || 0,
-    hasAnyAnswer: (turns && turns.length > 0)
-  });
-
-  let winnerId = null;
-  let reason = 'TIMEOUT_SCORE';
-
-  if (outcome.p1Result === 'THANG') {
-    winnerId = p1.ma_nguoi_dung;
-  } else if (outcome.p2Result === 'THANG') {
-    winnerId = p2.ma_nguoi_dung;
-  } else {
-    reason = 'DRAW';
+function submitTurn(input, botAccuracy) {
+  if (!input || Object.keys(input).some(name => !answerFields.has(name))) {
+    throw new Error('Yêu cầu trả lời có trường không hỗ trợ.');
   }
+  const { match_id, user_id, round_no } = input;
+  requireRound(round_no);
+  return withMatchLock(match_id, async (tx, match) => {
+    const player = await requirePlayer(tx, match.id, user_id);
+    if ((botAccuracy === undefined) === (player.role === 'SYSTEM')) {
+      throw new Error('Người chơi không được gửi lượt qua luồng này.');
+    }
+    const timing = await tx.queryOne(
+      'SELECT v1_arena_base_damage() AS damage, v1_arena_fast_bonus() AS bonus, v1_arena_fast_answer_seconds() AS fast_seconds'
+    );
+    const prior = await existingTurn(tx, match.id, round_no, player.slot);
+    if (prior) return turnResult(player, round_no, prior, await matchState(tx, match), timing, true);
+    if (match.status !== 'ACTIVE') throw new Error('Trận đấu đã kết thúc.');
 
-  await concludeMatch(ma_tran,winnerId,reason);
+    const previousAt = await precedingTurns(tx, match.id, round_no);
+    const question = await requireRoundQuestion(tx, match.id, round_no);
+    const submission = botAccuracy === undefined ? input : botSubmission(question, botAccuracy);
+    const graded = gradeQuestion(question, submission);
+    const { at } = await tx.queryOne('SELECT clock_timestamp() AS at');
+    const introSeconds = round_no === 1 ? 2.2 : 0.6;
+    const reference = previousAt ?? match.started_at;
+    const elapsed = Math.max(0, (new Date(at).getTime() - new Date(reference).getTime()) / 1000 - introSeconds);
+    const responseSeconds = Math.round(elapsed * 1000) / 1000;
+    const damage = graded.is_correct ? timing.damage + (responseSeconds <= timing.fast_seconds ? timing.bonus : 0) : 0;
+    const saved = await tx.queryOne(
+      'INSERT INTO match_answers (match_id, round_no, slot, is_correct, response_seconds, damage, answered_at)'
+        + ' VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING is_correct, damage, response_seconds',
+      [match.id, round_no, player.slot, graded.is_correct, responseSeconds, damage, at]
+    );
+
+    const updatedMatch = await settleIfResolved(tx, match);
+    return turnResult(player, round_no, saved, await matchState(tx, updatedMatch), timing, false);
+  });
 }
 
-/**
- * Surrender match voluntarily
- */
-async function surrenderMatch(ma_tran, surrenderingUserId) {
-  const participant=await db.queryOne('SELECT ma_nguoi_dung FROM nguoi_choi_trong_tran WHERE ma_tran=$1 AND ma_nguoi_dung=$2',[ma_tran,surrenderingUserId]);
-  if(!participant)throw new Error('Bạn không thuộc trận đấu này.');
-  const match = await db.queryOne('SELECT trang_thai FROM tran_dau_1v1 WHERE ma_tran = $1', [ma_tran]);
-  if (!match || match.trang_thai === 'KET_THUC') return await getMatchState(ma_tran);
-
-  // Find opponent
-  const opponent = await db.queryOne(`
-    SELECT ma_nguoi_dung FROM nguoi_choi_trong_tran
-    WHERE ma_tran = $1 AND ma_nguoi_dung != $2
-  `, [ma_tran, surrenderingUserId]);
-
-  const winnerId = opponent ? opponent.ma_nguoi_dung : null;
-  await concludeMatch(ma_tran, winnerId, 'DAU_HANG');
-  return await getMatchState(ma_tran);
+function submitTurnAnswer(input) {
+  return submitTurn(input);
 }
 
-async function concludeIfResolved(matchId,userId){
- const state=await getMatchState(matchId);
- if(!state.nguoi_choi.some(p=>p.ma_nguoi_dung===userId))throw new Error('Bạn không thuộc trận đấu này.');
- if(state.trang_thai==='KET_THUC')return state;
- const alive=state.nguoi_choi.filter(p=>Number(p.mau_hien_tai)>0);
- if(alive.length<2)await concludeMatch(matchId,alive[0]?.ma_nguoi_dung||null,'KO_VICTORY');
- else{
-  const counts=await db.queryOne('SELECT COUNT(*) AS n FROM luot_tra_loi l JOIN nguoi_choi_trong_tran p ON p.ma_nguoi_choi_trong_tran=l.ma_nguoi_choi_trong_tran WHERE p.ma_tran=$1',[matchId]);
-  if(Number(counts.n)>=state.cau_hoi.length*2)await concludeMatchByScore(matchId);
- }
- return getMatchState(matchId);
+function submitBotTurn(matchId, botId, roundNo, willAnswerCorrectly) {
+  if (typeof willAnswerCorrectly !== 'boolean') throw new Error('Mô phỏng lượt của bot không hợp lệ.');
+  return submitTurn({ match_id: matchId, user_id: botId, round_no: roundNo }, willAnswerCorrectly);
 }
+
+function surrenderMatch(matchId, userId) {
+  return withMatchLock(matchId, async (tx, match) => {
+    const loser = await requirePlayer(tx, match.id, userId);
+    if (match.status !== 'ACTIVE') return matchState(tx, match);
+    const players = await playerStats(tx, match.id);
+    const other = players.find(player => player.slot !== loser.slot);
+    const finished = await finishMatch(tx, match, players, { winnerId: other.user_id, reason: 'FORFEIT' });
+    return matchState(tx, finished);
+  });
+}
+
+function concludeIfResolved(matchId, userId) {
+  return withMatchLock(matchId, async (tx, match) => {
+    await requirePlayer(tx, match.id, userId);
+    return matchState(tx, await settleIfResolved(tx, match));
+  });
+}
+
 module.exports = {
-  createMatch,
-  concludeIfResolved,
+  ...createArenaService(),
+  createArenaService,
   getMatchState,
-  submitTurnAnswer,
   checkArenaPair,
-  concludeMatch,
-  surrenderMatch
+  submitTurnAnswer,
+  submitBotTurn,
+  surrenderMatch,
+  concludeIfResolved
 };

@@ -1,71 +1,97 @@
 const db = require('../database/db');
-const { mutateCoinsInTransaction } = require('./economy.service');
+const { mutateCoinsInTransaction } = require('./wallet.service');
 
-// Monday, 9 November 2026 at 00:00 in Vietnam.
-const firstStart = Date.parse('2026-11-09T00:00:00+07:00');
-const seasonLength = 56 * 86400000;
-
-function arenaSeasonAt(now = Date.now()) {
-  const number = Math.max(1, Math.floor((now - firstStart) / seasonLength) + 1);
-  const start = firstStart + (number - 1) * seasonLength;
-  return { number, startsAt: new Date(start).toISOString(), endsAt: new Date(start + seasonLength).toISOString() };
+function acquireArenaSeasonLock(tx) {
+  return tx.queryOne("SELECT pg_advisory_xact_lock(hashtext('thap-tri-thuc-v1:arena-season'))");
 }
 
-async function syncArenaSeason(tx, now = Date.now()) {
-  const current = arenaSeasonAt(now);
-  const state = await tx.queryOne('SELECT mua FROM mua_dau_hang WHERE id=1' + (db.isPostgres ? ' FOR UPDATE' : ''));
-  if (!state || state.mua >= current.number) return current;
+async function publishSeasonResults(tx, season, period) {
+  const results = await tx.query(`
+    WITH totals AS (
+      SELECT r.user_id, sum(r.points) AS points
+      FROM rank_scores AS r
+      JOIN users AS u ON u.id = r.user_id AND u.role = 'LEARNER'
+      WHERE r.season_no = $1 AND EXISTS (
+        SELECT 1
+        FROM matches AS m
+        JOIN coin_ledger AS l ON l.match_id = m.id AND l.user_id = r.user_id
+          AND l.kind = 'MATCH_REWARD' AND l.delta > 0
+        WHERE m.season_no = r.season_no AND m.mode = 'RANKED' AND m.status = 'FINISHED'
+          AND m.finished_at >= $2 AND m.finished_at < $3
+      )
+      GROUP BY r.user_id
+      HAVING sum(r.points) > 0
+    )
+    INSERT INTO season_results (season_no, user_id, rank)
+    SELECT $1, user_id, rank() OVER (ORDER BY points DESC)::int FROM totals
+    RETURNING user_id, rank
+  `, [season.season_no, season.starts_at, season.ends_at]);
 
-  const previous = arenaSeasonAt(firstStart + (state.mua - 1) * seasonLength);
-  const participants = await tx.query(`
-    SELECT DISTINCT p.ma_nguoi_dung
-    FROM nguoi_choi_trong_tran p JOIN tran_dau_1v1 t ON t.ma_tran=p.ma_tran
-    WHERE p.xu_nhan_duoc>0 AND t.che_do='RANKED'
-      AND t.thoi_gian_ket_thuc >= $1 AND t.thoi_gian_ket_thuc < $2
-  `, [previous.startsAt, previous.endsAt]);
-  const eligible = new Set(participants.map(player => player.ma_nguoi_dung));
-  const rows = await tx.query(`
-    SELECT r.ma_nguoi_dung, r.ma_mon, r.diem
-    FROM diem_dau_hang r JOIN nguoi_dung u ON u.ma_nguoi_dung=r.ma_nguoi_dung
-    WHERE u.vai_tro NOT IN ('QUAN_TRI_VIEN','HE_THONG')
-      AND u.ma_nguoi_dung NOT LIKE 'usr_bot_%'
+  // Match settlement and season awards take user locks in the same UUID order.
+  results.sort((left, right) => left.user_id.localeCompare(right.user_id));
+  for (const result of results) {
+    const rank = result.rank;
+    const coins = rank === 1 ? 150 : rank <= 3 ? 100 : rank <= 10 ? 50 : 0;
+    if (coins === 0) continue;
+    await mutateCoinsInTransaction(tx, result.user_id, coins, 'SEASON_REWARD', {
+      season_no: season.season_no,
+      occurred_at: period,
+      note: 'Top ' + rank + ' mùa ' + season.season_no
+    });
+  }
+}
+
+async function syncArenaSeason(tx, occurredAt = null) {
+  await acquireArenaSeasonLock(tx);
+  const current = await tx.queryOne(`
+    WITH observed AS (SELECT COALESCE($1::timestamptz, clock_timestamp()) AS observed_at)
+    SELECT observed_at, greatest(
+      1, 1 + floor(extract(epoch FROM (observed_at - v1_first_season_start())) /
+        (v1_season_length_days() * 86400))
+    )::int AS season_no
+    FROM observed
+  `, [occurredAt]);
+  const open = await tx.queryOne(`
+    SELECT v.season_no, v.starts_at, v.ends_at
+    FROM seasons AS s JOIN v_season_calendar AS v USING (season_no)
+    WHERE NOT s.is_closed
+    FOR UPDATE OF s
   `);
-  const players = new Map();
-  for (const row of rows) {
-    if (!eligible.has(row.ma_nguoi_dung)) continue;
-    if (!players.has(row.ma_nguoi_dung)) players.set(row.ma_nguoi_dung, { id: row.ma_nguoi_dung, points: 0, courses: {} });
-    const player = players.get(row.ma_nguoi_dung);
-    player.points += Number(row.diem);
-    player.courses[row.ma_mon] = Number(row.diem);
+  if (open?.season_no === current.season_no) return open;
+  if (open?.season_no > current.season_no) {
+    throw new Error('Thời điểm chốt trận sớm hơn mùa đấu hạng đang mở.');
   }
-  const standings = [...players.values()].filter(player => player.points > 0)
-    .sort((a, b) => b.points - a.points || a.id.localeCompare(b.id));
-  let position = 0;
-  for (const [index, player] of standings.entries()) {
-    if (index === 0 || player.points !== standings[index - 1].points) position = index + 1;
-    player.position = position;
-    player.coins = position === 1 ? 150 : position <= 3 ? 100 : position <= 10 ? 50 : 0;
+
+  if (open) {
+    await publishSeasonResults(tx, open, current.observed_at);
+    await tx.execute('UPDATE seasons SET is_closed = true WHERE season_no = $1', [open.season_no]);
   }
-  standings.sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-  for (const player of standings) {
-    await tx.execute(
-      'INSERT INTO lich_su_mua_dau_hang(mua,ma_nguoi_dung,diem,vi_tri,xu_thuong,diem_theo_mon) VALUES($1,$2,$3,$4,$5,$6)',
-      [state.mua, player.id, player.points, player.position, player.coins, JSON.stringify(player.courses)]
-    );
-    if (player.coins) {
-      await mutateCoinsInTransaction(tx, player.id, player.coins, 'THUONG_TRAN_DAU', `Top ${player.position} mùa ${state.mua}`);
-    }
+  await tx.execute('INSERT INTO seasons (season_no) VALUES ($1)', [current.season_no]);
+
+  if (open) {
+    const divisor = 2 ** Math.min(31, current.season_no - open.season_no);
+    await tx.execute(`
+      INSERT INTO rank_scores (user_id, subject_id, season_no, points)
+      SELECT user_id, subject_id, $1, (points::bigint / $2::bigint)::int
+      FROM rank_scores
+      WHERE season_no = $3
+    `, [current.season_no, divisor, open.season_no]);
   }
-  const divisor = Math.pow(2, Math.min(31, current.number - state.mua));
-  await tx.execute('UPDATE diem_dau_hang SET diem=CAST(FLOOR(diem * 1.0 / $1) AS INT)', [divisor]);
-  await tx.execute('UPDATE mua_dau_hang SET mua=$1 WHERE id=1', [current.number]);
-  return current;
+
+  return tx.queryOne(
+    'SELECT season_no, starts_at, ends_at FROM v_season_calendar WHERE season_no = $1',
+    [current.season_no]
+  );
 }
 
 async function getArenaSeason() {
-  const current = arenaSeasonAt();
-  const state = await db.queryOne('SELECT mua FROM mua_dau_hang WHERE id=1');
-  return state?.mua === current.number ? current : db.transaction(tx => syncArenaSeason(tx));
+  const open = await db.queryOne(`
+    WITH observed AS (SELECT clock_timestamp() AS now)
+    SELECT v.season_no, v.starts_at, v.ends_at
+    FROM v_season_calendar AS v CROSS JOIN observed
+    WHERE NOT v.is_closed AND observed.now >= v.starts_at AND observed.now < v.ends_at
+  `);
+  return open ?? db.transaction(tx => syncArenaSeason(tx));
 }
 
-module.exports = { arenaSeasonAt, syncArenaSeason, getArenaSeason };
+module.exports = { acquireArenaSeasonLock, syncArenaSeason, getArenaSeason };

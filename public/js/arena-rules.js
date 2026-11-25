@@ -3,8 +3,8 @@
   else root.ArenaRules = factory();
 })(globalThis, function () {
   const prizes = {
-    ranked: { THANG: [50, 75], HOA: [25, 35], THUA: [20, 25] },
-    other: { THANG: [25, 35], HOA: [15, 20], THUA: [10, 10] }
+    ranked: { WIN: [50, 75], DRAW: [25, 35], LOSE: [20, 25] },
+    other: { WIN: [25, 35], DRAW: [15, 20], LOSE: [10, 10] }
   };
 
   function rewards(mode, result) {
@@ -13,8 +13,8 @@
   }
 
   function delta(result, hp) {
-    if (result === 'THANG') return hp >= 50 ? 30 : 25;
-    return result === 'THUA' ? -15 : 0;
+    if (result === 'WIN') return hp >= 50 ? 30 : 25;
+    return result === 'LOSE' ? -15 : 0;
   }
 
   function progress(points) {

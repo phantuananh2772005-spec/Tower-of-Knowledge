@@ -1,137 +1,233 @@
-const express = require('express');
-const router = express.Router();
-const arenaService = require('../services/arena.service');
+const router = require('express').Router();
+const qrCode = require('qrcode');
+const db = require('../database/db');
+const arena = require('../services/arena.service');
 const { getArenaSeason } = require('../services/arena-season.service');
+const { formatPet } = require('../services/pet.service');
+const { deriveRankTitle } = require('../core/rules/economy.rules');
 const { authenticate } = require('../middlewares/auth.middleware');
-router.get('/room-qr.png',async(req,res)=>{
-  const code=String(req.query.code||'').toUpperCase();
-  if(!/^TOK-[A-Z0-9]{4,12}$/.test(code))return res.apiError('Mã phòng không hợp lệ.','INVALID_ROOM_CODE',400);
-  try{
-    const protocol=(req.get('x-forwarded-proto')||req.protocol).split(',')[0].trim();
-    const origin=process.env.PUBLIC_APP_URL||protocol+'://'+req.get('host');
-    const invitation=new URL('/',origin);invitation.searchParams.set('room',code);
-    const png=await require('qrcode').toBuffer(invitation.toString(),{type:'png',width:384,margin:2,errorCorrectionLevel:'M'});
-    res.setHeader('Cache-Control','private, max-age=60');res.type('png').send(png);
-  }catch(error){return res.apiError('Không tạo được mã QR phòng.','ROOM_QR_FAILED',500);}
+const { broadcastMatchEnded, broadcastTurn } = require('../sockets/arena.socket');
+
+const uuidPattern = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+const isUuid = value => typeof value === 'string' && uuidPattern.test(value);
+const isText = value => typeof value === 'string' && value.trim().length > 0;
+const isRoundNumber = value => Number.isInteger(value) && value >= 1 && value <= 10;
+
+function expectKeys(body, required, optional = []) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)
+      || required.some(key => !Object.hasOwn(body, key))
+      || Object.keys(body).some(key => !required.includes(key) && !optional.includes(key))) {
+    throw new Error('Dữ liệu đấu trường không hợp lệ hoặc có trường không được hỗ trợ.');
+  }
+}
+
+function expectRound(roundNo) {
+  if (!isRoundNumber(roundNo)) throw new Error('Số hiệp không hợp lệ.');
+}
+
+function validateTurnResponse(response) {
+  switch (response?.kind) {
+    case 'TIMEOUT':
+      expectKeys(response, ['kind']);
+      break;
+    case 'MATCHING':
+      expectKeys(response, ['kind', 'pairs']);
+      if (!Array.isArray(response.pairs) || !response.pairs.length) throw new Error('Danh sách ghép cặp không hợp lệ.');
+      for (const pair of response.pairs) {
+        expectKeys(pair, ['left', 'right']);
+        if (!isText(pair.left) || !isText(pair.right)) throw new Error('Nội dung ghép cặp không hợp lệ.');
+      }
+      break;
+    case 'ORDERING':
+      expectKeys(response, ['kind', 'tokens']);
+      if (!Array.isArray(response.tokens) || !response.tokens.length || !response.tokens.every(isText)) {
+        throw new Error('Danh sách thẻ không hợp lệ.');
+      }
+      break;
+    default:
+      throw new Error('Kiểu câu trả lời không hợp lệ.');
+  }
+}
+
+function validateTurn(body) {
+  const answerFields = ['selected_option_position', 'submitted_text', 'response'];
+  expectKeys(body, ['round_no'], answerFields);
+  expectRound(body.round_no);
+  const provided = answerFields.filter(field => Object.hasOwn(body, field));
+  if (provided.length !== 1) throw new Error('Mỗi lượt chỉ được gửi một dạng câu trả lời.');
+
+  if (provided[0] === 'response') {
+    validateTurnResponse(body.response);
+  } else if (provided[0] === 'selected_option_position') {
+    if (!Number.isInteger(body.selected_option_position) || body.selected_option_position < 0 || body.selected_option_position > 3) {
+      throw new Error('Vị trí phương án không hợp lệ.');
+    }
+  } else if (!isText(body.submitted_text)) {
+    throw new Error('Nội dung câu trả lời không hợp lệ.');
+  }
+}
+
+async function listPracticeBots() {
+  const rows = await db.query(`
+    SELECT u.id, u.username, u.display_name,
+      jsonb_build_object('id', p.id, 'name', p.name, 'image_path', p.image_path) AS pet
+    FROM users AS u
+    JOIN pets AS p ON p.id = u.equipped_pet_id
+    WHERE u.role = 'SYSTEM' AND u.disabled_at IS NULL
+    ORDER BY u.username, u.id
+  `);
+  return rows.map(bot => {
+    const { id, name, image_path, icon } = formatPet(bot.pet);
+    return { ...bot, pet: { id, name, image_path, icon } };
+  });
+}
+
+router.get('/room-qr.png', async (req, res) => {
+  const code = String(req.query.code || '').toUpperCase();
+  if (!/^TOK-[A-Z0-9]{4,12}$/.test(code)) {
+    return res.apiError('Mã phòng không hợp lệ.', 'INVALID_ROOM_CODE', 400);
+  }
+  try {
+    const protocol = (req.get('x-forwarded-proto') || req.protocol).split(',')[0].trim();
+    const origin = process.env.PUBLIC_APP_URL || protocol + '://' + req.get('host');
+    const invitation = new URL('/', origin);
+    invitation.searchParams.set('room', code);
+    const png = await qrCode.toBuffer(invitation.toString(), {
+      type: 'png', width: 384, margin: 2, errorCorrectionLevel: 'M'
+    });
+    res.setHeader('Cache-Control', 'private, max-age=60');
+    return res.type('png').send(png);
+  } catch {
+    return res.apiError('Không tạo được mã QR phòng.', 'ROOM_QR_FAILED', 500);
+  }
 });
 
-// Create a match (e.g. against bot or invited user)
+router.get('/bots', async (req, res) => {
+  try {
+    return res.apiSuccess(await listPracticeBots());
+  } catch (error) {
+    return res.apiError(error.message, 'FETCH_BOTS_FAILED', 500);
+  }
+});
+
 router.post('/create-match', authenticate, async (req, res) => {
   try {
-    const player1Id = req.user.id;
-    // Default opponent can be bot if not specified
-    const opponentId = req.body.doi_thu_id || 'usr_bot_003';
-    const ma_mon = req.body.ma_mon || 'mon_csdl';
-
-    const matchState = await arenaService.createMatch(player1Id, opponentId, ma_mon);
-    return res.apiSuccess(matchState, 201);
-  } catch (err) {
-    return res.apiError(err.message, 'CREATE_MATCH_FAILED', 400);
+    const body = req.body;
+    expectKeys(body, ['subject_id'], ['opponent_id']);
+    if (!isUuid(body.subject_id) || (Object.hasOwn(body, 'opponent_id') && !isUuid(body.opponent_id))) {
+      throw new Error('Mã môn học hoặc đối thủ không hợp lệ.');
+    }
+    const opponentId = body.opponent_id ?? (await listPracticeBots())[0]?.id;
+    if (!opponentId) throw new Error('Chưa có đối thủ luyện tập.');
+    const match = await arena.createMatch(req.user.id, opponentId, body.subject_id, 'PRACTICE');
+    return res.apiSuccess(match, 201);
+  } catch (error) {
+    return res.apiError(error.message, 'CREATE_MATCH_FAILED', 400);
   }
 });
 
 router.get('/season', async (req, res) => {
   try {
     return res.apiSuccess(await getArenaSeason());
-  } catch (err) {
-    return res.apiError(err.message, 'FETCH_SEASON_FAILED', 500);
+  } catch (error) {
+    return res.apiError(error.message, 'FETCH_SEASON_FAILED', 500);
   }
 });
 
-// Leaderboard from real database users
+async function readLeaderboard(season) {
+  const rows = await db.query(`
+    WITH ratings AS (
+      SELECT r.user_id, jsonb_object_agg(r.subject_id, r.points) AS rank_scores
+      FROM rank_scores AS r
+      JOIN users AS u ON u.id = r.user_id AND u.role = 'LEARNER'
+      WHERE r.season_no = $1
+      GROUP BY r.user_id
+    ), eligible_matches AS (
+      SELECT s.user_id, s.subject_id, s.match_id, s.result, m.finished_at,
+        s.answer_count, s.correct_count, s.total_response_seconds
+      FROM v_match_player_stats AS s
+      JOIN matches AS m ON m.id = s.match_id
+      JOIN ratings AS r ON r.user_id = s.user_id
+      WHERE s.season_no = $1 AND m.mode = 'RANKED' AND m.status = 'FINISHED'
+        AND m.finished_at >= $2 AND m.finished_at < $3 AND s.coins_awarded > 0
+    ), stats_by_subject AS (
+      SELECT user_id, subject_id, sum(answer_count) AS answer_count,
+        sum(correct_count) AS correct_count, sum(total_response_seconds) AS total_response_seconds
+      FROM eligible_matches
+      GROUP BY user_id, subject_id
+    ), answer_stats AS (
+      SELECT user_id, jsonb_agg(to_jsonb(s) - 'user_id' ORDER BY subject_id) AS answer_stats
+      FROM stats_by_subject AS s
+      GROUP BY user_id
+    ), ordered_results AS (
+      SELECT e.user_id, scope.key, e.result, count(*) FILTER (WHERE e.result IS DISTINCT FROM 'WIN') OVER (
+        PARTITION BY e.user_id, scope.key
+        ORDER BY e.finished_at DESC, e.match_id DESC
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+      ) AS preceding_nonwins
+      FROM eligible_matches AS e
+      CROSS JOIN LATERAL (VALUES ('all'), (e.subject_id::text)) AS scope(key)
+    ), streaks_by_scope AS (
+      SELECT user_id, key, count(*) FILTER (WHERE result = 'WIN' AND preceding_nonwins = 0) AS wins
+      FROM ordered_results
+      GROUP BY user_id, key
+    ), streaks AS (
+      SELECT user_id, jsonb_object_agg(key, wins) AS win_streaks
+      FROM streaks_by_scope
+      GROUP BY user_id
+    )
+    SELECT u.id, u.username, u.display_name, u.xp, r.rank_scores,
+      CASE WHEN p.id IS NOT NULL THEN
+        jsonb_build_object('id', p.id, 'name', p.name, 'image_path', p.image_path)
+      END AS pet,
+      COALESCE(w.win_streaks, '{}'::jsonb) AS win_streaks,
+      COALESCE(a.answer_stats, '[]'::jsonb) AS answer_stats
+    FROM ratings AS r
+    JOIN users AS u ON u.id = r.user_id
+    LEFT JOIN pets AS p ON p.id = u.equipped_pet_id
+    LEFT JOIN streaks AS w ON w.user_id = u.id
+    LEFT JOIN answer_stats AS a ON a.user_id = u.id
+    ORDER BY u.id
+  `, [season.season_no, season.starts_at, season.ends_at]);
+  return rows.map(row => ({
+    ...row,
+    pet: formatPet(row.pet),
+    rank_title: deriveRankTitle(row.xp)
+  }));
+}
+
 router.get('/leaderboard', async (req, res) => {
   try {
-    const db = require('../database/db');
-    const season = await getArenaSeason();
-    const { deriveRankTitle } = require('../core/rules/economy.rules');
-    const users = await db.query(`
-      SELECT u.ma_nguoi_dung, u.ten_dang_nhap, u.ten_hien_thi, u.tong_diem_kinh_nghiem, u.chuoi_streak_ngay,
-             COALESCE(u.chuoi_thang_arena, 0) as chuoi_thang_arena,
-             COALESCE(u.chuoi_thang_cao_nhat_arena, 0) as chuoi_thang_cao_nhat_arena,
-             p.ma_thu_cung,p.ten_thu_cung, p.anh_dai_dien
-      FROM nguoi_dung u
-      LEFT JOIN thu_cung_so_huu tcsh ON u.ma_nguoi_dung = tcsh.ma_nguoi_dung AND tcsh.dang_kich_hoat = 1
-      LEFT JOIN thu_cung p ON tcsh.ma_thu_cung = p.ma_thu_cung
-      WHERE u.vai_tro NOT IN ('QUAN_TRI_VIEN','HE_THONG')
-        AND u.ma_nguoi_dung NOT LIKE 'usr_bot_%'
-        AND EXISTS(SELECT 1 FROM diem_dau_hang r WHERE r.ma_nguoi_dung=u.ma_nguoi_dung)
-      ORDER BY u.ma_nguoi_dung
-    `);
-    
-    // Khử trùng lặp theo ma_nguoi_dung (đảm bảo mỗi người dùng chỉ xuất hiện đúng 1 lần)
-    const seen = new Set();
-    const uniqueUsers = [];
-    for (const u of (users || [])) {
-      if (!seen.has(u.ma_nguoi_dung)) {
-        seen.add(u.ma_nguoi_dung);
-        uniqueUsers.push(u);
-      }
-    }
-
-    const answerStats = await db.query(`
-      SELECT p.ma_nguoi_dung, t.ma_mon, COUNT(*) AS so_cau,
-        SUM(CASE WHEN a.la_dap_an_dung = $1 THEN 1 ELSE 0 END) AS so_cau_dung,
-        SUM(a.thoi_gian_tra_loi_giay) AS tong_thoi_gian
-      FROM luot_tra_loi a
-      JOIN nguoi_choi_trong_tran p ON p.ma_nguoi_choi_trong_tran = a.ma_nguoi_choi_trong_tran
-      JOIN tran_dau_1v1 t ON t.ma_tran = p.ma_tran
-      WHERE t.che_do='RANKED' AND t.trang_thai='KET_THUC' AND p.xu_nhan_duoc>0
-      AND t.thoi_gian_ket_thuc >= $2 AND t.thoi_gian_ket_thuc < $3
-      GROUP BY p.ma_nguoi_dung, t.ma_mon`, [true, season.startsAt, season.endsAt]);
-    const enrollments = await db.query('SELECT ma_nguoi_dung, ma_mon FROM tien_do_mon_hoc');
-    const ratings=await db.query('SELECT ma_nguoi_dung,ma_mon,diem FROM diem_dau_hang');
-    const results=await db.query(`
-      SELECT p.ma_nguoi_dung,t.ma_mon,p.ket_qua
-      FROM nguoi_choi_trong_tran p JOIN tran_dau_1v1 t ON t.ma_tran=p.ma_tran
-      WHERE t.che_do='RANKED' AND t.trang_thai='KET_THUC' AND p.xu_nhan_duoc>0
-      AND t.thoi_gian_ket_thuc >= $1 AND t.thoi_gian_ket_thuc < $2
-      ORDER BY t.thoi_gian_ket_thuc,t.ma_tran
-    `, [season.startsAt, season.endsAt]);
-    const streaks=new Map();
-    for(const result of results){
-      if(!streaks.has(result.ma_nguoi_dung))streaks.set(result.ma_nguoi_dung,{});
-      const streak=streaks.get(result.ma_nguoi_dung);
-      for(const scope of ['all',result.ma_mon.replace(/^mon_/,'')]){
-        streak[scope]=result.ket_qua==='THANG'?(streak[scope]||0)+1:0;
-      }
-    }
-    const enriched = uniqueUsers.map(u => ({
-      ...u,
-      chuoi_dau_hang:streaks.get(u.ma_nguoi_dung)||{},
-      diem_dau_hang:Object.fromEntries(ratings.filter(r=>r.ma_nguoi_dung===u.ma_nguoi_dung).map(r=>[r.ma_mon,Number(r.diem)])),
-      thu_cung:require('../services/pet.service').formatPet(u.ma_thu_cung?u:null),
-      mon_da_dang_ky: enrollments.filter(e => e.ma_nguoi_dung === u.ma_nguoi_dung).map(e => e.ma_mon),
-      thong_ke_tra_loi: answerStats.filter(s => s.ma_nguoi_dung === u.ma_nguoi_dung).map(s => ({
-        ma_mon:s.ma_mon, so_cau:Number(s.so_cau), so_cau_dung:Number(s.so_cau_dung), tong_thoi_gian:Number(s.tong_thoi_gian)
-      })),
-      danh_hieu: deriveRankTitle(u.tong_diem_kinh_nghiem),
-      chuoi_thang_arena: typeof u.chuoi_thang_arena === 'number' ? u.chuoi_thang_arena : 0,
-      chuoi_thang_cao_nhat_arena: typeof u.chuoi_thang_cao_nhat_arena === 'number' ? u.chuoi_thang_cao_nhat_arena : 0
-    }));
-    return res.apiSuccess(enriched);
-  } catch (err) {
-    return res.apiError(err.message, 'FETCH_LEADERBOARD_FAILED', 500);
+    return res.apiSuccess(await readLeaderboard(await getArenaSeason()));
+  } catch (error) {
+    return res.apiError(error.message, 'FETCH_LEADERBOARD_FAILED', 500);
   }
 });
 
 router.get('/:matchId', authenticate, async (req, res) => {
   try {
-    const matchState = await arenaService.getMatchState(req.params.matchId);
-    if (!matchState.nguoi_choi.some(player => player.ma_nguoi_dung === req.user.id)) {
-      return res.apiError("Bạn không tham gia trận này.", "MATCH_FORBIDDEN", 403);
+    const match = await arena.getMatchState(req.params.matchId);
+    if (!match.players.some(player => player.user_id === req.user.id)) {
+      return res.apiError('Bạn không tham gia trận này.', 'MATCH_FORBIDDEN', 403);
     }
-    return res.apiSuccess(matchState);
-  } catch (err) {
-    return res.apiError(err.message, 'FETCH_MATCH_FAILED', 404);
+    return res.apiSuccess(match);
+  } catch (error) {
+    return res.apiError(error.message, 'FETCH_MATCH_FAILED', 404);
   }
 });
 
 router.post('/:matchId/pair', authenticate, async (req, res) => {
   try {
-    const result = await arenaService.checkArenaPair(
-      req.params.matchId, req.user.id, req.body.round, req.body
-    );
-    return res.apiSuccess(result);
+    const body = req.body;
+    expectKeys(body, ['round_no', 'left', 'right']);
+    expectRound(body.round_no);
+    if (!isText(body.left) || !isText(body.right)) throw new Error('Nội dung ghép cặp không hợp lệ.');
+    return res.apiSuccess(await arena.checkArenaPair(
+      req.params.matchId,
+      req.user.id,
+      body.round_no,
+      { left: body.left, right: body.right }
+    ));
   } catch (error) {
     return res.apiError(error.message, 'CHECK_PAIR_FAILED', 400);
   }
@@ -139,74 +235,45 @@ router.post('/:matchId/pair', authenticate, async (req, res) => {
 
 router.post('/:matchId/turn', authenticate, async (req, res) => {
   try {
-    const { thu_tu_cau, vi_tri_dap_an_chon, cau_tra_loi, thoi_gian_giay } = req.body;
-    const result = await arenaService.submitTurnAnswer({
-      ma_tran: req.params.matchId,
-      ma_nguoi_dung: req.user.id,
-      thu_tu_cau: parseInt(thu_tu_cau, 10),
-      vi_tri_dap_an_chon: vi_tri_dap_an_chon !== undefined ? vi_tri_dap_an_chon : null,
-      cau_tra_loi,
-      thoi_gian_giay: parseFloat(thoi_gian_giay || 3.0)
+    validateTurn(req.body);
+    const result = await arena.submitTurnAnswer({
+      ...req.body,
+      match_id: req.params.matchId,
+      user_id: req.user.id
     });
-
-    const io = req.app.get('io');
-    if (io && !result.replayed) {
-      const roomName = `room_${req.params.matchId}`;
-      io.to(roomName).emit('turn_resolved', {
-        nguoi_tra_loi: req.user.id,
-        thu_tu_cau: parseInt(thu_tu_cau, 10),
-        la_dap_an_dung: result.la_dap_an_dung,
-        sat_thuong_gay_ra: result.sat_thuong_gay_ra,
-        la_chi_mang: result.la_chi_mang,
-        trang_thai_tran: result.trang_thai_tran
-      });
-      if (result.tran_ket_thuc) {
-        io.to(roomName).emit('match_ended', {
-          ma_tran: req.params.matchId,
-          nguoi_thang_cuoc: result.trang_thai_tran.nguoi_thang_cuoc,
-          ly_do_ket_thuc: result.trang_thai_tran.ly_do_ket_thuc,
-          trang_thai_cuoi: result.trang_thai_tran
-        });
-        io.emit('leaderboard_updated', { timestamp: Date.now(), ma_tran: req.params.matchId });
-      }
-    }
-
-    return res.apiSuccess(result);
-  } catch (err) {
-    return res.apiError(err.message, 'SUBMIT_TURN_FAILED', 400);
+    broadcastTurn(req.app.get('io'), result);
+    return res.apiSuccess({
+      match: result.match_state,
+      user_id: result.user_id,
+      round_no: result.round_no,
+      is_correct: result.is_correct,
+      damage: result.damage,
+      is_critical: result.is_critical
+    });
+  } catch (error) {
+    return res.apiError(error.message, 'SUBMIT_TURN_FAILED', 400);
   }
 });
 
 router.post('/:matchId/surrender', authenticate, async (req, res) => {
   try {
-    const updatedState = await arenaService.surrenderMatch(req.params.matchId, req.user.id);
-    const io = req.app.get('io');
-    if (io) {
-      const roomName = `room_${req.params.matchId}`;
-      io.to(roomName).emit('match_ended', {
-        ma_tran: req.params.matchId,
-        nguoi_thang_cuoc: updatedState.nguoi_thang_cuoc,
-        ly_do_ket_thuc: 'DAU_HANG',
-        trang_thai_cuoi: updatedState
-      });
-      io.emit('leaderboard_updated', { timestamp: Date.now(), ma_tran: req.params.matchId });
-    }
-    return res.apiSuccess(updatedState);
-  } catch (err) {
-    return res.apiError(err.message, 'SURRENDER_FAILED', 400);
+    expectKeys(req.body ?? {}, []);
+    const match = await arena.surrenderMatch(req.params.matchId, req.user.id);
+    broadcastMatchEnded(req.app.get('io'), match);
+    return res.apiSuccess(match);
+  } catch (error) {
+    return res.apiError(error.message, 'SURRENDER_FAILED', 400);
   }
 });
 
 router.post('/:matchId/conclude', authenticate, async (req, res) => {
   try {
-    const updatedState = await arenaService.concludeIfResolved(req.params.matchId,req.user.id);
-    const io = req.app.get('io');
-    if (io) {
-      io.emit('leaderboard_updated', { timestamp: Date.now(), ma_tran: req.params.matchId });
-    }
-    return res.apiSuccess(updatedState);
-  } catch (err) {
-    return res.apiError(err.message, 'CONCLUDE_MATCH_FAILED', 400);
+    expectKeys(req.body ?? {}, []);
+    const match = await arena.concludeIfResolved(req.params.matchId, req.user.id);
+    if (match.status === 'FINISHED') broadcastMatchEnded(req.app.get('io'), match);
+    return res.apiSuccess(match);
+  } catch (error) {
+    return res.apiError(error.message, 'CONCLUDE_MATCH_FAILED', 400);
   }
 });
 

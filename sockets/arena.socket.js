@@ -1,27 +1,22 @@
-/**
- * Arena 1v1 Socket.IO Handler
- * Decouples network transport from core combat logic.
- * Handles matchmaking queue, human-vs-human or human-vs-bot pairing,
- * safe fallback timeouts, and dynamic adaptive bot turn resolution.
- */
-
+const { randomUUID } = require('node:crypto');
+const db = require('../database/db');
 const { verifySessionToken } = require('../middlewares/auth.middleware');
+const { assertCurrentSession } = require('../services/session-validity.service');
 const arenaService = require('../services/arena.service');
+const registerReactions = require('./match-reactions');
 
-// In-memory matchmaking queue
-const matchmakingQueue = [];
-// Active bot timers mapped by matchId
-const botTimers = new Map();
-// Active ongoing matches mapped by userId and socketId for disconnect protection
-const userActiveMatchMap = new Map();
-const socketActiveMatchMap = new Map();
-// Casual / Friend room lobbies mapped by roomCode
-const casualRoomsMap = new Map();
+const arenaStates = new WeakMap();
+const botUsernames = ['bot_tapsu', 'bot_luky', 'bot_caothu'];
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const queueTimeout = 15_000;
+const introSeconds = 2.2;
+const allowedTurnFields = new Set(['match_id', 'round_no', 'selected_option_position', 'submitted_text', 'response']);
 
-/**
- * Dynamic Adaptive Bot Formula
- * Calculates bot reaction delay, accuracy percentage, and psychological pacing
- */
+const matchRoom = id => 'room_' + id;
+const casualRoom = code => 'casual_' + code;
+const isUuid = value => typeof value === 'string' && uuidPattern.test(value);
+const isRecord = value => value && typeof value === 'object' && !Array.isArray(value);
+
 function calculateBotTurnParams({ questionContent, myHp, botHp, userCombo }) {
   const qLen = (questionContent || '').length;
   // Natural reading baseline: ~22ms per char clamped between 1.2s and 2.8s
@@ -63,629 +58,458 @@ function calculateBotTurnParams({ questionContent, myHp, botHp, userCombo }) {
   };
 }
 
+function finishBroadcast(io, match) {
+  if (!io || !match || match.status === 'ACTIVE') return;
+  const state = arenaStates.get(io);
+  if (state) {
+    stopBotJob(state, match.id);
+    for (const [socketId, matchId] of state.matchBySocket) {
+      if (matchId === match.id) state.matchBySocket.delete(socketId);
+    }
+    if (state.finished.has(match.id)) return;
+    state.finished.add(match.id);
+    if (state.finished.size > 512) state.finished.delete(state.finished.values().next().value);
+  }
+  const channel = matchRoom(match.id);
+  io.to(channel).emit('match_ended', { match });
+  io.in(channel).socketsLeave(channel);
+  if (match.mode === 'RANKED' && match.status === 'FINISHED') {
+    io.emit('leaderboard_updated', { match_id: match.id });
+  }
+}
+
+function broadcastTurn(io, result) {
+  if (!io || !result || result.replayed) return;
+  io.to(matchRoom(result.match_id)).emit('turn_resolved', {
+    match: result.match_state,
+    user_id: result.user_id,
+    round_no: result.round_no,
+    is_correct: result.is_correct,
+    damage: result.damage,
+    is_critical: result.is_critical
+  });
+  if (result.match_ended) finishBroadcast(io, result.match_state);
+}
+
+function removeQueuedPlayer(state, userId, socketId = null) {
+  const entry = state.queue.get(userId);
+  if (!entry || (socketId && socketId !== entry.socket.id)) return false;
+  clearTimeout(entry.timer);
+  state.queue.delete(userId);
+  return true;
+}
+
+function removeCasualRoom(io, state, room, message) {
+  if (state.rooms.get(room.roomCode) !== room) return;
+  const channel = casualRoom(room.roomCode);
+  if (message) io.to(channel).emit('casual_room_closed', { message });
+  io.in(channel).socketsLeave(channel);
+  state.rooms.delete(room.roomCode);
+}
+
+function announceCasualRoom(io, room) {
+  const member = player => {
+    if (!player) return null;
+    const { socketId, ...display } = player;
+    return display;
+  };
+  io.to(casualRoom(room.roomCode)).emit('casual_room_updated', {
+    roomCode: room.roomCode,
+    host: member(room.host),
+    guest: member(room.guest),
+    subject_id: room.subject_id,
+    status: room.guest ? 'READY' : 'WAITING'
+  });
+}
+
+function roomCodeOf(value) {
+  const code = typeof value === 'string' ? value.trim().toUpperCase() : '';
+  if (!/^TOK-[A-Z0-9]{4,12}$/.test(code)) throw new Error('Vui lòng nhập mã phòng hợp lệ.');
+  return code;
+}
+
+function textOrDefault(value, fallback, length = 100) {
+  if (typeof value !== 'string') return fallback;
+  return value.trim().slice(0, length) || fallback;
+}
+
+function roomPlayer(socket, info, host) {
+  const { name, petIcon, image, petName, tier } = isRecord(info) ? info : {};
+  const permittedImage = typeof image === 'string' && !image.includes('..')
+    && /^\/assets\/[a-z0-9_./-]+\.(?:gif|png|webp|avif)$/i.test(image);
+  return {
+    userId: socket.user.id,
+    socketId: socket.id,
+    name: textOrDefault(name, socket.user.username || (host ? 'Chủ phòng' : 'Bạn giao hữu')),
+    petIcon: textOrDefault(petIcon, host ? '🦉' : '🦊', 16),
+    image: permittedImage ? image : null,
+    petName: textOrDefault(petName, 'Linh thú'),
+    tier: textOrDefault(tier, '🌱 Khởi nguyên I', 80)
+  };
+}
+
+async function verifySubject(subjectId) {
+  if (!isUuid(subjectId)) throw new Error('Vui lòng chọn môn học hợp lệ.');
+  const subject = await db.queryOne("SELECT id FROM subjects WHERE id = $1 AND status = 'ACTIVE'", [subjectId]);
+  if (!subject) throw new Error('Môn học không còn khả dụng.');
+  return subject.id;
+}
+
+async function pickPracticeBot() {
+  const bot = await db.queryOne(
+    "SELECT id FROM users WHERE role = 'SYSTEM' AND disabled_at IS NULL AND username = ANY($1::text[])"
+      + ' ORDER BY random() LIMIT 1',
+    [botUsernames]
+  );
+  if (!bot) throw new Error('Hiện chưa có bot luyện tập khả dụng.');
+  return bot.id;
+}
+
+function stopBotJob(state, matchId) {
+  const job = state.botJobs.get(matchId);
+  if (!job) return;
+  clearTimeout(job.timer);
+  state.botJobs.delete(matchId);
+}
+
+function trailingCorrectTurns(match, userId) {
+  const results = match.turns.filter(turn => turn.user_id === userId).sort((a, b) => b.round_no - a.round_no);
+  const firstWrong = results.findIndex(turn => !turn.is_correct);
+  return firstWrong < 0 ? results.length : firstWrong;
+}
+
+function startBotJob(io, state, match) {
+  if (match.mode !== 'PRACTICE' || match.status !== 'ACTIVE' || state.botJobs.has(match.id)) return;
+  const bot = match.players.find(player => player.role === 'SYSTEM');
+  const human = match.players.find(player => player.role !== 'SYSTEM');
+  if (!bot || !human) return;
+
+  const job = {};
+  state.botJobs.set(match.id, job);
+  const isCurrent = () => state.botJobs.get(match.id) === job;
+
+  function schedule(run, delay) {
+    if (!isCurrent()) return;
+    job.timer = setTimeout(async () => {
+      try {
+        await run();
+      } catch (error) {
+        if (!isCurrent()) return;
+        stopBotJob(state, match.id);
+        io.to(matchRoom(match.id)).emit('error_msg', 'Bot chưa thể xử lý lượt này: ' + error.message);
+      }
+    }, delay);
+    job.timer.unref?.();
+  }
+
+  async function tick() {
+    const current = await arenaService.getMatchState(match.id);
+    if (!isCurrent()) return;
+    if (current.status !== 'ACTIVE') {
+      stopBotJob(state, match.id);
+      return;
+    }
+    const round = current.rounds.find(question => question.round_no === current.current_round_no);
+    if (!round || current.turns.some(turn => turn.round_no === round.round_no && turn.user_id === bot.user_id)) {
+      schedule(tick, 400);
+      return;
+    }
+    const params = calculateBotTurnParams({
+      questionContent: round.stem,
+      myHp: current.players.find(player => player.user_id === human.user_id)?.hp ?? human.hp,
+      botHp: current.players.find(player => player.user_id === bot.user_id)?.hp ?? bot.hp,
+      userCombo: trailingCorrectTurns(current, human.user_id)
+    });
+    io.to(matchRoom(match.id)).emit('bot_thinking', {
+      round_no: round.round_no,
+      is_aggressive: params.isAggressive,
+      estimated_delay_seconds: params.totalDelaySec
+    });
+    schedule(async () => {
+      const result = await arenaService.submitBotTurn(match.id, bot.user_id, round.round_no, params.willAnswerCorrectly);
+      broadcastTurn(io, result);
+      schedule(tick, 400);
+    }, params.delayMs);
+  }
+
+  const introRemaining = Math.max(0, new Date(match.started_at).getTime() + 2_500 - Date.now());
+  schedule(tick, Number.isFinite(introRemaining) ? introRemaining : 2_500);
+}
+
+async function joinMatchRoom(state, socket, match) {
+  const previous = state.matchBySocket.get(socket.id);
+  if (match.status !== 'ACTIVE') {
+    if (previous === match.id) {
+      await socket.leave(matchRoom(match.id));
+      state.matchBySocket.delete(socket.id);
+    }
+    return;
+  }
+  if (previous && previous !== match.id) throw new Error('Bạn đang có một trận đấu.');
+  await socket.join(matchRoom(match.id));
+  if (socket.connected) state.matchBySocket.set(socket.id, match.id);
+}
+
+function busyInMatch(io, state, userId) {
+  if (state.pairing.has(userId)) return true;
+  return [...state.matchBySocket.keys()].some(socketId => io.sockets.sockets.get(socketId)?.user.id === userId);
+}
+
+function matchNotice(match, userId, isCasual) {
+  return {
+    match,
+    user_id: userId,
+    opponent_is_bot: match.players.some(player => player.user_id !== userId && player.role === 'SYSTEM'),
+    starts_in_seconds: introSeconds,
+    is_casual: isCasual
+  };
+}
+
+async function pairMatch(io, state, player1, player2, subjectId, mode, isCasual = false) {
+  const humans = [player1, player2].filter(player => player.socket);
+  if (humans.some(player => !player.socket.connected || busyInMatch(io, state, player.userId))) {
+    throw new Error('Một người chơi không còn sẵn sàng ghép trận.');
+  }
+  humans.forEach(player => state.pairing.add(player.userId));
+  try {
+    const match = await arenaService.createMatch(player1.userId, player2.userId, subjectId, mode);
+    for (const player of humans) {
+      if (player.socket.connected) await joinMatchRoom(state, player.socket, match);
+    }
+    const departed = humans.find(player => !player.socket.connected);
+    if (departed) {
+      const result = await arenaService.surrenderMatch(match.id, departed.userId);
+      for (const player of humans) {
+        if (player.socket.connected) player.socket.emit('error_msg', 'Đối thủ đã ngắt kết nối trước khi vào trận.');
+      }
+      finishBroadcast(io, result);
+      return;
+    }
+    for (const player of humans) player.socket.emit('match_found', matchNotice(match, player.userId, isCasual));
+    startBotJob(io, state, match);
+  } finally {
+    humans.forEach(player => state.pairing.delete(player.userId));
+  }
+}
+
 function initArenaSocket(io) {
+  const state = {
+    queue: new Map(),
+    rooms: new Map(),
+    pairing: new Set(),
+    matchBySocket: new Map(),
+    finished: new Set(),
+    botJobs: new Map()
+  };
   const reactionCooldowns = new Map();
-  // Middleware to authenticate socket gracefully (supports registered users & guests)
+  arenaStates.set(io, state);
+
   io.use(async (socket, next) => {
-    const token = (socket.handshake.auth && socket.handshake.auth.token) || socket.handshake.query?.token;
-    if (!token) {
-      const guestId = `guest_${Math.random().toString(36).substring(2, 9)}`;
-      socket.user = { id: guestId, username: 'Khách', isGuest: true };
-      return next();
+    const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+    if (token) {
+      try {
+        socket.user = await verifySessionToken(token);
+        return next();
+      } catch {
+        // Anonymous users may connect, but cannot take part in an arena match.
+      }
     }
-    try {
-      socket.user = await verifySessionToken(token);
-      next();
-    } catch (err) {
-      const guestId = `guest_${Math.random().toString(36).substring(2, 9)}`;
-      socket.user = { id: guestId, username: 'Khách', isGuest: true };
-      next();
-    }
+    socket.user = { id: randomUUID(), username: 'Khách', isGuest: true };
+    next();
   });
 
-  io.on('connection', (socket) => {
+  io.on('connection', socket => {
     const userId = socket.user.id;
     socket.use(async (_packet, next) => {
       if (socket.user.isGuest) return next();
       try {
-        socket.user = await require('../services/session-validity.service').assertCurrentSession(socket.user);
+        socket.user = await assertCurrentSession(socket.user);
         next();
       } catch {
         socket.disconnect(true);
       }
     });
+    registerReactions(io, socket, db, reactionCooldowns);
 
-    require('./match-reactions')(io, socket, require('../database/db'), reactionCooldowns);
-
-    // Join Matchmaking Queue
-    socket.on('join_queue', async (data = {}) => {
-      const ma_mon = data.ma_mon || 'mon_csdl';
-
-      // Check if already in queue & clean previous
-      const existingIdx = matchmakingQueue.findIndex(q => q.userId === userId);
-      if (existingIdx !== -1) {
-        if (matchmakingQueue[existingIdx].timer) clearTimeout(matchmakingQueue[existingIdx].timer);
-        matchmakingQueue.splice(existingIdx, 1);
-      }
-
-      // Check if there is another real player waiting for this course
-      const matchCandidateIdx = matchmakingQueue.findIndex(q => q.userId !== userId && q.ma_mon === ma_mon);
-
-      if (matchCandidateIdx !== -1) {
-        // MATCH FOUND with real human player!
-        const opponent = matchmakingQueue.splice(matchCandidateIdx, 1)[0];
-        if (opponent.timer) clearTimeout(opponent.timer);
-
+    function handle(event, action, errorEvent = 'error_msg') {
+      socket.on(event, async (value, reply) => {
+        const acknowledge = typeof value === 'function' ? value : reply;
         try {
-          const matchState = await arenaService.createMatch(userId, opponent.userId, ma_mon, 'RANKED');
-          const roomName = `room_${matchState.ma_tran}`;
-
-          userActiveMatchMap.set(userId, matchState.ma_tran);
-          socketActiveMatchMap.set(socket.id, matchState.ma_tran);
-          userActiveMatchMap.set(opponent.userId, matchState.ma_tran);
-          if (opponent.socket) socketActiveMatchMap.set(opponent.socket.id, matchState.ma_tran);
-
-          socket.join(roomName);
-          opponent.socket.join(roomName);
-
-          socket.emit('match_found', {
-            ma_tran: matchState.ma_tran,
-            nguoi_choi: matchState.nguoi_choi,
-            thoi_gian_bat_dau_sau_giay: 2.2,
-            doi_thu_la_bot: false,
-            my_user_id: userId,
-            matchState
-          });
-
-          opponent.socket.emit('match_found', {
-            ma_tran: matchState.ma_tran,
-            nguoi_choi: matchState.nguoi_choi,
-            thoi_gian_bat_dau_sau_giay: 2.2,
-            doi_thu_la_bot: false,
-            my_user_id: opponent.userId,
-            matchState
-          });
-        } catch (err) {
-          socket.emit('error_msg', 'Không thể khởi tạo trận đấu: ' + err.message);
+          if (socket.user.isGuest) throw new Error('Vui lòng đăng nhập để vào đấu trường.');
+          const payload = typeof value === 'function' || value === undefined ? {} : value;
+          if (!isRecord(payload)) throw new Error('Dữ liệu yêu cầu không hợp lệ.');
+          const data = await action(payload);
+          if (typeof acknowledge === 'function') acknowledge({ ok: true, data });
+        } catch (error) {
+          socket.emit(errorEvent, error.message);
+          if (typeof acknowledge === 'function') acknowledge({ ok: false, reason: 'arena_failed', message: error.message });
         }
-      } else {
-        // Add to queue
-        const queueEntry = { userId, socket, ma_mon, joinedAt: Date.now() };
-        matchmakingQueue.push(queueEntry);
-        socket.emit('queue_waiting', { vi_tri: matchmakingQueue.length, safeTimeoutMs: 15000 });
-
-        // Auto-match with smart bot after 15.0 seconds if no human joins (Safe Fallback Protection)
-        queueEntry.timer = setTimeout(async () => {
-          const idx = matchmakingQueue.indexOf(queueEntry);
-          if (idx !== -1) {
-            matchmakingQueue.splice(idx, 1);
-            try {
-              // Select canonical bot opponent (usr_bot_001, usr_bot_002, usr_bot_003)
-              const botPool = ['usr_bot_001', 'usr_bot_002', 'usr_bot_003'];
-              const chosenBotId = botPool[Math.floor(Math.random() * botPool.length)];
-
-              const matchState = await arenaService.createMatch(userId, chosenBotId, ma_mon);
-              const roomName = `room_${matchState.ma_tran}`;
-              userActiveMatchMap.set(userId, matchState.ma_tran);
-              socketActiveMatchMap.set(socket.id, matchState.ma_tran);
-              socket.join(roomName);
-
-              socket.emit('match_found', {
-                ma_tran: matchState.ma_tran,
-                nguoi_choi: matchState.nguoi_choi,
-                thoi_gian_bat_dau_sau_giay: 2.2,
-                doi_thu_la_bot: true,
-                my_user_id: userId,
-                matchState
-              });
-
-              // Setup intelligent adaptive bot behavior
-              setupSmartBotTurns(io, roomName, matchState.ma_tran, userId, chosenBotId);
-            } catch (err) {
-              socket.emit('error_msg', 'Lỗi ghép trận bot bảo vệ: ' + err.message);
-            }
-          }
-        }, 15000);
-      }
-    });
-
-    // Leave Queue
-    socket.on('leave_queue', () => {
-      const idx = matchmakingQueue.findIndex(q => q.userId === userId);
-      if (idx !== -1) {
-        if (matchmakingQueue[idx].timer) clearTimeout(matchmakingQueue[idx].timer);
-        matchmakingQueue.splice(idx, 1);
-        socket.emit('queue_cancelled');
-      }
-    });
-
-    // Surrender Match
-    socket.on('surrender', async ({ ma_tran } = {}) => {
-      if (!ma_tran) return;
-      try {
-        const roomName = `room_${ma_tran}`;
-        userActiveMatchMap.delete(userId);
-        socketActiveMatchMap.delete(socket.id);
-        const finalState = await arenaService.surrenderMatch(ma_tran, userId);
-        clearBotTimer(ma_tran);
-        io.to(roomName).emit('match_ended', {
-          ma_tran,
-          nguoi_thang_cuoc: finalState.nguoi_thang_cuoc,
-          ly_do_ket_thuc: 'DAU_HANG',
-          trang_thai_cuoi: finalState
-        });
-        io.emit('leaderboard_updated', { timestamp: Date.now(), ma_tran });
-      } catch (err) {
-        socket.emit('error_msg', err.message);
-      }
-    });
-
-    // Join Match Room
-    socket.on('join_match_room', async ({ ma_tran } = {}) => {
-      if (!ma_tran) return;
-      try {
-        const match = await arenaService.getMatchState(ma_tran);
-        if (!match.nguoi_choi.some(player => player.ma_nguoi_dung === userId)) return;
-        const previous = socketActiveMatchMap.get(socket.id);
-        if (previous && previous !== ma_tran) socket.leave(`room_${previous}`);
-        userActiveMatchMap.set(userId, ma_tran);
-        socketActiveMatchMap.set(socket.id, ma_tran);
-        socket.join(`room_${ma_tran}`);
-        const bot = match.nguoi_choi.find(player => player.ma_nguoi_dung.startsWith('usr_bot_'));
-        if (bot && match.che_do === 'PRACTICE' && match.trang_thai === 'DANG_THI_DAU'
-          && !match.luot_da_tra_loi.some(turn => turn.ma_nguoi_choi_trong_tran === bot.ma_nguoi_choi_trong_tran) && !botTimers.has(ma_tran)) {
-          setupSmartBotTurns(io, `room_${ma_tran}`, ma_tran, userId, bot.ma_nguoi_dung);
-        }
-      } catch {
-        socket.emit('error_msg', 'Không thể vào phòng đấu.');
-      }
-    });
-
-    // Submit Turn Answer
-    socket.on('submit_answer', async (payload) => {
-      const { ma_tran, thu_tu_cau, vi_tri_dap_an_chon, cau_tra_loi, thoi_gian_giay } = payload;
-      console.log(`[SOCKET] submit_answer from ${userId} (socket ${socket.id}) in match ${ma_tran}, round ${thu_tu_cau}`);
-      console.log(`[SOCKET] Socket current rooms:`, Array.from(socket.rooms));
-      try {
-        const turnResult = await arenaService.submitTurnAnswer({
-          ma_tran,
-          ma_nguoi_dung: userId,
-          thu_tu_cau,
-          vi_tri_dap_an_chon,
-          cau_tra_loi,
-          thoi_gian_giay
-        });
-
-        const roomName = `room_${ma_tran}`;
-        const roomClients = await io.in(roomName).allSockets();
-        console.log(`[SOCKET] Turn success! Damage: ${turnResult.sat_thuong_gay_ra}. Broadcasting turn_resolved to ${roomName} (allSockets in room:`, Array.from(roomClients), `)`);
-
-        // Broadcast turn outcome and HP updates to room
-        io.to(roomName).emit('turn_resolved', {
-          nguoi_tra_loi: userId,
-          thu_tu_cau,
-          la_dap_an_dung: turnResult.la_dap_an_dung,
-          sat_thuong_gay_ra: turnResult.sat_thuong_gay_ra,
-          la_chi_mang: turnResult.la_chi_mang,
-          trang_thai_tran: turnResult.trang_thai_tran
-        });
-
-        if (turnResult.tran_ket_thuc) {
-          clearBotTimer(ma_tran);
-          userActiveMatchMap.delete(userId);
-          socketActiveMatchMap.delete(socket.id);
-          io.to(roomName).emit('match_ended', {
-            ma_tran,
-            nguoi_thang_cuoc: turnResult.trang_thai_tran.nguoi_thang_cuoc,
-            ly_do_ket_thuc: turnResult.trang_thai_tran.ly_do_ket_thuc,
-            trang_thai_cuoi: turnResult.trang_thai_tran
-          });
-          io.emit('leaderboard_updated', { timestamp: Date.now(), ma_tran });
-        }
-      } catch (err) {
-        socket.emit('error_msg', err.message);
-      }
-    });
-
-    // ----------------------------------------------------
-    // SẢNH ĐẤU THƯỜNG / GIAO HỮU BẠN BÈ THEO MÃ PHÒNG (CASUAL LOBBY)
-    // ----------------------------------------------------
-
-    // 1. Tạo hoặc cập nhật sảnh phòng giao hữu của Host
-    socket.on('casual_create_or_update_room', ({ roomCode, playerInfo = {}, ma_mon = 'mon_csdl' }) => {
-      if (!roomCode) return;
-      const normCode = roomCode.trim().toUpperCase();
-      const existing = casualRoomsMap.get(normCode);
-
-      // Nếu phòng chưa tồn tại hoặc chính user này là host
-      if (!existing || existing.host.userId === userId) {
-        const guestData = (existing && existing.guest && existing.guest.userId !== userId) ? existing.guest : null;
-        const roomData = {
-          roomCode: normCode,
-          host: {
-            userId,
-            socketId: socket.id,
-            name: playerInfo.name || socket.user.username || 'Chủ phòng',
-            petIcon: playerInfo.petIcon || '🦉',
-            image: /^\/assets\/[a-z0-9_./-]+\.(?:gif|png|webp)$/i.test(playerInfo.image) ? playerInfo.image : null,
-            petName: playerInfo.petName || 'Linh Thú',
-            tier: playerInfo.tier || '🌱 Khởi nguyên I'
-          },
-          guest: guestData,
-          ma_mon,
-          status: guestData ? 'READY' : 'WAITING',
-          updatedAt: Date.now()
-        };
-
-        casualRoomsMap.set(normCode, roomData);
-        socket.join(`casual_${normCode}`);
-
-        // Gửi cập nhật trạng thái phòng cho người tham gia
-        io.to(`casual_${normCode}`).emit('casual_room_updated', {
-          roomCode: normCode,
-          host: roomData.host,
-          guest: roomData.guest,
-          ma_mon: roomData.ma_mon,
-          status: roomData.status
-        });
-      }
-    });
-
-    // 2. Bạn bè nhập mã phòng để vào đội
-    socket.on('casual_join_room', ({ roomCode, playerInfo = {} }) => {
-      if (!roomCode) {
-        socket.emit('casual_error', 'Vui lòng nhập mã phòng hợp lệ!');
-        return;
-      }
-      const normCode = String(roomCode || '').trim().toUpperCase();
-      const room = casualRoomsMap.get(normCode);
-
-      if (!room) {
-        socket.emit('casual_error', `Không tìm thấy phòng "${normCode}". Hãy đảm bảo chủ phòng đang mở sảnh giao hữu!`);
-        return;
-      }
-
-      // Kiểm tra nếu phòng đã có đủ 2 người và không phải là chính user này
-      if (room.guest && room.guest.userId !== userId && room.host.userId !== userId) {
-        socket.emit('casual_error', `Phòng "${normCode}" đã đủ 2 người chơi!`);
-        return;
-      }
-
-      // Đăng ký làm Guest
-      room.guest = {
-        userId,
-        socketId: socket.id,
-        name: playerInfo.name || socket.user.username || 'Bạn Giao Hữu',
-        petIcon: playerInfo.petIcon || '🦊',
-        image: /^\/assets\/[a-z0-9_./-]+\.(?:gif|png|webp)$/i.test(playerInfo.image) ? playerInfo.image : null,
-        petName: playerInfo.petName || 'Hồ Ly Kitsune',
-        tier: playerInfo.tier || '🌱 Khởi nguyên II'
-      };
-      room.status = 'READY';
-      room.updatedAt = Date.now();
-
-      socket.join(`casual_${normCode}`);
-
-      // Phát thông báo cho CẢ HAI người chơi: slot + lập tức hiện Pet và tên bạn bè!
-      io.to(`casual_${normCode}`).emit('casual_room_updated', {
-        roomCode: normCode,
-        host: room.host,
-        guest: room.guest,
-        ma_mon: room.ma_mon,
-        status: 'READY'
       });
-    });
+    }
 
-    // 3. Rời phòng hoặc hủy đội
-    socket.on('casual_leave_room', ({ roomCode }) => {
-      if (!roomCode) return;
-      const normCode = roomCode.trim().toUpperCase();
-      const room = casualRoomsMap.get(normCode);
-      if (!room) return;
+    handle('join_queue', async ({ subject_id }) => {
+      const subjectId = await verifySubject(subject_id);
+      if (!socket.connected || busyInMatch(io, state, userId)) throw new Error('Bạn đang có một trận đấu.');
+      removeQueuedPlayer(state, userId);
 
-      if (room.host && room.host.userId === userId) {
-        // Chủ phòng giải tán phòng
-        io.to(`casual_${normCode}`).emit('casual_room_closed', {
-          message: 'Chủ phòng đã rời khỏi sảnh giao hữu.'
-        });
-        casualRoomsMap.delete(normCode);
-      } else if (room.guest && room.guest.userId === userId) {
-        // Khách rời phòng -> Trả slot 2 về ô dấu [+]
-        room.guest = null;
-        room.status = 'WAITING';
-        socket.leave(`casual_${normCode}`);
-        io.to(`casual_${normCode}`).emit('casual_room_updated', {
-          roomCode: normCode,
-          host: room.host,
-          guest: null,
-          ma_mon: room.ma_mon,
-          status: 'WAITING'
-        });
-      }
-    });
-
-    // 4. Chủ phòng bấm Bắt Đầu Trận Đấu Giao Hữu
-    socket.on('casual_start_match', async ({ roomCode }) => {
-      if (!roomCode) return;
-      const normCode = roomCode.trim().toUpperCase();
-      const room = casualRoomsMap.get(normCode);
-
-      if (!room) {
-        socket.emit('casual_error', 'Phòng không tồn tại hoặc đã kết thúc!');
-        return;
-      }
-
-      if (!room.guest) {
-        socket.emit('casual_error', 'Chưa có bạn bè vào đội để bắt đầu trận đấu!');
-        return;
-      }
-
-      if (room.host.userId !== userId) {
-        socket.emit('casual_error', 'Chỉ có Chủ phòng mới có quyền bắt đầu trận đấu!');
-        return;
-      }
-
-      try {
-        const p1Id = room.host.userId;
-        const p2Id = room.guest.userId;
-        const isGuestBot = Boolean(room.guest.isBot);
-
-        const matchState = await arenaService.createMatch(p1Id, p2Id, room.ma_mon || 'mon_csdl', isGuestBot?'PRACTICE':'CASUAL');
-        const roomName = `room_${matchState.ma_tran}`;
-
-        userActiveMatchMap.set(p1Id, matchState.ma_tran);
-        socketActiveMatchMap.set(room.host.socketId, matchState.ma_tran);
-
-        if (!isGuestBot && room.guest.socketId) {
-          userActiveMatchMap.set(p2Id, matchState.ma_tran);
-          socketActiveMatchMap.set(room.guest.socketId, matchState.ma_tran);
-        }
-
-        // Host socket
-        socket.join(roomName);
-
-        // Guest socket
-        if (!isGuestBot && room.guest.socketId) {
-          const guestSocket = io.sockets.sockets.get(room.guest.socketId);
-          if (guestSocket) guestSocket.join(roomName);
-        }
-
-        // Gửi match_found cho Host
-        socket.emit('match_found', {
-          ma_tran: matchState.ma_tran,
-          nguoi_choi: matchState.nguoi_choi,
-          thoi_gian_bat_dau_sau_giay: 2.0,
-          doi_thu_la_bot: isGuestBot,
-          my_user_id: p1Id,
-          matchState,
-          isCasual: true,
-          isFriendMatch: true
-        });
-
-        // Gửi match_found cho Guest nếu là người thật
-        if (!isGuestBot && room.guest.socketId) {
-          const guestSocket = io.sockets.sockets.get(room.guest.socketId);
-          if (guestSocket) {
-            guestSocket.emit('match_found', {
-              ma_tran: matchState.ma_tran,
-              nguoi_choi: matchState.nguoi_choi,
-              thoi_gian_bat_dau_sau_giay: 2.0,
-              doi_thu_la_bot: false,
-              my_user_id: p2Id,
-              matchState,
-              isCasual: true,
-              isFriendMatch: true
-            });
-          }
-        } else if (isGuestBot) {
-          // Khởi tạo bot turns nếu đấu cùng bot
-          setupSmartBotTurns(io, roomName, matchState.ma_tran, p1Id, p2Id);
-        }
-
-        // Xóa phòng casual vì trận đấu đã bắt đầu
-        casualRoomsMap.delete(normCode);
-      } catch (err) {
-        socket.emit('casual_error', 'Lỗi khởi tạo trận giao hữu: ' + err.message);
-      }
-    });
-
-    socket.on('disconnect', async (reason) => {
-      console.log(`[SOCKET] Disconnect: socket ${socket.id}, user ${userId}, reason: ${reason}`);
-
-      // Dọn dẹp phòng casual nếu socket là Host hoặc Guest
-      for (const [code, r] of casualRoomsMap.entries()) {
-        if (r.host && r.host.socketId === socket.id) {
-          io.to(`casual_${code}`).emit('casual_room_closed', {
-            message: 'Chủ phòng đã rời khỏi hoặc mất kết nối.'
-          });
-          casualRoomsMap.delete(code);
-        } else if (r.guest && r.guest.socketId === socket.id) {
-          r.guest = null;
-          r.status = 'WAITING';
-          io.to(`casual_${code}`).emit('casual_room_updated', {
-            roomCode: code,
-            host: r.host,
-            guest: null,
-            ma_mon: r.ma_mon,
-            status: 'WAITING'
-          });
-        }
-      }
-      const idx = matchmakingQueue.findIndex(q => q.userId === userId);
-      if (idx !== -1) {
-        if (matchmakingQueue[idx].timer) clearTimeout(matchmakingQueue[idx].timer);
-        matchmakingQueue.splice(idx, 1);
-      }
-
-      // Check if user was in an ongoing 1v1 match
-      const activeMatchId = socketActiveMatchMap.get(socket.id) || userActiveMatchMap.get(userId);
-      if (activeMatchId) {
-        socketActiveMatchMap.delete(socket.id);
-        userActiveMatchMap.delete(userId);
+      const opponent = [...state.queue.values()].find(entry => entry.subjectId === subjectId && entry.socket.connected);
+      const player = { userId, socket };
+      if (opponent) {
+        removeQueuedPlayer(state, opponent.userId);
         try {
-          const match = await arenaService.getMatchState(activeMatchId);
-          if (match && match.trang_thai === 'DANG_THI_DAU') {
-            console.log(`[SOCKET] User ${userId} disconnected mid-battle ${activeMatchId}. Auto-forfeiting match!`);
-            const finalState = await arenaService.surrenderMatch(activeMatchId, userId);
-            clearBotTimer(activeMatchId);
-            const roomName = `room_${activeMatchId}`;
-            io.to(roomName).emit('match_ended', {
-              ma_tran: activeMatchId,
-              nguoi_thang_cuoc: finalState.nguoi_thang_cuoc,
-              ly_do_ket_thuc: 'DAU_HANG',
-              mo_ta: 'Đối thủ đã ngắt kết nối hoặc rời trận đấu. Bạn được xử THẮNG!',
-              trang_thai_cuoi: finalState
-            });
-            io.emit('leaderboard_updated', { timestamp: Date.now(), ma_tran: activeMatchId });
-          }
-        } catch (disErr) {
-          console.warn('[SOCKET] Auto-surrender on disconnect error:', disErr.message);
+          await pairMatch(io, state, player, opponent, subjectId, 'RANKED');
+        } catch (error) {
+          opponent.socket.emit('error_msg', error.message);
+          throw error;
         }
+        return;
+      }
+
+      const entry = { ...player, subjectId };
+      entry.timer = setTimeout(async () => {
+        if (state.queue.get(userId) !== entry) return;
+        try {
+          const botId = await pickPracticeBot();
+          if (state.queue.get(userId) !== entry || !socket.connected) return;
+          removeQueuedPlayer(state, userId, socket.id);
+          await pairMatch(io, state, player, { userId: botId }, subjectId, 'PRACTICE');
+        } catch (error) {
+          if (state.queue.get(userId) === entry) removeQueuedPlayer(state, userId, socket.id);
+          if (!state.queue.has(userId) && socket.connected && !busyInMatch(io, state, userId)) {
+            socket.emit('error_msg', error.message);
+          }
+        }
+      }, queueTimeout);
+      entry.timer.unref?.();
+      state.queue.set(userId, entry);
+      socket.emit('queue_waiting', { position: state.queue.size, timeout_ms: queueTimeout });
+    });
+
+    handle('leave_queue', () => {
+      if (removeQueuedPlayer(state, userId, socket.id)) socket.emit('queue_cancelled');
+    });
+
+    handle('join_match_room', async ({ match_id }) => {
+      if (!isUuid(match_id)) throw new Error('Mã trận đấu không hợp lệ.');
+      const match = await arenaService.getMatchState(match_id, userId);
+      await joinMatchRoom(state, socket, match);
+      startBotJob(io, state, match);
+      return { match };
+    });
+
+    handle('surrender', async ({ match_id }) => {
+      if (!isUuid(match_id)) throw new Error('Mã trận đấu không hợp lệ.');
+      const match = await arenaService.surrenderMatch(match_id, userId);
+      finishBroadcast(io, match);
+    });
+
+    handle('submit_answer', async payload => {
+      if (!isUuid(payload.match_id) || Object.keys(payload).some(field => !allowedTurnFields.has(field))) {
+        throw new Error('Dữ liệu lượt trả lời không hợp lệ.');
+      }
+      const result = await arenaService.submitTurnAnswer({ ...payload, match_id: payload.match_id.toLowerCase(), user_id: userId });
+      broadcastTurn(io, result);
+      return result;
+    });
+
+    handle('casual_create_or_update_room', async ({ roomCode, playerInfo, subject_id }) => {
+      const code = roomCodeOf(roomCode);
+      const subjectId = await verifySubject(subject_id);
+      if (!socket.connected) return;
+      const existing = state.rooms.get(code);
+      if (existing && existing.host.userId !== userId) throw new Error('Mã phòng này đang được sử dụng.');
+      if (existing?.starting) throw new Error('Phòng đang bắt đầu trận đấu.');
+
+      const room = {
+        roomCode: code,
+        host: roomPlayer(socket, playerInfo, true),
+        guest: existing?.guest ?? null,
+        subject_id: subjectId,
+        starting: false
+      };
+      state.rooms.set(code, room);
+      if (existing && existing.host.socketId !== socket.id) {
+        await io.sockets.sockets.get(existing.host.socketId)?.leave(casualRoom(code));
+      }
+      await socket.join(casualRoom(code));
+      announceCasualRoom(io, room);
+    }, 'casual_error');
+
+    handle('casual_join_room', async ({ roomCode, playerInfo }) => {
+      const code = roomCodeOf(roomCode);
+      const room = state.rooms.get(code);
+      if (!room) throw new Error('Không tìm thấy phòng ' + code + '.');
+      if (room.starting) throw new Error('Phòng đang bắt đầu trận đấu.');
+      if (room.host.userId === userId) throw new Error('Bạn đang là chủ phòng này.');
+      if (room.guest && room.guest.userId !== userId) throw new Error('Phòng đã đủ hai người chơi.');
+      if (room.guest && room.guest.socketId !== socket.id) {
+        await io.sockets.sockets.get(room.guest.socketId)?.leave(casualRoom(code));
+      }
+      room.guest = roomPlayer(socket, playerInfo, false);
+      await socket.join(casualRoom(code));
+      announceCasualRoom(io, room);
+    }, 'casual_error');
+
+    handle('casual_leave_room', async ({ roomCode }) => {
+      const code = roomCodeOf(roomCode);
+      const room = state.rooms.get(code);
+      if (!room) return;
+      if (room.host.socketId === socket.id) {
+        removeCasualRoom(io, state, room, 'Chủ phòng đã rời khỏi sảnh giao hữu.');
+      } else if (room.guest?.socketId === socket.id) {
+        room.guest = null;
+        await socket.leave(casualRoom(code));
+        announceCasualRoom(io, room);
+      }
+    }, 'casual_error');
+
+    handle('casual_start_match', async ({ roomCode }) => {
+      const code = roomCodeOf(roomCode);
+      const room = state.rooms.get(code);
+      if (!room) throw new Error('Phòng không tồn tại hoặc đã kết thúc.');
+      if (room.host.socketId !== socket.id) throw new Error('Chỉ chủ phòng mới có thể bắt đầu trận đấu.');
+      if (room.starting) throw new Error('Phòng đang bắt đầu trận đấu.');
+      const guestSocket = io.sockets.sockets.get(room.guest?.socketId);
+      if (!guestSocket) throw new Error('Chưa có bạn bè vào đội để bắt đầu trận đấu.');
+      room.starting = true;
+      removeQueuedPlayer(state, userId);
+      removeQueuedPlayer(state, guestSocket.user.id);
+      try {
+        await pairMatch(io, state, { userId, socket }, { userId: guestSocket.user.id, socket: guestSocket },
+          room.subject_id, 'CASUAL', true);
+        removeCasualRoom(io, state, room);
+      } finally {
+        room.starting = false;
+      }
+    }, 'casual_error');
+
+    socket.on('disconnect', async () => {
+      removeQueuedPlayer(state, userId, socket.id);
+      for (const room of state.rooms.values()) {
+        if (room.host.socketId === socket.id) {
+          removeCasualRoom(io, state, room, 'Chủ phòng đã mất kết nối.');
+        } else if (room.guest?.socketId === socket.id) {
+          room.guest = null;
+          announceCasualRoom(io, room);
+        }
+      }
+      const activeMatch = state.matchBySocket.get(socket.id);
+      state.matchBySocket.delete(socket.id);
+      if (!activeMatch || [...state.matchBySocket].some(([id, matchId]) =>
+        matchId === activeMatch && io.sockets.sockets.get(id)?.user.id === userId)) return;
+      try {
+        const match = await arenaService.getMatchState(activeMatch, userId);
+        if (match.status === 'ACTIVE') finishBroadcast(io, await arenaService.surrenderMatch(activeMatch, userId));
+      } catch (error) {
+        console.warn('[ARENA] Không thể xử lý ngắt kết nối:', error.message);
       }
     });
   });
 }
 
-function clearBotTimer(matchId) {
-  if (botTimers.has(matchId)) {
-    clearTimeout(botTimers.get(matchId));
-    botTimers.delete(matchId);
-  }
-}
-
-/**
- * Simulate dynamic adaptive bot turn with human-like pacing and psychology
- */
-function setupSmartBotTurns(io, roomName, matchId, humanUserId, botUserId) {
-  let currentQuestion = 1;
-  let userCombo = 0;
-
-  function scheduleNextBotTurn() {
-    // Fetch match state to compute dynamic adaptive parameters
-    arenaService.getMatchState(matchId).then((matchState) => {
-      if (matchState.trang_thai === 'KET_THUC') return;
-      const totalQuestions = matchState.cau_hoi?.length || 10;
-      if (currentQuestion > totalQuestions) return;
-
-      if (matchState.luot_da_tra_loi.length < (currentQuestion - 1) * 2) {
-        botTimers.set(matchId, setTimeout(scheduleNextBotTurn, 500));
-        return;
-      }
-
-      const qInMatch = matchState.cau_hoi[currentQuestion - 1];
-      if (!qInMatch) return;
-
-      const humanPlayer = matchState.nguoi_choi.find(p => p.ma_nguoi_dung === humanUserId);
-      const botPlayer = matchState.nguoi_choi.find(p => p.ma_nguoi_dung === botUserId);
-
-      const myHp = humanPlayer ? humanPlayer.mau_hien_tai : 100;
-      const botHp = botPlayer ? botPlayer.mau_hien_tai : 100;
-
-      const botConfig = calculateBotTurnParams({
-        questionContent: qInMatch.noi_dung,
-        myHp,
-        botHp,
-        userCombo,
-        questionIndex: currentQuestion
-      });
-
-      // Emit typing / thinking state
-      io.to(roomName).emit('bot_thinking', {
-        thu_tu_cau: currentQuestion,
-        isAggressive: botConfig.isAggressive,
-        estimatedDelaySec: botConfig.totalDelaySec
-      });
-
-      const timer = setTimeout(async () => {
-        try {
-          const freshState = await arenaService.getMatchState(matchId);
-          if (freshState.trang_thai === 'KET_THUC') return;
-
-          // Resolve bot choice depending on question type
-          const qType = qInMatch.loai_cau_hoi || 'TRAC_NGHIEM_4';
-          let botChoice = 0;
-          let botPayload = null;
-          const db = require('../database/db');
-          const qDetail = await db.queryOne('SELECT vi_tri_dap_an_dung, du_lieu_cau_hoi FROM cau_hoi WHERE ma_cau_hoi = $1', [qInMatch.ma_cau_hoi]);
-          let parsedQ = null;
-          if (qDetail && qDetail.du_lieu_cau_hoi) {
-            try {
-              parsedQ = typeof qDetail.du_lieu_cau_hoi === 'string' ? JSON.parse(qDetail.du_lieu_cau_hoi) : qDetail.du_lieu_cau_hoi;
-            } catch (e) {}
-          }
-
-          if (qType === 'NOI_CAP') {
-            botPayload = {
-              matched_pairs: botConfig.willAnswerCorrectly ? (parsedQ?.pairs || []) : [],
-              cap_ghep: botConfig.willAnswerCorrectly ? (parsedQ?.pairs || []) : []
-            };
-            botChoice = botConfig.willAnswerCorrectly ? 1 : 0;
-          } else if (qType === 'SAP_XEP_CAU') {
-            const correctOrder = parsedQ?.correct_order || parsedQ?.cac_tu_dung || [];
-            botPayload = {
-              ordered_words: botConfig.willAnswerCorrectly ? correctOrder : [],
-              cau_ghep: botConfig.willAnswerCorrectly ? correctOrder.join(' ') : 'sai_thu_tu'
-            };
-            botChoice = botConfig.willAnswerCorrectly ? 1 : 0;
-          } else if (qType === 'DIEN_TU') {
-            const correctWord = parsedQ?.blank_answer || parsedQ?.tu_dung || '';
-            botPayload = {
-              tu_chon: botConfig.willAnswerCorrectly ? correctWord : 'tu_sai_ngau_nhien'
-            };
-            botChoice = botConfig.willAnswerCorrectly ? 1 : 0;
-          } else {
-            if (qDetail && qDetail.vi_tri_dap_an_dung !== null) {
-              botChoice = botConfig.willAnswerCorrectly
-                ? qDetail.vi_tri_dap_an_dung
-                : (qDetail.vi_tri_dap_an_dung + 1) % 4;
-            }
-          }
-
-          const turnResult = await arenaService.submitTurnAnswer({
-            ma_tran: matchId,
-            ma_nguoi_dung: botUserId,
-            thu_tu_cau: currentQuestion,
-            vi_tri_dap_an_chon: botChoice,
-            cau_tra_loi: botPayload,
-            thoi_gian_giay: botConfig.totalDelaySec
-          });
-
-          io.to(roomName).emit('turn_resolved', {
-            nguoi_tra_loi: botUserId,
-            thu_tu_cau: currentQuestion,
-            la_dap_an_dung: turnResult.la_dap_an_dung,
-            sat_thuong_gay_ra: turnResult.sat_thuong_gay_ra,
-            la_chi_mang: turnResult.la_chi_mang,
-            trang_thai_tran: turnResult.trang_thai_tran
-          });
-
-          if (turnResult.tran_ket_thuc) {
-            clearBotTimer(matchId);
-            io.to(roomName).emit('match_ended', {
-              ma_tran: matchId,
-              nguoi_thang_cuoc: turnResult.trang_thai_tran.nguoi_thang_cuoc,
-              ly_do_ket_thuc: turnResult.trang_thai_tran.ly_do_ket_thuc,
-              trang_thai_cuoi: turnResult.trang_thai_tran
-            });
-            io.emit('leaderboard_updated', { timestamp: Date.now(), ma_tran: matchId });
-          } else {
-            currentQuestion++;
-            scheduleNextBotTurn();
-          }
-        } catch (err) {
-          // Match might have concluded already
-        }
-      }, botConfig.delayMs);
-
-      botTimers.set(matchId, timer);
-    }).catch(() => {});
-  }
-
-  // Start round 1 after VS screen animation completes (~2.5 seconds)
-  botTimers.set(matchId, setTimeout(scheduleNextBotTurn, 2500));
-}
-
 module.exports = {
   initArenaSocket,
-  calculateBotTurnParams
+  calculateBotTurnParams,
+  broadcastTurn,
+  broadcastMatchEnded: finishBroadcast
 };

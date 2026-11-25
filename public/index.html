@@ -1160,7 +1160,6 @@
 
         <div id="b-reactions"><button id="b-reaction-toggle" type="button" aria-label="Gửi biểu cảm" aria-expanded="false" aria-controls="b-reaction-panel" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8 9h.1m7.9 0h.1M8 14q4 5 8 0"/></svg></button><div id="b-reaction-panel" hidden><strong>Biểu cảm nhanh</strong><div id="b-reaction-grid"></div><label><input id="b-reaction-mute" type="checkbox">Ẩn biểu cảm từ đối thủ</label><p id="b-reaction-status" role="status"></p></div></div>
         <!-- Nút Khiên bảo vệ tròn gọn gàng -->
-        <button id="b-skill" onclick="useShield()" class="w-8 h-8 rounded-full border border-cyan-500/40 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 flex items-center justify-center text-sm font-bold transition cursor-pointer shrink-0 shadow-xs" title="Sử dụng Khiên hộ thể">🛡️</button>
       </div>
 
       <!-- 2. Sân khấu đối đầu 2 Pet & Thanh Máu (Thu gọn ~110px) -->
@@ -1176,7 +1175,6 @@
           </div>
           <div class="relative h-16 flex items-center justify-center mt-1">
             <div id="my-reaction" class="battle-reaction" role="status" hidden></div><div id="my-pet" class="w-16 h-16 flex items-center justify-center select-none text-5xl">🐉</div>
-            <span id="my-shield" class="hidden absolute text-4xl opacity-80">🛡️</span>
             <span id="my-float" class="absolute -top-2 text-base font-extrabold text-rose-500 opacity-0 pointer-events-none"></span>
             <!-- Huy hiệu Combo x5 cạnh linh vật -->
             <span id="b-combo" class="hidden absolute -right-1 top-0 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-rose-500 text-white font-black text-[10px] shadow-md animate-bounce pointer-events-none whitespace-nowrap">🔥x2</span>
@@ -3041,11 +3039,11 @@
         const { success, data } = await response.json();
         if (!success) return;
         const label = document.getElementById('arena-season-label');
-        label.textContent = `Mùa ${data.number} · 8 tuần`;
+        label.textContent = `Mùa ${data.season_no} · 8 tuần`;
         label.hidden = false;
         const end = new Intl.DateTimeFormat('vi-VN', {
           timeZone: 'Asia/Ho_Chi_Minh', dateStyle: 'short', timeStyle: 'short'
-        }).format(new Date(data.endsAt));
+        }).format(new Date(data.ends_at));
         document.getElementById('arena-season-end').textContent = `Kết thúc lúc ${end} (giờ Việt Nam)`;
       } catch {}
     }
@@ -3511,8 +3509,8 @@
 <script>
   
   // ===== Đấu trường Tiers & Ranks =====
-  const SUBJ = { csdl: 'Cơ Sở Dữ Liệu', ctdl: 'Cấu Trúc Dữ Liệu', mon_csdl: 'Cơ Sở Dữ Liệu', mon_ctdl: 'Cấu Trúc Dữ Liệu' };
-  const RANKS = { csdl: 0, ctdl: 0, mon_csdl: 0, mon_ctdl: 0 };
+  const SUBJ = Object.create(null);
+  const RANKS = Object.create(null);
   const overallPts = () => Object.values(RANKS).reduce((sum,value)=>sum+Math.max(0,Number(value)||0),0);
   const THI_THRESH = [0, 500, 1000, 1500, 2000];
   const THI_NAMES = ['🌱 Khởi nguyên', '🔥 Bứt phá', '⚡ Tinh thông', '🌟 Xuất chúng', '👑 Đỉnh cao'];
@@ -3631,7 +3629,7 @@
     document.getElementById('rank-list').innerHTML = rankRows.map((r, i) => {
       const me = Boolean(currentUserAccount?.userId && r[4]===currentUserAccount.userId);
       const petThumb = me 
-        ? (currentEquippedPet.image ? `<img src="${currentEquippedPet.image}" class="w-6 h-6 object-contain pixel-art inline-block select-none" />` : currentEquippedPet.icon)
+        ? (currentEquippedPet.image ? `<img src="${escapeHtml(currentEquippedPet.image)}" class="w-6 h-6 object-contain pixel-art inline-block select-none" />` : currentEquippedPet.icon)
         : `<img src="${escapeHtml(typeof r[6]==='string'&&r[6].startsWith('/assets/')?r[6]:'/assets/navigation/pet.webp')}" alt="" width="28" height="28" class="w-7 h-7 object-contain">`;
       let valDisplay = r[3];
       if (rankType === 'streak') {
@@ -3650,7 +3648,7 @@
   }
 
   // ===== Trận đấu pet =====
-  const B = { my:100, op:100, combo:0, qi:0, list:[], t0:0, tick:null, pDone:false, bDone:false, shield:false, shieldUsed:false, over:false, locked:false };
+  const B = { my:100, op:100, combo:0, qi:0, list:[], t0:0, tick:null, pDone:false, bDone:false, over:false, locked:false };
   window.B = B;
 
   let matchmakingInterval = null;
@@ -4038,26 +4036,27 @@
   async function executeSurrender() {
     closeSurrenderModal();
     clearBattleTimers();
-    B.my = 0;
-    updHp();
-
-    if (currentLiveMatch && currentLiveMatch.ma_tran) {
-      const mId = currentLiveMatch.ma_tran;
+    if (currentLiveMatch && currentLiveMatch.id) {
+      const mId = currentLiveMatch.id;
       try {
         const token = localStorage.getItem('tok_token');
         const response = await fetch('/api/arena/'+mId+'/surrender', {
           method: 'POST', headers: {Authorization: 'Bearer '+token}
         });
         const result = await response.json();
-        if (result.success) currentLiveMatch = result.data;
+        if (!result.success) throw Error(result.error?.message || 'Không thể xác nhận đầu hàng.');
+        currentLiveMatch = result.data;
       } catch (error) {
-        console.warn('Không thể xác nhận đầu hàng:', error.message);
+        showToast(error.message, 'error');
+        return;
       }
     }
-    checkEnd('DAU_HANG');
+    checkEnd();
   }
 
   // Khởi tạo và quản lý tìm trận 1v1
+  let pendingRankedMatchHandler = null;
+
   async function startMatchmaking() {
     clearBattleTimers();
     if (matchmakingInterval) clearInterval(matchmakingInterval);
@@ -4090,8 +4089,12 @@
       }
     }, 1000);
 
-    const subCode = document.getElementById('lobby-subject') ? document.getElementById('lobby-subject').value : 'csdl';
-    const maMon = subCode.startsWith('mon_') ? subCode : ('mon_' + subCode);
+    const subjectId = document.getElementById('lobby-subject')?.value;
+    if (!subjectId) {
+      cancelMatchmaking();
+      showToast('Chọn môn trước khi tìm trận.', 'info');
+      return;
+    }
     const token = localStorage.getItem('tok_token');
 
     // 1. Đồng bộ Socket.IO và tham gia hàng chờ
@@ -4099,11 +4102,11 @@
     if (typeof liveSocket !== 'undefined' && liveSocket) {
       // Đảm bảo token đăng nhập được cập nhật trên socket
       liveSocket.auth = { token };
-      liveSocket.off('match_found');
+      if (pendingRankedMatchHandler) liveSocket.off('match_found', pendingRankedMatchHandler);
       liveSocket.off('queue_waiting');
 
       const joinQueue = () => {
-        liveSocket.emit('join_queue', { ma_mon: maMon });
+        liveSocket.emit('join_queue', { subject_id: subjectId });
       };
 
       if (liveSocket.connected) {
@@ -4113,45 +4116,29 @@
         liveSocket.once('connect', joinQueue);
       }
 
-      liveSocket.once('match_found', (data) => {
-        if (socketMatched) return;
+      pendingRankedMatchHandler = data => {
+        if (socketMatched || data.is_casual) return;
+        liveSocket.off('match_found', pendingRankedMatchHandler);
+        pendingRankedMatchHandler = null;
         socketMatched = true;
         clearInterval(matchmakingInterval);
         clearTimeout(matchmakingTimeout);
 
-        if (statusEl) statusEl.textContent = data.doi_thu_la_bot
-          ? 'Đấu tập với bot · Không tính điểm hạng'
-          : 'Đã tìm thấy đối thủ trực tuyến!';
-        if (audioSettings && audioSettings.battle) playAdvancedSound('click');
-
-        if (data.my_user_id) {
-          B.myUserId = data.my_user_id;
-          if (!currentUserAccount.userId) {
-            currentUserAccount.userId = data.my_user_id;
-          }
+        const match = data.match;
+        const opponent = match?.players.find(player => player.user_id !== data.user_id);
+        if (!match || !opponent || data.user_id !== currentUserAccount.userId) {
+          cancelMatchmaking();
+          return;
         }
-        B.isBot = Boolean(data.doi_thu_la_bot);
-
-        const myId = B.myUserId || currentUserAccount?.userId;
-        const opUser = (data.nguoi_choi || []).find(p => p.ma_nguoi_dung !== myId) || (data.nguoi_choi || [])[1] || (data.nguoi_choi || [])[0] || {};
-        matchedOpponent = arenaBots.find(bot => bot.id === opUser.ma_nguoi_dung) || {
-          id: opUser.ma_nguoi_dung,
-          name: opUser.ten_hien_thi || (data.doi_thu_la_bot ? 'Đấu Sĩ Tập Sự' : 'Chiến Binh Lữ Khách'),
-          petIcon: opUser.thu_cung?.ten_thu_cung?.includes('Hồ Ly') ? '🦊' : (opUser.thu_cung?.ten_thu_cung?.includes('Thạch') ? '🗿' : '🐉'),
-          petName: opUser.thu_cung?.ten_thu_cung || 'Linh Thú Đối Thủ',
-          tier: opUser.danh_hieu || '🌱 Khởi nguyên I',
-          isBot: Boolean(data.doi_thu_la_bot)
-        };
-
-        const mData = data.matchState || data;
-        mData.my_user_id = B.myUserId;
-        mData.doi_thu_la_bot = Boolean(data.doi_thu_la_bot);
-
+        if (statusEl) statusEl.textContent = opponent.role === 'SYSTEM'
+          ? 'Đấu tập với bot · Không tính điểm hạng' : 'Đã tìm thấy đối thủ trực tuyến!';
+        if (audioSettings.battle) playAdvancedSound('click');
         setTimeout(() => {
-          if (mmModal) mmModal.classList.add('hidden');
-          showVersusScreen(matchedOpponent, mData);
+          mmModal?.classList.add('hidden');
+          showVersusScreen(arenaOpponent(opponent), match);
         }, 400);
-      });
+      };
+      liveSocket.on('match_found', pendingRankedMatchHandler);
     }
 
     matchmakingTimeout = setTimeout(() => {
@@ -4165,6 +4152,8 @@
     if (matchmakingInterval) clearInterval(matchmakingInterval);
     if (matchmakingTimeout) clearTimeout(matchmakingTimeout);
     if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected) {
+      if (pendingRankedMatchHandler) liveSocket.off('match_found', pendingRankedMatchHandler);
+      pendingRankedMatchHandler = null;
       liveSocket.emit('leave_queue');
     }
     const mmModal = document.getElementById('modal-matchmaking');
@@ -4173,19 +4162,29 @@
     showToast('Đã hủy tìm kiếm trận đấu.');
   }
 
-  const arenaBots = [
-    { id: 'usr_bot_001', name: 'Đấu Sĩ Tập Sự', petName: 'Slime Mọt Sách Gloop', sprite: 'bot_gloop' },
-    { id: 'usr_bot_002', name: 'Chiến Binh Lữ Khách', petName: 'Cú Cót Tickbot', sprite: 'bot_tickbot' },
-    { id: 'usr_bot_003', name: 'Hộ Vệ Tri Thức', petName: 'Bóng Ma Lỗi Glitchy', sprite: 'bot_glitchy' }
-  ].map(bot => ({
-    ...bot,
-    userId: bot.id,
-    image: `/assets/pets/${bot.sprite}/03_spritesheet/${bot.sprite}_idle.gif`,
-    isBot: true
-  }));
+  function arenaOpponent(player) {
+    return {
+      id: player.user_id ?? player.id,
+      userId: player.user_id ?? player.id,
+      name: player.display_name,
+      petName: player.pet?.name,
+      petIcon: player.pet?.icon || '🐾',
+      image: player.pet?.image_path,
+      isBot: player.role === 'SYSTEM'
+    };
+  }
+
+  async function getPracticeBots() {
+    const token = localStorage.getItem('tok_token');
+    const response = await fetch('/api/arena/bots', { headers: { Authorization: 'Bearer ' + token } });
+    const result = await response.json();
+    if (!response.ok || !result.success) throw Error(result.error?.message || 'Không tải được danh sách Bot.');
+    if (token !== localStorage.getItem('tok_token')) throw Error('Tài khoản đã thay đổi.');
+    return result.data.map(row => arenaOpponent({ ...row, role: 'SYSTEM' }));
+  }
 
   function showVersusScreen(opponent, matchData) {
-    if (!matchData?.ma_tran || !matchData.cau_hoi?.length) {
+    if (!matchData?.id || !matchData.rounds?.length) {
       showToast('Chưa tải được trận đấu. Hãy thử lại.', 'error');
       return;
     }
@@ -4201,9 +4200,9 @@
     const opPetBox = document.getElementById('vs-op-pet');
     if (opPetBox) {
       if (opponent && opponent.image) {
-        opPetBox.innerHTML = `<img src="${opponent.image}" alt="${opponent.petName || 'Bot'}" class="w-24 h-24 sm:w-28 sm:h-28 object-contain pixel-art drop-shadow-xl select-none mx-auto block" />`;
+        opPetBox.innerHTML = `<img src="${escapeHtml(opponent.image)}" alt="${escapeHtml(opponent.petName || '')}" class="w-24 h-24 sm:w-28 sm:h-28 object-contain pixel-art drop-shadow-xl select-none mx-auto block" />`;
       } else {
-        opPetBox.innerHTML = `<span class="text-6xl sm:text-7xl select-none inline-block pet-animated block" style="transform:scaleX(${(opponent.id?.startsWith('usr_bot_') || opponent.isBot || matchData?.doi_thu_la_bot) ? 1 : -1})">${opponent.petIcon || '🤖'}</span>`;
+        opPetBox.innerHTML = `<span class="text-6xl sm:text-7xl select-none inline-block pet-animated block" style="transform:scaleX(${opponent.isBot ? 1 : -1})">${opponent.petIcon || '🤖'}</span>`;
       }
     }
     const opUserName = document.getElementById('vs-op-user-name');
@@ -4212,11 +4211,11 @@
     if (opPetName) opPetName.textContent = '🐾 ' + (opponent.petName || 'Linh vật đối thủ');
     const opTier = document.getElementById('vs-op-tier');
     if (opTier) {
-      if (matchData?.che_do === 'RANKED') {
-        const opponentPlayer = matchData.nguoi_choi?.find(player => player.ma_nguoi_dung === opponent.id);
-        opTier.innerHTML = arenaRankBadge(opponentPlayer?.diem_hang, 20);
+      if (matchData?.mode === 'RANKED') {
+        const opponentPlayer = matchData.players.find(player => player.user_id === opponent.id);
+        opTier.innerHTML = arenaRankBadge(opponentPlayer?.rating_points, 20);
       } else {
-        opTier.textContent = (matchData?.che_do === 'PRACTICE' || opponent.isBot || matchData?.doi_thu_la_bot)
+        opTier.textContent = (matchData?.mode === 'PRACTICE' || opponent.isBot)
           ? 'Đấu tập · Không tính điểm hạng'
           : (opponent.tier || '');
       }
@@ -4238,9 +4237,9 @@
   }
 
   function startBattle() {
-    if (B && B.isCasual) {
-      if (B.isFriendMatch) {
-        startCasualFriendMatch();
+    if (currentArenaMode === 'casual') {
+      if (currentCasualParty.partner) {
+        handleCasualStartClick();
       } else {
         startBotPractice();
       }
@@ -4249,185 +4248,105 @@
     }
   }
 
-  function startActualBattle(opponent, matchData) {
+  function setBattleHealth(match) {
+    const me = match.players.find(player => player.user_id === B.myUserId);
+    const opponent = match.players.find(player => player.user_id !== B.myUserId);
+    B.my = me.hp;
+    B.op = opponent.hp;
+    B.myMax = me.max_hp;
+    B.opMax = opponent.max_hp;
+    updHp();
+  }
+
+  function startActualBattle(opponent, match) {
     clearBattleTimers();
-    const activeSub = (currentArenaMode === 'casual' && document.getElementById('casual-subject'))
-      ? document.getElementById('casual-subject').value
-      : (document.getElementById('lobby-subject') ? document.getElementById('lobby-subject').value : 'csdl');
-    B.subject = activeSub;
-    Object.assign(B, { my: 100, op: 100, combo: 0, maxCombo: 0, userCorrectCount: 0, qi: 0, shield: false, shieldUsed: false, over: false });
-
-    // Xác định vai trò đối thủ (Bot hay Người chơi thực PvP) & Định danh người dùng
-    B.isBot = Boolean(opponent?.id?.startsWith('usr_bot_') || opponent?.isBot || matchData?.doi_thu_la_bot);
-    B.isCasual = Boolean(opponent?.isCasual || currentArenaMode === 'casual' || matchData?.isCasual);
-    B.isFriendMatch = Boolean(opponent?.isFriendMatch);
-    B.myUserId = matchData?.my_user_id || B.myUserId || currentUserAccount?.userId;
-
-    // Trích xuất ngân hàng câu hỏi đầy đủ 4 dạng từ Backend CSDL thật
-    currentLiveMatch = matchData;
-    B.list = matchData.cau_hoi.map(q => ({
-      q: q.noi_dung,
-      loai: q.loai_cau_hoi || 'TRAC_NGHIEM_4',
-      data: q.du_lieu_cau_hoi || null,
-      bloom: q.muc_bloom || 'NHO',
-      do_kho: q.do_kho || 'TRUNG_BINH',
-      o: q.dap_an || [q.dap_an_a, q.dap_an_b, q.dap_an_c, q.dap_an_d].filter(Boolean),
-      a: q.vi_tri_dap_an_dung,
-      ma_cau_trong_tran: q.ma_cau_trong_tran
-    }));
-
-    window.BattleReactions?.start(liveSocket, matchData?.ma_tran, B.myUserId, B.isBot);
-
-    // Tham gia phòng Socket thời gian thực (nếu có trận đấu trực tuyến)
-    if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected && currentLiveMatch?.ma_tran) {
-      liveSocket.emit('join_match_room', { ma_tran: currentLiveMatch.ma_tran });
-      liveSocket.off('turn_resolved');
-      liveSocket.off('match_ended');
-
-    }
+    const userId = currentUserAccount.userId;
+    if (!match.players.some(player => player.user_id === userId)) return;
+    currentLiveMatch = match;
+    Object.assign(B, {
+      subject: match.subject_id, myUserId: userId, list: match.rounds, qi: (match.current_round_no || 1) - 1,
+      combo: 0, maxCombo: 0, userCorrectCount: 0, isBot: opponent.isBot, over: false,
+      isCasual: match.mode !== 'RANKED', isFriendMatch: match.mode === 'CASUAL', pendingTurns: []
+    });
+    window.BattleReactions?.start(liveSocket, match.id, userId, B.isBot);
     const resolvedTurns = new Set();
-    B.onTurnResolved = (data) => {
-        if (data.trang_thai_tran?.ma_tran !== currentLiveMatch?.ma_tran || data.thu_tu_cau !== B.qi || B.over) return;
-        const key = `${data.thu_tu_cau}:${data.nguoi_tra_loi}`;
-        if (resolvedTurns.has(key)) return;
-        resolvedTurns.add(key);
-        console.log('[CLIENT] turn_resolved received! nguoi_tra_loi:', data.nguoi_tra_loi, 'myUserId:', B.myUserId, 'dmg:', data.sat_thuong_gay_ra);
-        const isMe = (data.nguoi_tra_loi === B.myUserId);
-        const d = data.sat_thuong_gay_ra || 0;
-        const botStatus = document.getElementById('b-bot-status');
-
-        if (isMe) {
-          // --- BẢN THÂN VỪA TẤN CÔNG (Attacker) ---
-          B.pDone = true;
-          document.getElementById('b-retry-answer')?.remove();
-          const box = document.getElementById('b-options');
-          box?.classList.add('ring-2', data.la_dap_an_dung ? 'ring-emerald-500' : 'ring-rose-500', 'rounded-2xl');
-          if (data.la_dap_an_dung) {
-            B.userCorrectCount = (B.userCorrectCount || 0) + 1;
-            B.combo = (B.combo || 0) + 1;
-            B.maxCombo = Math.max(B.maxCombo || 0, B.combo);
-            anim('my-pet', 'do-lunge');
-            if (audioSettings && audioSettings.battle) playAdvancedSound('sfx-slash');
-            anim('op-pet', 'do-shake');
-            popFloat('op-float', '-' + d);
-            // Đồng bộ máu đối thủ chính xác từ máy chủ
-            const opPlayer = (data.trang_thai_tran?.nguoi_choi || []).find(p => p.ma_nguoi_dung !== B.myUserId);
-            if (opPlayer && typeof opPlayer.mau_hien_tai === 'number') {
-              B.op = opPlayer.mau_hien_tai;
-            } else {
-              B.op = Math.max(0, B.op - d);
-            }
-            updHp();
-            if (botStatus) {
-              botStatus.textContent = `⚡ Đánh trúng (-${d} HP)`;
-              botStatus.className = 'text-[9.5px] text-center font-bold text-emerald-400 transition-all truncate';
-            }
-          } else {
-            B.combo = 0;
-            if (botStatus) {
-              botStatus.textContent = '❌ Chọn chưa đúng';
-              botStatus.className = 'text-[9.5px] text-center font-medium text-rose-400 transition-all truncate';
-            }
-          }
-          checkEnd();
-          roundCheck();
-        } else {
-          // --- ĐỐI THỦ TẤN CÔNG (Defender) ---
-          B.bDone = true;
-          if (data.la_dap_an_dung) {
-            if (B.shield) {
-              B.shield = false;
-              const shieldEl = document.getElementById('my-shield');
-              if (shieldEl) shieldEl.classList.add('hidden');
-              popFloat('my-float', '🛡️ Chặn!');
-              if (botStatus) {
-                botStatus.textContent = '🛡️ Khiên đã chặn đòn!';
-                botStatus.className = 'text-[9.5px] text-center font-semibold text-cyan-400 transition-all truncate';
-              }
-            } else {
-              anim('op-pet', 'do-lungeL');
-              anim('my-pet', 'do-shake');
-              popFloat('my-float', '-' + d);
-              // Đồng bộ máu của mình chính xác từ máy chủ
-              const myPlayer = (data.trang_thai_tran?.nguoi_choi || []).find(p => p.ma_nguoi_dung === B.myUserId);
-              if (myPlayer && typeof myPlayer.mau_hien_tai === 'number') {
-                B.my = myPlayer.mau_hien_tai;
-              } else {
-                B.my = Math.max(0, B.my - d);
-              }
-              updHp();
-              if (botStatus) {
-                botStatus.textContent = `⚡ Bị đánh trúng (-${d} HP)`;
-                botStatus.className = 'text-[9.5px] text-center font-bold text-rose-400 animate-pulse transition-all truncate';
-              }
-            }
-          } else {
-            if (botStatus) {
-              botStatus.textContent = '🛡️ Đối thủ đánh trượt';
-              botStatus.className = 'text-[9.5px] text-center font-medium text-slate-400 transition-all truncate';
-            }
-          }
-          checkEnd();
-          roundCheck();
-        }
-    };
-    if (liveSocket?.connected && currentLiveMatch?.ma_tran) {
-      liveSocket.on('turn_resolved', B.onTurnResolved);
-      liveSocket.on('match_ended', data => {
-        if (data.ma_tran !== currentLiveMatch?.ma_tran || B.over) return;
-        if (data.trang_thai_cuoi) currentLiveMatch = data.trang_thai_cuoi;
-        const players = currentLiveMatch.nguoi_choi || [];
-        const mine = players.find(p => p.ma_nguoi_dung === B.myUserId);
-        const opponent = players.find(p => p.ma_nguoi_dung !== B.myUserId);
-        if (mine) B.my = Number(mine.mau_hien_tai);
-        if (opponent) B.op = Number(opponent.mau_hien_tai);
-        const won = data.nguoi_thang_cuoc === B.myUserId;
-        const reason = data.ly_do_ket_thuc === 'DAU_HANG'
-          ? (won ? 'OP_SURRENDER' : 'DAU_HANG') : 'RESOLVED';
-        checkEnd(reason);
-      });
-    }
-
-    const opName = opponent ? (opponent.name || opponent[0]) : 'Đấu Sĩ Tập Sự';
-    const opIcon = opponent ? (opponent.petIcon || opponent[1]) : '🤖';
-
-    document.getElementById('op-name').textContent = opName;
-    const opPetEl = document.getElementById('op-pet');
-    if (opPetEl) {
-      opPetEl.style.setProperty('--op-facing', B.isBot ? '1' : '-1');
-      if (opponent && opponent.image) {
-        opPetEl.innerHTML = `<img src="${opponent.image}" alt="${opName}" class="w-16 h-16 object-contain pixel-art select-none" />`;
-      } else {
-        opPetEl.innerHTML = `<span class="text-5xl select-none">${opIcon}</span>`;
+    B.onTurnResolved = event => {
+      if (event.match?.id !== currentLiveMatch?.id || B.over) return;
+      if (event.round_no > B.qi) {
+        B.pendingTurns.push(event);
+        return;
       }
+      if (event.round_no < B.qi) return;
+      const key = event.round_no + ':' + event.user_id;
+      if (resolvedTurns.has(key)) return;
+      resolvedTurns.add(key);
+      currentLiveMatch = event.match;
+      const isMine = event.user_id === B.myUserId;
+      if (isMine) {
+        B.pDone = true;
+        document.getElementById('b-retry-answer')?.remove();
+        document.getElementById('b-options')?.classList.add(
+          'ring-2', event.is_correct ? 'ring-emerald-500' : 'ring-rose-500', 'rounded-2xl'
+        );
+        B.combo = event.is_correct ? B.combo + 1 : 0;
+        B.userCorrectCount += Number(event.is_correct);
+        B.maxCombo = Math.max(B.maxCombo, B.combo);
+      } else B.bDone = true;
+
+      if (event.damage > 0) {
+        anim(isMine ? 'my-pet' : 'op-pet', isMine ? 'do-lunge' : 'do-lungeL');
+        anim(isMine ? 'op-pet' : 'my-pet', 'do-shake');
+        popFloat(isMine ? 'op-float' : 'my-float', '-' + event.damage);
+        if (audioSettings.battle) playAdvancedSound('sfx-slash');
+      }
+      const status = document.getElementById('b-bot-status');
+      if (status) {
+        status.textContent = event.is_correct
+          ? (isMine ? 'Đánh trúng' : 'Bị đánh trúng') + ' (-' + event.damage + ' HP)'
+          : isMine ? 'Chọn chưa đúng' : 'Đối thủ chọn chưa đúng';
+      }
+      setBattleHealth(event.match);
+      if (event.match.status !== 'ACTIVE') checkEnd();
+      else roundCheck();
+    };
+    B.onMatchEnded = ({ match: finished }) => {
+      if (!finished || finished.id !== currentLiveMatch?.id || B.over) return;
+      currentLiveMatch = finished;
+      setBattleHealth(finished);
+      checkEnd();
+    };
+    if (liveSocket) {
+      liveSocket.on('turn_resolved', B.onTurnResolved);
+      liveSocket.on('match_ended', B.onMatchEnded);
+      if (liveSocket.connected) liveSocket.emit('join_match_room', { match_id: match.id });
     }
-    const myBattlePetName = document.getElementById('my-battle-pet-name');
-    if (myBattlePetName) myBattlePetName.textContent = '🐾 ' + (currentEquippedPet?.name || 'Linh vật đồng hành');
-    const opBattlePetName = document.getElementById('op-battle-pet-name');
-    if (opBattlePetName) opBattlePetName.textContent = '🐾 ' + (opponent?.petName || 'Linh vật đối thủ');
+
+    document.getElementById('op-name').textContent = opponent.name;
+    const opPet = document.getElementById('op-pet');
+    opPet.style.setProperty('--op-facing', B.isBot ? '1' : '-1');
+    const art = document.createElement(opponent.image ? 'img' : 'span');
+    if (opponent.image) {
+      art.className = 'w-16 h-16 object-contain pixel-art select-none';
+      art.src = opponent.image;
+      art.alt = opponent.petName || '';
+    } else art.textContent = opponent.petIcon || '🐾';
+    opPet.replaceChildren(art);
+    document.getElementById('my-battle-pet-name').textContent = '🐾 ' + currentEquippedPet.name;
+    document.getElementById('op-battle-pet-name').textContent = '🐾 ' + (opponent.petName || 'Linh vật đối thủ');
     document.getElementById('b-result').classList.add('hidden');
-    document.getElementById('my-shield').classList.add('hidden');
-    const skillBtn = document.getElementById('b-skill');
-    if (skillBtn) {
-      skillBtn.disabled = false;
-      skillBtn.classList.remove('opacity-40');
-    }
-
-    const botStatus = document.getElementById('b-bot-status');
-    if (botStatus) {
-      botStatus.textContent = '💭 đang suy nghĩ...';
-      botStatus.className = 'text-[9.5px] text-center font-medium text-[var(--muted-foreground)] transition-all truncate';
-    }
-
     syncAllPetDisplays();
     navTo('battle');
-    updHp();
-    nextRound();
+    setBattleHealth(match);
+    if (match.status === 'ACTIVE') nextRound();
+    else checkEnd();
   }
 
   function clearBattleTimers() {
     window.BattleReactions?.stop();
     clearInterval(B.tick);
+    clearTimeout(B.roundTransition);
+    if (B.onTurnResolved) liveSocket?.off('turn_resolved', B.onTurnResolved);
+    if (B.onMatchEnded) liveSocket?.off('match_ended', B.onMatchEnded);
   }
 
   function leaveBattle() {
@@ -4441,8 +4360,8 @@
   function updHp() {
     const myBar = document.getElementById('my-hp');
     const opBar = document.getElementById('op-hp');
-    if (myBar) myBar.style.width = B.my + '%';
-    if (opBar) opBar.style.width = B.op + '%';
+    if (myBar) myBar.style.width = (100 * B.my / (B.myMax || B.my || 1)) + '%';
+    if (opBar) opBar.style.width = (100 * B.op / (B.opMax || B.op || 1)) + '%';
     const myTxt = document.getElementById('my-hp-txt');
     const opTxt = document.getElementById('op-hp-txt');
     if (myTxt) myTxt.textContent = B.my;
@@ -4461,20 +4380,6 @@
     }
   }
 
-  function useShield() {
-    if (B.shieldUsed || B.over) return;
-    B.shieldUsed = true;
-    B.shield = true;
-    const shieldEl = document.getElementById('my-shield');
-    if (shieldEl) shieldEl.classList.remove('hidden');
-    const b = document.getElementById('b-skill');
-    if (b) {
-      b.disabled = true;
-      b.classList.add('opacity-40');
-    }
-    showToast('Đã kích hoạt Khiên Hộ Thể! Sát thương tiếp theo sẽ bị triệt tiêu.', 'success');
-  }
-
   function nextRound() {
     if (B.over) return;
     if (B.qi >= B.list.length) {
@@ -4482,8 +4387,8 @@
       return;
     }
 
-    const q = B.list[B.qi % B.list.length];
-    B.qi++;
+    const q = B.list[B.qi];
+    B.qi = q.round_no;
     B.pDone = false;
     B.answerPending = false;
     document.getElementById('b-retry-answer')?.remove();
@@ -4491,18 +4396,6 @@
     B.locked = false;
 
     const totalQ = B.list.length || 10;
-    const typeLabels = {
-      'TRAC_NGHIEM_4': 'Trắc nghiệm 4 đáp án',
-      'NOI_CAP': 'Nối cặp tương ứng',
-      'DIEN_TU': 'Điền từ khuyết thiếu',
-      'SAP_XEP_CAU': 'Sắp xếp câu hoàn chỉnh'
-    };
-    const bloomIcons = {
-      'NHO': '📘 Nhớ',
-      'HIEU': '💡 Hiểu',
-      'VAN_DUNG': '⚙️ Vận dụng'
-    };
-
     const roundBadge = document.getElementById('b-round-badge');
     if (roundBadge) {
       roundBadge.textContent = `Hiệp ${B.qi}/${totalQ}`;
@@ -4512,10 +4405,9 @@
     const box = document.getElementById('b-options');
 
     // Thiết lập giao diện tùy chỉnh theo Dạng Câu Hỏi
-    if (q.loai === 'DIEN_TU') {
-      const template = q.data?.sentence_template || q.q || 'Điền từ thích hợp vào chỗ trống:';
-      const options = (q.data?.options && q.data.options.length > 0) ? q.data.options : (q.o || []);
-      const shuffledOptions = [...options].sort(() => Math.random() - 0.5);
+    if (q.type === 'FILL_BLANK') {
+      const template = q.sentence_template || q.stem || 'Điền từ thích hợp vào chỗ trống:';
+      const shuffledOptions = q.options;
 
       if (promptEl) {
         promptEl.innerHTML = `<div class="p-3.5 rounded-xl bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700 text-sm leading-relaxed text-slate-800 dark:text-slate-200">
@@ -4540,21 +4432,20 @@
               target.textContent = word;
               target.className = "inline-block px-3 py-1 mx-1 rounded-lg border-2 border-solid border-cyan-500 bg-cyan-100 dark:bg-cyan-500/20 text-cyan-900 dark:text-cyan-200 font-bold min-w-[90px] text-center";
             }
-            playerAnswer(null, q, btn, { tu_chon: word });
+            playerAnswer({ submitted_text: word });
           };
           chipsBox.appendChild(btn);
         });
       }
-    } else if (q.loai === 'NOI_CAP') {
-      const pairs = q.data?.pairs || [];
-      if (promptEl) promptEl.textContent = q.q || 'Nối từng mục bên Trái với mục tương ứng bên Phải:';
+    } else if (q.type === 'MATCHING') {
+      if (promptEl) promptEl.textContent = q.stem || 'Nối từng mục bên Trái với mục tương ứng bên Phải:';
       if (box) {
-        const leftItems = (q.data?.left || pairs.map(p => p.left)).map((text, id) => ({ id, text }));
-        const rightItems = (q.data?.right || pairs.map(p => p.right)).map((text, id) => ({ id, text })).sort(() => Math.random() - 0.5);
+        const leftItems = q.left_items.map((text, id) => ({ id, text }));
+        const rightItems = q.right_items.map((text, id) => ({ id, text }));
 
         let selectedLeft = null;
         let checkingPair = false;
-        const matchId = currentLiveMatch?.ma_tran;
+        const matchId = currentLiveMatch?.id;
         const round = B.qi;
         let matchedCount = 0;
         const matchedPairs = [];
@@ -4609,12 +4500,12 @@
                   'Content-Type': 'application/json',
                   Authorization: 'Bearer ' + localStorage.getItem('tok_token')
                 },
-                body: JSON.stringify({ round, ...pair })
+                body: JSON.stringify({ round_no: round, ...pair })
               });
               const result = await response.json();
-              if (currentLiveMatch?.ma_tran !== matchId || B.qi !== round || B.over || B.pDone || B.answerPending) return;
+              if (currentLiveMatch?.id !== matchId || B.qi !== round || B.over || B.pDone || B.answerPending) return;
               if (!result.success) throw new Error(result.error?.message || 'Chưa kiểm tra được cặp.');
-              if (!result.data.correct) {
+              if (!result.data.matches) {
                 for (const card of [leftBtn, btn]) {
                   card.classList.add('pair-wrong');
                   setTimeout(() => card.classList.remove('pair-wrong'), 330);
@@ -4629,9 +4520,9 @@
               }
               selectedLeft = null;
               if (audioSettings.battle) playAdvancedSound('click');
-              if (matchedCount === totalPairs) playerAnswer(null, q, null, { matched_pairs: matchedPairs });
+              if (matchedCount === totalPairs) playerAnswer({ response: { kind: 'MATCHING', pairs: matchedPairs } });
             } catch (error) {
-              if (currentLiveMatch?.ma_tran === matchId && B.qi === round && !B.over) {
+              if (currentLiveMatch?.id === matchId && B.qi === round && !B.over) {
                 const status = document.getElementById('b-bot-status');
                 if (status) status.textContent = error.message;
               }
@@ -4642,11 +4533,9 @@
           rightCol.appendChild(btn);
         });
       }
-    } else if (q.loai === 'SAP_XEP_CAU') {
-      const promptText = q.data?.prompt || q.q || 'Sắp xếp các cụm từ theo thứ tự chuẩn xác:';
-      const correctWords = q.data?.correct_order || [];
-      const distractors = q.data?.distractors || [];
-      const allChips = (currentLiveMatch?.ma_tran ? [...q.o] : [...correctWords, ...distractors]).sort(() => Math.random() - 0.5);
+    } else if (q.type === 'ORDERING') {
+      const promptText = q.prompt || q.stem;
+      const allChips = q.tokens;
 
       let placedWords = [];
       if (promptEl) promptEl.textContent = promptText;
@@ -4726,31 +4615,29 @@
 
         submitBtn.onclick = () => {
           if (B.pDone || B.answerPending || B.over) return;
-          const userSentence = placedWords.join(' ').trim().toLowerCase().replace(/\s+/g, ' ');
-          const correctSentence = correctWords.join(' ').trim().toLowerCase().replace(/\s+/g, ' ');
-          const isOk = (userSentence === correctSentence);
-          playerAnswer(isOk ? 1 : 0, q, null, { cau_ghep: placedWords.join(' '), isCorrect: isOk });
+          if (placedWords.length === 0) return;
+          playerAnswer({ response: { kind: 'ORDERING', tokens: placedWords } });
         };
 
         renderBank();
       }
     } else {
       // Dạng mặc định: TRAC_NGHIEM_4
-      if (promptEl) promptEl.textContent = q.q;
+      if (promptEl) promptEl.textContent = q.stem;
       if (box) {
         box.innerHTML = '';
-        (q.o || []).forEach((t, i) => {
+        (q.options || []).forEach((option, i) => {
           const bt = document.createElement('button');
           bt.className = "w-full text-left p-3.5 rounded-xl border border-slate-300 dark:border-[var(--border)] bg-white dark:bg-[var(--card)] hover:bg-slate-100 dark:hover:bg-slate-800/80 transition text-xs font-semibold text-slate-800 dark:text-slate-100 cursor-pointer shadow-xs";
-          bt.textContent = `${['A', 'B', 'C', 'D'][i]}. ${t}`;
-          bt.onclick = () => playerAnswer(i, q, bt);
+          bt.textContent = `${['A', 'B', 'C', 'D'][i]}. ${option.text}`;
+          bt.onclick = () => playerAnswer({ selected_option_position: option.position });
           box.appendChild(bt);
         });
       }
     }
 
     // Thời gian hiệp đấu linh hoạt theo độ phức tạp dạng câu hỏi
-    const roundDurationMs = q.loai === 'NOI_CAP' ? 18000 : (q.loai === 'SAP_XEP_CAU' ? 16000 : (q.loai === 'DIEN_TU' ? 12000 : 10000));
+    const roundDurationMs = q.type === 'MATCHING' ? 18000 : (q.type === 'ORDERING' ? 16000 : (q.type === 'FILL_BLANK' ? 12000 : 10000));
     B.t0 = Date.now();
     const bar = document.getElementById('b-timer');
     clearInterval(B.tick);
@@ -4759,7 +4646,7 @@
       if (bar) bar.style.width = ((left / roundDurationMs) * 100) + '%';
       if (left <= 0) {
         clearInterval(B.tick);
-        if (!B.pDone && !B.answerPending && !document.getElementById('b-retry-answer')) playerAnswer(-1, q, null, { isTimeout: true, isCorrect: false });
+        if (!B.pDone && !B.answerPending && !document.getElementById('b-retry-answer')) playerAnswer({ response: { kind: 'TIMEOUT' } });
       }
     }, 100);
 
@@ -4768,6 +4655,13 @@
       botStatus.textContent = '⚔️ đang suy nghĩ...';
       botStatus.className = 'text-[9.5px] text-center font-medium text-[var(--muted-foreground)] transition-all truncate';
     }
+    const persisted = currentLiveMatch.turns.filter(turn => turn.round_no === q.round_no);
+    B.pDone = persisted.some(turn => turn.user_id === B.myUserId);
+    B.bDone = persisted.some(turn => turn.user_id !== B.myUserId);
+    const pending = B.pendingTurns.filter(event => event.round_no === q.round_no);
+    B.pendingTurns = B.pendingTurns.filter(event => event.round_no > q.round_no);
+    pending.forEach(B.onTurnResolved);
+    if (B.pDone && B.bDone) roundCheck();
   }
 
   function popFloat(id, txt) {
@@ -4787,14 +4681,13 @@
     el.classList.add(cls);
   }
 
-  function playerAnswer(i, q, btn, payload = null) {
-    if (B.pDone || B.answerPending || B.over || !currentLiveMatch?.ma_tran) return;
-    const matchId = currentLiveMatch.ma_tran;
+  function playerAnswer(answer) {
+    if (B.pDone || B.answerPending || B.over || !currentLiveMatch?.id) return;
+    const matchId = currentLiveMatch.id;
     const round = B.qi;
     const token = localStorage.getItem('tok_token');
-    const { isCorrect, ...answer } = payload || { vi_tri_chon: i };
-    const body = JSON.stringify({ thu_tu_cau: round, vi_tri_dap_an_chon: i, cau_tra_loi: answer });
-    const active = () => currentLiveMatch?.ma_tran === matchId && B.qi === round && !B.over;
+    const body = JSON.stringify({ round_no: round, ...answer });
+    const active = () => currentLiveMatch?.id === matchId && B.qi === round && !B.over;
     const status = document.getElementById('b-bot-status');
 
     async function send() {
@@ -4809,7 +4702,7 @@
         });
         const result = await response.json();
         if (!result.success) throw new Error(result.error?.message || 'Không gửi được câu trả lời.');
-        if (active()) B.onTurnResolved({ ...result.data, thu_tu_cau: round, nguoi_tra_loi: B.myUserId });
+        if (active()) B.onTurnResolved(result.data);
       } catch (error) {
         if (!active() || B.pDone) return;
         if (status) status.textContent = error.message;
@@ -4831,53 +4724,48 @@
     if (B.pDone && B.bDone && !B.over && !B.locked) {
       B.locked = true;
       clearInterval(B.tick);
-      setTimeout(() => {
-        if (!B.over) nextRound();
+      const matchId = currentLiveMatch?.id;
+      B.roundTransition = setTimeout(() => {
+        if (!B.over && currentLiveMatch?.id === matchId) nextRound();
       }, 600);
     }
   }
 
-  async function checkEnd(specialReason = null) {
-    if (B.over) return;
-    if (!specialReason && B.my > 0 && B.op > 0 && B.qi < B.list.length) return;
-    const matchId = currentLiveMatch?.ma_tran;
-    const isSurrender = specialReason === 'DAU_HANG';
-    const isOpSurrender = specialReason === 'OP_SURRENDER';
-    let win = isOpSurrender || (!isSurrender && ((B.op <= 0 && B.my > 0) || (B.my > B.op)));
-
-    if (matchId && !isSurrender && currentLiveMatch.trang_thai !== 'KET_THUC') {
-      if (B.resolvingMatch === matchId) return;
+  async function checkEnd() {
+    const battle = currentLiveMatch;
+    if (!battle || B.over) return;
+    const matchId = battle.id;
+    if (battle.status === 'ACTIVE') {
+      const endCandidate = B.my <= 0 || B.op <= 0 || (B.qi === B.list.length && B.pDone && B.bDone);
+      if (!endCandidate || B.resolvingMatch === matchId) return;
       B.resolvingMatch = matchId;
       try {
         const token = localStorage.getItem('tok_token');
-        const response = await fetch('/api/arena/'+matchId+'/conclude', {
-          method: 'POST', headers: {Authorization: 'Bearer '+token}
+        const response = await fetch('/api/arena/' + matchId + '/conclude', {
+          method: 'POST', headers: { Authorization: 'Bearer ' + token }
         });
         const result = await response.json();
-        if (currentLiveMatch?.ma_tran !== matchId || B.over) return;
+        if (currentLiveMatch?.id !== matchId || B.over) return;
         if (result.success) currentLiveMatch = result.data;
       } catch (error) {
-        console.warn('Không tải được kết quả:', error.message);
+        showToast(error.message, 'error');
       } finally {
-        if (B.resolvingMatch === matchId) B.resolvingMatch = null;
+        B.resolvingMatch = null;
       }
-      if (currentLiveMatch?.ma_tran !== matchId || B.over) return;
-      if (currentLiveMatch.che_do === 'RANKED' && currentLiveMatch.trang_thai !== 'KET_THUC') return;
+      if (currentLiveMatch?.id !== matchId || currentLiveMatch.status === 'ACTIVE' || B.over) return;
     }
+    const settled = currentLiveMatch;
+    const settledPlayer = settled.players.find(player => player.user_id === B.myUserId);
+    const win = settledPlayer?.result === 'WIN';
+    const draw = settledPlayer?.result === 'DRAW';
+    const isSurrender = settled.finish_reason === 'FORFEIT' && !win;
+    const isOpSurrender = settled.finish_reason === 'FORFEIT' && win;
     B.over = true;
     clearBattleTimers();
-    if (typeof trackDailyQuestAction === 'function') trackDailyQuestAction('dau_truong');
-
-    const settledPlayer=currentLiveMatch?.trang_thai==='KET_THUC'
-      ? currentLiveMatch.nguoi_choi?.find(p=>p.ma_nguoi_dung===currentUserAccount?.userId) : null;
-    if(settledPlayer) win=settledPlayer.ket_qua==='THANG';
-    const draw=settledPlayer?.ket_qua==='HOA';
-    if (typeof refreshUserData === 'function') {
-      setTimeout(refreshUserData, 400);
-    }
-    if (typeof loadRealLeaderboard === 'function') {
-      setTimeout(loadRealLeaderboard, 600);
-    }
+    setBattleHealth(settled);
+    trackDailyQuestAction();
+    setTimeout(refreshUserData, 400);
+    setTimeout(loadRealLeaderboard, 600);
 
     setTimeout(() => {
       const koBadge = document.getElementById('b-result-ko-badge');
@@ -4885,17 +4773,15 @@
       const koSub = document.getElementById('b-result-sub');
       const petImg = document.getElementById('b-result-pet-img');
 
-      const isCasual = currentLiveMatch?.che_do!=='RANKED';
+      const isCasual = currentLiveMatch?.mode!=='RANKED';
       const totalQ = (B.list && B.list.length) ? B.list.length : 10;
-      const userCorrect = (typeof B.userCorrectCount === 'number')
-        ? B.userCorrectCount
-        : (win ? Math.min(totalQ, Math.max(B.qi || 1, 1)) : 0);
-      const userMaxCombo = Math.max(B.maxCombo || 0, B.combo || 0, win ? (userCorrect > 3 ? 3 : 1) : 0);
+      const userCorrect = settledPlayer?.correct_count || 0;
+      const userMaxCombo = B.maxCombo || 0;
 
       const savedPlayer=settledPlayer;
       if (savedPlayer) refreshArenaExpQuota();
-      const coinsReward=Number(savedPlayer?.xu_nhan_duoc||0),expReward=Number(savedPlayer?.exp_nhan_duoc||0);
-      const curExp = (currentUserAccount && typeof currentUserAccount.exp === 'number') ? currentUserAccount.exp : 155;
+      const coinsReward=Number(savedPlayer?.coins_awarded||0),expReward=Number(savedPlayer?.xp_awarded||0);
+      const curExp = (currentUserAccount && typeof currentUserAccount.exp === 'number') ? currentUserAccount.exp : 0;
       const expLevel = LevelRules.progress(curExp);
       const expInTier = expLevel.earned;
       const expNext = expLevel.needed;
@@ -4979,12 +4865,12 @@
       if (elExpProgress) elExpProgress.textContent = expLevel.nextExp ? `EXP ${expInTier}/${expNext}` : `Cấp tối đa · ${curExp} EXP`;
 
       // Tính điểm rank: CHỈ CỘNG/TRỪ ĐIỂM TRONG ĐẤU HẠNG (RANKED), ĐẤU THƯỜNG/BOT LUÔN LÀ 0!
-      const sub = B.subject || 'csdl';
+      const sub = B.subject;
       let delta = 0;
       let deltaTxt = '±0';
       let deltaColor = 'text-cyan-400';
 
-      delta=Number(savedPlayer?.diem_hang_thay_doi||0);
+      delta=Number(savedPlayer?.rating_delta||0);
       deltaTxt=delta>0?'+'+delta:String(delta);
       deltaColor=delta>0?'text-emerald-400':delta<0?'text-rose-500':'text-slate-400';
       const summaryContainer=document.getElementById('res-rank-banner');
@@ -5444,8 +5330,8 @@
             break;
           }
 
-          case 'sfx-shield': {
-            // Metallic shield parry clink
+          case 'sfx-clash-metal': {
+            // Metallic clash
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
             osc.type = 'sine';
@@ -5479,7 +5365,7 @@
           case 'sfx-vs-clash': {
             // Explosive clash impact
             playAdvancedSound('sfx-crit');
-            playAdvancedSound('sfx-shield');
+            playAdvancedSound('sfx-clash-metal');
             break;
           }
 
@@ -7779,27 +7665,39 @@
     // --- 5. Real Leaderboard from SQL Server ---
     async function loadRealLeaderboard() {
       try {
-        const response=await fetch('/api/arena/leaderboard');const result=await response.json();
-        if(!result.success || !Array.isArray(result.data))return;
-        const scopes=['all','csdl',...(allSystemCourses || []).map(course => course.id)];
-        for(const scope of new Set(scopes)){
-          const users=result.data.filter(u=>scope==='all'||Object.prototype.hasOwnProperty.call(u.diem_dau_hang||{},'mon_'+scope));
-          const rows={hang:[],speed:[],acc:[],streak:[]};
-          for(const user of users){
-            const points=scope==='all'?Object.values(user.diem_dau_hang||{}).reduce((n,p)=>n+Number(p||0),0):Number(user.diem_dau_hang?.['mon_'+scope]||0);
-            const prefix=[user.ten_hien_thi||user.ten_dang_nhap,'',points];
-            const row=value=>[...prefix,String(value),user.ma_nguoi_dung,user.ten_dang_nhap,user.thu_cung?.anh_dai_dien||'/assets/navigation/pet.webp'];
+        const response = await fetch('/api/arena/leaderboard', { cache: 'no-store' });
+        const result = await response.json();
+        if (!response.ok || !result.success) return;
+        const users = result.data;
+        for (const scope of ['all', ...allSystemCourses.map(course => course.id)]) {
+          const rows = { hang: [], speed: [], acc: [], streak: [] };
+          for (const user of users) {
+            const scores = user.rank_scores;
+            if (scope !== 'all' && !Object.hasOwn(scores, scope)) continue;
+            const points = scope === 'all'
+              ? Object.values(scores).reduce((total, value) => total + Number(value), 0)
+              : Number(scores[scope]);
+            const row = value => [
+              user.display_name, '', points, String(value), user.id, user.username, user.pet?.image_path
+            ];
             rows.hang.push(row(points));
-            rows.streak.push(row(user.chuoi_dau_hang?.[scope]||0));
-            const stats=(user.thong_ke_tra_loi||[]).filter(x=>scope==='all'||x.ma_mon==='mon_'+scope);
-            const count=stats.reduce((n,x)=>n+x.so_cau,0);
-            if(count){rows.speed.push(row((stats.reduce((n,x)=>n+x.tong_thoi_gian,0)/count).toFixed(2)+'s'));
-              rows.acc.push(row((stats.reduce((n,x)=>n+x.so_cau_dung,0)/count*100).toFixed(1)+'%'));}
+            rows.streak.push(row(user.win_streaks[scope] ?? 0));
+            const stats = user.answer_stats.filter(entry => scope === 'all' || entry.subject_id === scope);
+            const count = stats.reduce((total, entry) => total + Number(entry.answer_count), 0);
+            if (count > 0) {
+              const seconds = stats.reduce((total, entry) => total + Number(entry.total_response_seconds), 0);
+              const correct = stats.reduce((total, entry) => total + Number(entry.correct_count), 0);
+              rows.speed.push(row((seconds / count).toFixed(2) + 's'));
+              rows.acc.push(row((correct / count * 100).toFixed(1) + '%'));
+            }
           }
-          RANK_DATA[scope]=rows;
+          RANK_DATA[scope] = rows;
         }
-        renderRank();renderLobby();
-      }catch(error){console.error('Không tải được bảng xếp hạng:',error.message);}
+        renderRank();
+        renderLobby();
+      } catch (error) {
+        console.error('Không tải được bảng xếp hạng:', error.message);
+      }
     }
 
     async function refreshUserData() {
@@ -7885,7 +7783,7 @@
             showToast('⚠️ ' + msg, 'warning');
           });
           liveSocket.on('match_found', (data) => {
-            if (data && data.isCasual) {
+            if (data?.is_casual) {
               handleCasualMatchFound(data);
             }
           });
@@ -8146,12 +8044,11 @@
 
       // Đồng bộ thông tin phòng lên Socket.IO
       if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected) {
-        const sub = document.getElementById('casual-subject') ? document.getElementById('casual-subject').value : 'csdl';
-        const maMon = sub.startsWith('mon_') ? sub : ('mon_' + sub);
-        liveSocket.emit('casual_create_or_update_room', {
+        const sub = document.getElementById('casual-subject')?.value;
+        if (sub) liveSocket.emit('casual_create_or_update_room', {
           roomCode: currentCasualRoomCode,
           playerInfo: getMyCasualPlayerInfo(),
-          ma_mon: maMon
+          subject_id: sub
         });
       }
 
@@ -8290,13 +8187,19 @@
       showToast('Đã rời đội / làm mới sảnh.', 'info');
     }
 
-    function addBotToCasualParty() {
+    async function addBotToCasualParty() {
       if (currentCasualParty.partner && !currentCasualParty.partner.isBot) {
         showToast('Phòng đã có bạn chơi.', 'info');
         return;
       }
-      setCasualPartner(arenaBots[0], true);
-      if (audioSettings?.battle) playAdvancedSound('click');
+      try {
+        const [bot] = await getPracticeBots();
+        if (!bot) throw Error('Chưa có Bot luyện tập cho bản local.');
+        setCasualPartner(bot, true);
+        if (audioSettings.battle) playAdvancedSound('click');
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
     }
 
     function joinCasualFriendRoom() {
@@ -8319,6 +8222,8 @@
     function handleCasualRoomUpdated(data) {
       const myId = currentUserAccount?.userId;
       if (!data || !myId) return;
+      const subject = document.getElementById('casual-subject');
+      if (subject && data.subject_id) subject.value = data.subject_id;
       const previousPartner = currentCasualParty.roomCode === data.roomCode
         ? currentCasualParty.partner
         : null;
@@ -8357,40 +8262,12 @@
     }
 
     function handleCasualMatchFound(data) {
+      if (!data?.is_casual || data.user_id !== currentUserAccount.userId) return;
+      const opponent = data.match?.players.find(player => player.user_id !== data.user_id);
+      if (!opponent) return;
       clearBattleTimers();
-      trackDailyQuestAction('dau_truong');
-      if (audioSettings && audioSettings.battle) playAdvancedSound('click');
-
-      if (data.my_user_id) {
-        B.myUserId = data.my_user_id;
-        if (!currentUserAccount.userId) {
-          currentUserAccount.userId = data.my_user_id;
-        }
-      }
-      B.isBot = Boolean(data.doi_thu_la_bot);
-      B.isCasual = true;
-      B.isFriendMatch = true;
-
-      const myId = B.myUserId || currentUserAccount?.userId;
-      const opUser = (data.nguoi_choi || []).find(p => p.ma_nguoi_dung !== myId) || (data.nguoi_choi || [])[1] || (data.nguoi_choi || [])[0] || {};
-      const opponent = arenaBots.find(bot => bot.id === opUser.ma_nguoi_dung) || {
-        id: opUser.ma_nguoi_dung,
-        name: opUser.ten_hien_thi || 'Bạn Giao Hữu',
-        petIcon: opUser.thu_cung?.ten_thu_cung?.includes('Hồ Ly') ? '🦊' : (opUser.thu_cung?.ten_thu_cung?.includes('Thạch') ? '🗿' : '🐉'),
-        petName: opUser.thu_cung?.ten_thu_cung || 'Linh Thú Đối Thủ',
-        tier: opUser.danh_hieu || '🌱 Khởi nguyên I',
-        isBot: Boolean(data.doi_thu_la_bot),
-        isCasual: true,
-        isFriendMatch: true
-      };
-
-      const mData = data.matchState || data;
-      mData.my_user_id = B.myUserId;
-      mData.doi_thu_la_bot = Boolean(data.doi_thu_la_bot);
-      mData.isCasual = true;
-      mData.isFriendMatch = true;
-
-      showVersusScreen(opponent, mData);
+      if (audioSettings.battle) playAdvancedSound('click');
+      showVersusScreen(arenaOpponent(opponent), data.match);
     }
 
     function handleCasualStartClick() {
@@ -8431,19 +8308,20 @@
         showToast('Mất kết nối. Hãy thử bắt đầu trận lại.', 'error');
         return;
       }
-      const subject = document.getElementById('casual-subject').value || 'csdl';
-      const maMon = subject.startsWith('mon_') ? subject : 'mon_' + subject;
+      const subject = document.getElementById('casual-subject').value;
+      if (!subject) return showToast('Chọn môn trước khi đấu.', 'info');
       try {
         const response = await fetch('/api/arena/create-match', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-          body: JSON.stringify({ doi_thu_id: partner.id, ma_mon: maMon })
+          body: JSON.stringify({ opponent_id: partner.id, subject_id: subject })
         });
         const result = await response.json();
         if (!result.success || !result.data) throw new Error(result.error?.message || 'Không thể bắt đầu trận.');
         if (token !== localStorage.getItem('tok_token')) return;
         clearBattleTimers();
-        showVersusScreen({ ...partner, isCasual: true, isFriendMatch: partner === currentCasualParty.partner }, result.data);
+        const opponent = result.data.players.find(player => player.user_id !== currentUserAccount.userId);
+        if (opponent) showVersusScreen(arenaOpponent(opponent), result.data);
       } catch (error) {
         showToast(error.message || 'Không thể bắt đầu trận.', 'error');
       }
@@ -8479,12 +8357,11 @@
 
       // Đăng ký phòng lên Socket.IO nếu là Host
       if (typeof liveSocket !== 'undefined' && liveSocket && liveSocket.connected && currentCasualParty.isHost) {
-        const sub = casualSub ? casualSub.value : 'csdl';
-        const maMon = sub.startsWith('mon_') ? sub : ('mon_' + sub);
-        liveSocket.emit('casual_create_or_update_room', {
+        const sub = casualSub?.value;
+        if (sub) liveSocket.emit('casual_create_or_update_room', {
           roomCode: currentCasualRoomCode,
           playerInfo: getMyCasualPlayerInfo(),
-          ma_mon: maMon
+          subject_id: sub
         });
       }
     }
@@ -8558,8 +8435,14 @@
       }
     }
 
-    function startBotPractice() {
-      return startCasualFriendMatch(arenaBots[Math.floor(Math.random() * arenaBots.length)]);
+    async function startBotPractice() {
+      try {
+        const bots = await getPracticeBots();
+        if (bots.length === 0) throw Error('Chưa có Bot luyện tập cho bản local.');
+        await startCasualFriendMatch(bots[Math.floor(Math.random() * bots.length)]);
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
     }
 
     function previewArcadeModes() {
