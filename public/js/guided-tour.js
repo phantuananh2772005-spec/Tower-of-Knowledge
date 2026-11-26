@@ -27,42 +27,92 @@
     tipKey = null;
   }
 
-  function show(key, anchor, message, force = false) {
+  function progress() {
+    return currentUserAccount?.tourProgress || {};
+  }
+
+  function save(context) {
     const account = currentUserAccount;
-    if (!account?.userId || !anchor?.getClientRects().length || !message) return;
-    if (tipKey === key && tip?.isConnected) return;
-    const progress = account.tourProgress;
-    const storageKey = 'tok_feature_tips_v1_' + account.userId;
-    let local = {};
-    try { local = JSON.parse(localStorage.getItem(storageKey) || '{}') || {}; } catch {}
-    const seen = { ...progress?.context?.featureTips, ...local };
-    close();
-    if (!force && (seen[key] || progress?.completed)) return;
-
-    const box = document.createElement('aside');
-    box.className = 'flex items-start gap-3 my-2 p-3 rounded-xl border text-xs leading-relaxed bg-[var(--card)] border-[var(--border)]';
-    box.setAttribute('aria-label', 'Gợi ý sử dụng');
-    const text = document.createElement('span');
-    text.className = 'flex-1';
-    text.textContent = message;
-    const dismiss = document.createElement('button');
-    dismiss.type = 'button';
-    dismiss.className = 'shrink-0 font-semibold px-2 py-1 rounded border border-[var(--border)]';
-    dismiss.textContent = 'Đã hiểu';
-    dismiss.onclick = close;
-    box.append(text, dismiss);
-    if (anchor.id.startsWith('view-') || anchor.id === 'arena-casual' || anchor.id === 'settings-view-audio') anchor.prepend(box);
-    else anchor.before(box);
-    tip = box;
-    tipKey = key;
-
-    seen[key] = true;
-    try { localStorage.setItem(storageKey, JSON.stringify(seen)); } catch {}
     account.tourProgress = {
-      step: 'feature-tips', layout: innerWidth < 768 ? 'mobile' : 'desktop',
-      completed: Boolean(progress?.completed), context: { featureTips: seen }
+      step: 'contextual-guide-v2', layout: innerWidth < 768 ? 'mobile' : 'desktop',
+      completed: context.experience === 'experienced', context
     };
     queuePreferenceSave({ tutorial_progress: account.tourProgress });
+  }
+
+  function floating(title, message, actions) {
+    close();
+    const box = document.createElement('aside');
+    box.className = 'companion-guide';
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-label', title);
+    const image = document.createElement('img');
+    image.src = '/assets/sparky_idle.gif';
+    image.alt = 'Sparky';
+    image.width = 56;
+    image.height = 56;
+    const heading = document.createElement('strong');
+    heading.textContent = title;
+    const text = document.createElement('p');
+    text.textContent = message;
+    const buttons = document.createElement('div');
+    actions.forEach(([label, action]) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = label;
+      button.onclick = action;
+      buttons.append(button);
+    });
+    box.append(image, heading, text, buttons);
+    document.body.append(box);
+    tip = box;
+    return box;
+  }
+
+  function chooseExperience() {
+    if (!currentUserAccount?.userId) return;
+    floating('Sparky làm quen', 'Bạn đã từng dùng Tháp Tri Thức chưa?', [
+      ['Mình là người mới', () => {
+        save({ ...progress().context, experience: 'new', guides: {} });
+        close();
+        view(currentAppView, true);
+      }],
+      ['Mình đã biết cách dùng', () => {
+        save({ ...progress().context, experience: 'experienced' });
+        close();
+      }]
+    ]);
+  }
+
+  function show(key, anchor, message, force = false) {
+    if (!currentUserAccount?.userId || !anchor?.getClientRects().length || !message) return;
+    if (tipKey === key && tip?.isConnected) return;
+    const context = progress().context || {};
+    if (!context.experience && !force) {
+      if (!isUnboxingInProgress) chooseExperience();
+      return;
+    }
+    const state = context.guides?.[key];
+    if (!force && (context.experience === 'experienced' || state)) return;
+    const mark = status => {
+      const latest = progress().context || {};
+      save({ ...latest, guides: { ...latest.guides, [key]: {
+        status, at: new Date().toISOString()
+      } } });
+    };
+    const accepted = () => {
+      mark('started');
+      floating('Cùng thử nhé', message, [
+        ['Mình đã hiểu', () => { mark('completed'); close(); }],
+        ['Để sau', () => { mark('deferred'); close(); }]
+      ]);
+      tipKey = key;
+    };
+    floating('Sparky đồng hành', 'Bạn có muốn mình hướng dẫn phần này không?', [
+      ['Hướng dẫn mình', accepted],
+      ['Bỏ qua phần này', () => { mark('skipped'); close(); }]
+    ]);
+    tipKey = key;
   }
 
   function view(key, force = false) {
@@ -76,7 +126,7 @@
     show('question-' + type, anchor, questions[type]);
   }
 
-  window.GuidedTour = { view, question, close, get active() { return Boolean(tip?.isConnected); } };
+  window.GuidedTour = { view, question, close, chooseExperience, get active() { return Boolean(tip?.isConnected); } };
   window.startPetOnboardingTour = () => view(currentAppView, true);
   window.skipPetTour = close;
   window.nextPetTourStep = close;

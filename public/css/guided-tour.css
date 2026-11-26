@@ -39,3 +39,11 @@
 @media (prefers-reduced-motion:reduce) {
   .tour-progress-fill { transition:none; }
 }
+
+.companion-guide { position:fixed; right:20px; bottom:84px; z-index:1200; width:min(350px,calc(100vw - 32px)); max-height:65dvh; overflow:auto; padding:18px; box-sizing:border-box; border:1px solid var(--border); border-radius:20px; background:var(--card); color:var(--foreground); box-shadow:0 12px 40px #0003; font-size:14px; line-height:1.5; }
+.companion-guide img { float:left; margin:0 12px 8px 0; object-fit:contain; image-rendering:pixelated; }
+.companion-guide p { margin:8px 0 14px; }
+.companion-guide>div { display:flex; flex-wrap:wrap; clear:both; gap:8px; }
+.companion-guide button { min-height:44px; padding:9px 12px; border-radius:10px; border:1px solid var(--border); cursor:pointer; }
+.companion-guide button:first-child { background:#087d60; color:white; }
+.companion-guide button:focus-visible { outline:3px solid #10b981; outline-offset:2px; }

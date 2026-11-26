@@ -8812,7 +8812,7 @@
       isUnboxingInProgress = false;
 
       navTo('hub');
-      showEnrollmentPractice();
+      window.GuidedTour?.chooseExperience();
       const token = localStorage.getItem('tok_token');
       if (token) fetch('/api/economy/onboarding-gift', {
         method: 'POST', headers: { Authorization: 'Bearer ' + token }
