@@ -2199,6 +2199,7 @@
           <div id="result-book-stars"></div>
           <strong id="step-review-score"></strong>
           <p id="step-review-detail"></p>
+          <p id="step-review-record" class="text-sm mt-2" role="status"></p>
           <button type="button" id="step-review-action"></button>
           <details id="step-review-mistakes"><summary></summary><ol></ol></details>
           <form method="dialog"><button>Về bản đồ</button></form>
@@ -6537,6 +6538,7 @@
         kind,
         step: data?.step_no ?? null,
         totalSteps: milestone.step_count,
+        previousRecord: milestone.record?.steps?.[data?.step_no] ?? null,
         theory: milestone.theory_markdown,
         courseSessionId: data?.id ?? null,
         questions: data?.questions ?? [],
@@ -6909,7 +6911,7 @@
     async function startStepPlay(mocId, stepNumber = 1) {
       closeCheckpointModal();
       try {
-        const milestone = currentCheckpointMoc?.id === mocId ? currentCheckpointMoc : await courseRequest(mocId);
+        const milestone = await courseRequest(mocId);
         const session = await courseRequest(mocId, '/sessions', { kind: 'STEP', step_no: stepNumber });
         currentMocSession = null;
         currentQuizSession = createCourseSessionState(milestone, 'STEP', session);
@@ -7461,6 +7463,17 @@
       document.getElementById('step-review-detail').textContent = result.passed
         ? (next ? 'Có thể vào chặng ' + result.current_step + '.' : result.completed ? 'Mục này đã hoàn thành.' : 'Đã ghi nhận kết quả.')
         : `Cần đúng ${required}/${result.question_count} câu trong một lượt (70%). Còn thiếu ${required - result.correct_count} câu.`;
+      const previous = session.previousRecord;
+      const recordNote = document.getElementById('step-review-record');
+      const improvement = previous?.accuracy_percent != null
+        ? result.score_percent - Number(previous.accuracy_percent) : null;
+      const target = stars === 0 ? 70 : stars === 1 ? 80 : stars === 2 ? 95 : null;
+      const recordText = improvement > 0
+        ? 'Kỷ lục mới · ' + previous.accuracy_percent + '% → ' + result.score_percent + '%'
+        : previous?.accuracy_percent != null ? 'Kỷ lục của bạn · ' + previous.accuracy_percent + '%' : '';
+      const targetText = target !== null ? 'Mục tiêu ' + (stars + 1) + ' sao · ' + target + '%' : '';
+      recordNote.textContent = [recordText, targetText].filter(Boolean).join(' · ');
+      recordNote.hidden = !recordNote.textContent;
       const action = document.getElementById('step-review-action');
       action.hidden = session.kind !== 'STEP';
       action.textContent = next ? 'Vào chặng ' + result.current_step : 'Thử lại';
