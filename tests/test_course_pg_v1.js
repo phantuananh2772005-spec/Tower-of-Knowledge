@@ -159,6 +159,10 @@ test('course enrollment, theory-only completion, ordered quiz rewards, durable a
       const guestRoadmap = success(await send('GET', '/courses/' + slug));
       assert.equal(guestRoadmap.chapters.length, 2);
       assert.deepEqual(success(await send('GET', '/my-courses', { token })), []);
+      const unregistered = success(await send('GET', '/courses/' + slug, { token }));
+      assert.equal(unregistered.enrolled_at, null);
+      assert.deepEqual(success(await send('GET', '/my-courses', { token })), []);
+      success(await send('POST', '/courses/' + slug + '/enroll', { token }));
       const enrolled = success(await send('GET', '/courses/' + slug, { token }));
       assert.equal(enrolled.enrolled_at != null, true);
       assert.deepEqual(enrolled.chapters.flatMap(chapter => chapter.milestones.map(milestone => milestone.status)),

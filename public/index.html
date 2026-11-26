@@ -6376,6 +6376,14 @@
     let roadmapRequest = 0;
 
     async function loadCourseRoadmap(preferredChapterIdOrSlug = null) {
+      if (!preferredChapterIdOrSlug && !myEnrolledCourses.some(course => course.slug === currentActiveCourseSlug)) {
+        currentActiveCourseSlug = myEnrolledCourses[0]?.slug || null;
+      }
+      if (!preferredChapterIdOrSlug && !currentActiveCourseSlug) {
+        currentFocusMoc = null;
+        document.getElementById('hub-continue-learning-card')?.classList.add('hidden');
+        return;
+      }
       const request = ++roadmapRequest;
       const token = localStorage.getItem('tok_token');
       try {

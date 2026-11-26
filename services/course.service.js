@@ -131,7 +131,8 @@ function enrollCourse(slug, userId) {
 
 async function getCourseDetails(slug, userId = null) {
   return db.transaction(async tx => {
-    const subject = await getActiveSubject(tx, slug, userId);
+    const subject = await tx.queryOne(subjectSummaryQuery + ' AND s.slug = $2', [userId, slug]);
+    if (!subject) throw new Error('Không tìm thấy môn học.');
     const chapters = await tx.query(`
       SELECT id, title, sort_order
       FROM chapters
