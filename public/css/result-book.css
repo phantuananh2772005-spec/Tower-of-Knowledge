@@ -28,3 +28,35 @@
   .result-page { padding:17px 24px 8px; }
   #step-review-title { margin-top:4px; }
 }
+
+.review-practice-choices { display:grid; gap:8px; margin:10px 0; }
+.review-practice-choices button { text-align:left; padding:10px 12px; border:1px solid #b4aa8d; border-radius:8px; background:#fffbed; color:#243d28; min-height:44px; cursor:pointer; }
+.review-practice-choices button[data-correct="false"] { border-color:#b8523f; background:#fbe9e2; }
+.review-practice-choices button[data-correct="true"] { border-color:#397749; background:#e3efde; }
+
+.review-practice-form { display:grid; gap:10px; margin:12px 0; }
+.review-practice-form label { display:grid; gap:5px; }
+.review-practice-form input,.review-practice-form select,.review-practice-form textarea { width:100%; box-sizing:border-box; min-height:44px; padding:8px; background:#fffbed; color:#243d28; border:1px solid #b4aa8d; border-radius:8px; }
+.review-practice-form textarea { min-height:100px; }
+.review-practice-form button { min-height:44px; border-radius:8px; background:#285c38; color:#fff8dc; cursor:pointer; }
+
+#step-review-dialog, #step-review-dialog * { box-sizing:border-box; }
+.result-page { min-width:0; overflow-wrap:anywhere; }
+#step-review-mistakes ol { margin-left:0; margin-right:0; }
+.review-practice-form select { min-width:0; max-width:100%; }
+
+@keyframes result-arrive {
+  from { opacity:0; transform:translateY(12px) scale(.98); }
+  to { opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes result-star-arrive {
+  from { opacity:0; transform:translateY(8px) scale(.7); }
+  to { opacity:1; transform:translateY(0) scale(1); }
+}
+#step-review-dialog[open] .result-spread { animation:result-arrive 240ms ease-out; }
+.result-star { display:inline-block; }
+#step-review-dialog[open] .result-star.earned { animation:result-star-arrive 220ms ease-out backwards; animation-delay:var(--star-delay); }
+@media(prefers-reduced-motion:reduce) {
+  #step-review-dialog[open] .result-spread,
+  #step-review-dialog[open] .result-star.earned { animation:none; }
+}

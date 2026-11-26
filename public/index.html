@@ -6328,7 +6328,9 @@
         }
       }
       if (titleEl) titleEl.textContent = moc.title || 'Mốc học tập';
-      if (descEl) descEl.textContent = moc.description || 'Tiếp tục hành trình học tập tương tác cùng Linh vật Pet của bạn.';
+      if (descEl) descEl.textContent = moc.kind === 'THEORY' ? 'Lý thuyết'
+        : moc.status === 'COMPLETED' ? 'Ôn tập · ' + moc.step_count + ' chặng'
+        : 'Chặng ' + (moc.current_step || 1) + '/' + moc.step_count;
       if (rewardEl) {
         rewardEl.textContent = `+${moc.reward_xp ?? 0} EXP • +${moc.reward_coins ?? 0} Xu`;
       }
@@ -6349,11 +6351,24 @@
       }
     }
 
-    function startFocusMocLearning() {
-      if (currentFocusMoc && currentFocusMoc.id) {
-        openCheckpointModal(currentFocusMoc.id);
-      } else {
-        openCourseRoadmap(currentActiveCourseSlug || 'co-so-du-lieu');
+    async function startFocusMocLearning() {
+      const button = document.getElementById('btn_hub_start_focus_moc');
+      if (button?.disabled) return;
+      if (button) button.disabled = true;
+      try {
+        await loadCourseRoadmap();
+        const milestones = liveCourseData?.chapters?.flatMap(chapter => chapter.milestones || []) || [];
+        const next = milestones.find(milestone => milestone.status === 'OPEN')
+          || [...milestones].reverse().find(milestone => milestone.status === 'COMPLETED');
+        if (!next) {
+          await openCourseRoadmap(currentActiveCourseSlug || 'co-so-du-lieu');
+          return;
+        }
+        setSagaFocusMoc(next);
+        if (next.kind === 'THEORY') await openTheoryModal(next.id);
+        else await openCheckpointModal(next.id, next.current_step || 1);
+      } finally {
+        if (button) button.disabled = false;
       }
     }
 
@@ -7411,6 +7426,7 @@
       const mistakes = new Map();
       session.submissions.forEach(attempt => {
         if (!attempt.is_correct) mistakes.set(attempt.position, attempt);
+        else mistakes.delete(attempt.position);
       });
       const dialog = document.getElementById('step-review-dialog');
       const label = session.kind === 'STEP' ? 'Chặng ' + session.step : 'Ôn tập mốc';
@@ -7432,7 +7448,14 @@
       petImage.alt = pet?.name ?? 'Sparky';
       document.getElementById('step-review-title').textContent = title;
       const starRow = document.getElementById('result-book-stars');
-      starRow.textContent = '★'.repeat(stars) + '☆'.repeat(3 - stars);
+      starRow.replaceChildren(...[0, 1, 2].map(index => {
+        const star = document.createElement('span');
+        star.textContent = index < stars ? '★' : '☆';
+        star.className = index < stars ? 'result-star earned' : 'result-star';
+        star.style.setProperty('--star-delay', (index * 120 + 160) + 'ms');
+        star.setAttribute('aria-hidden', 'true');
+        return star;
+      }));
       starRow.setAttribute('aria-label', stars + ' trên 3 sao');
       document.getElementById('step-review-score').textContent = `${result.correct_count}/${result.question_count} câu đúng`;
       document.getElementById('step-review-detail').textContent = result.passed
@@ -7453,9 +7476,129 @@
         const item = document.createElement('li');
         const prompt = document.createElement('strong');
         const explanation = document.createElement('p');
-        prompt.textContent = questions.get(attempt.position)?.stem || '';
-        explanation.textContent = attempt.explanation || 'Xem lại lý thuyết của mốc này.';
-        item.append(prompt, explanation);
+        const question = questions.get(attempt.position);
+        prompt.textContent = question?.stem || '';
+        explanation.textContent = attempt.explanation || 'Xem lại lý thuyết của mục này.';
+        item.append(prompt);
+        if (question?.type === 'MULTIPLE_CHOICE') {
+          const choices = document.createElement('div');
+          choices.className = 'review-practice-choices';
+          const feedback = document.createElement('p');
+          feedback.setAttribute('role', 'status');
+          explanation.hidden = true;
+          for (const option of question.options) {
+            const choice = document.createElement('button');
+            choice.type = 'button';
+            choice.textContent = option.text;
+            choice.onclick = () => {
+              const correct = option.position === attempt.correct_answer;
+              choice.dataset.correct = String(correct);
+              feedback.textContent = correct ? 'Đúng rồi! Bạn có thể thử lại chặng để cải thiện sao.' : 'Chưa đúng, thử một đáp án khác nhé.';
+              if (correct) {
+                explanation.hidden = false;
+                for (const button of choices.children) button.disabled = true;
+              }
+            };
+            choices.append(choice);
+          }
+          const note = document.createElement('p');
+          note.textContent = 'Luyện nhanh · Không tính sao hoặc thưởng';
+          item.append(note, choices, feedback);
+        }
+        if (question && question.type !== 'MULTIPLE_CHOICE') {
+          explanation.hidden = true;
+          const form = document.createElement('form');
+          const fields = [];
+          const ordered = [];
+          let orderBank;
+          if (question.type === 'ORDERING') {
+            const selected = document.createElement('div');
+            orderBank = document.createElement('div');
+            const render = () => {
+              selected.replaceChildren(...ordered.map(index => {
+                const token = document.createElement('button');
+                token.type = 'button';
+                token.textContent = question.tokens[index];
+                token.onclick = () => { ordered.splice(ordered.indexOf(index), 1); render(); };
+                return token;
+              }));
+              orderBank.replaceChildren(...question.tokens.flatMap((text, index) => {
+                if (ordered.includes(index)) return [];
+                const token = document.createElement('button');
+                token.type = 'button';
+                token.textContent = text;
+                token.onclick = () => { ordered.push(index); render(); };
+                return [token];
+              }));
+            };
+            const instruction = document.createElement('p');
+            instruction.textContent = 'Bấm thẻ để xếp câu. Bấm lại thẻ đã chọn để gỡ.';
+            form.append(instruction, selected, orderBank);
+            render();
+          } else if (question.type === 'MATCHING') {
+            for (const left of question.left_items) {
+              const label = document.createElement('label');
+              label.textContent = left;
+              const select = document.createElement('select');
+              select.required = true;
+              const empty = document.createElement('option');
+              empty.value = '';
+              empty.textContent = 'Chọn nghĩa tương ứng';
+              select.append(empty);
+              for (const right of question.right_items) {
+                const option = document.createElement('option');
+                option.value = right;
+                option.textContent = right;
+                select.append(option);
+              }
+              label.append(select);
+              fields.push({left, input: select});
+              form.append(label);
+            }
+          } else {
+            const label = document.createElement('label');
+            label.textContent = question.type === 'ORDERING' ? 'Nhập các phần theo đúng thứ tự, mỗi phần một dòng' : (question.sentence_template || 'Điền đáp án');
+            const input = document.createElement('select');
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = 'Chọn từ thích hợp';
+            input.append(placeholder);
+            for (const text of question.options) {
+              const option = document.createElement('option');
+              option.textContent = text;
+              option.value = text;
+              input.append(option);
+            }
+            input.required = true;
+            label.append(input);
+            fields.push({input});
+            form.append(label);
+          }
+          const check = document.createElement('button');
+          check.type = 'submit';
+          check.textContent = 'Kiểm tra';
+          const status = document.createElement('p');
+          status.setAttribute('role', 'status');
+          form.append(check, status);
+          form.className = 'review-practice-form';
+          form.onsubmit = event => {
+            event.preventDefault();
+            const expected = attempt.correct_answer;
+            let correct;
+            if (question.type === 'MATCHING') correct = fields.every(({left, input}) => expected.some(pair => pair.left === left && pair.right === input.value));
+            else if (question.type === 'ORDERING') correct = JSON.stringify(ordered.map(index => question.tokens[index].trim())) === JSON.stringify(expected.map(value => value.trim()));
+            else correct = fields[0].input.value.trim().toLowerCase() === String(expected).trim().toLowerCase();
+            status.textContent = correct ? 'Chính xác! Đã ôn xong câu này.' : 'Chưa đúng, bạn thử lại nhé.';
+            if (correct) {
+              explanation.hidden = false;
+              fields.forEach(({input}) => input.disabled = true);
+              check.disabled = true;
+              form.querySelectorAll('button').forEach(button => button.disabled = true);
+            }
+          };
+          item.append(form);
+        }
+        item.append(explanation);
         return item;
       }));
       if (!dialog.open) dialog.showModal();
