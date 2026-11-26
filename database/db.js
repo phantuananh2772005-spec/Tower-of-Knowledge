@@ -1,12 +1,12 @@
 const { Pool, types } = require('pg');
-const { databaseUrl } = require('../config/local-env');
+const { databaseUrl, ssl } = require('../config/local-env');
 
 // A DATE is a calendar day, independent of the Node process timezone.
 types.setTypeParser(1082, value => value);
 
 const pool = new Pool({
   connectionString: databaseUrl.href,
-  ssl: false,
+  ssl,
   application_name: 'tower-of-knowledge-local-v1',
   connectionTimeoutMillis: 5000,
   options: '-c search_path=app_v1,pg_catalog'
@@ -42,7 +42,7 @@ async function verifyRuntime() {
       + ' FROM pg_roles r WHERE r.rolname = current_user'
   );
   if (runtime?.login !== decodeURIComponent(databaseUrl.username)
-      || runtime.login !== runtime.session_login || runtime.database !== 'thaptrithuc_v1'
+      || runtime.login !== runtime.session_login || runtime.database !== decodeURIComponent(databaseUrl.pathname.slice(1))
       || runtime.schemas.join(',') !== 'app_v1,pg_catalog'
       || !runtime.has_runtime_role || runtime.can_create || runtime.privileged) {
     throw new Error('Expected a dedicated V1 runtime login with search_path app_v1, pg_catalog.');

@@ -44,4 +44,21 @@ function loadLocalEnvironment() {
   return { databaseUrl, port };
 }
 
-module.exports = loadLocalEnvironment();
+function loadProductionEnvironment() {
+  const { V1_DATABASE_URL, JWT_SECRET, PORT = '10000' } = process.env;
+  if (!V1_DATABASE_URL || !JWT_SECRET?.trim()) {
+    throw new Error('Set V1_DATABASE_URL and JWT_SECRET for the production V1 runtime.');
+  }
+  const databaseUrl = new URL(V1_DATABASE_URL);
+  const port = Number(PORT);
+  if (!['postgres:', 'postgresql:'].includes(databaseUrl.protocol)
+      || !databaseUrl.username || !databaseUrl.password || databaseUrl.pathname.length < 2
+      || databaseUrl.search || databaseUrl.hash || !Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error('Invalid V1 runtime connection or PORT.');
+  }
+  return { databaseUrl, port, host: '0.0.0.0', ssl: { rejectUnauthorized: true } };
+}
+
+module.exports = process.env.NODE_ENV === 'production'
+  ? loadProductionEnvironment()
+  : { ...loadLocalEnvironment(), host: '127.0.0.1', ssl: false };

@@ -6,7 +6,8 @@ services:
     region: singapore
     branch: main
     autoDeploy: true
-    buildCommand: npm install && node database/migrate.js --seed
+    buildCommand: npm ci --omit=dev
+    healthCheckPath: /health
     startCommand: node server.js
     envVars:
       - key: NODE_ENV
@@ -15,6 +16,8 @@ services:
         value: 596560941998-dbgmv0nh91l184hhk2rjvn64ura1isku.apps.googleusercontent.com
       - key: JWT_SECRET
         generateValue: true
+      - key: V1_DATABASE_URL
+        sync: false
       - key: DATABASE_URL
         fromDatabase:
           name: tower-of-knowledge-db

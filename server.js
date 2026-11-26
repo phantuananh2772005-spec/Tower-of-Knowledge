@@ -3,7 +3,7 @@
  * Express 4 + Socket.IO + local PostgreSQL V1
  */
 
-const { port } = require('./config/local-env');
+const { port, host } = require('./config/local-env');
 const db = require('./database/db');
 const http = require('http');
 const path = require('path');
@@ -93,8 +93,8 @@ app.use((err, req, res, next) => {
 async function start() {
   await db.verifyRuntime();
   app.set('ruleConstants', await db.loadRuleConstants());
-  server.listen(port, '127.0.0.1', () => {
-    console.log('Tower of Knowledge is running at http://127.0.0.1:' + port);
+  server.listen(port, host, () => {
+    console.log('Tower of Knowledge listening on port ' + port);
   });
 }
 
