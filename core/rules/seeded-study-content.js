@@ -28,4 +28,20 @@ function getStudyQuestionExclusions(milestoneId) {
   return milestoneId === foundationReview.milestoneId ? foundationExcluded : [];
 }
 
-module.exports = { seededContentId, foundationReview, getStudyQuestionExclusions };
+const theorySections = new Map([
+  ['q_csdl_01_01_01', '1. Dữ liệu (Data) và Thông tin (Information)'],
+  ['q_csdl_01_01_02', '1. Dữ liệu (Data) và Thông tin (Information)'],
+  ['q_csdl_01_01_03', '2. Định nghĩa Hệ Cơ sở Dữ liệu (DBMS)'],
+  ['q_csdl_01_01_04', '3. Kiến trúc 3 mức trừu tượng ANSI/SPARC'],
+  ['q_csdl_01_01_06', '3. Kiến trúc 3 mức trừu tượng ANSI/SPARC'],
+  ['q_csdl_01_01_08', '4. Tính Độc lập Dữ liệu (Data Independence)'],
+  ['q_csdl_01_01_10', '2. Định nghĩa Hệ Cơ sở Dữ liệu (DBMS)'],
+  ['q_csdl_01_01_11', '4. Tính Độc lập Dữ liệu (Data Independence)'],
+  ['q_csdl_01_01_12', '4. Tính Độc lập Dữ liệu (Data Independence)']
+].map(([id, heading]) => [seededContentId('questions', id), heading]));
+
+function getStudyTheorySection(questionId) {
+  return theorySections.get(questionId) ?? null;
+}
+
+module.exports = { seededContentId, foundationReview, getStudyQuestionExclusions, getStudyTheorySection };

@@ -1,7 +1,7 @@
 const { isDeepStrictEqual } = require('node:util');
 const db = require('../database/db');
 const { calculateQuestionWeight } = require('../core/rules/adaptive.rules');
-const { getStudyQuestionExclusions } = require('../core/rules/seeded-study-content');
+const { getStudyQuestionExclusions, getStudyTheorySection } = require('../core/rules/seeded-study-content');
 const { applyMilestoneProgress, lockCourseUser, lockOpenMilestone } = require('./course.service');
 const { correctAnswer, getStepConfig, gradeQuestion, pairMatches, pickStudyQuestions, presentQuestion } = require('./study-questions');
 
@@ -64,6 +64,7 @@ function feedback(answerRow, question, lookups) {
     seconds: seconds === null ? null : Number(seconds),
     selected_option_position, submitted_text, response, lookups,
     explanation: question.explanation,
+    theory_section: getStudyTheorySection(question.id),
     correct_answer: correctAnswer(question)
   };
 }

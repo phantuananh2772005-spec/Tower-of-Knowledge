@@ -7606,6 +7606,15 @@
           dialog.close();
           await openTheoryModal(session.mocId);
           if (currentTheoryMoc?.id === session.mocId && !document.getElementById('modal-theory').classList.contains('hidden')) {
+            if (attempt.theory_section) {
+              const heading = [...document.querySelectorAll('#theory-content h2,#theory-content h3,#theory-content h4')]
+                .find(element => element.textContent.trim() === attempt.theory_section);
+              if (heading) {
+                heading.scrollIntoView({block:'start'});
+                heading.tabIndex = -1;
+                heading.focus({preventScroll:true});
+              }
+            }
             const theoryDialog = document.getElementById('modal-theory');
             const restore = () => {
               if (!theoryDialog.classList.contains('hidden')) return;
@@ -7705,7 +7714,7 @@
     }
 
     function formatTheoryContent(text) {
-      return text.split('\n\n').map(p => {
+      return text.replace(/^(#{1,3} [^\n]+)\n(?!\n)/gm, '$1\n\n').split('\n\n').map(p => {
         p = p.trim();
         if (p.startsWith('### ')) {
           return `<h4 class="font-bold text-emerald-600 text-sm mt-3 mb-1">${escapeHtml(p.replace('### ', ''))}</h4>`;
