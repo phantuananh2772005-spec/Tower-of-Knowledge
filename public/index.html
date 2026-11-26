@@ -8781,24 +8781,38 @@
       }, 1000);
     }
 
+    function showEnrollmentPractice() {
+      document.getElementById('enrollment-practice')?.remove();
+      const dialog = document.createElement('dialog');
+      dialog.id = 'enrollment-practice';
+      dialog.className = 'rounded-2xl p-6 border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] shadow-xl';
+      dialog.style.cssText = 'margin:auto;width:min(92vw,440px);max-height:85dvh;overflow:auto';
+      dialog.setAttribute('aria-labelledby', 'enrollment-practice-title');
+      dialog.innerHTML = '<h2 id="enrollment-practice-title" class="font-bold text-lg">Thử đăng ký một môn</h2>'
+        + '<p class="text-sm mt-2">Đây là thao tác hướng dẫn. Bạn sẽ tự chọn môn muốn học sau.</p>'
+        + '<div class="mt-4 p-4 rounded-xl border border-[var(--border)]"><strong>Môn học minh họa</strong>'
+        + '<button type="button" class="block w-full mt-3 p-3 rounded-xl bg-emerald-700 text-white font-bold">Đăng ký học thử</button></div>';
+      const button = dialog.querySelector('button');
+      button.onclick = () => {
+        dialog.querySelector('h2').textContent = 'Bạn đã biết cách đăng ký!';
+        dialog.querySelector('p').textContent = 'Khi sẵn sàng, mở Kho môn học hệ thống và chọn môn bạn muốn học.';
+        dialog.querySelector('strong').textContent = 'Đã hoàn thành thao tác hướng dẫn';
+        button.textContent = 'Về trang chủ';
+        button.onclick = () => { dialog.close(); dialog.remove(); navTo('hub'); };
+      };
+      dialog.addEventListener('cancel', event => event.preventDefault());
+      document.body.append(dialog);
+      dialog.showModal();
+    }
+
     function completeUnboxingAndStartTour() {
       const modal = document.getElementById('modal-unboxing-pet');
       if (modal) modal.classList.add('hidden');
       localStorage.setItem('tok_unboxed_starter_pet', 'true');
       isUnboxingInProgress = false;
 
-      const enrolled = myEnrolledCourses.find(course => course.slug === currentActiveCourseSlug)
-        || myEnrolledCourses[0];
-      if (enrolled?.slug) {
-        navTo('hub');
-        if (enrolled.slug === currentActiveCourseSlug && currentFocusMoc?.id) {
-          openCheckpointModal(currentFocusMoc.id);
-        } else {
-          openCourseRoadmap(enrolled.slug);
-        }
-      } else {
-        navTo('catalog');
-      }
+      navTo('hub');
+      showEnrollmentPractice();
       const token = localStorage.getItem('tok_token');
       if (token) fetch('/api/economy/onboarding-gift', {
         method: 'POST', headers: { Authorization: 'Bearer ' + token }
