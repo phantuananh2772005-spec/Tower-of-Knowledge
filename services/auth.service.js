@@ -84,7 +84,7 @@ async function formatUserResponse(user, connection = db) {
     rank_best_win_streak: bestWinStreak,
     equipped_pet: formatPet(details?.equipped_pet),
     equipped_accessory: details?.equipped_accessory ?? null,
-    theme: details?.theme ?? 'DARK',
+    theme: details?.theme ?? 'LIGHT',
     sound_enabled: details?.sound_enabled ?? true,
     sound_config: details?.sound_config ?? null,
     tutorial_progress: details?.tutorial_progress ?? null
@@ -245,7 +245,7 @@ async function updateSettings(userId, { theme, sound_enabled, display_name, soun
       [userId]
     );
     const next = {
-      theme: current?.theme ?? 'DARK',
+      theme: current?.theme ?? 'LIGHT',
       sound_enabled: current?.sound_enabled ?? true,
       sound_config: current?.sound_config ?? null,
       tutorial_progress: current?.tutorial_progress ?? null

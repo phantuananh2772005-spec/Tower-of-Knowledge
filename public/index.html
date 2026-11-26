@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="vi" class="dark">
+<html lang="vi">
 <head>
   <meta charset="UTF-8">
   <script>
     // Apply the saved theme before external resources can delay the first paint.
     try {
-      document.documentElement.classList.toggle('dark', localStorage.getItem('app-theme') !== 'light');
+      document.documentElement.classList.toggle('dark', localStorage.getItem('app-theme') === 'dark');
       document.documentElement.classList.toggle('scenic-skin', localStorage.getItem('tok-scenic-skin') !== 'off');
-    } catch (_) { /* Keep the existing dark default if browser storage is unavailable. */ }
+    } catch (_) { /* Keep the light default if browser storage is unavailable. */ }
   </script>
   <style>
     html { color-scheme: light; background: #f8fafc; color: #0f172a; }
@@ -274,6 +274,7 @@
     }
   </style>
 <link rel="stylesheet" href="/css/result-book.css">
+<link rel="stylesheet" href="/css/guided-tour.css?v=2">
 </head>
 <body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen flex font-sans">
 
@@ -4985,7 +4986,7 @@
 
     // ================= CHẾ ĐỘ SÁNG / TỐI (LIGHT / DARK THEME) =================
     function initTheme() {
-      const savedTheme = localStorage.getItem('app-theme') || 'dark';
+      const savedTheme = localStorage.getItem('app-theme') || 'light';
       setTheme(savedTheme);
     }
 
