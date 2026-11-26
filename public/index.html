@@ -331,7 +331,7 @@
             <img class="app-nav-art" data-seasonal-source="/assets/navigation/saga.webp" data-seasonal-icon="saga" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="32" height="32" decoding="async">
             <span class="sidebar-text font-medium">Bản đồ leo tháp</span>
           </div>
-          <span id="sidebar-saga-course-tag" class="sidebar-text text-[10px] bg-emerald-500/10 text-emerald-600 font-bold px-1.5 py-0.5 rounded font-mono">CSDL · C1</span>
+          <span id="sidebar-saga-course-tag" class="sidebar-text text-[10px] bg-emerald-500/10 text-emerald-600 font-bold px-1.5 py-0.5 rounded font-mono" hidden></span>
         </button>
 
         <!-- 4. Kho Môn học Hệ thống (Tách riêng để duyệt & đăng ký) -->
@@ -2934,6 +2934,7 @@
     }
 
     function navTo(viewName) {
+      if (viewName === 'saga' && myEnrolledCourses.length === 0) viewName = 'catalog';
       currentAppView = viewName;
       if (typeof currentLiveMatch !== 'undefined' && currentLiveMatch && typeof B !== 'undefined' && B && !B.over && viewName !== 'battle') {
         pendingBattleNavView = viewName;
@@ -3649,7 +3650,7 @@
     let allSystemCourses = [];
     let myEnrolledCourses = [];
     let currentLiveMatch = null;
-    let currentActiveCourseSlug = 'co-so-du-lieu';
+    let currentActiveCourseSlug = null;
 
     async function loadAllCourses() {
       const token = localStorage.getItem('tok_token');
@@ -3686,6 +3687,21 @@
         if (badgeEl) {
           badgeEl.textContent = myEnrolledCourses.length;
           badgeEl.style.display = myEnrolledCourses.length > 0 ? 'inline-block' : 'none';
+        }
+
+        const courseTag = document.getElementById('sidebar-saga-course-tag');
+        if (courseTag) {
+          courseTag.hidden = myEnrolledCourses.length === 0;
+          if (courseTag.hidden) courseTag.textContent = '';
+        }
+        if (myEnrolledCourses.length === 0) {
+          currentActiveCourseSlug = null;
+          liveCourseData = null;
+          currentFocusMoc = null;
+          const focusCard = document.getElementById('hub-continue-learning-card');
+          focusCard?.classList.add('hidden');
+          focusCard?.classList.remove('flex');
+          document.getElementById('saga-roadmap-track')?.replaceChildren();
         }
 
         // 4. Update Hub Welcome Banner according to user status
