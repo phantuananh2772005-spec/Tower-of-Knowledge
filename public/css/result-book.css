@@ -60,3 +60,5 @@
   #step-review-dialog[open] .result-spread,
   #step-review-dialog[open] .result-star.earned { animation:none; }
 }
+
+.review-theory-link { display:inline-block; margin-top:8px; min-height:44px; padding:8px 0; color:#285c38; font-weight:600; text-decoration:underline; cursor:pointer; }

@@ -7598,7 +7598,26 @@
           };
           item.append(form);
         }
-        item.append(explanation);
+        const theoryLink = document.createElement('button');
+        theoryLink.type = 'button';
+        theoryLink.className = 'review-theory-link';
+        theoryLink.textContent = 'Đọc lại lý thuyết';
+        theoryLink.onclick = async () => {
+          dialog.close();
+          await openTheoryModal(session.mocId);
+          if (currentTheoryMoc?.id === session.mocId && !document.getElementById('modal-theory').classList.contains('hidden')) {
+            const theoryDialog = document.getElementById('modal-theory');
+            const restore = () => {
+              if (!theoryDialog.classList.contains('hidden')) return;
+              observer.disconnect();
+              if (!dialog.open) dialog.showModal();
+              item.scrollIntoView({block:'nearest'});
+            };
+            const observer = new MutationObserver(restore);
+            observer.observe(theoryDialog, {attributes:true, attributeFilter:['class']});
+          } else if (!dialog.open) dialog.showModal();
+        };
+        item.append(explanation, theoryLink);
         return item;
       }));
       if (!dialog.open) dialog.showModal();
