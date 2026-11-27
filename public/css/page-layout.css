@@ -105,3 +105,5 @@
 .course-retry { min-height:44px; padding:10px 18px; border:1px solid var(--border); border-radius:12px; color:var(--foreground); background:var(--card); cursor:pointer; }
 @keyframes course-placeholder{to{opacity:.3}}
 @media(prefers-reduced-motion:reduce){.course-loading-card>*{animation:none}}
+
+#topbar-breadcrumb:empty { display:none; height:0; margin:0; }

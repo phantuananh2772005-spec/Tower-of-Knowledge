@@ -409,8 +409,8 @@
         <button id="sidebar-toggle-btn" type="button" onclick="toggleSidebar()" title="Ẩn menu" aria-label="Ẩn menu" aria-controls="app-sidebar" aria-expanded="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16m6-12-3 4 3 4"/></svg></button>
         <img src="/assets/logo_transparent.png" alt="Logo" class="w-8 h-8 object-contain shrink-0 drop-shadow-sm select-none md:hidden" />
         <div class="min-w-0 flex-1">
-          <!-- Breadcrumb vị trí phân cấp -->
-          <nav id="topbar-breadcrumb" aria-label="Đường dẫn trang"></nav>
+          <!-- Contextual page actions -->
+          <nav id="topbar-breadcrumb" aria-label="Thao tác trang"></nav>
           <!-- Tiêu đề lớn -->
           <h1 id="topbar-title" class="font-bold tracking-tight text-sm sm:text-base md:text-lg leading-tight truncate">Tổng quan</h1>
         </div>
@@ -2861,11 +2861,14 @@
     function setPageHeader(title,parent=null){
       const breadcrumb=document.getElementById('topbar-breadcrumb');
       breadcrumb.replaceChildren();
-      const addButton=(label,handler)=>{const button=document.createElement('button');button.type='button';button.textContent=label;button.onclick=handler;breadcrumb.appendChild(button);};
-      const separator=()=>{const span=document.createElement('span');span.textContent='/';span.setAttribute('aria-hidden','true');breadcrumb.appendChild(span);};
-      addButton('Trang chủ',()=>navTo('hub'));separator();
-      if(parent){addButton(parent.label,parent.onClick);separator();}
-      const current=document.createElement('span');current.textContent=title;current.setAttribute('aria-current','page');breadcrumb.appendChild(current);
+      if(parent){
+        const back=document.createElement('button');
+        back.type='button';
+        back.textContent='←';
+        back.setAttribute('aria-label','Quay lại '+parent.label);
+        back.onclick=parent.onClick;
+        breadcrumb.append(back);
+      }
       document.getElementById('topbar-title').textContent=title;
     }
     function updateTopbarUI(viewName){
