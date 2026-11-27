@@ -44,4 +44,12 @@ router.post('/onboarding-gift', authenticate, async (req, res) => {
   }
 });
 
+router.post('/tour-reward', authenticate, async (req, res) => {
+  try {
+    return res.apiSuccess(await quests.awardTour(req.user.id));
+  } catch (error) {
+    return res.apiError(error.message, 'TOUR_REWARD_FAILED', 400);
+  }
+});
+
 module.exports = router;

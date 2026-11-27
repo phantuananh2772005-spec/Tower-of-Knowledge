@@ -47,3 +47,30 @@
 .companion-guide button { min-height:44px; padding:9px 12px; border-radius:10px; border:1px solid var(--border); cursor:pointer; }
 .companion-guide button:first-child { background:#087d60; color:white; }
 .companion-guide button:focus-visible { outline:3px solid #10b981; outline-offset:2px; }
+
+.tour-portal { position:fixed; inset:0; z-index:2147483000; pointer-events:none; }
+.tour-spot { position:fixed; border:3px solid #10b981; border-radius:14px; box-shadow:0 0 0 9999px rgba(10,20,15,.45); box-sizing:border-box; }
+.dark .tour-spot { box-shadow:0 0 0 9999px rgba(10,20,15,.55); }
+.tour-unit { position:fixed; left:0; top:0; width:min(300px,calc(100vw - 24px)); box-sizing:border-box; padding:14px; border-radius:18px; border:1px solid var(--border); background:var(--card); color:var(--foreground); pointer-events:auto; box-shadow:0 10px 35px #0004; transition:transform 300ms,opacity 150ms; }
+.tour-unit p { font-size:14px; line-height:1.5; max-height:40dvh; overflow:auto; margin:10px 0; }
+.tour-unit>div:last-child { display:flex; flex-wrap:wrap; gap:6px; }
+.tour-unit button { min-height:44px; padding:8px; border:1px solid var(--border); border-radius:9px; cursor:pointer; }
+.tour-pet-box { width:72px; height:72px; aspect-ratio:1; }
+.tour-pet-box img { width:100%; height:100%; object-fit:contain; image-rendering:pixelated; opacity:0; transition:opacity 150ms; }
+@media(max-width:700px) { .tour-pet-box{width:56px;height:56px} .tour-unit{padding-bottom:calc(14px + env(safe-area-inset-bottom))} }
+@media(prefers-reduced-motion:reduce) { .tour-unit,.tour-pet-box img{transition:none} }
+
+.tour-offer-small { width:100px; padding:8px; }
+.tour-offer-small>strong,.tour-offer-small>p,.tour-offer-small>div { display:none; }
+.tour-offer-small>img { float:none; display:block; margin:auto; }
+.tour-offer-reopen { font-size:12px; min-height:44px; }
+
+@media(max-width:700px) {
+  #app-sidebar.tour-sidebar-open { display:flex!important; position:fixed!important; top:0; left:0; height:calc(100dvh - 64px); width:260px!important; z-index:2147482000; transform:none!important; visibility:visible!important; }
+}
+
+.tour-unit:before { content:""; position:absolute; width:12px; height:12px; background:var(--card); border:1px solid var(--border); transform:rotate(45deg); }
+.tour-unit[data-side="top"]:before { top:-7px; left:var(--tour-tail-x); border-right:0; border-bottom:0; }
+.tour-unit[data-side="bottom"]:before { bottom:-7px; left:var(--tour-tail-x); border-left:0; border-top:0; }
+.tour-unit[data-side="left"]:before { left:-7px; top:var(--tour-tail-y); border-right:0; border-top:0; }
+.tour-unit[data-side="right"]:before { right:-7px; top:var(--tour-tail-y); border-left:0; border-bottom:0; }

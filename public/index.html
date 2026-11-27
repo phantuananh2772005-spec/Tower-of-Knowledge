@@ -344,7 +344,7 @@
         </button>
 
         <!-- 5. Minigame -->
-        <button onclick="navTo('minigame')" id="nav-minigame" title="Minigame" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
+        <button onclick="navTo('minigame')" id="nav-minigame" data-tour="minigame" title="Minigame" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
           <div class="flex items-center gap-3">
             <img class="app-nav-art" data-seasonal-source="/assets/navigation/minigame.webp" data-seasonal-icon="minigame" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="32" height="32" decoding="async">
             <span class="sidebar-text font-medium">Minigame</span>
@@ -352,7 +352,7 @@
         </button>
 
         <!-- 6. Linh vật Thú cưng -->
-        <button onclick="navTo('pet')" id="nav-pet" title="Linh vật Thú cưng" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
+        <button onclick="navTo('pet')" id="nav-pet" data-tour="pet" title="Linh vật Thú cưng" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
           <div class="flex items-center gap-3">
             <img class="app-nav-art" data-seasonal-source="/assets/navigation/pet.webp" data-seasonal-icon="pet" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="32" height="32" decoding="async">
             <span class="sidebar-text font-medium">Linh vật Thú cưng</span>
@@ -360,7 +360,7 @@
         </button>
 
         <!-- 7. Cửa hàng Shop riêng biệt -->
-        <button onclick="navTo('shop')" id="nav-shop" title="Cửa hàng Shop" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
+        <button onclick="navTo('shop')" id="nav-shop" data-tour="shop" title="Cửa hàng Shop" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
           <div class="flex items-center gap-3">
             <img class="app-nav-art" data-seasonal-source="/assets/navigation/shop.webp" data-seasonal-icon="shop" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="32" height="32" decoding="async">
             <span class="sidebar-text font-medium">Cửa hàng Shop</span>
@@ -383,7 +383,7 @@
         <span id="sidebar-streak-val" title="Chuỗi học tập" class="text-amber-500">🔥 0</span>
         <span class="text-[var(--border)]">|</span>
         <span title="Xu Tri Thức" class="text-amber-600 flex items-center gap-0.5">
-          <span class="user-coins-val" id="sidebar-coins-val">0</span>🪙
+          <span class="user-coins-val" id="sidebar-coins-val" data-tour="coins">0</span>🪙
         </span>
       </div>
     </div>
@@ -423,7 +423,7 @@
         <button onclick="toggleTheme(event)" id="btn-theme-toggle" class="season-switch" role="switch" aria-label="Chế độ tối" aria-checked="true"></button>
 
         <!-- Nút Cài đặt (chỉ hiện trên desktop md trở lên, trên mobile có trong menu Thêm) -->
-        <button onclick="openSettingsModal()" id="btn-topbar-settings" title="Cài đặt" class="hidden md:flex w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--border)]/40 hover:border-emerald-500/50 text-[var(--muted-foreground)] hover:text-[var(--foreground)] items-center justify-center transition cursor-pointer shadow-2xs shrink-0">
+        <button onclick="openSettingsModal()" id="btn-topbar-settings" data-tour="settings" title="Cài đặt" class="hidden md:flex w-8 h-8 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--border)]/40 hover:border-emerald-500/50 text-[var(--muted-foreground)] hover:text-[var(--foreground)] items-center justify-center transition cursor-pointer shadow-2xs shrink-0">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -573,7 +573,7 @@
           </div>
 
           <!-- Mid Row: Thẻ bài học trọng tâm cần tiếp tục (Focus Card) -->
-          <div id="hub-level-progress" class="rounded-2xl p-3 border border-emerald-500/25 bg-emerald-500/5" aria-label="Cấp độ và kinh nghiệm">
+          <div id="hub-level-progress" data-tour="level" class="rounded-2xl p-3 border border-emerald-500/25 bg-emerald-500/5" aria-label="Cấp độ và kinh nghiệm">
             <div class="flex items-center justify-between gap-2 text-xs"><strong id="hub-level-label">Cấp 1 · Tân thủ</strong><span id="hub-exp-label" class="font-mono">0 EXP</span></div>
             <div class="h-2 rounded-full bg-[var(--border)] mt-2 overflow-hidden"><div id="hub-exp-bar" class="h-full bg-emerald-500 transition-all" style="width:0%"></div></div>
             <p id="hub-next-level" class="text-[11px] text-[var(--muted-foreground)] mt-1.5">Còn 100 EXP lên Cấp 2</p>
@@ -608,7 +608,7 @@
               Chinh phục các mốc kiến thức tương tác để nhận Xu & EXP thăng hạng.
             </p>
             <div class="flex items-center gap-2 w-full sm:w-auto">
-              <button id="btn_hub_tieptuc_csdl" onclick="handleHubMainAction()" class="flex-1 sm:flex-none px-3.5 py-2 sm:py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap">
+              <button id="btn_hub_tieptuc_csdl" data-tour="catalog" onclick="handleHubMainAction()" class="flex-1 sm:flex-none px-3.5 py-2 sm:py-1.5 rounded-xl border border-[var(--border)] hover:bg-[var(--background)] text-xs font-semibold text-[var(--foreground)] transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs whitespace-nowrap">
                 <span>🔍</span>
                 <span>Khám phá Kho môn</span>
                 <span>→</span>
@@ -641,7 +641,7 @@
           </div>
 
           <!-- Nhiệm Vụ Hôm Nay Tinh Gọn (3 dòng task) -->
-          <div id="hub-daily-quests" class="space-y-2">
+          <div id="hub-daily-quests" data-tour="quests" class="space-y-2">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-1.5">
                 <span class="text-xs"><img class="function-art" data-seasonal-source="/assets/functions/quests.webp" data-seasonal-icon="quests" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="22" height="22" style="--art-size:22px" decoding="async"></span>
@@ -806,7 +806,7 @@
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <button id="btn_bxh_dautruong" onclick="arenaTab('rank')" class="px-3.5 py-2 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-amber-500/10 hover:border-amber-500/30 text-amber-500 font-semibold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Bảng xếp hạng đấu trường">
+          <button id="btn_bxh_dautruong" data-tour="leaderboard" onclick="arenaTab('rank')" class="px-3.5 py-2 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-amber-500/10 hover:border-amber-500/30 text-amber-500 font-semibold text-xs transition cursor-pointer flex items-center gap-1.5 shadow-2xs" title="Bảng xếp hạng đấu trường">
             <span class="text-base"><img class="function-art" data-seasonal-source="/assets/functions/leaderboard.webp" data-seasonal-icon="leaderboard" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="22" height="22" style="--art-size:22px" decoding="async"></span>
             <span>Bảng Xếp Hạng</span>
           </button>
@@ -816,7 +816,7 @@
       <!-- Thanh Chọn Chế Độ Chơi (Game Mode Cards) -->
       <div id="arena-modes-bar" class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- Chế độ 1: Đấu Hạng 1v1 (Đang mở) -->
-        <div id="card-mode-ranked" onclick="selectArenaMode('ranked')" class="cursor-pointer rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-emerald-500/50 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs">
+        <div id="card-mode-ranked" data-tour="ranked" onclick="selectArenaMode('ranked')" class="cursor-pointer rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-emerald-500/50 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs">
           <div class="flex items-center justify-between">
             <span class="text-2xl"><img class="function-art" data-seasonal-source="/assets/functions/ranked.webp" data-seasonal-icon="ranked" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="42" height="42" style="--art-size:42px" decoding="async"></span>
             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white uppercase tracking-wider">Đang Mở</span>
@@ -831,7 +831,7 @@
         </div>
 
         <!-- Chế độ 2: Đấu Thường & Giao Hữu -->
-        <div id="card-mode-casual" onclick="selectArenaMode('casual')" class="cursor-pointer rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-cyan-500/50 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs">
+        <div id="card-mode-casual" data-tour="casual" onclick="selectArenaMode('casual')" class="cursor-pointer rounded-2xl border border-[var(--border)] bg-[var(--card)] hover:border-cyan-500/50 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs">
           <div class="flex items-center justify-between">
             <span class="text-2xl"><img class="function-art" data-seasonal-source="/assets/functions/casual.webp" data-seasonal-icon="casual" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="42" height="42" style="--art-size:42px" decoding="async"></span>
             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-600 uppercase tracking-wider">Giao Hữu & Bot</span>
@@ -846,7 +846,7 @@
         </div>
 
         <!-- Chế độ 3: Thi Đấu Cực Hạn (Endless Survival Mode) -->
-        <div id="card-mode-arcade" onclick="openExtremeSetupModal()" class="cursor-pointer rounded-2xl border border-rose-500/40 bg-[var(--card)] hover:border-rose-500/70 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs">
+        <div id="card-mode-arcade" data-tour="extreme" onclick="openExtremeSetupModal()" class="cursor-pointer rounded-2xl border border-rose-500/40 bg-[var(--card)] hover:border-rose-500/70 p-4 space-y-2.5 transition relative overflow-hidden group shadow-xs">
           <div class="flex items-center justify-between">
             <span class="text-2xl"><img class="function-art" data-seasonal-source="/assets/functions/extreme.webp" data-seasonal-icon="extreme" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="42" height="42" style="--art-size:42px" decoding="async"></span>
             <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500 text-white uppercase tracking-wider animate-pulse">CỰC HẠN • MỚI</span>
@@ -1429,10 +1429,10 @@
               <div id="pet-mood-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-300" style="width: 90%"></div>
             </div>
             <div class="pt-2 flex gap-3">
-              <button id="btn_choan_pet" onclick="feedPet()" class="flex-1 py-2.5 rounded-xl bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border border-amber-500/30 font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs hover:scale-[1.02] active:scale-[0.98]">
+              <button id="btn_choan_pet" data-tour="feed" onclick="feedPet()" class="flex-1 py-2.5 rounded-xl bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 border border-amber-500/30 font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs hover:scale-[1.02] active:scale-[0.98]">
                 <span>🍎</span> <span>Cho ăn (10 🪙)</span>
               </button>
-              <button id="btn_vuotve_pet" onclick="petHappy()" class="flex-1 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--card-hover)] font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs hover:scale-[1.02] active:scale-[0.98]">
+              <button id="btn_vuotve_pet" data-tour="stroke" onclick="petHappy()" class="flex-1 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--card-hover)] font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs hover:scale-[1.02] active:scale-[0.98]">
                 <span>✨</span> <span>Vuốt ve</span>
               </button>
             </div>
@@ -1568,7 +1568,7 @@
             </div>
 
             <!-- Mục 3: Xem lại Hướng dẫn Tân thủ cùng Linh Thú -->
-            <div id="settings-open-guide" role="button" tabindex="0" onclick="window.GuidedTour?.view('settings', true);" class="p-3.5 rounded-2xl bg-[var(--background)] border border-[var(--border)] hover:border-emerald-500/50 hover:bg-[var(--card)] transition cursor-pointer flex items-center justify-between group shadow-2xs">
+            <div id="settings-open-guide" data-tour="replay" role="button" tabindex="0" onclick="startPetOnboardingTour()" class="p-3.5 rounded-2xl bg-[var(--background)] border border-[var(--border)] hover:border-emerald-500/50 hover:bg-[var(--card)] transition cursor-pointer flex items-center justify-between group shadow-2xs">
               <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-base shrink-0 group-hover:scale-105 transition">
                   🐉
@@ -2622,7 +2622,7 @@
     </button>
 
     <!-- 3. Minigame -->
-    <button id="btn_m_nav_minigame" onclick="navTo('minigame')" class="flex-1 max-w-[62px] flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer text-center relative">
+    <button id="btn_m_nav_minigame" data-tour="mobile-minigame" onclick="navTo('minigame')" class="flex-1 max-w-[62px] flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer text-center relative">
       <img class="app-nav-art" data-seasonal-source="/assets/navigation/minigame.webp" data-seasonal-icon="minigame" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="32" height="32" decoding="async">
       <span class="text-[9.5px] mt-0.5 whitespace-nowrap leading-tight">Minigame</span>
     </button>
@@ -2635,7 +2635,7 @@
     </button>
 
     <!-- 5. Linh vật Pet -->
-    <button id="btn_m_nav_pet" onclick="navTo('pet')" class="flex-1 max-w-[62px] flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer text-center relative">
+    <button id="btn_m_nav_pet" data-tour="mobile-pet" onclick="navTo('pet')" class="flex-1 max-w-[62px] flex flex-col items-center justify-center py-1 px-0.5 rounded-xl transition text-[var(--muted-foreground)] hover:text-[var(--foreground)] font-medium active:scale-95 cursor-pointer text-center relative">
       <img class="app-nav-art" data-seasonal-source="/assets/navigation/pet.webp" data-seasonal-icon="pet" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="32" height="32" decoding="async">
       <span class="text-[9.5px] mt-0.5 whitespace-nowrap leading-tight">Linh vật</span>
     </button>
@@ -2702,7 +2702,7 @@
         </button>
 
         <!-- 4. Cửa hàng Shop -->
-        <button id="btn_m_more_shop" onclick="closeMobileMoreSheet(); navTo('shop')" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
+        <button id="btn_m_more_shop" data-tour="mobile-shop" onclick="closeMobileMoreSheet(); navTo('shop')" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
           <img class="app-nav-art" data-seasonal-source="/assets/navigation/shop.webp" data-seasonal-icon="shop" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="32" height="32" decoding="async">
           <div class="flex-1 min-w-0">
             <p class="font-bold text-xs text-[var(--foreground)]">Cửa hàng Shop</p>
@@ -2717,7 +2717,7 @@
         </button>
 
         <!-- 6. Cài đặt hệ thống & Âm thanh -->
-        <button id="btn_m_more_settings" onclick="closeMobileMoreSheet(); openSettingsModal()" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
+        <button id="btn_m_more_settings" data-tour="mobile-settings" onclick="closeMobileMoreSheet(); openSettingsModal()" class="w-full text-left p-3 rounded-2xl bg-[var(--background)] hover:bg-[var(--border)]/30 border border-[var(--border)] flex items-center gap-3.5 transition cursor-pointer">
           <span class="w-10 h-10 rounded-xl bg-slate-500/15 text-[var(--foreground)] flex items-center justify-center text-lg shrink-0">⚙️</span>
           <div class="flex-1 min-w-0">
             <p class="font-bold text-xs text-[var(--foreground)]">Cài đặt & Âm thanh</p>
@@ -3379,7 +3379,7 @@
           : 'border-[var(--border)] hover:border-emerald-500/40';
 
         return `
-          <div data-pet-id="${escapeHtml(p.id)}" data-pet-role="${p.role || 'learner'}" class="bg-[var(--card)] border ${cardBorderClass} rounded-xl p-2.5 flex items-center justify-between gap-2 transition">
+          <div data-tour="shop-pet" data-pet-id="${escapeHtml(p.id)}" data-pet-role="${p.role || 'learner'}" class="bg-[var(--card)] border ${cardBorderClass} rounded-xl p-2.5 flex items-center justify-between gap-2 transition">
             <button type="button" aria-haspopup="dialog" onclick="openShopPet(${petActionArg})" class="flex items-center gap-2.5 min-w-0 cursor-pointer hover:text-emerald-600">
               <div class="w-9 h-9 rounded-lg bg-[var(--background)] border-[var(--border)] border flex items-center justify-center shrink-0 select-none overflow-hidden shadow-xs">
                 ${avatarThumb}
@@ -3881,7 +3881,7 @@
                 ? `<button id="btn_catalog_study_${c.slug}" onclick="openCourseRoadmap('${c.slug}')" class="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-xs">
                      🎯 Vào học tiếp →
                    </button>`
-                : `<button id="btn_catalog_enroll_${c.slug}" onclick="handleEnrollCourse('${c.slug}')" class="w-full py-2.5 rounded-xl bg-[var(--foreground)] text-[var(--background)] font-semibold text-xs hover:opacity-90 transition cursor-pointer shadow-xs">
+                : `<button data-tour="enroll" id="btn_catalog_enroll_${c.slug}" onclick="handleEnrollCourse('${c.slug}')" class="w-full py-2.5 rounded-xl bg-[var(--foreground)] text-[var(--background)] font-semibold text-xs hover:opacity-90 transition cursor-pointer shadow-xs">
                      ➕ Đăng ký học ngay
                    </button>`
               }
@@ -3912,6 +3912,7 @@
           showToast('🎉 Đăng ký môn học thành công! Bắt đầu hành trình leo tháp!');
           await loadAllCourses();
           await openCourseRoadmap(slug);
+          window.GuidedTour?.action('enroll');
         } else {
           showToast(res.error?.message || 'Không thể đăng ký môn học!', 'error');
         }
@@ -8782,30 +8783,6 @@
       }, 1000);
     }
 
-    function showEnrollmentPractice() {
-      document.getElementById('enrollment-practice')?.remove();
-      const dialog = document.createElement('dialog');
-      dialog.id = 'enrollment-practice';
-      dialog.className = 'rounded-2xl p-6 border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] shadow-xl';
-      dialog.style.cssText = 'margin:auto;width:min(92vw,440px);max-height:85dvh;overflow:auto';
-      dialog.setAttribute('aria-labelledby', 'enrollment-practice-title');
-      dialog.innerHTML = '<h2 id="enrollment-practice-title" class="font-bold text-lg">Thử đăng ký một môn</h2>'
-        + '<p class="text-sm mt-2">Đây là thao tác hướng dẫn. Bạn sẽ tự chọn môn muốn học sau.</p>'
-        + '<div class="mt-4 p-4 rounded-xl border border-[var(--border)]"><strong>Môn học minh họa</strong>'
-        + '<button type="button" class="block w-full mt-3 p-3 rounded-xl bg-emerald-700 text-white font-bold">Đăng ký học thử</button></div>';
-      const button = dialog.querySelector('button');
-      button.onclick = () => {
-        dialog.querySelector('h2').textContent = 'Bạn đã biết cách đăng ký!';
-        dialog.querySelector('p').textContent = 'Khi sẵn sàng, mở Kho môn học hệ thống và chọn môn bạn muốn học.';
-        dialog.querySelector('strong').textContent = 'Đã hoàn thành thao tác hướng dẫn';
-        button.textContent = 'Về trang chủ';
-        button.onclick = () => { dialog.close(); dialog.remove(); navTo('hub'); };
-      };
-      dialog.addEventListener('cancel', event => event.preventDefault());
-      document.body.append(dialog);
-      dialog.showModal();
-    }
-
     function completeUnboxingAndStartTour() {
       const modal = document.getElementById('modal-unboxing-pet');
       if (modal) modal.classList.add('hidden');
@@ -9525,6 +9502,7 @@
   <script src="/js/learning-garden.js"></script>
   <script src="/js/lesson-state.js"></script>
   <script src="/js/password-recovery.js"></script>
+  <script src="/js/tour-steps.js"></script>
   <script src="/js/guided-tour.js"></script>
 <script src="/js/battle-reactions.js"></script><script src="/js/personal-journey.js"></script>
 <script src="/js/season-switch.js"></script>

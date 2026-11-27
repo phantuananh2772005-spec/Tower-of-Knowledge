@@ -335,3 +335,24 @@ test('repeat EXP combines awards until 1,500 and starts a new week at Vietnam mi
   });
   assert.equal(await db.queryOne('SELECT id FROM users WHERE username = $1', [learnerName]), null);
 });
+
+
+test('starter and tour gifts are independent and repeat claims award nothing', async () => {
+  await withRolledBackDatabase(async tx => {
+    const learner = await auth.register({username:'tour_'+randomUUID().slice(0,8),password:'testtour8'});
+    const id = learner.user.id;
+    await assert.rejects(quests.awardTour(id), /hoàn thành/);
+    const first = await quests.awardOnboarding(id);
+    assert.equal(first.coins_awarded,20);
+    assert.equal(first.xp_awarded,30);
+    const tourState = Object.fromEntries(['home','kho','mini','pet','shop','set'].map(key=>[key,'done']));
+    await auth.updateSettings(id,{tutorial_progress:{step:'tour',layout:'desktop',context:{tourState}}});
+    const rewards = await Promise.all([quests.awardTour(id),quests.awardTour(id)]);
+    assert.equal(rewards.reduce((sum,r)=>sum+r.coins_awarded,0),10);
+    assert.equal(rewards.reduce((sum,r)=>sum+r.xp_awarded,0),0);
+    assert.equal((await quests.awardOnboarding(id)).coins_awarded,0);
+    assert.equal((await quests.awardTour(id)).coins_awarded,0);
+    const balance = await tx.queryOne('SELECT coin_balance, (SELECT SUM(delta) FROM coin_ledger WHERE user_id=$1) AS ledger FROM users WHERE id=$1',[id]);
+    assert.equal(Number(balance.coin_balance),Number(balance.ledger));
+  });
+});

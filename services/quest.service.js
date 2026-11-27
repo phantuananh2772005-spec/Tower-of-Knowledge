@@ -139,4 +139,23 @@ function awardOnboarding(userId) {
   });
 }
 
-module.exports = { award, awardOnboarding, getStatus, readVietnamDay };
+async function awardTour(userId) {
+  return db.transaction(async tx => {
+    const user = await lockQuestUser(tx, userId);
+    if (!user) throw new Error('Tài khoản không hoạt động.');
+    const claimed = await tx.queryOne(
+      "SELECT 1 FROM coin_ledger WHERE user_id = $1 AND kind = 'TOUR_REWARD'", [userId]);
+    if (claimed) return rewardResult(user, null, 0, 0, true);
+    const settings = await tx.queryOne('SELECT tutorial_progress FROM user_settings WHERE user_id = $1', [userId]);
+    const state = settings?.tutorial_progress?.context?.tourState;
+    if (!['home','kho','mini','pet','shop','set'].every(key => state?.[key] === 'done')) {
+      throw new Error('Hãy hoàn thành đủ các phần hướng dẫn trước khi nhận quà.');
+    }
+    const { at } = await tx.queryOne('SELECT clock_timestamp() AS at');
+    return applyReward(tx, user, { reward_coins: 10, reward_xp: 0 }, {
+      kind: 'TOUR_REWARD', note: 'Hoàn thành hướng dẫn Sparky', at
+    });
+  });
+}
+
+module.exports = { award, awardOnboarding, awardTour, getStatus, readVietnamDay };
