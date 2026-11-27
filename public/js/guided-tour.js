@@ -80,6 +80,7 @@
 
   let tour = null;
   let version = 0;
+  let ownsSettings = false;
   let cleanup = () => {};
   const stages = ['home','kho','mini','pet','shop','set'];
   const stageForView = {hub:'home',catalog:'kho',minigame:'mini',pet:'pet',shop:'shop',settings:'set'};
@@ -98,6 +99,10 @@
     cleanup = () => {};
     document.querySelector('.tour-portal')?.remove();
     tour = null;
+    if (ownsSettings) {
+      ownsSettings=false;
+      if(typeof closeSettingsModal==='function') closeSettingsModal();
+    }
     close();
     if (focus?.isConnected) focus.focus({preventScroll:true});
   }
@@ -198,7 +203,11 @@
     const index = resume?.stage === stage && Number.isInteger(resume.index)
       ? Math.max(0, Math.min(config.steps.length - 1, resume.index)) : 0;
     tour = {stage,index,missing:false,focus:document.activeElement};
-    if (config.view === 'settings') openSettingsModal();
+    if (config.view === 'settings') {
+      const modal=document.getElementById('modal-settings');
+      ownsSettings=!!modal?.classList.contains('hidden');
+      openSettingsModal();
+    }
     else if (currentAppView !== config.view) navTo(config.view);
     await renderStep();
   }
@@ -346,6 +355,9 @@
         const at=version;
         if (active.clickPending) { event.preventDefault(); return; }
         active.clickPending = true;
+        if(effectiveSelector.includes('settings')) {
+          ownsSettings=!!document.getElementById('modal-settings')?.classList.contains('hidden');
+        }
         const check = async () => {
           if (at !== version || tour !== active) return;
           if (effectiveSelector.includes('enroll') && !myEnrolledCourses.length) {

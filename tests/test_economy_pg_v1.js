@@ -347,6 +347,8 @@ test('starter and tour gifts are independent and repeat claims award nothing', a
     assert.equal(first.xp_awarded,30);
     const tourState = Object.fromEntries(['home','kho','mini','pet','shop','set'].map(key=>[key,'done']));
     await auth.updateSettings(id,{tutorial_progress:{step:'tour',layout:'desktop',context:{tourState}}});
+    const otherSession = await auth.login({username:learner.user.username,password:'testtour8'});
+    assert.deepEqual(otherSession.user.tutorial_progress.context.tourState,tourState);
     const rewards = await Promise.all([quests.awardTour(id),quests.awardTour(id)]);
     assert.equal(rewards.reduce((sum,r)=>sum+r.coins_awarded,0),10);
     assert.equal(rewards.reduce((sum,r)=>sum+r.xp_awarded,0),0);

@@ -257,3 +257,34 @@ test('active tour retargets across mobile breakpoint and restores saved cursor',
     assert.equal(await page.$('.tour-portal'),null);
   } finally {await browser.close();}
 });
+
+
+test('Escape closes only the settings modal owned by the tour', async () => {
+  const browser=await puppeteer.launch({
+    executablePath:process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true
+  });
+  try {
+    for(const alreadyOpen of [false,true]) {
+      const page=await browser.newPage();
+      await page.setContent('<div id="modal-settings" class="'+(alreadyOpen?'':'hidden')+'"><button data-tour="replay" style="position:absolute;top:100px;left:20px;width:200px;height:60px">Replay</button></div>');
+      await page.addStyleTag({content:'.hidden{display:none}'+fs.readFileSync('public/css/guided-tour.css','utf8')});
+      await page.addScriptTag({content:`
+        let currentUserAccount={userId:'settings',tourProgress:{context:{experience:'new'}}};
+        let currentAppView='hub',isUnboxingInProgress=false;
+        function queuePreferenceSave(){}
+        function navTo(view){currentAppView=view}
+        function openSettingsModal(){document.getElementById('modal-settings').classList.remove('hidden')}
+        function closeSettingsModal(){document.getElementById('modal-settings').classList.add('hidden')}
+      `});
+      for(const name of ['tour-steps','guided-tour']) {
+        await page.addScriptTag({content:fs.readFileSync('public/js/'+name+'.js','utf8')});
+      }
+      await page.evaluate(()=>GuidedTour.startStage('set'));
+      await page.waitForSelector('.tour-unit');
+      await page.keyboard.press('Escape');
+      assert.equal(await page.$('.tour-portal'),null);
+      assert.equal(await page.$eval('#modal-settings',element=>!element.classList.contains('hidden')),alreadyOpen);
+      await page.close();
+    }
+  } finally {await browser.close();}
+});
