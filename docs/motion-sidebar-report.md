@@ -50,8 +50,9 @@ giữ nguồn và cấu trúc cũ; trạng thái nhóm/filter/anchor chỉ thu�
 - Từ trang khác, dùng `navTo('shop')` cũ, đợi page-entry đang chạy kết thúc và
   grid thật có nội dung, rồi mới căn neo. Không cuộn vào grid chưa render;
   readiness observer chờ dữ liệu chậm và được hủy khi đổi neo/rời Shop.
-- Khu cao hơn 90% viewport căn đầu, chừa `scroll-margin-top:18px`. Khu thấp căn
-  giữa; khoảng trống đầu/cuối Shop cho phép căn giữa cả khu đầu và khu cuối.
+- Theo chỉnh sửa sau phát hành: khu Pet luôn căn đầu, chừa 18px, kể cả khi
+  danh sách ngắn. Đã bỏ phần đệm đầu Shop gây khoảng trống lớn. Khu phụ kiện
+  thấp vẫn căn giữa, khu cao hơn 90% viewport căn đầu; chỉ giữ phần đệm cuối.
 - Scroll-spy dùng IntersectionObserver gắn với vùng cuộn. Giữ tập các khu đang
   giao vùng đọc để cuộn ngược vẫn đổi active đúng khi khu linh vật rất dài.
 - Click khóa spy ngay từ lúc chọn, qua thời gian chờ render/page motion và khi
@@ -102,7 +103,7 @@ git diff --check
   và loại môn 0 mốc. Badge không bị lọc theo kết quả đang xem.
 - Shop 100 Pet: căn đầu đúng 18px, phụ kiện ngắn căn giữa, click neo không chạy
   animation trang, cuộn tay cập nhật lại menu cả hai hướng, từ Hub vào đúng neo,
-  chờ grid phụ kiện xuất hiện muộn và căn giữa khu linh vật khi chỉ có một thẻ.
+  chờ grid phụ kiện xuất hiện muộn và căn đầu khu linh vật khi chỉ có một thẻ.
 - 1280×600, 1280×700, 844×390 và 390×844 khi các nhóm mở: không tràn ngang,
   không cuộn sidebar, không chồng footer. Bộ motion còn kiểm 1920×1080 và 768×650.
 - Bật reduced motion: không CSS animation/transition đang chạy, neo căn tức thì.

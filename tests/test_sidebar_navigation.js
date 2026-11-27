@@ -141,7 +141,7 @@ test('course submenus reuse progress and Shop anchors survive a 100-pet catalog'
     assert.equal(await page.$eval('#sidebar-shop-group',el=>getComputedStyle(el).transitionDuration),'0s');
     assert(await page.evaluate(()=>{const el=document.getElementById('shop-accessories').getBoundingClientRect(),root=document.getElementById('app-main-scroll').getBoundingClientRect();return Math.abs(el.top+el.height/2-root.top-root.height/2)<3}));
     await page.evaluate(()=>{allPets=allPets.slice(0,1);renderShopPets();SidebarNavigation.openShop('shop-pets')});await delay(150);
-    assert(await page.evaluate(()=>{const el=document.getElementById('shop-pets').getBoundingClientRect(),root=document.getElementById('app-main-scroll').getBoundingClientRect();return Math.abs(el.top+el.height/2-root.top-root.height/2)<3}),'short first section must also center');
+    assert(await page.evaluate(()=>{const el=document.getElementById('shop-pets').getBoundingClientRect(),root=document.getElementById('app-main-scroll'),top=el.top-root.getBoundingClientRect().top;return top>=17&&top<=26&&root.scrollTop<30}),'short pet section must start near the top without blank headroom');
     // Restore every in-memory fixture; no test records were written to PostgreSQL.
     await page.evaluate(()=>{myEnrolledCourses=originalSidebarData.courses;allPets=originalSidebarData.pets;accessoryCatalog=originalSidebarData.items;renderEnrolledCourses();renderShopPets();renderAccessories();navTo('hub')});
     assert.deepEqual(errors,[]);

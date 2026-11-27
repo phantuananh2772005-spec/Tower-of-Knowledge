@@ -12,8 +12,6 @@
 #app-sidebar::-webkit-scrollbar,#app-sidebar nav::-webkit-scrollbar{display:none}
 #app-main-scroll.tt-shop-anchors{scroll-behavior:smooth}
 #view-shop [data-section]{scroll-margin-top:18px}
-/* A short first section also needs headroom for true center alignment. */
-#view-shop::before{content:'';display:block;height:var(--shop-anchor-head,0px);margin:0;pointer-events:none}
 /* Space after the last existing section permits center alignment of a short
    accessories area, even at the bottom of a very long pet catalog. */
 #view-shop::after{content:'';display:block;height:var(--shop-anchor-tail,0px);margin:0;pointer-events:none}

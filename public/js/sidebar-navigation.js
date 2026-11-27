@@ -61,9 +61,6 @@
   }
   function updateTail(){
     const section=document.getElementById('shop-accessories');
-    const pets=document.getElementById('shop-pets');
-    const gutter=parseFloat(getComputedStyle(shop()).paddingTop)||0;
-    shop().style.setProperty('--shop-anchor-head',Math.max(0,(root().clientHeight-pets.offsetHeight)/2-gutter)+'px');
     shop().style.setProperty('--shop-anchor-tail',Math.max(0,root().clientHeight*.6-section.offsetHeight*.5)+'px');
   }
   function attachSpy(){
@@ -114,7 +111,7 @@
         selectShop(id);
         scrollEnd=()=>releaseLock();root().addEventListener('scrollend',scrollEnd,{once:true});
         const box=root().getBoundingClientRect(),rect=el.getBoundingClientRect();
-        const tall=rect.height>root().clientHeight*.9;
+        const tall=id==='shop-pets'||rect.height>root().clientHeight*.9;
         const inset=tall?parseFloat(getComputedStyle(el).scrollMarginTop)||18:(root().clientHeight-rect.height)/2;
         const top=Math.max(0,Math.min(root().scrollHeight-root().clientHeight,root().scrollTop+rect.top-box.top-inset));
         const started=performance.now();
