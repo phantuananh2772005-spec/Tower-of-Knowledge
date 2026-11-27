@@ -126,7 +126,23 @@ chỉ đọc phần tử mới trong callback; không snap pill khi hai menu dù
 4. A3 không có cột trạng thái môn riêng. Dùng đúng read-model và quy tắc hoàn
    thành đã có ở hồ sơ, không tự thêm cột hay nghiệp vụ.
 
-Không có câu hỏi còn chặn A3/B2. Trạng thái triển khai được báo riêng sau kiểm tra phát hành.
+Không có câu hỏi còn chặn A3/B2.
+
+## Kiểm tra phát hành
+
+- Thay đổi ứng dụng `29f64d8` đã được đẩy lên `main` và phục vụ tại
+  https://tower-of-knowledge.onrender.com/ ngày 27/11/2026.
+- Local: 20 kiểm thử backend, 11 kiểm thử UI/tour và 14 ảnh WebP đều PASS.
+- Production: `/health` trả HEALTHY; nội dung 22 tệp HTML/CSS/JS/JSON/WebP
+  được đối chiếu hash với bản local và khớp toàn bộ.
+- Bộ motion và sidebar được chạy lại trực tiếp trên production bằng browser
+  không đăng nhập: PASS, gồm fixture 100 Pet chỉ nằm trong browser. Không gọi
+  API mua hàng, nhận thưởng hoặc tạo tài khoản trên production.
+- Đã sửa riêng harness test để chờ danh mục Pet và môn thật tải xong trước khi
+  gán fixture; `networkidle2` có thể trả về khi hai request vẫn chưa kết thúc.
+  Đây là thay đổi kiểm thử, không thay đổi logic tải danh mục của ứng dụng.
+- Ảnh chụp/fixture/output kiểm tra nằm trong `outputs/` được gitignore, không
+  được đưa vào thư mục `public` hay commit tài nguyên chạy trên website.
 
 ## Tệp của đợt motion và A/B
 

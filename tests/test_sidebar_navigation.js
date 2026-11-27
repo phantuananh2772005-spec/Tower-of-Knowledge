@@ -13,6 +13,9 @@ test('course submenus reuse progress and Shop anchors survive a 100-pet catalog'
     await page.setViewport({width:1280,height:700});
     await page.goto(process.env.MOTION_BASE_URL||'http://127.0.0.1:3000',{waitUntil:'networkidle2'});
     await page.waitForFunction(()=>window.SidebarNavigation&&window.AppMotion&&document.getElementById('tt-nav-pill')?.style.transform);
+    // networkidle2 can resolve while the last two catalog requests are still
+    // pending on Render. Let their real render complete before injecting fixtures.
+    await page.waitForFunction(()=>allPets.length>0&&document.getElementById('catalog-courses-grid')?.getAttribute('aria-busy')==='false',{timeout:45000});
     await page.evaluate(()=>{
       document.querySelectorAll('[id^="modal-"]').forEach(el=>el.classList.add('hidden'));
       window.GuidedTour={close(){},view(){}};
