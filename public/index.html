@@ -792,8 +792,8 @@
         <h2 class="text-lg font-bold">Kho môn học hệ thống</h2>
         
       </div>
-      <div id="catalog-courses-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        <div class="col-span-full text-center py-12 text-xs text-[var(--muted-foreground)]">Đang tải kho môn học...</div>
+      <div id="catalog-courses-grid" aria-label="Kho môn học" aria-busy="true" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div class="course-loading-card" aria-hidden="true"><i></i><b></b><b></b><p></p><span></span></div><div class="course-loading-card" aria-hidden="true"><i></i><b></b><b></b><p></p><span></span></div><div class="course-loading-card" aria-hidden="true"><i></i><b></b><b></b><p></p><span></span></div><div class="course-loading-card" aria-hidden="true"><i></i><b></b><b></b><p></p><span></span></div><div class="course-loading-card" aria-hidden="true"><i></i><b></b><b></b><p></p><span></span></div><div class="course-loading-card" aria-hidden="true"><i></i><b></b><b></b><p></p><span></span></div>
       </div>
     </section>
 
@@ -3656,7 +3656,10 @@
     let currentLiveMatch = null;
     let currentActiveCourseSlug = null;
 
+    let catalogVisibleCount = 12;
+    let catalogRequest = 0;
     async function loadAllCourses() {
+      const request = ++catalogRequest;
       const token = localStorage.getItem('tok_token');
       try {
         const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
@@ -3664,6 +3667,8 @@
         // 1. Fetch system catalog
         const respCatalog = await fetch('/api/courses', { headers });
         const resCatalog = await respCatalog.json();
+        if(request !== catalogRequest || token !== localStorage.getItem('tok_token')) return;
+        if (!respCatalog.ok || !resCatalog.success || !Array.isArray(resCatalog.data)) throw new Error('Không tải được kho môn.');
         if (resCatalog.success && Array.isArray(resCatalog.data)) {
           allSystemCourses = resCatalog.data;
           syncArenaSubjectSelects();
@@ -3722,6 +3727,14 @@
         }
       } catch (err) {
         console.error('Lỗi khi tải danh sách môn học:', err);
+        const grid=document.getElementById('catalog-courses-grid');
+        if(grid && !allSystemCourses.length) {
+          grid.innerHTML='<div class="col-span-full"><p>Chưa tải được kho môn học.</p><button type="button" class="course-retry">Thử lại</button></div>';
+          grid.querySelector('button').onclick=()=>loadAllCourses();
+        }
+      } finally {
+        if(request === catalogRequest) document.getElementById('catalog-courses-grid')?.setAttribute('aria-busy','false');
+
       }
     }
 
@@ -3864,10 +3877,10 @@
         return;
       }
 
-      container.innerHTML = allSystemCourses.map(c => {
+      container.innerHTML = allSystemCourses.slice(0,catalogVisibleCount).map(c => {
         const isEnrolled = myEnrolledCourses.some(m => m.id === c.id || m.slug === c.slug);
         return `
-          <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 space-y-4 shadow-xs flex flex-col justify-between hover:border-[var(--foreground)]/20 transition">
+          <div class="catalog-course-card bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 space-y-4 shadow-xs flex flex-col justify-between hover:border-[var(--foreground)]/20 transition">
             <div class="space-y-2.5">
               <div class="flex items-center justify-between">
                 <span class="text-3xl select-none">🗄️</span>
@@ -3892,6 +3905,15 @@
           </div>
         `;
       }).join('');
+      document.getElementById('catalog-load-more')?.remove();
+      if(catalogVisibleCount<allSystemCourses.length) {
+        const more=document.createElement('button');
+        more.id='catalog-load-more';more.type='button';more.className='course-retry';
+        more.textContent='Xem thêm môn ('+catalogVisibleCount+'/'+allSystemCourses.length+')';
+        more.onclick=()=>{catalogVisibleCount+=12;renderCatalogCourses();};
+        container.after(more);
+      }
+
     }
 
     async function handleEnrollCourse(slug) {
