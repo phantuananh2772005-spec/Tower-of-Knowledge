@@ -91,3 +91,9 @@
 ::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
 ::view-transition-old(root){z-index:1}::view-transition-new(root){z-index:2}
 @media(prefers-reduced-motion:reduce){::view-transition-group(root){animation:none}}
+
+/* Reserve the learning card before account and course requests finish. */
+#hub-learning-slot { height:184px; flex-shrink:0; min-width:0; }
+#hub-learning-slot #hub-continue-learning-card { height:100%; box-sizing:border-box; justify-content:space-between; }
+#hub-focus-title { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+@media(max-width:639px) { #hub-learning-slot { height:244px; } }

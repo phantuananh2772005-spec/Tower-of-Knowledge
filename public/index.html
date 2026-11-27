@@ -578,21 +578,22 @@
             <div class="h-2 rounded-full bg-[var(--border)] mt-2 overflow-hidden"><div id="hub-exp-bar" class="h-full bg-emerald-500 transition-all" style="width:0%"></div></div>
             <p id="hub-next-level" class="text-[11px] text-[var(--muted-foreground)] mt-1.5">Còn 100 EXP lên Cấp 2</p>
           </div>
-          <div id="hub-continue-learning-card" class="rounded-2xl p-3.5 sm:p-4 bg-[var(--background)]/80 border border-emerald-500/30 flex flex-col gap-3 shadow-2xs">
+          <div id="hub-learning-slot">
+          <div id="hub-continue-learning-card" class="hidden rounded-2xl p-3.5 sm:p-4 bg-[var(--background)]/80 border border-emerald-500/30 flex flex-col gap-3 shadow-2xs">
             <div class="flex items-start sm:items-center gap-3 min-w-0">
               <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-xl sm:text-2xl shrink-0 mt-0.5 sm:mt-0">
                 📖
               </div>
               <div class="min-w-0 flex-1">
-                <span id="hub-focus-chapter-tag" class="text-[10px] sm:text-[11px] font-bold text-emerald-600 font-mono uppercase tracking-wide block truncate">Chương 1: Tổng quan CSDL</span>
-                <span id="hub-focus-title" class="text-sm sm:text-base font-bold text-[var(--foreground)] block break-words mt-0.5">Mốc 1.1: Giới thiệu CSDL</span>
-                <p id="hub-focus-desc" class="text-[11px] text-[var(--muted-foreground)] mt-0.5 line-clamp-1">Tiếp tục hành trình học tập tương tác cùng Linh vật Pet.</p>
+                <span id="hub-focus-chapter-tag" class="text-[10px] sm:text-[11px] font-bold text-emerald-600 font-mono uppercase tracking-wide block truncate"></span>
+                <span id="hub-focus-title" class="text-sm sm:text-base font-bold text-[var(--foreground)] block break-words mt-0.5"></span>
+                <p id="hub-focus-desc" class="text-[11px] text-[var(--muted-foreground)] mt-0.5 line-clamp-1"></p>
               </div>
             </div>
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-2 border-t border-[var(--border)]/40">
               <div class="flex items-center justify-between sm:justify-start gap-2">
                 <span class="text-[10px] text-[var(--muted-foreground)] uppercase font-semibold">Phần thưởng:</span>
-                <span id="hub-focus-reward" class="text-xs font-bold text-amber-500 font-mono">+150 EXP • +30 Xu</span>
+                <span id="hub-focus-reward" class="text-xs font-bold text-amber-500 font-mono"></span>
               </div>
               <button id="btn_hub_start_focus_moc" onclick="startFocusMocLearning()" class="w-full sm:w-auto py-3 sm:py-2.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-sm shadow-md transition cursor-pointer flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 duration-150">
                 <span>🚀</span>
@@ -600,6 +601,8 @@
                 <span>→</span>
               </button>
             </div>
+          </div>
+
           </div>
 
           <!-- Bottom Row: Mô tả hành động & Phím điều hướng nhanh -->
