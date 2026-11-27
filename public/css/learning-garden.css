@@ -13,18 +13,15 @@
 @media(prefers-reduced-motion:reduce){.garden-node{transition:none}}
 .garden-intro>div:first-child{flex:1;min-width:0}.garden-summary{flex:0 0 220px;display:flex;flex-direction:column;align-items:stretch;gap:9px}.garden-summary .garden-progress{border:0;padding:0;background:none;text-align:right}.garden-course-progress{height:6px;border-radius:20px;background:var(--garden-line);overflow:hidden}.garden-course-progress>span{display:block;height:100%;border-radius:inherit;background:#159b6c}.garden-summary button{font-size:12px;font-weight:700;text-align:right;cursor:pointer;color:var(--garden-ink)}.garden-summary button:hover{text-decoration:underline}.garden-chapter-heading>div{flex:1;min-width:0}.garden-chapter-score{font-size:12px;font-weight:700;color:#a87924;white-space:nowrap;padding:6px 9px;border-radius:20px;background:#d6a13e15}
 @media(max-width:767px){.garden-intro{flex-direction:column;align-items:stretch}.garden-summary{flex:auto;width:100%}.garden-summary .garden-progress{text-align:left}.garden-summary button{align-self:flex-end}.garden-chapter-state{display:none}.garden-chapter-score{font-size:10px;padding:5px 7px}}
-/* The next season fades over the extended previous scene across 200px.
-   Each chapter retains its own SVG trail: no cross-chapter connectors. */
+/* Chapter headings and learning trails are above the independent scenery layer. */
 .garden-chapters{position:relative;background:#e4ead7;overflow:hidden}
 .garden-chapter{position:relative}
-.garden-chapter:before{content:'';position:absolute;inset:-100px 0;background-image:var(--season-art);background-size:100% 100%;background-position:center;pointer-events:none;mask-image:linear-gradient(to bottom,transparent,#000 200px);z-index:0}
-.garden-chapter:first-child:before{mask-image:none}
 .garden-landscape,.dark .garden-landscape{background:none;position:relative}
 .garden-chapter-heading{position:absolute;top:18px;left:20px;right:20px;z-index:2;padding:8px 12px;border:0;border-radius:14px;background:#fffdf0e6;color:#294531;gap:9px;box-shadow:0 2px 10px #32482d0a}
 .garden-chapter-heading h3{font-size:12px;line-height:1.35}.garden-chapter-heading p,.garden-chapter-number,.garden-chapter-state{display:none}.garden-chapter-score{font-size:10px;padding:3px 7px}
 .garden-stop-label{color:#243c2c;text-shadow:0 1px 3px #fff}
 .garden-stop-label>span:not(.garden-stars){color:#3c5142;background:#ffffffe0;border-radius:9px;padding:3px 7px;text-shadow:none}
-.dark .garden-chapters{background:#26382c}.dark .garden-chapter:before{filter:brightness(.64) saturate(.8)}
+.dark .garden-chapters{background:#26382c}
 .dark .garden-stop-label{color:#fff;text-shadow:0 1px 4px #162b22}.dark .garden-stop-label>span:not(.garden-stars){background:#20392dec;color:#e3eddf}
 @media(max-width:767px){.garden-chapter-heading{left:10px;right:10px;top:14px;padding:7px 9px}.garden-chapter-heading h3{font-size:11px}}
 /* Static round pedestals; only their decorative paper icons drift gently. */
@@ -54,8 +51,6 @@
 .garden-intro,.garden-finish{background:var(--scene-paper,#fffdf1)}
 .garden-intro h2{font-family:Georgia,'Times New Roman',serif;color:var(--garden-ink)}
 .garden-chapters{background:#e9eddc}
-.garden-chapter:before{background-size:cover;background-position:center;background-repeat:no-repeat;mask-image:linear-gradient(to bottom,transparent,#000 180px,#000 calc(100% - 180px),transparent)}
-.garden-chapter:first-child:before{mask-image:linear-gradient(to bottom,#000,#000 calc(100% - 180px),transparent)}
 .garden-chapter-heading{background:#fffdf0ed;border:1px solid #d7d7bd;box-shadow:0 3px 12px #364b2d0a}
 .garden-trail-shadow{stroke:#b6ac82;stroke-width:31;opacity:.65}.garden-trail-line{stroke:#fff4d6;stroke-width:24}
 .garden-node{background:#e7d8ac;border-color:#fff1c6;box-shadow:0 6px 0 #ac9157,0 9px 7px #29493120}
@@ -65,11 +60,31 @@
 .garden-stop-label strong{background:#fffdf0eb;border:1px solid #dadbc7;border-radius:20px;padding:3px 10px;text-shadow:none}
 .dark .garden-map{--garden-bg:#20302b;--garden-ink:#eeeadd;--garden-muted:#b7c4b6;--garden-line:#4a5c47;--garden-path:#d4c69c;--garden-card:#21352ff0;border-color:#4a5c47}
 .dark .garden-intro,.dark .garden-finish{background:#202c2b}.dark .garden-chapters{background:#20302b}
-.dark .garden-chapter:before{filter:brightness(.61) saturate(.75)}
+
 .dark .garden-chapter-heading{background:#20392df0;border-color:#56634b;color:#eeeadd}
 .dark .garden-trail-shadow{stroke:#182c21;opacity:.9}.dark .garden-trail-line{stroke:#9c9d79}
 .dark .garden-stop-label strong{background:#20392df0;border-color:#64715b}
-@media(max-width:767px){.garden-chapter:before{background-size:100% auto;background-repeat:repeat-y;background-position:center top}.garden-node:not(.is-boss) .garden-node-icon{width:62px;height:62px}.is-boss .garden-node-icon{width:83px;height:83px;transform:translateY(-7px)}}
-/* Blend the edges of aspect-preserving mobile tiles instead of exposing a repeat seam. */
-.garden-chapters{container-type:inline-size}
-@media(max-width:767px){.garden-chapter:before{--garden-tile-height:calc(100cqw * 1.3354167);background-image:linear-gradient(to bottom,#e9eddc,transparent 18%,transparent 82%,#e9eddc),var(--season-art);background-size:100% var(--garden-tile-height),100% var(--garden-tile-height);background-repeat:repeat-y}}
+@media(max-width:767px){.garden-node:not(.is-boss) .garden-node-icon{width:62px;height:62px}.is-boss .garden-node-icon{width:83px;height:83px;transform:translateY(-7px)}}
+/* Transparent connector zones in the illustrations meet on one ground.
+   No fade, filter blur, overlap or per-chapter image scaling is used to join them. */
+
+.garden-chapters{background:var(--garden-ground,#edf0dc)}
+.garden-scenery{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.garden-scene{position:absolute;left:0;width:100%;background-image:var(--garden-scene-art);background-size:100% 100%;background-repeat:no-repeat}
+/* Overhanging leaves may cover the trail, while learning controls remain clear.
+   Keep the scenery wrapper out of a stacking context so these layers interleave. */
+.garden-scene.is-overhang{z-index:1}
+.garden-stop{z-index:3}
+.garden-chapter-heading{z-index:4}
+.garden-stars{background:#fffdf1ed;border-radius:20px;padding:2px 7px;text-shadow:none}
+.dark .garden-stars{background:#20392df2}
+[data-scenic-theme="halloween"] .garden-map{--garden-ground:#ebe5d6}
+[data-scenic-theme="teachers"] .garden-map{--garden-ground:#f0eddb}
+[data-scenic-theme="christmas"] .garden-map{--garden-ground:#e8eeeb}
+[data-scenic-theme="new-year"] .garden-map{--garden-ground:#ede9df}
+[data-scenic-theme="tet"] .garden-map{--garden-ground:#f0e9d7}
+[data-scenic-theme="valentine"] .garden-map{--garden-ground:#f1e7df}
+[data-scenic-theme="womens-day"] .garden-map{--garden-ground:#eeeadd}
+[data-scenic-theme="youth-spring"] .garden-map{--garden-ground:#e5eedc}
+.dark .garden-chapters{background:#20302b}
+.dark .garden-scene{filter:brightness(.61) saturate(.75)}

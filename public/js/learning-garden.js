@@ -21,6 +21,7 @@ function renderLearningGarden(courseData) {
   window.gardenArtObserver?.disconnect();
   window.gardenThemeObserver?.disconnect();
   window.gardenArtCleanup?.();
+  window.gardenSceneResizeObserver?.disconnect();
   const chapters=courseData.chapters||[], done=m=>m?.status==='COMPLETED';
   const entries=chapters.flatMap((chapter,index)=>(chapter.milestones||[]).map(m=>({
     m,chapter,index,available:done(m)||m.status==='OPEN'
@@ -86,11 +87,11 @@ function renderLearningGarden(courseData) {
   const artQuery=matchMedia('(max-width:767px)'),loaded=new Set();
   const themes=['sky','halloween','teachers','christmas','new-year','tet','valentine','womens-day','youth-spring'];
   const theme=()=>themes.includes(document.documentElement.dataset.scenicTheme)?document.documentElement.dataset.scenicTheme:'sky';
-  const loadArt=section=>{
-    if(!section)return;
-    loaded.add(section);
-    const base='/assets/garden-v2/'+theme()+'/'+section.dataset.season+'-'+(artQuery.matches?480:960);
-    section.style.setProperty('--season-art',CSS.supports('background-image','image-set(url("x.avif") type("image/avif"))')?`image-set(url('${base}.avif') type('image/avif'),url('${base}.webp') type('image/webp'))`:`url('${base}.webp')`);
+  const loadArt=scene=>{
+    if(!scene)return;
+    loaded.add(scene);
+    const base='/assets/garden-v3/'+scene.dataset.scene+'-'+(artQuery.matches?480:1024);
+    scene.style.setProperty('--garden-scene-art',`url('${base}.webp')`);
   };
   const refreshIcons=()=>host.querySelectorAll('[data-garden-kind]').forEach(img=>{
     const current=theme(),src=img.dataset.gardenKind==='boss'?'/assets/garden-v2/nodes/'+current+'-boss.webp':current==='sky'?'/assets/navigation/enrolled.webp':'/assets/seasonal-icons/'+current+'/enrolled.webp';
@@ -98,18 +99,49 @@ function renderLearningGarden(courseData) {
   });
   const refresh=()=>{if(currentAppView!=='saga')return;loaded.forEach(loadArt);refreshIcons()};
   window.refreshLearningGardenArt=refresh;
-  const scenes=[...host.querySelectorAll('.garden-chapter')];
-  loadArt(scenes[0]);
-  if(scenes[active.index]!==scenes[0])loadArt(scenes[active.index]);
   refreshIcons();
   window.gardenArtObserver=new IntersectionObserver(records=>{
     records.forEach(record=>{if(record.isIntersecting){loadArt(record.target);window.gardenArtObserver.unobserve(record.target);}});
   },{root:document.getElementById('app-main-scroll'),rootMargin:'600px 0px'});
-  scenes.forEach(section=>window.gardenArtObserver.observe(section));
+  // One scenery layer spans every chapter. The transparent connector zones in
+  // the art meet directly over the same ground, without masks or overlapping tiles.
+  let sceneWidth=0;
+  const layoutScenes=()=>{
+    const width=container.clientWidth;
+    if(!width || Math.abs(width-sceneWidth)<1)return;
+    sceneWidth=width;
+    window.gardenArtObserver.disconnect();loaded.clear();
+    const sceneHeight=width*1.5;
+    container.querySelector('.garden-scenery')?.remove();
+    const scenery=document.createElement('div');
+    scenery.className='garden-scenery';scenery.setAttribute('aria-hidden','true');
+    // Start inside the empty top connector so the first decorations are visible
+    // near the chapter heading rather than after a large blank first screen.
+    const firstTop=-sceneHeight*.25;
+    const count=Math.max(1,Math.ceil((container.offsetHeight-firstTop)/sceneHeight));
+    const variants=['canopy','bench','branch','ferns','fallen-log','planter','trunk'];
+    for(let i=0;i<count;i++){
+      const scene=document.createElement('div');scene.className='garden-scene';
+      scene.dataset.scene=variants[i%variants.length];
+      if(['canopy','branch'].includes(scene.dataset.scene))scene.classList.add('is-overhang');
+      scene.style.top=(firstTop+i*sceneHeight)+'px';scene.style.height=sceneHeight+'px';
+      scenery.appendChild(scene);window.gardenArtObserver.observe(scene);
+    }
+    container.prepend(scenery);
+    const bounds=document.getElementById('app-main-scroll')?.getBoundingClientRect()||{top:0,bottom:innerHeight};
+    host.querySelectorAll('.garden-scene').forEach(scene=>{
+      const r=scene.getBoundingClientRect();
+      if(r.bottom>=bounds.top-600 && r.top<=bounds.bottom+600)loadArt(scene);
+    });
+  };
+  window.gardenSceneResizeObserver=new ResizeObserver(layoutScenes);
+  window.gardenSceneResizeObserver.observe(container);
+  layoutScenes();
   window.gardenThemeObserver=new MutationObserver(refresh);
   window.gardenThemeObserver.observe(document.documentElement,{attributes:true,attributeFilter:['data-scenic-theme']});
-  artQuery.addEventListener('change',refresh);
-  window.gardenArtCleanup=()=>artQuery.removeEventListener('change',refresh);
+  const mediaChanged=()=>{sceneWidth=0;layoutScenes();refresh()};
+  artQuery.addEventListener('change',mediaChanged);
+  window.gardenArtCleanup=()=>artQuery.removeEventListener('change',mediaChanged);
   host.querySelector('#btn_garden_current').onclick=()=>scrollToActiveNode(true);
   host.querySelector('#btn_garden_change_course').onclick=()=>navTo('enrolled');
   syncAllPetDisplays();

@@ -275,6 +275,8 @@
   </style>
 <link rel="stylesheet" href="/css/result-book.css">
 <link rel="stylesheet" href="/css/guided-tour.css?v=2">
+<link rel="stylesheet" href="/css/app-motion.css">
+<link rel="stylesheet" href="/css/sidebar-navigation.css">
 </head>
 <body class="bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen flex font-sans">
 
@@ -317,15 +319,6 @@
           </div>
         </button>
 
-        <!-- 2. Danh sách Môn đang theo học (Tách riêng biệt) -->
-        <button onclick="navTo('enrolled')" id="nav-enrolled" title="Môn đang theo học" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <img class="app-nav-art" data-seasonal-source="/assets/navigation/enrolled.webp" data-seasonal-icon="enrolled" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="32" height="32" decoding="async">
-            <span class="sidebar-text font-medium">Môn đang theo học</span>
-          </div>
-          <span id="sidebar-enrolled-count" class="sidebar-text text-[10px] bg-emerald-500/10 text-emerald-600 font-bold px-1.5 py-0.5 rounded font-mono">0</span>
-        </button>
-
         <!-- 3. Bản đồ Lộ trình leo tháp -->
         <button onclick="navTo('saga')" id="nav-saga" title="Bản đồ leo tháp" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
           <div class="flex items-center gap-3">
@@ -336,12 +329,26 @@
         </button>
 
         <!-- 4. Kho Môn học Hệ thống (Tách riêng để duyệt & đăng ký) -->
-        <button onclick="navTo('catalog')" id="nav-catalog" title="Kho môn học hệ thống" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
+        <button onclick="SidebarNavigation.toggle('courses')" id="nav-catalog" aria-expanded="false" aria-controls="sidebar-courses-group" title="Kho môn học hệ thống" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
           <div class="flex items-center gap-3">
             <img class="app-nav-art" data-seasonal-source="/assets/navigation/catalog.webp" data-seasonal-icon="catalog" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="32" height="32" decoding="async">
             <span class="sidebar-text font-medium">Kho môn học hệ thống</span>
           </div>
+          <span class="tt-sidebar-chevron" aria-hidden="true">›</span>
         </button>
+        <div id="sidebar-courses-group" class="tt-sidebar-group" aria-hidden="true">
+          <div class="tt-sidebar-group-inner" inert>
+            <button onclick="SidebarNavigation.openCourses('all')" id="nav-enrolled" title="Đang theo học" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <img class="app-nav-art" data-seasonal-source="/assets/navigation/enrolled.webp" data-seasonal-icon="enrolled" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="32" height="32" decoding="async">
+                <span class="sidebar-text font-medium">Đang theo học</span>
+              </div>
+              <span id="sidebar-enrolled-count" class="sidebar-text text-[10px] bg-emerald-500/10 text-emerald-600 font-bold px-1.5 py-0.5 rounded font-mono">0</span>
+            </button>
+            <button type="button" id="nav-all-courses" onclick="SidebarNavigation.openCourses('catalog')" class="sidebar-text" title="Tất cả môn">Tất cả môn</button>
+            <button type="button" id="nav-completed-courses" onclick="SidebarNavigation.openCourses('completed')" class="sidebar-text" title="Đã hoàn thành">Đã hoàn thành</button>
+          </div>
+        </div>
 
         <!-- 5. Minigame -->
         <button onclick="navTo('minigame')" id="nav-minigame" data-tour="minigame" title="Minigame" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
@@ -360,12 +367,19 @@
         </button>
 
         <!-- 7. Cửa hàng Shop riêng biệt -->
-        <button onclick="navTo('shop')" id="nav-shop" data-tour="shop" title="Cửa hàng Shop" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
+        <button onclick="SidebarNavigation.toggle('shop')" id="nav-shop" aria-expanded="false" aria-controls="sidebar-shop-group" data-tour="shop" title="Cửa hàng Shop" class="w-full text-left px-3 py-2.5 rounded-xl text-xs font-medium text-[var(--muted-foreground)] hover:bg-[var(--background)]/60 hover:text-[var(--foreground)] transition flex items-center justify-between">
           <div class="flex items-center gap-3">
             <img class="app-nav-art" data-seasonal-source="/assets/navigation/shop.webp" data-seasonal-icon="shop" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" width="32" height="32" decoding="async">
             <span class="sidebar-text font-medium">Cửa hàng Shop</span>
           </div>
+          <span class="tt-sidebar-chevron" aria-hidden="true">›</span>
         </button>
+        <div id="sidebar-shop-group" class="tt-sidebar-group" aria-hidden="true">
+          <div class="tt-sidebar-group-inner" inert>
+            <button type="button" id="nav-shop-pets" class="sidebar-text" onclick="SidebarNavigation.openShop('shop-pets')" title="Linh vật đồng hành">Linh vật đồng hành</button>
+            <button type="button" id="nav-shop-items" class="sidebar-text" onclick="SidebarNavigation.openShop('shop-accessories')" title="Vật phẩm & phụ kiện">Vật phẩm & phụ kiện</button>
+          </div>
+        </div>
       </nav>
 
     </div>
@@ -1477,7 +1491,7 @@
     <!-- ================= VIEW 8: CỬA HÀNG SHOP RIÊNG BIỆT (TÁCH HẲN RA KHỎI PET) ================= -->
     <section id="view-shop" class="app-page hidden">
       <!-- Nhóm 1: Mở khóa Linh vật mới (DẠNG THANH MINI SIÊU GỌN) -->
-      <div class="space-y-2.5">
+      <div id="shop-pets" data-section="pets" class="space-y-2.5">
         <div class="flex items-center justify-between gap-3">
         <h3 class="text-[11px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] flex items-center gap-1.5">
           <span>🐾</span> <span>Linh vật đồng hành</span>
@@ -1489,8 +1503,8 @@
         </div>
       </div>
 
-      <div id="shop-accessories" class="space-y-3">
-        <h3 class="text-xs font-bold">✨ Ngoại trang & Phụ kiện</h3>
+      <div id="shop-accessories" data-section="items" class="space-y-3">
+        <h3 class="text-xs font-bold">Vật phẩm & phụ kiện</h3>
         <div id="shop-items-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
       </div>
     </section>
@@ -2845,6 +2859,7 @@
       button.setAttribute('aria-label',collapsed?'Mở menu':'Ẩn menu');
       button.title=collapsed?'Mở menu':'Ẩn menu';
       button.classList.toggle('is-collapsed',collapsed);
+      window.AppMotion?.sidebar();
     }
     const TOPBAR_CONFIG = {
       hub:{title:'Tổng quan'},
@@ -3021,6 +3036,9 @@
       updateTopbarUI(viewName);
       updateMobileBottomBar(viewName);
       syncAllPetDisplays();
+      window.SidebarNavigation?.view(viewName);
+      window.AppMotion?.enterPage(targetView,viewName);
+      window.SidebarNavigation?.afterView(viewName);
       window.GuidedTour?.close();
       window.GuidedTour?.view(viewName);
     }
@@ -3541,6 +3559,7 @@
       setPageHeader('Bảng xếp hạng',{label:'Minigame',onClick:()=>arenaTab('fight')});
 
       renderRank();
+      window.AppMotion?.enterTab('arena','rank',rankPanel);
       if (typeof loadRealLeaderboard === 'function') loadRealLeaderboard();
     } else {
       if (rankPanel) rankPanel.classList.add('hidden');
@@ -3821,14 +3840,18 @@
     function renderEnrolledCourses() {
       const container = document.getElementById('enrolled-courses-grid');
       if (!container) return;
+      const completedOnly = document.getElementById('view-enrolled').dataset.courseFilter === 'completed';
+      const courses = completedOnly
+        ? myEnrolledCourses.filter(c => Number(c.total_milestones) > 0 && Number(c.completed_milestones) === Number(c.total_milestones))
+        : myEnrolledCourses;
 
-      if (!myEnrolledCourses || myEnrolledCourses.length === 0) {
+      if (!courses || courses.length === 0) {
         container.innerHTML = `
           <div class="col-span-full text-center py-16 text-xs text-[var(--muted-foreground)] space-y-3 bg-[var(--card)]/40 rounded-2xl border border-dashed border-[var(--border)] p-8">
             <div class="text-4xl select-none">🎯</div>
-            <div class="font-bold text-sm text-[var(--foreground)]">Chưa có môn học nào trong lộ trình cá nhân của bạn</div>
+            <div class="font-bold text-sm text-[var(--foreground)]">${completedOnly ? 'Chưa có môn đã hoàn thành' : 'Chưa có môn học nào trong lộ trình cá nhân của bạn'}</div>
             <p class="text-xs text-[var(--muted-foreground)] max-w-sm mx-auto leading-relaxed">
-              Bạn chưa đăng ký môn học nào. Khi đăng ký một môn học từ kho hệ thống, môn học đó sẽ xuất hiện tại đây cùng bản đồ leo tháp cá nhân.
+              ${completedOnly ? 'Đã hoàn thành: 0' : 'Bạn chưa đăng ký môn học nào. Khi đăng ký một môn học từ kho hệ thống, môn học đó sẽ xuất hiện tại đây cùng bản đồ leo tháp cá nhân.'}
             </p>
             <button onclick="navTo('catalog')" id="btn_enrolled_khampha" class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition cursor-pointer shadow-xs">
               + Khám phá Kho môn học hệ thống →
@@ -3838,12 +3861,12 @@
         return;
       }
 
-      container.innerHTML = myEnrolledCourses.map(c => {
+      container.innerHTML = courses.map(c => {
         const pct = c.completion_percent !== undefined ? Math.round(c.completion_percent) : calculateCurrentProgressPct();
         return `
           <div class="bg-[var(--card)] border border-emerald-500/30 rounded-2xl p-6 space-y-4 shadow-xs relative overflow-hidden">
             <div class="absolute top-0 right-0 bg-emerald-500/10 text-emerald-600 text-[10px] font-bold px-3 py-1 rounded-bl-xl font-mono">
-              ✓ Đang theo học
+              ✓ ${completedOnly ? 'Đã hoàn thành' : 'Đang theo học'}
             </div>
             <div class="flex items-center gap-3">
               <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-2xl font-bold select-none">
@@ -5001,12 +5024,14 @@
         <span class="font-bold text-sm">${icon}</span>
         <span>${message}</span>
       </div>`;
+      void toast.offsetWidth;
       toast.classList.remove('translate-y-4', 'opacity-0');
       toast.classList.add('translate-y-0', 'opacity-100');
-      setTimeout(() => {
+      clearTimeout(showToast.hideTimer);
+      showToast.hideTimer = setTimeout(() => {
         toast.classList.remove('translate-y-0', 'opacity-100');
         toast.classList.add('translate-y-4', 'opacity-0');
-      }, 2600);
+      }, 1800);
     }
 
     // ================= CÀI ĐẶT: 2 MỤC NGOÀI (AUTH & ÂM THANH HIỆU ỨNG CHI TIẾT) =================
@@ -6134,6 +6159,7 @@
         if (loginHelper) loginHelper.classList.add('hidden');
         if (submitBtn) submitBtn.innerHTML = 'Tạo tài khoản';
       }
+      window.AppMotion?.enterTab('auth',mode,document.querySelector('#modal-auth form'));
     }
 
     async function handleAuthSubmit(event) {
@@ -8656,6 +8682,7 @@
 
         const scrollContainer = document.getElementById('app-main-scroll');
         if (scrollContainer) scrollContainer.scrollTop = 0;
+        window.AppMotion?.enterTab('arena','modes',modesBar);
         return;
       }
 
@@ -8677,6 +8704,7 @@
       } else if (mode === 'casual') {
         renderCasualLobby();
       }
+      window.AppMotion?.enterTab('arena',mode,mode==='ranked'?fightPanel:mode==='casual'?casualPanel:arcadePanel);
     }
 
     async function startBotPractice() {
@@ -9527,6 +9555,8 @@
     }
 
 </script>
+  <script src="/js/app-motion.js"></script>
+  <script src="/js/sidebar-navigation.js"></script>
   <script src="/js/learning-garden.js"></script>
   <script src="/js/lesson-state.js"></script>
   <script src="/js/password-recovery.js"></script>
