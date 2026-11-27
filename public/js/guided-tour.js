@@ -60,6 +60,16 @@
     box.append(image, heading, text, buttons);
     document.body.append(box);
     tip = box;
+    const origin=document.getElementById('sidebar-pet-avatar');
+    if (!matchMedia('(prefers-reduced-motion:reduce)').matches && origin?.getClientRects().length) {
+      const from=origin.getBoundingClientRect(), to=box.getBoundingClientRect();
+      if(from.width && from.left>=0 && from.right<=innerWidth) {
+        box.animate([
+          {transform:'translate('+(from.left-to.left)+'px,'+(from.top-to.top)+'px) scale(.3)',opacity:0},
+          {transform:'translate(0,0) scale(1)',opacity:1}
+        ],{duration:450,easing:'ease-out'});
+      }
+    }
     return box;
   }
 
@@ -87,7 +97,8 @@
   const reduced = () => matchMedia('(prefers-reduced-motion:reduce)').matches;
 
   function blocked() {
-    return !navigator.onLine || ['play','battle','extreme','login'].includes(currentAppView)
+    return !currentUserAccount?.userId || location.pathname.startsWith('/admin')
+      || !navigator.onLine || ['play','battle','extreme','login'].includes(currentAppView)
       || typeof currentLiveMatch !== 'undefined' && currentLiveMatch && !currentLiveMatch.over
       || typeof isUnboxingInProgress !== 'undefined' && isUnboxingInProgress;
   }
@@ -349,6 +360,10 @@
       });
     };
     const observer=new ResizeObserver(schedule);observer.observe(target);observer.observe(unit);
+    const removalObserver=new MutationObserver(()=>{
+      if(!target.isConnected) schedule();
+    });
+    removalObserver.observe(document.body,{childList:true,subtree:true});
     const intercept=event=>{
       if(unit.contains(event.target))return;
       if(step.clickable && target.contains(event.target)) {
@@ -400,7 +415,7 @@
       sidebar?.classList.remove('tour-sidebar-open');
       target.style.scrollMarginTop=previousScrollMargin;
       clearInterval(typing);
-      cancelAnimationFrame(frame);observer.disconnect();
+      cancelAnimationFrame(frame);observer.disconnect();removalObserver.disconnect();
       document.removeEventListener('click',intercept,true);
       document.removeEventListener('wheel',lock);
       document.removeEventListener('touchmove',lock);

@@ -74,3 +74,9 @@
 .tour-unit[data-side="bottom"]:before { bottom:-7px; left:var(--tour-tail-x); border-left:0; border-top:0; }
 .tour-unit[data-side="left"]:before { left:-7px; top:var(--tour-tail-y); border-right:0; border-top:0; }
 .tour-unit[data-side="right"]:before { right:-7px; top:var(--tour-tail-y); border-left:0; border-bottom:0; }
+
+@keyframes tour-glow { from { opacity:.45; } to { opacity:1; } }
+.tour-spot:after { content:""; position:absolute; inset:-5px; border:2px solid #10b981; border-radius:inherit; pointer-events:none; opacity:.7; animation:tour-glow 1.4s ease-in-out infinite alternate; }
+.tour-offer-small:after { content:""; position:absolute; top:8px; right:8px; width:9px; height:9px; border-radius:50%; background:#10b981; }
+.companion-guide { bottom:calc(84px + env(safe-area-inset-bottom)); }
+@media(prefers-reduced-motion:reduce) { .tour-spot:after{animation:none} }

@@ -291,3 +291,41 @@ test('Escape closes only the settings modal owned by the tour', async () => {
     }
   } finally {await browser.close();}
 });
+
+
+test('tour rejects unsigned users and follows a replaced target', async () => {
+  const browser=await puppeteer.launch({
+    executablePath:process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true
+  });
+  try {
+    const page=await browser.newPage();
+    await page.setContent('<div data-tour="level" style="position:absolute;left:20px;top:100px;width:200px;height:80px">Level</div>');
+    await page.addStyleTag({content:fs.readFileSync('public/css/guided-tour.css','utf8')});
+    await page.addScriptTag({content:`
+      let currentUserAccount={},currentAppView='hub',isUnboxingInProgress=false;
+      function queuePreferenceSave(){}
+      function navTo(view){currentAppView=view}
+    `});
+    for(const name of ['tour-steps','guided-tour']) {
+      await page.addScriptTag({content:fs.readFileSync('public/js/'+name+'.js','utf8')});
+    }
+    await page.evaluate(()=>GuidedTour.startStage('home'));
+    assert.equal(await page.$('.tour-portal'),null);
+    await page.evaluate(()=>{
+      currentUserAccount={userId:'replacement',tourProgress:{context:{experience:'new'}}};
+      GuidedTour.startStage('home');
+    });
+    await page.waitForSelector('.tour-unit');
+    const old=await page.$('.tour-portal');
+    await page.evaluate(()=>{
+      const target=document.querySelector('[data-tour="level"]');
+      const next=target.cloneNode(true);
+      next.style.left='300px';
+      target.replaceWith(next);
+    });
+    await page.waitForFunction(element=>!element.isConnected,{},old);
+    await page.waitForSelector('.tour-unit');
+    assert.equal(await page.$$eval('.tour-portal',elements=>elements.length),1);
+    await page.keyboard.press('Escape');
+  } finally {await browser.close();}
+});
