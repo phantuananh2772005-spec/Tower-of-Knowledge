@@ -80,3 +80,8 @@
 .tour-offer-small:after { content:""; position:absolute; top:8px; right:8px; width:9px; height:9px; border-radius:50%; background:#10b981; }
 .companion-guide { bottom:calc(84px + env(safe-area-inset-bottom)); }
 @media(prefers-reduced-motion:reduce) { .tour-spot:after{animation:none} }
+
+@media(max-height:480px) {
+  .tour-unit { max-height:calc(100dvh - 24px); overflow-y:auto; }
+  .tour-unit p { max-height:25dvh; margin:6px 0; }
+}

@@ -39,6 +39,20 @@ CHROME_PATH có thể chỉ đường dẫn Chrome riêng.
 Đã kiểm tra mục tiêu muộn, hủy khi đang chờ, ảnh bị chặn, focus,
 offline, card thu nhỏ và bốn mép màn hình ở năm viewport.
 
-Cần tiếp tục xác minh zoom/cỡ chữ lớn, mục tiêu cao trên 60% viewport,
-xoay màn hình trong luồng trang thật, và khả năng đồng bộ tiến độ
-giữa hai thiết bị. Chưa triển khai bản này lên production.
+Đã bổ sung kiểm tra mười viewport dọc/ngang, mục tiêu sát bốn mép,
+mục tiêu cao, chữ lời thoại 21px, đổi breakpoint, tiếp tục cursor,
+Cài đặt mở sẵn/do tour mở, mục tiêu bị thay thế, ảnh lỗi và hủy khi chờ.
+
+Đã kiểm tra đăng nhập phiên khác đọc lại trạng thái đã lưu từ server.
+Production đã chạy đủ 17 bước và xác nhận nhận quà tân thủ,
+nhận quà tour và gọi lặp đều không phát sinh thưởng trùng.
+Tài khoản QA production còn tồn tại là qa_tour_1795744870220.
+
+## Giới hạn kiểm chứng
+
+Các kiểm tra trình duyệt dùng Chromium trên Windows, không thay thế
+kiểm tra trên thiết bị iOS Safari vật lý.
+Đổi breakpoint và trạng thái hai phiên đã kiểm tra tự động;
+chưa kiểm tra đồng thời hai thiết bị vật lý.
+Nội dung cấu hình giới thiệu tính năng theo luật đang có trong code,
+không dùng tiến độ tour làm chứng nhận hiểu bài.

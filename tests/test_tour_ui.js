@@ -7,7 +7,7 @@ test('tour steps keep the target clear and release the portal on Escape', async 
   const executablePath = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
   const browser = await puppeteer.launch({ executablePath, headless: true });
   try {
-    for (const [width, height] of [[1920,1080],[1366,768],[768,1024],[390,844],[360,640]]) {
+    for (const [width, height] of [[1920,1080],[1080,1920],[1366,768],[768,1366],[768,1024],[1024,768],[390,844],[844,390],[360,640],[640,360]]) {
       const page = await browser.newPage();
       await page.setViewport({ width, height });
       await page.setContent('<div data-tour="level" style="position:absolute;top:120px;left:20px;width:210px;height:70px">Level</div>');

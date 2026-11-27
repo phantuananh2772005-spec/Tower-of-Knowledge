@@ -337,9 +337,12 @@
       let x=Math.max(12,Math.min(vw-width-12,choice.x));
       let y=Math.max(12,Math.min(vh-height-12,choice.y));
       if(vw<=700){
-        x=12;
         const below=vh-height-78;
-        y=below>=bottom+14 ? below : top>=height+26 ? 12 : Math.max(12,bottom+14);
+        if (below>=bottom+14) { x=12; y=below; }
+        else if (top>=height+26) { x=12; y=12; }
+        else if (!choices.some(candidate=>candidate.fit)) {
+          x=12; y=Math.max(12,Math.min(vh-height-12,bottom+14));
+        }
       }
       unit.style.transform='translate('+x+'px,'+y+'px)';
       const centerX=(left+right)/2, centerY=(top+bottom)/2;
