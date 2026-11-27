@@ -15,11 +15,6 @@
 /* Space after the last existing section permits center alignment of a short
    accessories area, even at the bottom of a very long pet catalog. */
 #view-shop::after{content:'';display:block;height:var(--shop-anchor-tail,0px);margin:0;pointer-events:none}
-@media(min-width:768px) and (max-height:740px){
-  #app-sidebar .sidebar-header{display:grid;grid-template-rows:1fr;transition:grid-template-rows 400ms var(--ease-main),margin 400ms var(--ease-main),opacity 150ms var(--ease-out)}
-  #app-sidebar .sidebar-header>div{overflow:hidden;min-height:0}
-  #app-sidebar[data-sidebar-group] .sidebar-header{grid-template-rows:0fr;margin-block:0;opacity:0}
-}
 @media(min-width:768px) and (max-height:520px){
   #app-sidebar .sidebar-header{display:none}
   #app-sidebar nav>button{min-height:32px;padding-block:2px}

@@ -23,6 +23,9 @@ giữ nguồn và cấu trúc cũ; trạng thái nhóm/filter/anchor chỉ thu�
   của `sidebar-courses-group`. Không còn ở cấp 1.
 - Cha Kho môn học mở nhóm và gọi lại `navTo('enrolled')`. Bấm khi nhóm đang mở
   sẽ thu nhóm, giữ trang hiện tại. Mở nhóm này đóng nhóm Shop.
+- Không thu/ẩn hồ sơ khi mở nhóm: logo, hồ sơ và các mục nằm trước nhóm giữ
+  nguyên vị trí, chỉ các mục sau nhóm bị đẩy xuống. Chế độ cực thấp 520px vẫn
+  thu gọn phần phụ theo chiều cao cửa sổ, độc lập trạng thái nhóm.
 - Đang theo học dùng `view-enrolled`, `enrolled-courses-grid` và
   `renderEnrolledCourses()` cũ. Tất cả môn dùng `view-catalog` cũ.
 - **A3 đã làm, không bị chặn thiếu dữ liệu.** `services/course.service.js` đã trả

@@ -40,7 +40,12 @@ test('course submenus reuse progress and Shop anchors survive a 100-pet catalog'
     assert.equal(await page.$$eval('#app-sidebar nav>button',els=>els.length),6);
     assert(await page.$eval('#nav-enrolled',el=>el.parentElement.parentElement.id==='sidebar-courses-group'));
     assert.equal(await page.$$eval('.tt-sidebar-group',els=>els.length),2);
+    const anchoredBefore=await page.evaluate(()=>Object.fromEntries(['sidebar-brand','nav-hub','nav-saga','nav-catalog','nav-minigame'].map(id=>[id,document.getElementById(id).getBoundingClientRect().top])));
     await page.click('#nav-catalog');await delay(550);
+    const anchoredAfter=await page.evaluate(()=>Object.fromEntries(['sidebar-brand','nav-hub','nav-saga','nav-catalog','nav-minigame'].map(id=>[id,document.getElementById(id).getBoundingClientRect().top])));
+    for(const id of ['sidebar-brand','nav-hub','nav-saga','nav-catalog'])assert(Math.abs(anchoredAfter[id]-anchoredBefore[id])<1,'opening a group moved an earlier item: '+id);
+    assert(anchoredAfter['nav-minigame']>anchoredBefore['nav-minigame']+80,'submenu must push later navigation down');
+    assert(await page.$eval('#app-sidebar .sidebar-header',el=>el.getBoundingClientRect().height>20&&getComputedStyle(el).opacity==='1'),'profile disappeared when opening group');
     console.log('sidebar: course group opened');
     assert.equal(await page.evaluate(()=>currentAppView),'enrolled');
     assert(await page.$eval('#sidebar-courses-group',el=>el.classList.contains('is-open')));
@@ -124,7 +129,11 @@ test('course submenus reuse progress and Shop anchors survive a 100-pet catalog'
     for(const [width,height] of [[1280,600],[1280,700],[844,390],[390,844]]){
       await page.setViewport({width,height});await delay(550);
       for(const group of ['courses','shop']){
+        await page.evaluate(()=>navTo('hub'));await delay(450);
+        const upperBefore=await page.$$eval('#sidebar-brand,#nav-hub,#nav-saga,#nav-catalog',els=>els.map(el=>el.getBoundingClientRect().top));
         await page.evaluate(group=>group==='courses'?SidebarNavigation.openCourses('all'):SidebarNavigation.openShop('shop-pets'),group);await delay(700);
+        const upperAfter=await page.$$eval('#sidebar-brand,#nav-hub,#nav-saga,#nav-catalog',els=>els.map(el=>el.getBoundingClientRect().top));
+        if(width>=768)assert(upperAfter.every((top,i)=>Math.abs(top-upperBefore[i])<1),'upper menu shifted at '+width+'x'+height);
         const layout=await page.evaluate(()=>{
           const side=document.getElementById('app-sidebar'),last=document.getElementById('sidebar-shop-group').classList.contains('is-open')?document.getElementById('nav-shop-items'):document.getElementById('nav-shop');
           return {display:getComputedStyle(side).display,scrollHeight:side.scrollHeight,height:side.clientHeight,footer:side.querySelector('.sidebar-footer').getBoundingClientRect().top,last:last.getBoundingClientRect().bottom,overflow:document.documentElement.scrollWidth>innerWidth};
