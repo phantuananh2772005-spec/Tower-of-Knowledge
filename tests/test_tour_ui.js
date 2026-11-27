@@ -246,7 +246,10 @@ test('active tour retargets across mobile breakpoint and restores saved cursor',
     await page.evaluate(()=>GuidedTour.startStage('home'));
     await page.waitForSelector('.tour-unit');
     assert.match(await page.$eval('.tour-unit p',element=>element.textContent),/ba nhiệm vụ/);
+    const oldPortal=await page.$('.tour-portal');
     await page.setViewport({width:844,height:390});
+    await page.waitForFunction(element=>!element.isConnected,{},oldPortal);
+    await page.waitForSelector('.tour-unit');
     await page.waitForFunction(()=>document.querySelector('.tour-pet-box')?.offsetWidth===72);
     assert.equal(await page.$$eval('.tour-portal',elements=>elements.length),1);
     await page.keyboard.press('Escape');
